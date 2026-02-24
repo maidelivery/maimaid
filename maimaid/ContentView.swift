@@ -118,9 +118,9 @@ struct ContentView: View {
                                             .font(.subheadline)
                                             .padding(.horizontal, 16)
                                             .padding(.vertical, 8)
-                                            .background(selectedCategory == nil ? Color.blue : Color.white.opacity(0.1))
+                                            .background(selectedCategory == nil ? Color.blue : Color.primary.opacity(0.1))
                                             .cornerRadius(20)
-                                            .foregroundColor(.white)
+                                            .foregroundColor(selectedCategory == nil ? .white : .primary)
                                     }
                                     
                                     ForEach(categories, id: \.self) { category in
@@ -131,9 +131,9 @@ struct ContentView: View {
                                                 .font(.subheadline)
                                                 .padding(.horizontal, 16)
                                                 .padding(.vertical, 8)
-                                                .background(selectedCategory == category ? Color.blue : Color.white.opacity(0.1))
+                                                .background(selectedCategory == category ? Color.blue : Color.primary.opacity(0.1))
                                                 .cornerRadius(20)
-                                                .foregroundColor(.white)
+                                                .foregroundColor(selectedCategory == category ? .white : .primary)
                                         }
                                     }
                                 }
@@ -163,7 +163,7 @@ struct ContentView: View {
                             showScanner = true
                         } label: {
                             Image(systemName: "camera.viewfinder")
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                         }
                     }
                     
@@ -176,7 +176,7 @@ struct ContentView: View {
                             }
                         } label: {
                             Image(systemName: isFetching ? "arrow.triangle.2.circlepath" : "arrow.down.circle")
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                                 .rotationEffect(Angle(degrees: isFetching ? 360 : 0))
                                 .animation(isFetching ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isFetching)
                         }
@@ -207,7 +207,7 @@ struct ContentView: View {
                                 .foregroundColor(filterSettings.selectedVersions.isEmpty && 
                                            filterSettings.selectedDifficulties.isEmpty && 
                                            filterSettings.selectedTypes.isEmpty && 
-                                           !filterSettings.isBpmFilterActive ? .white : .blue)
+                                           !filterSettings.isBpmFilterActive ? Color.primary : Color.blue)
                         }
                     }
                 }
@@ -216,7 +216,7 @@ struct ContentView: View {
                 // Initial Sync Overlay
                 if requiresInitialSync {
                     ZStack {
-                        Color.black.opacity(0.8)
+                        Color.black.opacity(0.6)
                             .ignoresSafeArea()
                         
                         VStack(spacing: 24) {
@@ -229,10 +229,11 @@ struct ContentView: View {
                                 Text("Initial Sync")
                                     .font(.title2)
                                     .fontWeight(.bold)
+                                    .foregroundColor(.white)
                                 
                                 Text("Fetching rich song data and metadata...")
                                     .font(.subheadline)
-                                    .foregroundColor(.white.opacity(0.6))
+                                    .foregroundColor(.white.opacity(0.8))
                                     .multilineTextAlignment(.center)
                             }
                             
@@ -241,10 +242,11 @@ struct ContentView: View {
                             
                             Text(syncProgress)
                                 .font(.caption2)
-                                .foregroundColor(.white.opacity(0.4))
+                                .foregroundColor(.white.opacity(0.6))
                         }
                         .padding(40)
-//                        .glass(cornerRadius: 32)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(32)
                         .padding(40)
                     }
                     .transition(.opacity)

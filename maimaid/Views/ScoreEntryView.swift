@@ -21,19 +21,19 @@ struct ScoreEntryView: View {
                 Section {
                     HStack {
                         Text("Achievement Rate (%)")
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                         Spacer()
                         if visionService.isProcessing {
                             ProgressView()
-                                .tint(.white)
+                                .tint(.primary)
                         } else {
                             PhotosPicker(selection: $selectedItem, matching: .images) {
                                 Label("Scan Photo", systemImage: "camera.viewfinder")
                                     .font(.caption)
                                     .padding(6)
-                                    .background(Color.white.opacity(0.1))
+                                    .background(Color.primary.opacity(0.1))
                                     .cornerRadius(8)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.primary)
                             }
                         }
                     }
@@ -84,7 +84,7 @@ struct ScoreEntryView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(.white)
+                        .foregroundColor(.blue)
                 }
             }
         }

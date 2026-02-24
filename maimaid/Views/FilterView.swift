@@ -20,7 +20,7 @@ struct FilterView: View {
         NavigationStack {
             Form {
                 // Versions - 增加了垂直 padding 和内部 FlowLayout 的 spacing
-                Section(header: Text("Version").foregroundColor(.white.opacity(0.7))) {
+                Section(header: Text("Version").foregroundColor(.secondary)) {
                     FlowLayout(spacing: 12) { // 这里将 8 改为了 12，增加了 Chip 之间的间距
                         ForEach(allVersions, id: \.self) { version in
                             FilterChip(title: version, isSelected: settings.selectedVersions.contains(version)) {
@@ -35,10 +35,10 @@ struct FilterView: View {
                     .padding(.vertical, 12) // 增加了 Section 内部的上下间距
                     .padding(.horizontal, 4) // 增加了左右微调
                 }
-                .listRowBackground(Color.white.opacity(0.1).background(.ultraThinMaterial))
+                .listRowBackground(Color.primary.opacity(0.05).background(.ultraThinMaterial))
                 
                 // Difficulties
-                Section(header: Text("Difficulty").foregroundColor(.white.opacity(0.7))) {
+                Section(header: Text("Difficulty").foregroundColor(.secondary)) {
                     FlowLayout(spacing: 10) {
                         ForEach(allDifficulties, id: \.self) { diff in
                             FilterChip(title: diff.capitalized, isSelected: settings.selectedDifficulties.contains(diff)) {
@@ -52,10 +52,10 @@ struct FilterView: View {
                     }
                     .padding(.vertical, 10)
                 }
-                .listRowBackground(Color.white.opacity(0.1).background(.ultraThinMaterial))
+                .listRowBackground(Color.primary.opacity(0.05).background(.ultraThinMaterial))
                 
                 // Types
-                Section(header: Text("Type").foregroundColor(.white.opacity(0.7))) {
+                Section(header: Text("Type").foregroundColor(.secondary)) {
                     HStack(spacing: 12) { // 这里也增加了 HStack 的间距
                         ForEach(allTypes, id: \.self) { type in
                             FilterChip(title: type.uppercased(), isSelected: settings.selectedTypes.contains(type)) {
@@ -69,10 +69,10 @@ struct FilterView: View {
                     }
                     .padding(.vertical, 10)
                 }
-                .listRowBackground(Color.white.opacity(0.1).background(.ultraThinMaterial))
+                .listRowBackground(Color.primary.opacity(0.05).background(.ultraThinMaterial))
                 
                 // BPM Range
-                Section(header: Text("BPM Range").foregroundColor(.white.opacity(0.7))) {
+                Section(header: Text("BPM Range").foregroundColor(.secondary)) {
                     Toggle("Enable BPM Filter", isOn: $settings.isBpmFilterActive)
                         .tint(.blue)
                     
@@ -84,7 +84,7 @@ struct FilterView: View {
                                 Text("\(Int(settings.bpmRange.upperBound))")
                             }
                             .font(.caption)
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundColor(.secondary)
                             
                             Slider(value: Binding(get: { settings.bpmRange.upperBound }, set: { settings.bpmRange = settings.bpmRange.lowerBound...$0 }), in: 50...300)
                                 .tint(.blue)
@@ -92,7 +92,7 @@ struct FilterView: View {
                         .padding(.vertical, 8)
                     }
                 }
-                .listRowBackground(Color.white.opacity(0.1).background(.ultraThinMaterial))
+                .listRowBackground(Color.primary.opacity(0.05).background(.ultraThinMaterial))
             }
             .listStyle(.insetGrouped)
             .navigationTitle("Filters")
@@ -125,9 +125,9 @@ struct FilterChip: View {
                 .font(.subheadline)
                 .padding(.horizontal, 14) // 增加文字左右内边距，让 Chip 看起来大一点
                 .padding(.vertical, 8)    // 增加文字上下内边距
-                .background(isSelected ? Color.blue : Color.white.opacity(0.1))
+                .background(isSelected ? Color.blue : Color.primary.opacity(0.08))
                 .cornerRadius(12)
-                .foregroundColor(.white)
+                .foregroundColor(isSelected ? .white : .primary)
         }
         .buttonStyle(.plain)
     }

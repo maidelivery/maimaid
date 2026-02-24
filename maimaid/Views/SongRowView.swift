@@ -11,12 +11,12 @@ struct SongRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(song.title)
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .lineLimit(1)
                 
                 Text(song.artist)
                     .font(.subheadline)
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(.secondary)
                     .lineLimit(1)
                 
                 HStack {
@@ -32,7 +32,7 @@ struct SongRowView: View {
                     
                     Text(song.category)
                         .font(.caption2)
-                        .foregroundColor(.white.opacity(0.5))
+                        .foregroundColor(.secondary.opacity(0.7))
                 }
             }
             
@@ -62,7 +62,7 @@ struct SongRowView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
         )
         .padding(.horizontal)
     }

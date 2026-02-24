@@ -19,7 +19,7 @@ struct SongJacketView: View {
                         .aspectRatio(contentMode: .fill)
                 } placeholder: {
                     ZStack {
-                        Color.white.opacity(0.05)
+                        Color.primary.opacity(0.05)
                         ProgressView()
                             .scaleEffect(0.5)
                     }
@@ -30,7 +30,7 @@ struct SongJacketView: View {
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
         .overlay(
             RoundedRectangle(cornerRadius: cornerRadius)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
         )
     }
     
