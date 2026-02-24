@@ -1,0 +1,497 @@
+import SwiftUI
+import AVFoundation
+import Vision
+import SwiftData
+
+struct ScannerView: View {
+    @Environment(\.dismiss) var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Query private var songs: [Song]
+    
+    @State private var recognizedSong: Song? = nil
+    @State private var recognizedRate: Double? = nil
+    @State private var recognizedDifficulty: String? = nil
+    @State private var recognizedType: String? = nil
+    @State private var isShowingDetail = false
+    @State private var showScoreImportConfirmation = false
+    
+    // Stabilization & Persistence
+    @State private var isLocked = false
+    @State private var lastSeenDate = Date()
+    
+    // Background Processing
+    private let processingQueue = DispatchQueue(label: "com.maimaid.scanner.processing", qos: .userInitiated)
+    @State private var recognitionBuffer: [String: Int] = [:]
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                CameraPreviewView { observations in
+                    handleObservations(observations)
+                }
+                .ignoresSafeArea()
+                
+                // Overlay
+                VStack {
+                    headerView()
+                    Spacer()
+                    scanningGuideView()
+                    Spacer()
+                    resultView()
+                }
+            }
+            .navigationDestination(isPresented: $isShowingDetail) {
+                if let song = recognizedSong {
+                    SongDetailView(song: song)
+                }
+            }
+            .alert("Import Score?", isPresented: $showScoreImportConfirmation) {
+                Button("Import", role: .none) { executeImport() }
+                Button("Cancel", role: .cancel) { isLocked = false }
+            } message: {
+                if let song = recognizedSong, let rate = recognizedRate {
+                    Text("Import \(String(format: "%.4f", rate))% to \(song.title)?")
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func headerView() -> some View {
+        HStack {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.largeTitle)
+                    .foregroundColor(.white)
+                    .padding()
+            }
+            Spacer()
+        }
+    }
+    
+    @ViewBuilder
+    private func scanningGuideView() -> some View {
+        ZStack {
+            // Circular Lens UI - Enlarged as requested
+            Circle()
+                .strokeBorder(
+                    LinearGradient(colors: [isLocked ? .green : .blue, .clear], startPoint: .top, endPoint: .bottom),
+                    lineWidth: 4
+                )
+                .frame(width: 320, height: 320)
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                        .padding(-12)
+                )
+            
+            // Scanning Line Animation
+            ScanningLineView(isLocked: isLocked)
+                .frame(width: 320, height: 320)
+                .clipShape(Circle())
+            
+            VStack(spacing: 6) {
+                Text(isLocked ? "TARGET LOCKED" : "ALIGN CENTER")
+                    .font(.system(size: 14, weight: .black, design: .rounded))
+                    .foregroundColor(isLocked ? .green : .blue)
+                
+                Text(isLocked ? "DATA SYNCED" : "ALIGN RESULT RING")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.white.opacity(0.6))
+            }
+            .offset(y: 190)
+        }
+        .offset(y: -50) // Move the whole guide up as requested
+    }
+    
+    @ViewBuilder
+    private func resultView() -> some View {
+        if let song = recognizedSong {
+            Button {
+                isShowingDetail = true
+            } label: {
+                HStack(spacing: 16) {
+                    AsyncImage(url: URL(string: song.imageUrl)) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Color.white.opacity(0.1)
+                    }
+                    .frame(width: 60, height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 3)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            if let type = recognizedType {
+                                Text(type.uppercased() == "STD" ? "标准" : type.uppercased())
+                                    .font(.system(size: 8, weight: .black))
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(type.lowercased() == "dx" ? Color.orange : Color.blue)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(3)
+                            }
+                            Text(song.title)
+                                .font(.system(.subheadline, weight: .bold))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                        }
+                        
+                        Text(song.artist)
+                            .font(.system(size: 10))
+                            .foregroundColor(.white.opacity(0.6))
+                            .lineLimit(1)
+                    }
+                    
+                    Spacer()
+                    
+                    if let rate = recognizedRate {
+                        VStack(alignment: .trailing, spacing: 6) {
+                            Text("\(String(format: "%.4f", rate))%")
+                                .font(.system(size: 16, weight: .black, design: .monospaced))
+                                .foregroundColor(.yellow)
+                                .shadow(color: .yellow.opacity(0.3), radius: 4)
+                            
+                            HStack(spacing: 4) {
+                                if let diff = recognizedDifficulty {
+                                    Text(diff.uppercased())
+                                        .font(.system(size: 8, weight: .black))
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(colorForDifficulty(diff))
+                                        .foregroundColor(.white)
+                                        .cornerRadius(4)
+                                }
+                                
+                                Button {
+                                    importScore(to: song, rate: rate, diff: recognizedDifficulty)
+                                } label: {
+                                    Text("IMPORT")
+                                        .font(.system(size: 8, weight: .black))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color.green)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(6)
+                                        .shadow(color: .green.opacity(0.4), radius: 4)
+                                }
+                            }
+                        }
+                    }
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white.opacity(0.4))
+                }
+                .padding(18)
+//                .glass(cornerRadius: 28)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
+            }
+            .buttonStyle(.plain)
+            .transition(.asymmetric(
+                insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)),
+                removal: .opacity.combined(with: .scale(scale: 0.95))
+            ))
+        }
+    }
+
+    struct ScanningLineView: View {
+        let isLocked: Bool
+        @State private var phase: CGFloat = 0
+        
+        var body: some View {
+            Rectangle()
+                .fill(LinearGradient(colors: [.clear, (isLocked ? Color.green : Color.blue).opacity(0.6), .clear], startPoint: .top, endPoint: .bottom))
+                .frame(height: 60)
+                .offset(y: -160 + (320 * phase))
+                .onAppear {
+                    withAnimation(.linear(duration: 2.5).repeatForever(autoreverses: false)) {
+                        phase = 1.0
+                    }
+                }
+        }
+    }
+
+    private func handleObservations(_ observations: [VNRecognizedTextObservation]) {
+        processingQueue.async {
+            self.processInQueue(observations)
+        }
+    }
+
+    private func processInQueue(_ observations: [VNRecognizedTextObservation]) {
+        let candidates = observations.compactMap { obs -> (String, CGRect) in
+            let text = obs.topCandidates(1).first?.string ?? ""
+            return (text, obs.boundingBox)
+        }
+        
+        // 1. Spatial Partitioning
+        let topCandidates = candidates.filter { $0.1.origin.y > 0.6 }
+        let midCandidates = candidates.filter { $0.1.origin.y > 0.3 && $0.1.origin.y <= 0.6 }
+        let botCandidates = candidates.filter { $0.1.origin.y <= 0.3 }
+        
+        // 2. Identifying Score (XX.XXXX%)
+        let ratePattern = "(\\d{1,3}\\.\\d{4})"
+        let rateRegex = try? NSRegularExpression(pattern: ratePattern)
+        var rates: [Double] = []
+        for (text, _) in midCandidates {
+            let matches = rateRegex?.matches(in: text, options: [], range: NSRange(location: 0, length: text.utf16.count)) ?? []
+            for match in matches {
+                if let range = Range(match.range(at: 1), in: text), let value = Double(text[range]), value <= 101.0 {
+                    rates.append(value)
+                }
+            }
+        }
+        let capturedRate = rates.max()
+        
+        // 3. Extract Difficulty & Type (Search in all areas since they can shift)
+        let diffKeywords = ["basic", "advanced", "expert", "master", "remaster"]
+        var capturedDiff: String? = nil
+        var capturedType: String? = nil
+        
+        for (text, _) in (topCandidates + midCandidates + botCandidates) {
+            let low = text.lowercased()
+            if capturedDiff == nil {
+                if let matched = diffKeywords.first(where: { low.contains($0) }) {
+                    capturedDiff = matched
+                }
+            }
+            if capturedType == nil {
+                if low.contains("dx") || low.contains("d×") || low.contains("d x") { capturedType = "dx" }
+                else if low.contains("std") || low.contains("standard") || low.contains("stand") { capturedType = "std" }
+                else if low.contains("utage") || low.contains("宴") { capturedType = "utage" }
+            }
+        }
+        
+        // 4. Match Songs
+        var frameMatches: [String] = []
+        for (text, _) in (topCandidates + midCandidates) {
+            let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard cleaned.count >= 2 else { continue }
+            
+            var foundFast = false
+            for song in songs {
+                if song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title) {
+                    frameMatches.append(song.songId)
+                    foundFast = true
+                    if frameMatches.count > 3 { break }
+                }
+            }
+            
+            if !foundFast && cleaned.count > 4 {
+                for song in songs {
+                    if fuzzyMatch(cleaned, song.title) {
+                        frameMatches.append(song.songId)
+                        if frameMatches.count > 3 { break }
+                    }
+                }
+            }
+            if !frameMatches.isEmpty { break }
+        }
+        
+        DispatchQueue.main.async {
+            self.updateUIWithResults(songIds: frameMatches, rate: capturedRate, diff: capturedDiff, type: capturedType)
+        }
+    }
+    
+    private func updateUIWithResults(songIds: [String], rate: Double?, diff: String?, type: String?) {
+        for id in recognitionBuffer.keys {
+            recognitionBuffer[id, default: 0] -= 1
+            if recognitionBuffer[id]! <= 0 { recognitionBuffer.removeValue(forKey: id) }
+        }
+        
+        for id in songIds {
+            recognitionBuffer[id, default: 0] += 5
+        }
+        
+        if let topCandidate = recognitionBuffer.max(by: { $0.value < $1.value }), topCandidate.value > 15 {
+            if let song = songs.first(where: { $0.songId == topCandidate.key }) {
+                if recognizedSong?.songId != song.songId {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        self.recognizedSong = song
+                        self.isLocked = true
+                    }
+                }
+                self.lastSeenDate = Date()
+            }
+        }
+        
+        if isLocked {
+            if let r = rate { self.recognizedRate = r }
+            if let d = diff { self.recognizedDifficulty = d }
+            if let t = type { self.recognizedType = t }
+        }
+        
+        if isLocked && !showScoreImportConfirmation && !isShowingDetail {
+            if Date().timeIntervalSince(lastSeenDate) > 4.0 {
+                withAnimation {
+                    self.recognizedSong = nil
+                    self.recognizedRate = nil
+                    self.recognizedDifficulty = nil
+                    self.recognizedType = nil
+                    self.recognitionBuffer.removeAll()
+                    self.isLocked = false
+                }
+            }
+        }
+    }
+    
+    private func fuzzyMatch(_ s1: String, _ s2: String) -> Bool {
+        let t1 = s1.lowercased().filter { !$0.isWhitespace }
+        let t2 = s2.lowercased().filter { !$0.isWhitespace }
+        if abs(t1.count - t2.count) > 2 { return false }
+        let dist = levenshteinDistance(t1, t2)
+        return dist <= max(1, t1.count / 4)
+    }
+    
+    private func levenshteinDistance(_ s1: String, _ s2: String) -> Int {
+        let empty = [Int](repeating: 0, count: s2.count + 1)
+        var last = [Int](0...s2.count)
+        for (i, char1) in s1.enumerated() {
+            var cur = [i + 1] + empty.dropFirst()
+            for (j, char2) in s2.enumerated() {
+                cur[j + 1] = char1 == char2 ? last[j] : min(last[j], last[j + 1], cur[j]) + 1
+            }
+            last = cur
+        }
+        return last.last!
+    }
+    
+    private func executeImport() {
+        guard let (song, rate, diff) = pendingImport else { return }
+        let targetDiff = diff ?? recognizedDifficulty ?? "master"
+        let targetType = recognizedType ?? "dx"
+        
+        // Find matching sheet with BOTH difficulty and type
+        var matchedSheet = song.sheets.first { sheet in
+            let diffMatch = sheet.difficulty.lowercased() == targetDiff.lowercased()
+            let typeMatch = sheet.type.lowercased() == targetType.lowercased()
+            return diffMatch && typeMatch
+        }
+        
+        // Fallback: If no exact match (difficulty + type), try matching just difficulty
+        // This handles cases where type detection might fail but difficulty is clear
+        if matchedSheet == nil {
+            matchedSheet = song.sheets.first { $0.difficulty.lowercased() == targetDiff.lowercased() }
+        }
+        
+        if let sheet = matchedSheet {
+            let existingScore = sheet.score
+            if existingScore == nil || rate > existingScore!.rate {
+                if let existing = existingScore { modelContext.delete(existing) }
+                let newScore = Score(sheetId: "\(sheet.songId)-\(sheet.type)-\(sheet.difficulty)", rate: rate, rank: calculateRank(rate))
+                modelContext.insert(newScore)
+                sheet.score = newScore
+                try? modelContext.save()
+            }
+        }
+        isLocked = false
+    }
+    
+    private func calculateRank(_ rate: Double) -> String {
+        if rate >= 100.5 { return "SSS+" }
+        if rate >= 100.0 { return "SSS" }
+        if rate >= 99.5 { return "SS+" }
+        if rate >= 99.0 { return "SS" }
+        if rate >= 98.0 { return "S+" }
+        if rate >= 97.0 { return "S" }
+        return "AAA"
+    }
+    
+    private func colorForDifficulty(_ diff: String) -> Color {
+        switch diff.lowercased() {
+        case "basic": return .green
+        case "advanced": return .orange
+        case "expert": return .red
+        case "master": return .purple
+        case "remaster": return .white
+        default: return .blue
+        }
+    }
+    
+    private func importScore(to song: Song, rate: Double, diff: String?) {
+        isLocked = true
+        pendingImport = (song, rate, diff)
+        showScoreImportConfirmation = true
+    }
+    
+    @State private var pendingImport: (Song, Double, String?)? = nil
+}
+
+struct CameraPreviewView: UIViewControllerRepresentable {
+    var onObservationsRecognized: ([VNRecognizedTextObservation]) -> Void
+    func makeUIViewController(context: Context) -> CameraViewController {
+        let controller = CameraViewController()
+        controller.onObservationsRecognized = onObservationsRecognized
+        return controller
+    }
+    func updateUIViewController(_ uiViewController: CameraViewController, context: Context) {}
+}
+
+class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
+    var onObservationsRecognized: (([VNRecognizedTextObservation]) -> Void)?
+    private var captureSession: AVCaptureSession?
+    private var previewLayer: AVCaptureVideoPreviewLayer?
+    private let textRecognitionRequest = VNRecognizeTextRequest()
+    private let processingQueue = DispatchQueue(label: "com.maimaid.camera.queue", qos: .userInteractive)
+    private var frameCounter = 0
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupCaptureSession()
+        setupVision()
+    }
+    
+    private func setupCaptureSession() {
+        captureSession = AVCaptureSession()
+        guard let captureSession = captureSession else { return }
+        captureSession.sessionPreset = .hd1280x720
+        guard let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+              let videoInput = try? AVCaptureDeviceInput(device: videoDevice) else { return }
+        if captureSession.canAddInput(videoInput) { captureSession.addInput(videoInput) }
+        let videoOutput = AVCaptureVideoDataOutput()
+        videoOutput.alwaysDiscardsLateVideoFrames = true
+        videoOutput.setSampleBufferDelegate(self, queue: processingQueue)
+        if captureSession.canAddOutput(videoOutput) { captureSession.addOutput(videoOutput) }
+        previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
+        previewLayer?.frame = view.layer.bounds
+        previewLayer?.videoGravity = .resizeAspectFill
+        if let previewLayer = previewLayer { view.layer.addSublayer(previewLayer) }
+        DispatchQueue.global(qos: .userInitiated).async { captureSession.startRunning() }
+    }
+    
+    private func setupVision() {
+        textRecognitionRequest.recognitionLevel = .accurate
+        textRecognitionRequest.usesLanguageCorrection = true
+        textRecognitionRequest.recognitionLanguages = ["ja-JP", "zh-Hans", "en-US"]
+        // Adjusted ROI to match the upward-shifted circular guide
+        textRecognitionRequest.regionOfInterest = CGRect(x: 0.1, y: 0.28, width: 0.8, height: 0.6)
+    }
+    
+    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        frameCounter += 1
+        guard frameCounter % 4 == 0 else { return }
+        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+        let requestHandler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .right, options: [:])
+        do {
+            try requestHandler.perform([textRecognitionRequest])
+            if let results = textRecognitionRequest.results as? [VNRecognizedTextObservation] {
+                self.onObservationsRecognized?(results)
+            }
+        } catch {
+            print("Vision failed: \(error)")
+        }
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        previewLayer?.frame = view.layer.bounds
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        captureSession?.stopRunning()
+    }
+}
