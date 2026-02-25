@@ -6,6 +6,24 @@ struct SongData: Decodable {
     let updateTime: String
 }
 
+struct AliasListResponse: Decodable {
+    let aliases: [AliasItem]
+}
+
+struct AliasItem: Decodable {
+    let song_id: Int
+    let aliases: [String]
+}
+
+struct LxnsSongListResponse: Decodable {
+    let songs: [LxnsSong]
+}
+
+struct LxnsSong: Decodable {
+    let id: Int
+    let title: String
+}
+
 struct InternalSong: Decodable {
     let songId: String
     let category: String?
@@ -69,6 +87,35 @@ class MaimaiDataFetcher {
         
         let songData = try JSONDecoder().decode(SongData.self, from: data)
         
+        // Fetch Aliases and LXNS Song List to build a Title -> Aliases map
+        var aliasMap: [String: [String]] = [:]
+        var titleToLxnsId: [String: Int] = [:]
+        do {
+            if let aliasUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/alias/list"),
+               let lxnsSongUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/song/list") {
+                
+                async let (aliasData, _) = URLSession.shared.data(from: aliasUrl)
+                async let (lxnsSongData, _) = URLSession.shared.data(from: lxnsSongUrl)
+                
+                let aliasResponse = try await JSONDecoder().decode(AliasListResponse.self, from: aliasData)
+                let lxnsSongResponse = try await JSONDecoder().decode(LxnsSongListResponse.self, from: lxnsSongData)
+                
+                var lxnsIdToTitle: [Int: String] = [:]
+                for lxnsSong in lxnsSongResponse.songs {
+                    lxnsIdToTitle[lxnsSong.id] = lxnsSong.title
+                    titleToLxnsId[lxnsSong.title] = lxnsSong.id
+                }
+                
+                for item in aliasResponse.aliases {
+                    if let title = lxnsIdToTitle[item.song_id] {
+                        aliasMap[title] = item.aliases
+                    }
+                }
+            }
+        } catch {
+            print("Failed to fetch aliases: \(error)")
+        }
+        
         // 1. Map existing songs for efficient updates
         let existingSongs = try modelContext.fetch(FetchDescriptor<Song>())
         var songMap: [String: Song] = [:]
@@ -93,13 +140,20 @@ class MaimaiDataFetcher {
                     imageUrl: "", // We'll rely on imageName/static assets
                     version: internalSong.version,
                     releaseDate: internalSong.releaseDate,
-                    sortOrder: 0, // Will be updated if needed
+                    sortOrder: 0,
                     bpm: internalSong.bpm,
                     isNew: internalSong.isNew ?? false,
                     isLocked: internalSong.isLocked ?? false,
                     comment: internalSong.comment
                 )
                 modelContext.insert(song)
+            }
+            
+            // Map LXNS ID by title if available
+            if let title = internalSong.title, let officialId = titleToLxnsId[title] {
+                song.lxnsId = officialId
+                // If the data.json songId is just a placeholder (not matching official), 
+                // we technically want to use officialId for sync.
             }
             
             // Update metadata
@@ -112,6 +166,10 @@ class MaimaiDataFetcher {
             song.isNew = internalSong.isNew ?? false
             song.isLocked = internalSong.isLocked ?? false
             song.comment = internalSong.comment
+            
+            if let aliases = aliasMap[internalSong.title ?? ""], !aliases.isEmpty {
+                song.aliases = aliases
+            }
             
             // Re-sync sheets
             // Simple approach: clear and re-add for accuracy unless score exists

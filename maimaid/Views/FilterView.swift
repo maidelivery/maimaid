@@ -4,8 +4,6 @@ struct FilterSettings {
     var selectedVersions: Set<String> = []
     var selectedDifficulties: Set<String> = []
     var selectedTypes: Set<String> = []
-    var bpmRange: ClosedRange<Double> = 50...300
-    var isBpmFilterActive: Bool = false
 }
 
 struct FilterView: View {
@@ -33,6 +31,7 @@ struct FilterView: View {
                                 }
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     
                     // Difficulties
@@ -48,6 +47,7 @@ struct FilterView: View {
                                 }
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     
                     // Types
@@ -63,36 +63,7 @@ struct FilterView: View {
                                 }
                             }
                         }
-                    }
-                    
-                    // BPM Range
-                    filterSection(title: "BPM 范围") {
-                        VStack(spacing: 12) {
-                            Toggle("启用 BPM 筛选", isOn: $settings.isBpmFilterActive)
-                                .tint(.blue)
-                            
-                            if settings.isBpmFilterActive {
-                                VStack(spacing: 8) {
-                                    HStack {
-                                        Text("\(Int(settings.bpmRange.lowerBound))")
-                                            .font(.system(size: 13, weight: .bold, design: .monospaced))
-                                        Spacer()
-                                        Text("\(Int(settings.bpmRange.upperBound))")
-                                            .font(.system(size: 13, weight: .bold, design: .monospaced))
-                                    }
-                                    .foregroundColor(.primary)
-                                    
-                                    Slider(
-                                        value: Binding(
-                                            get: { settings.bpmRange.upperBound },
-                                            set: { settings.bpmRange = settings.bpmRange.lowerBound...$0 }
-                                        ),
-                                        in: 50...300
-                                    )
-                                    .tint(.blue)
-                                }
-                            }
-                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .padding(20)

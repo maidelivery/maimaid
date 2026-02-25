@@ -12,9 +12,9 @@ import SwiftData
 struct maimaidApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainTabView()
         }
-        .modelContainer(for: [Song.self, Sheet.self, Score.self])
+        .modelContainer(for: [Song.self, Sheet.self, Score.self, SyncConfig.self])
     }
 }
 

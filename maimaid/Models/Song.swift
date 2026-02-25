@@ -17,11 +17,13 @@ final class Song {
     var isLocked: Bool
     var comment: String?
     var searchKeywords: String?
+    var aliases: [String] = []
+    var lxnsId: Int = 0
     
     @Relationship(deleteRule: .cascade, inverse: \Sheet.song)
     var sheets: [Sheet] = []
     
-    init(songId: String, category: String, title: String, artist: String, imageName: String, imageUrl: String, version: String? = nil, releaseDate: String? = nil, sortOrder: Int, bpm: Double? = nil, isNew: Bool, isLocked: Bool, comment: String? = nil, searchKeywords: String? = nil) {
+    init(songId: String, category: String, title: String, artist: String, imageName: String, imageUrl: String, version: String? = nil, releaseDate: String? = nil, sortOrder: Int, bpm: Double? = nil, isNew: Bool, isLocked: Bool, comment: String? = nil, searchKeywords: String? = nil, aliases: [String] = []) {
         self.songId = songId
         self.category = category
         self.title = title
@@ -36,5 +38,6 @@ final class Song {
         self.isLocked = isLocked
         self.comment = comment
         self.searchKeywords = searchKeywords
+        self.aliases = aliases
     }
 }

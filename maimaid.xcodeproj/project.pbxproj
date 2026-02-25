@@ -20,7 +20,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				Statics/data.json,
 			);
 			target = 375868E82F4C78EB006316F5 /* maimaid */;
 		};

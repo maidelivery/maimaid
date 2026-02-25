@@ -5,8 +5,8 @@ import SwiftData
 import PhotosUI
 
 struct ScannerView: View {
-    @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query private var configs: [SyncConfig]
     @Query private var songs: [Song]
     
     @State private var recognizedSong: Song? = nil
@@ -202,7 +202,7 @@ struct ScannerView: View {
     private func selectSong(_ song: Song) {
         recognizedSong = song
         // If we have a rate, we can prompt for import, but let's wait until disambiguation is done
-        if let rate = recognizedRate {
+        if recognizedRate != nil {
             showScoreImportConfirmation = true
         }
     }
@@ -219,14 +219,6 @@ struct ScannerView: View {
     @ViewBuilder
     private func headerView() -> some View {
         HStack(spacing: 16) {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.largeTitle)
-                    .foregroundColor(.white)
-            }
-            
             Spacer()
             
             // Photo picker button
@@ -614,6 +606,13 @@ struct ScannerView: View {
                 modelContext.insert(newScore)
                 sheet.score = newScore
                 try? modelContext.save()
+                
+                // Trigger Auto-Upload
+                if let config = configs.first {
+                    Task {
+                        await SyncManager.shared.uploadScoreIfNeeded(sheet: sheet, score: newScore, config: config)
+                    }
+                }
             }
         }
         isLocked = false
@@ -708,7 +707,7 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
         let requestHandler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .right, options: [:])
         do {
             try requestHandler.perform([textRecognitionRequest])
-            if let results = textRecognitionRequest.results as? [VNRecognizedTextObservation] {
+            if let results = textRecognitionRequest.results {
                 self.onObservationsRecognized?(results)
             }
         } catch {

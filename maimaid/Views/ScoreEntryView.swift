@@ -5,6 +5,7 @@ import PhotosUI
 struct ScoreEntryView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query private var configs: [SyncConfig]
     let sheet: Sheet
     
     @StateObject private var visionService = VisionService()
@@ -12,11 +13,17 @@ struct ScoreEntryView: View {
     @State private var selectedImage: UIImage? = nil
     
     @State private var rateText = ""
+    @State private var dxScoreText = ""
     @State private var isSaved = false
     @FocusState private var isRateFocused: Bool
+    @FocusState private var isDxScoreFocused: Bool
     
     private var parsedRate: Double? {
         Double(rateText)
+    }
+    
+    private var parsedDxScore: Int? {
+        Int(dxScoreText)
     }
     
     private var calculatedRank: String {
@@ -93,6 +100,7 @@ struct ScoreEntryView: View {
         .onAppear {
             if let score = sheet.score {
                 rateText = String(format: "%.4f", score.rate)
+                dxScoreText = score.dxScore > 0 ? "\(score.dxScore)" : ""
             }
         }
         .onChange(of: selectedItem) { _, newValue in
@@ -182,18 +190,35 @@ struct ScoreEntryView: View {
             
             // Auto-calculated rank
             if parsedRate != nil {
-                HStack(spacing: 8) {
-                    Image(systemName: "trophy.fill")
-                        .font(.system(size: 12))
-                        .foregroundColor(.orange)
+                HStack(spacing: 12) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "trophy.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(.orange)
+                        
+                        Text(calculatedRank)
+                            .font(.system(size: 16, weight: .black, design: .rounded))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.orange.opacity(0.1), in: Capsule())
                     
-                    Text(calculatedRank)
-                        .font(.system(size: 18, weight: .black, design: .rounded))
-                        .foregroundColor(.primary)
+                    // DX Score mini input
+                    HStack(spacing: 6) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(.yellow)
+                        
+                        TextField("DX分数", text: $dxScoreText)
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .frame(width: 60)
+                            .keyboardType(.numberPad)
+                            .focused($isDxScoreFocused)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.yellow.opacity(0.1), in: Capsule())
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.orange.opacity(0.1), in: Capsule())
                 .transition(.scale.combined(with: .opacity))
             }
         }
@@ -367,11 +392,23 @@ struct ScoreEntryView: View {
                 modelContext.delete(existing)
             }
             
-            let newScore = Score(sheetId: "\(sheet.songId)-\(sheet.type)-\(sheet.difficulty)", rate: rate, rank: calculatedRank)
+            let newScore = Score(
+                sheetId: "\(sheet.songId)-\(sheet.type)-\(sheet.difficulty)",
+                rate: rate,
+                rank: calculatedRank,
+                dxScore: parsedDxScore ?? 0
+            )
             modelContext.insert(newScore)
             sheet.score = newScore
             
             try? modelContext.save()
+            
+            // Trigger Auto-Sync for manual entry
+            if let config = configs.first {
+                Task {
+                    await SyncManager.shared.uploadScoreIfNeeded(sheet: sheet, score: newScore, config: config)
+                }
+            }
         }
         
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()

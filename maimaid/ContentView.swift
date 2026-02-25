@@ -21,18 +21,14 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Song.sortOrder, order: .forward) private var songs: [Song]
     
-    @State private var searchText = ""
+    var searchText: String = ""
+    
     @State private var selectedCategory: String? = nil
     @State private var filterSettings = FilterSettings()
     @State private var showFilterSheet = false
-    @State private var showScanner = false
     @State private var isFetching = false
     @State private var sortOption: SortOption = .defaultOrder
     @State private var sortAscending: Bool = true
-    
-    // First Launch Sync
-    @State private var requiresInitialSync = !UserDefaults.standard.bool(forKey: "didPerformInitialSync")
-    @State private var syncProgress = ""
     
     var categories: [String] {
         Array(Set(songs.map { $0.category })).sorted()
@@ -48,7 +44,8 @@ struct ContentView: View {
                                song.title.localizedCaseInsensitiveContains(searchText) || 
                                song.artist.localizedCaseInsensitiveContains(searchText) ||
                                song.sheets.contains(where: { $0.noteDesigner?.localizedCaseInsensitiveContains(searchText) ?? false }) ||
-                               (song.searchKeywords?.localizedCaseInsensitiveContains(searchText) ?? false)
+                               (song.searchKeywords?.localizedCaseInsensitiveContains(searchText) ?? false) ||
+                               song.aliases.contains(where: { $0.localizedCaseInsensitiveContains(searchText) })
             
             let matchesCategory = selectedCategory == nil || song.category == selectedCategory
             
@@ -61,10 +58,8 @@ struct ContentView: View {
             let matchesType = filterSettings.selectedTypes.isEmpty || 
                              song.sheets.contains(where: { filterSettings.selectedTypes.contains($0.type.lowercased()) })
             
-            let matchesBpm = !filterSettings.isBpmFilterActive || 
-                            (song.bpm != nil && filterSettings.bpmRange.contains(song.bpm!))
             
-            return matchesSearch && matchesCategory && matchesVersion && matchesDifficulty && matchesType && matchesBpm
+            return matchesSearch && matchesCategory && matchesVersion && matchesDifficulty && matchesType
         }
         
         return filtered.sorted { a, b in
@@ -132,20 +127,16 @@ struct ContentView: View {
                             }
                         }
                         .padding(.vertical, 12)
+                        
+                        if !searchText.isEmpty && sortedAndFilteredSongs.isEmpty {
+                            ContentUnavailableView.search(text: searchText)
+                                .padding(.top, 40)
+                        }
                     }
                 }
             }
-            .navigationTitle("maimaid")
-            .searchable(text: $searchText, prompt: "搜索歌曲、艺术家、别名...")
+            .navigationTitle("Songs")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showScanner = true
-                    } label: {
-                        Image(systemName: "camera.viewfinder")
-                            .foregroundColor(.primary)
-                    }
-                }
                 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -186,68 +177,13 @@ struct ContentView: View {
                         Image(systemName: "line.3.horizontal.decrease.circle")
                             .foregroundColor(filterSettings.selectedVersions.isEmpty && 
                                        filterSettings.selectedDifficulties.isEmpty && 
-                                       filterSettings.selectedTypes.isEmpty && 
-                                       !filterSettings.isBpmFilterActive ? Color.primary : Color.blue)
+                                       filterSettings.selectedTypes.isEmpty ? Color.primary : Color.blue)
                     }
                 }
-            }
-            
-            // Initial Sync Overlay
-            if requiresInitialSync {
-                ZStack {
-                    Color.black.opacity(0.5)
-                        .ignoresSafeArea()
-                    
-                    VStack(spacing: 24) {
-                        Image(systemName: "arrow.down.circle.fill")
-                            .font(.system(size: 56))
-                            .foregroundColor(.blue)
-                            .symbolEffect(.pulse)
-                        
-                        VStack(spacing: 8) {
-                            Text("首次同步")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
-                            
-                            Text("正在获取歌曲数据...")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        ProgressView()
-                            .controlSize(.regular)
-                        
-                        if !syncProgress.isEmpty {
-                            Text(syncProgress)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding(36)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28))
-                    .padding(40)
-                }
-                .transition(.opacity)
             }
         }
         .sheet(isPresented: $showFilterSheet) {
             FilterView(settings: $filterSettings, allVersions: allVersions)
-        }
-        .sheet(isPresented: $showScanner) {
-            ScannerView()
-        }
-        .task {
-            if requiresInitialSync {
-                do {
-                    try await MaimaiDataFetcher.shared.fetchSongs(modelContext: modelContext)
-                    withAnimation {
-                        requiresInitialSync = false
-                    }
-                } catch {
-                    syncProgress = "同步失败: \(error.localizedDescription)"
-                }
-            }
         }
     }
     

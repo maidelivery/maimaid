@@ -103,11 +103,13 @@ struct SongDetailView: View {
         ZStack {
             Color(.systemBackground)
             
-            SongJacketView(imageName: song.imageName, remoteUrl: song.imageUrl, size: UIScreen.main.bounds.width, cornerRadius: 0)
-                .blur(radius: 80)
-                .opacity(0.4)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
+            GeometryReader { geo in
+                SongJacketView(imageName: song.imageName, remoteUrl: song.imageUrl, size: geo.size.width, cornerRadius: 0)
+                    .blur(radius: 80)
+                    .opacity(0.4)
+                    .allowsHitTesting(false)
+            }
+            .ignoresSafeArea()
         }
         .ignoresSafeArea()
     }
@@ -146,8 +148,28 @@ struct SongDetailView: View {
                         .multilineTextAlignment(.center)
                         .lineLimit(1)
                 }
+                
+                if !song.aliases.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(song.aliases, id: \.self) { alias in
+                                Text(alias)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(.secondary.opacity(0.1), in: Capsule())
+                                    .onTapGesture {
+                                        copyToClipboard(alias, label: "别名")
+                                    }
+                            }
+                        }
+                        .padding(.horizontal, 32)
+                    }
+                    .padding(.top, 4)
+                }
             }
-            .padding(.horizontal, 32)
+            .padding(.horizontal, song.aliases.isEmpty ? 32 : 0)
         }
         .padding(.top, 8)
     }
@@ -178,13 +200,14 @@ struct SongDetailView: View {
                 .foregroundColor(.secondary)
             
             if let label = label {
-                Text("\(value)")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary)
-                +
-                Text(" \(label)")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.secondary)
+                HStack(spacing: 2) {
+                    Text(value)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(.primary)
+                    Text(label)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
             } else {
                 Text(value)
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
