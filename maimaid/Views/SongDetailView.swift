@@ -7,7 +7,7 @@ struct SongDetailView: View {
     
     @State private var selectedSheet: Sheet? = nil
     @State private var selectedType: String = ""
-    @State private var showScoreEntry = false
+    @State private var toastMessage: String? = nil
     
     init(song: Song) {
         self.song = song
@@ -57,9 +57,42 @@ struct SongDetailView: View {
         }
         .background(ambientBackground)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showScoreEntry) {
-            if let sheet = selectedSheet {
-                ScoreEntryView(sheet: sheet)
+        .sheet(item: $selectedSheet) { sheet in
+            ScoreEntryView(sheet: sheet)
+        }
+        .overlay(alignment: .bottom) {
+            if let message = toastMessage {
+                Text(message)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.black.opacity(0.8), in: Capsule())
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .padding(.bottom, 24)
+                    .zIndex(100)
+            }
+        }
+    }
+    
+    private func copyToClipboard(_ text: String, label: String) {
+        UIPasteboard.general.string = text
+        
+        // Haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        
+        // Show toast
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            toastMessage = "已复制\(label)"
+        }
+        
+        // Hide toast after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation {
+                if toastMessage == "已复制\(label)" {
+                    toastMessage = nil
+                }
             }
         }
     }
@@ -93,14 +126,18 @@ struct SongDetailView: View {
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
                     .lineLimit(3)
-                    .textSelection(.enabled)
+                    .onTapGesture {
+                        copyToClipboard(song.title, label: "曲名")
+                    }
                 
                 Text(song.artist)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
-                    .textSelection(.enabled)
+                    .onTapGesture {
+                        copyToClipboard(song.artist, label: "曲师")
+                    }
                 
                 if let keywords = song.searchKeywords, !keywords.isEmpty {
                     Text(keywords.replacingOccurrences(of: ",", with: " · "))
@@ -121,12 +158,15 @@ struct SongDetailView: View {
         HStack(spacing: 10) {
             if let bpm = song.bpm {
                 metadataPill(icon: "metronome", value: "\(Int(bpm))", label: "BPM")
+                    .onTapGesture { copyToClipboard("\(Int(bpm))", label: "BPM") }
             }
             
             metadataPill(icon: "square.grid.2x2", value: song.category, label: nil)
+                .onTapGesture { copyToClipboard(song.category, label: "分类") }
             
             if let version = song.version {
                 metadataPill(icon: "clock", value: version, label: nil)
+                    .onTapGesture { copyToClipboard(version, label: "版本") }
             }
         }
     }
@@ -175,7 +215,6 @@ struct SongDetailView: View {
             ForEach(filteredSheets) { sheet in
                 SheetCardView(sheet: sheet) {
                     selectedSheet = sheet
-                    showScoreEntry = true
                 }
             }
         }
@@ -183,11 +222,11 @@ struct SongDetailView: View {
     
     private func difficultyOrder(_ difficulty: String) -> Int {
         switch difficulty.lowercased() {
-        case "basic": return 0
-        case "advanced": return 1
+        case "basic": return 4
+        case "advanced": return 3
         case "expert": return 2
-        case "master": return 3
-        case "remaster": return 4
+        case "master": return 1
+        case "remaster": return 0
         default: return -1
         }
     }
@@ -330,11 +369,11 @@ struct SheetCardView: View {
     private var noteBreakdown: some View {
         let totalWeight = calculateTotalWeight(sheet)
         let items: [(String, Int?, Double, Color)] = [
-            ("TAP", sheet.tap, 1.0, .blue),
-            ("HOLD", sheet.hold, 2.0, .orange),
-            ("SLIDE", sheet.slide, 3.0, .green),
-            ("TOUCH", sheet.touch, 1.0, .pink),
-            ("BREAK", sheet.breakCount, 5.0, .yellow),
+            ("TAP", sheet.tap, 1.0, .pink),
+            ("HOLD", sheet.hold, 2.0, .pink),
+            ("SLIDE", sheet.slide, 3.0, .blue),
+            ("TOUCH", sheet.touch, 1.0, .blue),
+            ("BREAK", sheet.breakCount, 5.0, .orange),
         ]
         
         VStack(spacing: 6) {

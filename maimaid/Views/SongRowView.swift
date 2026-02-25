@@ -3,68 +3,123 @@ import SwiftUI
 struct SongRowView: View {
     let song: Song
     
+    private var highestSheet: Sheet? {
+        let dxSheets = song.sheets.filter { $0.type.lowercased() == "dx" }
+        let pool = dxSheets.isEmpty ? song.sheets.filter { $0.type.lowercased() == "std" } : dxSheets
+        return pool.max(by: { difficultyOrder($0.difficulty) < difficultyOrder($1.difficulty) })
+    }
+    
+    private var accentColor: Color {
+        guard let sheet = highestSheet else { return .blue }
+        return colorForDifficulty(sheet.difficulty)
+    }
+    
     var body: some View {
-        HStack(spacing: 16) {
-            // Jacket Image with local support
-            SongJacketView(imageName: song.imageName, remoteUrl: song.imageUrl, size: 60)
+        HStack(spacing: 0) {
+            // Difficulty accent bar
+            RoundedRectangle(cornerRadius: 2)
+                .fill(accentColor)
+                .frame(width: 4)
+                .padding(.vertical, 8)
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(song.title)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
+            HStack(spacing: 14) {
+                // Jacket
+                SongJacketView(imageName: song.imageName, remoteUrl: song.imageUrl, size: 52, cornerRadius: 12)
                 
-                Text(song.artist)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+                // Info
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(song.title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                    
+                    Text(song.artist)
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
                 
-                HStack {
+                Spacer()
+                
+                // Version + Type badge
+                VStack(alignment: .trailing, spacing: 4) {
                     if let version = song.version {
                         Text(version)
-                            .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(song.sheets.contains(where: { $0.type.lowercased() == "dx" }) ? Color.orange.opacity(0.8) : Color.blue.opacity(0.8))
-                            .cornerRadius(4)
+                            .font(.system(size: 9, weight: .bold))
                             .foregroundColor(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                song.sheets.contains(where: { $0.type.lowercased() == "dx" }) ? Color.orange : Color.blue,
+                                in: RoundedRectangle(cornerRadius: 4)
+                            )
                     }
                     
-                    Text(song.category)
-                        .font(.caption2)
-                        .foregroundColor(.secondary.opacity(0.7))
+                    // Difficulty dots
+                    HStack(spacing: 3) {
+                        let prioritizedSheets: [Sheet] = {
+                            let dxSheets = song.sheets.filter { $0.type.lowercased() == "dx" }
+                            if !dxSheets.isEmpty {
+                                return dxSheets.sorted(by: { difficultyOrder($0.difficulty) > difficultyOrder($1.difficulty) })
+                            }
+                            return song.sheets
+                                .filter { $0.type.lowercased() == "std" }
+                                .sorted(by: { difficultyOrder($0.difficulty) > difficultyOrder($1.difficulty) })
+                        }()
+                        
+                        ForEach(prioritizedSheets) { sheet in
+                            ScoreProgressDot(sheet: sheet)
+                        }
+                    }
                 }
             }
-            
-            Spacer()
-            
-            // Difficulty circles - Show only DX if available, otherwise STD
-            let prioritizedSheets: [Sheet] = {
-                let dxSheets = song.sheets.filter { $0.type.lowercased() == "dx" }
-                if !dxSheets.isEmpty {
-                    return dxSheets.sorted(by: { difficultyOrder($0.difficulty) > difficultyOrder($1.difficulty) })
-                }
-                return song.sheets
-                    .filter { $0.type.lowercased() == "std" }
-                    .sorted(by: { difficultyOrder($0.difficulty) > difficultyOrder($1.difficulty) })
-            }()
-            
-            HStack(spacing: 4) {
-                ForEach(prioritizedSheets) { sheet in
+            .padding(.leading, 10)
+            .padding(.trailing, 14)
+        }
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(accentColor.opacity(0.12), lineWidth: 1)
+        )
+        .padding(.horizontal, 16)
+    }
+    
+    // MARK: - Progress Dot
+    
+    struct ScoreProgressDot: View {
+        let sheet: Sheet
+        
+        private var color: Color {
+            colorForDifficulty(sheet.difficulty)
+        }
+        
+        var body: some View {
+            ZStack {
+                Circle()
+                    .stroke(color.opacity(0.3), lineWidth: 1)
+                    .frame(width: 8, height: 8)
+                
+                if let score = sheet.score, score.rate > 0 {
+                    let progress = min(1.0, score.rate / 101.0)
                     Circle()
-                        .fill(colorForDifficulty(sheet.difficulty))
-                        .frame(width: 8, height: 8)
+                        .trim(from: 0, to: progress)
+                        .stroke(color, style: StrokeStyle(lineWidth: 4, lineCap: .butt))
+                        .frame(width: 4, height: 4)
+                        .rotationEffect(.degrees(-90))
                 }
             }
         }
-        .padding()
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
-        )
-        .padding(.horizontal)
+        
+        private func colorForDifficulty(_ difficulty: String) -> Color {
+            let low = difficulty.lowercased()
+            if low.contains("basic") { return Color(.systemGreen) }
+            if low.contains("advanced") { return Color(.systemOrange) }
+            if low.contains("expert") { return Color(.systemRed) }
+            if low.contains("master") { return Color(.systemPurple) }
+            if low.contains("remaster") { return Color(red: 0.85, green: 0.65, blue: 1.0) }
+            return .pink
+        }
     }
     
     private func difficultyOrder(_ difficulty: String) -> Int {
@@ -80,11 +135,11 @@ struct SongRowView: View {
     
     private func colorForDifficulty(_ difficulty: String) -> Color {
         let low = difficulty.lowercased()
-        if low.contains("basic") { return .green }
-        if low.contains("advanced") { return .orange }
-        if low.contains("expert") { return .red }
-        if low.contains("master") { return .purple }
-        if low.contains("remaster") { return .white }
-        return Color(red: 0.8, green: 0.2, blue: 0.8) // Utage - Purple/Pink
+        if low.contains("basic") { return Color(.systemGreen) }
+        if low.contains("advanced") { return Color(.systemOrange) }
+        if low.contains("expert") { return Color(.systemRed) }
+        if low.contains("master") { return Color(.systemPurple) }
+        if low.contains("remaster") { return Color(red: 0.85, green: 0.65, blue: 1.0) }
+        return .pink
     }
 }

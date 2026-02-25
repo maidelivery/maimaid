@@ -18,96 +18,134 @@ struct FilterView: View {
     
     var body: some View {
         NavigationStack {
-            Form {
-                // Versions - 增加了垂直 padding 和内部 FlowLayout 的 spacing
-                Section(header: Text("Version").foregroundColor(.secondary)) {
-                    FlowLayout(spacing: 12) { // 这里将 8 改为了 12，增加了 Chip 之间的间距
-                        ForEach(allVersions, id: \.self) { version in
-                            FilterChip(title: version, isSelected: settings.selectedVersions.contains(version)) {
-                                if settings.selectedVersions.contains(version) {
-                                    settings.selectedVersions.remove(version)
-                                } else {
-                                    settings.selectedVersions.insert(version)
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Versions
+                    filterSection(title: "版本") {
+                        FlowLayout(spacing: 10) {
+                            ForEach(allVersions, id: \.self) { version in
+                                FilterChip(
+                                    title: version,
+                                    isSelected: settings.selectedVersions.contains(version),
+                                    color: .blue
+                                ) {
+                                    toggleSet(&settings.selectedVersions, version)
                                 }
                             }
                         }
                     }
-                    .padding(.vertical, 12) // 增加了 Section 内部的上下间距
-                    .padding(.horizontal, 4) // 增加了左右微调
-                }
-                .listRowBackground(Color.primary.opacity(0.05).background(.ultraThinMaterial))
-                
-                // Difficulties
-                Section(header: Text("Difficulty").foregroundColor(.secondary)) {
-                    FlowLayout(spacing: 10) {
-                        ForEach(allDifficulties, id: \.self) { diff in
-                            FilterChip(title: diff.capitalized, isSelected: settings.selectedDifficulties.contains(diff)) {
-                                if settings.selectedDifficulties.contains(diff) {
-                                    settings.selectedDifficulties.remove(diff)
-                                } else {
-                                    settings.selectedDifficulties.insert(diff)
-                                }
-                            }
-                        }
-                    }
-                    .padding(.vertical, 10)
-                }
-                .listRowBackground(Color.primary.opacity(0.05).background(.ultraThinMaterial))
-                
-                // Types
-                Section(header: Text("Type").foregroundColor(.secondary)) {
-                    HStack(spacing: 12) { // 这里也增加了 HStack 的间距
-                        ForEach(allTypes, id: \.self) { type in
-                            FilterChip(title: type.uppercased(), isSelected: settings.selectedTypes.contains(type)) {
-                                if settings.selectedTypes.contains(type) {
-                                    settings.selectedTypes.remove(type)
-                                } else {
-                                    settings.selectedTypes.insert(type)
-                                }
-                            }
-                        }
-                    }
-                    .padding(.vertical, 10)
-                }
-                .listRowBackground(Color.primary.opacity(0.05).background(.ultraThinMaterial))
-                
-                // BPM Range
-                Section(header: Text("BPM Range").foregroundColor(.secondary)) {
-                    Toggle("Enable BPM Filter", isOn: $settings.isBpmFilterActive)
-                        .tint(.blue)
                     
-                    if settings.isBpmFilterActive {
-                        VStack(spacing: 12) {
-                            HStack {
-                                Text("\(Int(settings.bpmRange.lowerBound))")
-                                Spacer()
-                                Text("\(Int(settings.bpmRange.upperBound))")
+                    // Difficulties
+                    filterSection(title: "难度") {
+                        FlowLayout(spacing: 10) {
+                            ForEach(allDifficulties, id: \.self) { diff in
+                                FilterChip(
+                                    title: diff.capitalized,
+                                    isSelected: settings.selectedDifficulties.contains(diff),
+                                    color: colorForDifficulty(diff)
+                                ) {
+                                    toggleSet(&settings.selectedDifficulties, diff)
+                                }
                             }
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            
-                            Slider(value: Binding(get: { settings.bpmRange.upperBound }, set: { settings.bpmRange = settings.bpmRange.lowerBound...$0 }), in: 50...300)
-                                .tint(.blue)
                         }
-                        .padding(.vertical, 8)
+                    }
+                    
+                    // Types
+                    filterSection(title: "类型") {
+                        HStack(spacing: 10) {
+                            ForEach(allTypes, id: \.self) { type in
+                                FilterChip(
+                                    title: type.uppercased(),
+                                    isSelected: settings.selectedTypes.contains(type),
+                                    color: type == "dx" ? .orange : .blue
+                                ) {
+                                    toggleSet(&settings.selectedTypes, type)
+                                }
+                            }
+                        }
+                    }
+                    
+                    // BPM Range
+                    filterSection(title: "BPM 范围") {
+                        VStack(spacing: 12) {
+                            Toggle("启用 BPM 筛选", isOn: $settings.isBpmFilterActive)
+                                .tint(.blue)
+                            
+                            if settings.isBpmFilterActive {
+                                VStack(spacing: 8) {
+                                    HStack {
+                                        Text("\(Int(settings.bpmRange.lowerBound))")
+                                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                        Spacer()
+                                        Text("\(Int(settings.bpmRange.upperBound))")
+                                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                    }
+                                    .foregroundColor(.primary)
+                                    
+                                    Slider(
+                                        value: Binding(
+                                            get: { settings.bpmRange.upperBound },
+                                            set: { settings.bpmRange = settings.bpmRange.lowerBound...$0 }
+                                        ),
+                                        in: 50...300
+                                    )
+                                    .tint(.blue)
+                                }
+                            }
+                        }
                     }
                 }
-                .listRowBackground(Color.primary.opacity(0.05).background(.ultraThinMaterial))
+                .padding(20)
             }
-            .listStyle(.insetGrouped)
-            .navigationTitle("Filters")
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("筛选")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("完成") { dismiss() }
                         .fontWeight(.bold)
                 }
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Reset") {
-                        settings = FilterSettings()
+                    Button("重置") {
+                        withAnimation(.spring(response: 0.3)) {
+                            settings = FilterSettings()
+                        }
                     }
                 }
             }
+        }
+    }
+    
+    @ViewBuilder
+    private func filterSection<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.secondary)
+                .padding(.leading, 4)
+            
+            content()
+                .padding(16)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        }
+    }
+    
+    private func toggleSet(_ set: inout Set<String>, _ value: String) {
+        if set.contains(value) {
+            set.remove(value)
+        } else {
+            set.insert(value)
+        }
+    }
+    
+    private func colorForDifficulty(_ diff: String) -> Color {
+        switch diff.lowercased() {
+        case "basic": return Color(.systemGreen)
+        case "advanced": return Color(.systemOrange)
+        case "expert": return Color(.systemRed)
+        case "master": return Color(.systemPurple)
+        case "remaster": return Color(red: 0.85, green: 0.65, blue: 1.0)
+        default: return .blue
         }
     }
 }
@@ -117,19 +155,27 @@ struct FilterView: View {
 struct FilterChip: View {
     let title: String
     let isSelected: Bool
+    var color: Color = .blue
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.subheadline)
-                .padding(.horizontal, 14) // 增加文字左右内边距，让 Chip 看起来大一点
-                .padding(.vertical, 8)    // 增加文字上下内边距
-                .background(isSelected ? Color.blue : Color.primary.opacity(0.08))
-                .cornerRadius(12)
+                .font(.system(size: 13, weight: .semibold))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
                 .foregroundColor(isSelected ? .white : .primary)
+                .background(
+                    isSelected ? color : Color.primary.opacity(0.06),
+                    in: Capsule()
+                )
+                .overlay(
+                    Capsule()
+                        .strokeBorder(isSelected ? color.opacity(0.3) : Color.primary.opacity(0.08), lineWidth: 1)
+                )
         }
         .buttonStyle(.plain)
+        .animation(.spring(response: 0.25), value: isSelected)
     }
 }
 

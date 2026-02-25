@@ -2,6 +2,7 @@ import SwiftUI
 import AVFoundation
 import Vision
 import SwiftData
+import PhotosUI
 
 struct ScannerView: View {
     @Environment(\.dismiss) var dismiss
@@ -12,6 +13,13 @@ struct ScannerView: View {
     @State private var recognizedRate: Double? = nil
     @State private var recognizedDifficulty: String? = nil
     @State private var recognizedType: String? = nil
+    
+    // Disambiguation
+    @State private var songCandidates: [Song] = []
+    @State private var rateCandidates: [Double] = []
+    @State private var showSongSelection = false
+    @State private var showRateSelection = false
+    
     @State private var isShowingDetail = false
     @State private var showScoreImportConfirmation = false
     
@@ -22,6 +30,11 @@ struct ScannerView: View {
     // Background Processing
     private let processingQueue = DispatchQueue(label: "com.maimaid.scanner.processing", qos: .userInitiated)
     @State private var recognitionBuffer: [String: Int] = [:]
+    
+    // Photo Import
+    @State private var selectedPhotoItem: PhotosPickerItem? = nil
+    @State private var isProcessingPhoto = false
+    @State private var photoImportFeedback: String? = nil
     
     var body: some View {
         NavigationStack {
@@ -37,6 +50,34 @@ struct ScannerView: View {
                     Spacer()
                     scanningGuideView()
                     Spacer()
+                    
+                    // Photo processing indicator
+                    if isProcessingPhoto {
+                        HStack(spacing: 10) {
+                            ProgressView()
+                                .tint(.white)
+                            Text("正在识别照片...")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .padding(.bottom, 8)
+                    }
+                    
+                    // Photo import feedback
+                    if let feedback = photoImportFeedback {
+                        Text(feedback)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .padding(.bottom, 8)
+                    }
+                    
                     resultView()
                 }
             }
@@ -45,36 +86,165 @@ struct ScannerView: View {
                     SongDetailView(song: song)
                 }
             }
-            .alert("Import Score?", isPresented: $showScoreImportConfirmation) {
-                Button("Import", role: .none) { executeImport() }
-                Button("Cancel", role: .cancel) { isLocked = false }
+            .alert("导入成绩", isPresented: $showScoreImportConfirmation) {
+                Button("导入", role: .none) { executeImport() }
+                Button("取消", role: .cancel) { isLocked = false }
             } message: {
                 if let song = recognizedSong, let rate = recognizedRate {
-                    Text("Import \(String(format: "%.4f", rate))% to \(song.title)?")
+                    Text("将 \(String(format: "%.4f", rate))% 导入到「\(song.title)」？")
                 }
+            }
+            .onChange(of: selectedPhotoItem) { _, newValue in
+                guard let newValue else { return }
+                Task {
+                    await processSelectedPhoto(newValue)
+                }
+            }
+            .sheet(isPresented: $showSongSelection) {
+                songSelectionSheet
+            }
+            .sheet(isPresented: $showRateSelection) {
+                rateSelectionSheet
             }
         }
     }
     
+    // MARK: - Photo Processing
+    
+    private func processSelectedPhoto(_ item: PhotosPickerItem) async {
+        await MainActor.run {
+            isProcessingPhoto = true
+            photoImportFeedback = nil
+            songCandidates = []
+            rateCandidates = []
+        }
+        
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let image = UIImage(data: data) else {
+            await MainActor.run {
+                isProcessingPhoto = false
+                showFeedback("无法加载图片")
+            }
+            return
+        }
+        
+        // Use ScoreImageProcessor for full-image OCR + field extraction
+        let recognition = await ScoreImageProcessor.shared.process(image)
+        
+        // Match title candidates against song database
+        var matchedSongs: [Song] = []
+        var seenIds = Set<String>()
+        
+        // Try all candidates collected by the processor
+        for candidate in recognition.titleCandidates {
+            let matches = songs.filter { song in
+                song.title.localizedCaseInsensitiveContains(candidate) ||
+                candidate.localizedCaseInsensitiveContains(song.title) ||
+                (song.searchKeywords?.localizedCaseInsensitiveContains(candidate) ?? false)
+            }
+            
+            for song in matches {
+                if !seenIds.contains(song.songId) {
+                    matchedSongs.append(song)
+                    seenIds.insert(song.songId)
+                }
+            }
+        }
+        
+        // Sort matches: Exact matches first, then by title similarity or length
+        matchedSongs.sort { a, b in
+            let aIsExact = recognition.titleCandidates.contains(where: { $0.localizedCaseInsensitiveCompare(a.title) == .orderedSame })
+            let bIsExact = recognition.titleCandidates.contains(where: { $0.localizedCaseInsensitiveCompare(b.title) == .orderedSame })
+            if aIsExact != bIsExact { return aIsExact }
+            return a.title.count > b.title.count // Favor longer (more specific) titles
+        }
+        
+        await MainActor.run {
+            isProcessingPhoto = false
+            
+            // Set results
+            self.rateCandidates = recognition.rateCandidates
+            self.songCandidates = matchedSongs
+            self.recognizedDifficulty = recognition.difficulty
+            self.recognizedType = recognition.type
+            
+            // Logic for auto-selecting or prompting
+            if matchedSongs.isEmpty {
+                showFeedback("未能识别到歌曲标题")
+            } else if matchedSongs.count > 1 {
+                // If we have an "exact" match and others are just substrings, auto-select exact
+                let exactMatched = matchedSongs.first { song in
+                    recognition.titleCandidates.contains(where: { $0.localizedCaseInsensitiveCompare(song.title) == .orderedSame })
+                }
+                
+                if let exact = exactMatched {
+                    selectSong(exact)
+                } else {
+                    showSongSelection = true
+                }
+            } else {
+                selectSong(matchedSongs[0])
+            }
+            
+            // If we have multiple rates, we'll let the user change it from the result card
+            // but we default to the highest one.
+            self.recognizedRate = recognition.achievementRate
+            
+            if recognition.rateCandidates.count > 1 {
+                // We'll show an indicator in the result card that other scores were found
+            }
+            
+            self.isLocked = true
+            self.lastSeenDate = Date()
+        }
+    }
+    
+    private func selectSong(_ song: Song) {
+        recognizedSong = song
+        // If we have a rate, we can prompt for import, but let's wait until disambiguation is done
+        if let rate = recognizedRate {
+            showScoreImportConfirmation = true
+        }
+    }
+    
+    private func showFeedback(_ message: String) {
+        withAnimation { photoImportFeedback = message }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            withAnimation { photoImportFeedback = nil }
+        }
+    }
+    
+    // MARK: - Header
+    
     @ViewBuilder
     private func headerView() -> some View {
-        HStack {
+        HStack(spacing: 16) {
             Button {
                 dismiss()
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.largeTitle)
                     .foregroundColor(.white)
-                    .padding()
             }
+            
             Spacer()
+            
+            // Photo picker button
+            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                Image(systemName: "photo.on.rectangle.angled")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(10)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
         }
+        .padding()
     }
     
     @ViewBuilder
     private func scanningGuideView() -> some View {
         ZStack {
-            // Circular Lens UI - Enlarged as requested
+            // Circular Lens UI
             Circle()
                 .strokeBorder(
                     LinearGradient(colors: [isLocked ? .green : .blue, .clear], startPoint: .top, endPoint: .bottom),
@@ -87,7 +257,6 @@ struct ScannerView: View {
                         .padding(-12)
                 )
             
-            // Scanning Line Animation
             ScanningLineView(isLocked: isLocked)
                 .frame(width: 320, height: 320)
                 .clipShape(Circle())
@@ -103,7 +272,7 @@ struct ScannerView: View {
             }
             .offset(y: 190)
         }
-        .offset(y: -50) // Move the whole guide up as requested
+        .offset(y: -50)
     }
     
     @ViewBuilder
@@ -113,14 +282,8 @@ struct ScannerView: View {
                 isShowingDetail = true
             } label: {
                 HStack(spacing: 16) {
-                    AsyncImage(url: URL(string: song.imageUrl)) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
-                        Color.white.opacity(0.1)
-                    }
-                    .frame(width: 60, height: 60)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 3)
+                    SongJacketView(imageName: song.imageName, remoteUrl: song.imageUrl, size: 60, cornerRadius: 16)
+                        .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 3)
                     
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 6) {
@@ -149,10 +312,26 @@ struct ScannerView: View {
                     
                     if let rate = recognizedRate {
                         VStack(alignment: .trailing, spacing: 6) {
-                            Text("\(String(format: "%.4f", rate))%")
-                                .font(.system(size: 16, weight: .black, design: .monospaced))
-                                .foregroundColor(.yellow)
+                            Button {
+                                if rateCandidates.count > 1 {
+                                    showRateSelection = true
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text("\(String(format: "%.4f", rate))%")
+                                        .font(.system(size: 16, weight: .black, design: .monospaced))
+                                        .foregroundColor(.yellow)
+                                    
+                                    if rateCandidates.count > 1 {
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundColor(.yellow.opacity(0.8))
+                                    }
+                                }
                                 .shadow(color: .yellow.opacity(0.3), radius: 4)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(rateCandidates.count <= 1)
                             
                             HStack(spacing: 4) {
                                 if let diff = recognizedDifficulty {
@@ -168,7 +347,7 @@ struct ScannerView: View {
                                 Button {
                                     importScore(to: song, rate: rate, diff: recognizedDifficulty)
                                 } label: {
-                                    Text("IMPORT")
+                                    Text("导入")
                                         .font(.system(size: 8, weight: .black))
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
@@ -186,7 +365,6 @@ struct ScannerView: View {
                         .foregroundColor(.white.opacity(0.4))
                 }
                 .padding(18)
-//                .glass(cornerRadius: 28)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 40)
             }
@@ -196,6 +374,64 @@ struct ScannerView: View {
                 removal: .opacity.combined(with: .scale(scale: 0.95))
             ))
         }
+    }
+    
+    // MARK: - Disambiguation Sheets
+    
+    private var songSelectionSheet: some View {
+        NavigationStack {
+            List(songCandidates) { song in
+                Button {
+                    selectSong(song)
+                    showSongSelection = false
+                } label: {
+                    HStack {
+                        SongJacketView(imageName: song.imageName, remoteUrl: song.imageUrl, size: 40)
+                        VStack(alignment: .leading) {
+                            Text(song.title).font(.headline)
+                            Text(song.artist).font(.caption).foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("选择正确歌曲")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { showSongSelection = false }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+    
+    private var rateSelectionSheet: some View {
+        NavigationStack {
+            List(rateCandidates, id: \.self) { rate in
+                Button {
+                    recognizedRate = rate
+                    showRateSelection = false
+                } label: {
+                    HStack {
+                        Text("\(String(format: "%.4f", rate))%")
+                            .font(.system(.body, design: .monospaced))
+                            .fontWeight(.bold)
+                        Spacer()
+                        if recognizedRate == rate {
+                            Image(systemName: "checkmark").foregroundColor(.blue)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("选择正确达成率")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("完成") { showRateSelection = false }
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 
     struct ScanningLineView: View {
@@ -227,12 +463,10 @@ struct ScannerView: View {
             return (text, obs.boundingBox)
         }
         
-        // 1. Spatial Partitioning
         let topCandidates = candidates.filter { $0.1.origin.y > 0.6 }
         let midCandidates = candidates.filter { $0.1.origin.y > 0.3 && $0.1.origin.y <= 0.6 }
         let botCandidates = candidates.filter { $0.1.origin.y <= 0.3 }
         
-        // 2. Identifying Score (XX.XXXX%)
         let ratePattern = "(\\d{1,3}\\.\\d{4})"
         let rateRegex = try? NSRegularExpression(pattern: ratePattern)
         var rates: [Double] = []
@@ -246,7 +480,6 @@ struct ScannerView: View {
         }
         let capturedRate = rates.max()
         
-        // 3. Extract Difficulty & Type (Search in all areas since they can shift)
         let diffKeywords = ["basic", "advanced", "expert", "master", "remaster"]
         var capturedDiff: String? = nil
         var capturedType: String? = nil
@@ -265,7 +498,6 @@ struct ScannerView: View {
             }
         }
         
-        // 4. Match Songs
         var frameMatches: [String] = []
         for (text, _) in (topCandidates + midCandidates) {
             let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -364,15 +596,12 @@ struct ScannerView: View {
         let targetDiff = diff ?? recognizedDifficulty ?? "master"
         let targetType = recognizedType ?? "dx"
         
-        // Find matching sheet with BOTH difficulty and type
         var matchedSheet = song.sheets.first { sheet in
             let diffMatch = sheet.difficulty.lowercased() == targetDiff.lowercased()
             let typeMatch = sheet.type.lowercased() == targetType.lowercased()
             return diffMatch && typeMatch
         }
         
-        // Fallback: If no exact match (difficulty + type), try matching just difficulty
-        // This handles cases where type detection might fail but difficulty is clear
         if matchedSheet == nil {
             matchedSheet = song.sheets.first { $0.difficulty.lowercased() == targetDiff.lowercased() }
         }
@@ -397,7 +626,10 @@ struct ScannerView: View {
         if rate >= 99.0 { return "SS" }
         if rate >= 98.0 { return "S+" }
         if rate >= 97.0 { return "S" }
-        return "AAA"
+        if rate >= 94.0 { return "AAA" }
+        if rate >= 90.0 { return "AA" }
+        if rate >= 80.0 { return "A" }
+        return "B"
     }
     
     private func colorForDifficulty(_ diff: String) -> Color {
@@ -406,7 +638,7 @@ struct ScannerView: View {
         case "advanced": return .orange
         case "expert": return .red
         case "master": return .purple
-        case "remaster": return .white
+        case "remaster": return Color(red: 0.85, green: 0.65, blue: 1.0)
         default: return .blue
         }
     }
@@ -466,7 +698,6 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
         textRecognitionRequest.recognitionLevel = .accurate
         textRecognitionRequest.usesLanguageCorrection = true
         textRecognitionRequest.recognitionLanguages = ["ja-JP", "zh-Hans", "en-US"]
-        // Adjusted ROI to match the upward-shifted circular guide
         textRecognitionRequest.regionOfInterest = CGRect(x: 0.1, y: 0.28, width: 0.8, height: 0.6)
     }
     
@@ -488,6 +719,15 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         previewLayer?.frame = view.layer.bounds
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        if let captureSession, !captureSession.isRunning {
+            DispatchQueue.global(qos: .userInitiated).async {
+                captureSession.startRunning()
+            }
+        }
     }
     
     override func viewWillDisappear(_ animated: Bool) {
