@@ -13,14 +13,24 @@ struct ThemeUtils {
         if low.contains("expert") {
             return Color(light: Color(hex: "#f7536a"), dark: Color(hex: "#c54153"))
         }
+        if low.contains("remaster") {
+            return Color(light: Color(hex: "#e3bdfc"), dark: Color(hex: "#bf8cfc"))
+        }
         if low.contains("master") {
             return Color(light: Color(hex: "#a34ee4"), dark: Color(hex: "#813db4"))
         }
-        if low.contains("remaster") {
-            return Color(light: Color(hex: "#be6ff9"), dark: Color(hex: "#9758c5"))
-        }
         
         return .pink
+    }
+    
+    static func versionSortOrder(_ version: String) -> Int {
+        // Core logic: Use the sequence fetched from data.json and stored in UserDefaults
+        let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
+        
+        if let index = sequence.firstIndex(where: { version.contains($0) }) {
+            return index
+        }
+        return 999 
     }
 }
 

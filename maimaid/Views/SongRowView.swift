@@ -107,6 +107,9 @@ struct SongRowView: View {
             }
         }
         
+        }
+    }
+    
     private func difficultyOrder(_ difficulty: String) -> Int {
         switch difficulty.lowercased() {
         case "basic": return 0
@@ -117,4 +120,4 @@ struct SongRowView: View {
         default: return -1
         }
     }
-}
+

@@ -1,49 +1,97 @@
 import SwiftUI
 
-struct FilterSettings {
+struct FilterSettings: Equatable {
+    var selectedCategories: Set<String> = []
     var selectedVersions: Set<String> = []
     var selectedDifficulties: Set<String> = []
     var selectedTypes: Set<String> = []
+    
+    var minLevel: Double = 1.0
+    var maxLevel: Double = 15.0
 }
 
 struct FilterView: View {
     @Environment(\.dismiss) var dismiss
     @Binding var settings: FilterSettings
     
+    let allCategories: [String]
     let allVersions: [String]
-    let allDifficulties = ["basic", "advanced", "expert", "master", "remaster"]
+    let allDifficulties = ["Basic", "Advanced", "Expert", "Master", "Re: Master"]
     let allTypes = ["dx", "std", "utage"]
+    
+    var sortedVersions: [String] {
+        allVersions.sorted { ThemeUtils.versionSortOrder($0) < ThemeUtils.versionSortOrder($1) }
+    }
     
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
-                    // Versions
-                    filterSection(title: "版本") {
+                VStack(spacing: 24) {
+                    // Difficulty & Range Section (Grouped)
+                    VStack(alignment: .leading, spacing: 8) {
+                        filterSection(title: "难度筛选（必选难度参考）") {
+                            VStack(alignment: .leading, spacing: 16) {
+                                FlowLayout(spacing: 10) {
+                                    ForEach(allDifficulties, id: \.self) { diff in
+                                        FilterChip(
+                                            title: diff,
+                                            isSelected: settings.selectedDifficulties.contains(internalName(for: diff)),
+                                            color: colorForDifficulty(diff)
+                                        ) {
+                                            toggleSet(&settings.selectedDifficulties, internalName(for: diff))
+                                        }
+                                    }
+                                }
+                                
+                                Divider()
+                                
+                                HStack {
+                                    Text("定数区间")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Text("\(settings.minLevel, specifier: "%.1f") - \(settings.maxLevel, specifier: "%.1f")")
+                                        .font(.system(.subheadline, design: .monospaced, weight: .bold))
+                                        .foregroundColor(settings.selectedDifficulties.isEmpty ? .secondary : .blue)
+                                }
+                                
+                                RangeSlider(minValue: $settings.minLevel, maxValue: $settings.maxLevel, range: 1.0...15.0, step: 0.1, isActive: !settings.selectedDifficulties.isEmpty)
+                                    .padding(.horizontal, 8)
+                            }
+                        }
+                        
+                        Text("必须选择至少一个参考难度。系统将筛选出包含该难度、且该难度定数在下方区间内的歌曲。")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 4)
+                    }
+                    
+                    // Categories
+                    filterSection(title: "分类") {
                         FlowLayout(spacing: 10) {
-                            ForEach(allVersions, id: \.self) { version in
+                            ForEach(allCategories, id: \.self) { category in
                                 FilterChip(
-                                    title: version,
-                                    isSelected: settings.selectedVersions.contains(version),
+                                    title: category,
+                                    isSelected: settings.selectedCategories.contains(category),
                                     color: .blue
                                 ) {
-                                    toggleSet(&settings.selectedVersions, version)
+                                    toggleSet(&settings.selectedCategories, category)
                                 }
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     
-                    // Difficulties
-                    filterSection(title: "难度") {
+                    // Versions
+                    filterSection(title: "版本") {
                         FlowLayout(spacing: 10) {
-                            ForEach(allDifficulties, id: \.self) { diff in
+                            ForEach(sortedVersions.reversed(), id: \.self) { version in
                                 FilterChip(
-                                    title: diff.capitalized,
-                                    isSelected: settings.selectedDifficulties.contains(diff),
-                                    color: colorForDifficulty(diff)
+                                    title: version,
+                                    isSelected: settings.selectedVersions.contains(version),
+                                    color: .blue
                                 ) {
-                                    toggleSet(&settings.selectedDifficulties, diff)
+                                    toggleSet(&settings.selectedVersions, version)
                                 }
                             }
                         }
@@ -109,8 +157,106 @@ struct FilterView: View {
         }
     }
     
+    private func internalName(for displayDiff: String) -> String {
+        switch displayDiff {
+        case "Re: Master": return "remaster"
+        default: return displayDiff.lowercased()
+        }
+    }
+    
     private func colorForDifficulty(_ diff: String) -> Color {
-        ThemeUtils.colorForDifficulty(diff)
+        ThemeUtils.colorForDifficulty(internalName(for: diff))
+    }
+}
+
+// MARK: - Components
+
+struct RangeSlider: View {
+    @Binding var minValue: Double
+    @Binding var maxValue: Double
+    let range: ClosedRange<Double>
+    let step: Double
+    var isActive: Bool = true
+    @State private var draggingHandle: DraggingHandle = .none
+    
+    private enum DraggingHandle {
+        case none, min, max
+    }
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let totalWidth = geometry.size.width
+            let rangeSpan = range.upperBound - range.lowerBound
+            
+            ZStack(alignment: .leading) {
+                // Track
+                Capsule()
+                    .fill(Color.primary.opacity(0.1))
+                    .frame(height: 4)
+                
+                // Active Track
+                Capsule()
+                    .fill(isActive ? Color.blue : Color.gray.opacity(0.5))
+                    .frame(width: CGFloat((maxValue - minValue) / rangeSpan) * totalWidth, height: 4)
+                    .offset(x: CGFloat((minValue - range.lowerBound) / rangeSpan) * totalWidth)
+                
+                // Min Handle (Visual)
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 24, height: 24)
+                    .shadow(radius: 2, y: 1)
+                    .offset(x: CGFloat((minValue - range.lowerBound) / rangeSpan) * totalWidth - 12)
+                
+                // Max Handle (Visual)
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 24, height: 24)
+                    .shadow(radius: 2, y: 1)
+                    .offset(x: CGFloat((maxValue - range.lowerBound) / rangeSpan) * totalWidth - 12)
+                
+                // Gesture Overlay
+                Color.clear
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                let relativeX = Double(value.location.x / totalWidth)
+                                let newValue = range.lowerBound + relativeX * rangeSpan
+                                let steppedValue = (newValue / step).rounded() * step
+                                let clampedValue = Swift.min(Swift.max(range.lowerBound, steppedValue), range.upperBound)
+                                
+                                if draggingHandle == .none {
+                                    // Logic to pick a handle when they overlap or determine closest
+                                    if abs(clampedValue - minValue) < abs(clampedValue - maxValue) {
+                                        draggingHandle = .min
+                                    } else if abs(clampedValue - minValue) > abs(clampedValue - maxValue) {
+                                        draggingHandle = .max
+                                    } else {
+                                        // Exactly overlapping! Pick based on movement direction
+                                        if value.translation.width < 0 {
+                                            draggingHandle = .min
+                                        } else if value.translation.width > 0 {
+                                            draggingHandle = .max
+                                        }
+                                    }
+                                }
+                                
+                                switch draggingHandle {
+                                case .min:
+                                    minValue = Swift.min(clampedValue, maxValue)
+                                case .max:
+                                    maxValue = Swift.max(clampedValue, minValue)
+                                case .none:
+                                    break
+                                }
+                            }
+                            .onEnded { _ in
+                                draggingHandle = .none
+                            }
+                    )
+            }
+        }
+        .frame(height: 24)
     }
 }
 

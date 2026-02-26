@@ -177,24 +177,38 @@ struct SongDetailView: View {
     // MARK: - Metadata Pills
     
     private var metadataPills: some View {
-        HStack(spacing: 10) {
-            if let bpm = song.bpm {
-                metadataPill(icon: "metronome", value: "\(Int(bpm))", label: "BPM")
-                    .onTapGesture { copyToClipboard("\(Int(bpm))", label: "BPM") }
+        ViewThatFits(in: .horizontal) {
+            // Priority 1: All in one row (if they fit)
+            HStack(spacing: 8) {
+                pillsContent(isGrid: false)
             }
             
-            metadataPill(icon: "square.grid.2x2", value: song.category, label: nil)
-                .onTapGesture { copyToClipboard(song.category, label: "分类") }
-            
-            if let version = song.version {
-                metadataPill(icon: "clock", value: version, label: nil)
-                    .onTapGesture { copyToClipboard(version, label: "版本") }
+            // Priority 2: Two per row
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                pillsContent(isGrid: true)
             }
-            if let releaseDate = song.releaseDate {
-                let formattedDate = formatDate(releaseDate)
-                metadataPill(icon: "calendar", value: formattedDate, label: nil)
-                    .onTapGesture { copyToClipboard(releaseDate, label: "上线日") }
-            }
+        }
+    }
+    
+    @ViewBuilder
+    private func pillsContent(isGrid: Bool) -> some View {
+        if let bpm = song.bpm {
+            metadataPill(icon: "metronome", value: "\(Int(bpm))", label: "BPM", isGrid: isGrid)
+                .onTapGesture { copyToClipboard("\(Int(bpm))", label: "BPM") }
+        }
+        
+        metadataPill(icon: "square.grid.2x2", value: song.category, label: nil, isGrid: isGrid)
+            .onTapGesture { copyToClipboard(song.category, label: "分类") }
+        
+        if let version = song.version {
+            metadataPill(icon: "clock", value: version, label: nil, isGrid: isGrid)
+                .onTapGesture { copyToClipboard(version, label: "版本") }
+        }
+        
+        if let releaseDate = song.releaseDate {
+            let displayDate = isGrid ? releaseDate : formatDate(releaseDate)
+            metadataPill(icon: "calendar", value: displayDate, label: nil, isGrid: isGrid)
+                .onTapGesture { copyToClipboard(releaseDate, label: "上线日") }
         }
     }
     
@@ -207,7 +221,7 @@ struct SongDetailView: View {
         return date
     }
     
-    private func metadataPill(icon: String, value: String, label: String?) -> some View {
+    private func metadataPill(icon: String, value: String, label: String?, isGrid: Bool = false) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .semibold))
@@ -229,6 +243,7 @@ struct SongDetailView: View {
                     .lineLimit(1)
             }
         }
+        .frame(maxWidth: isGrid ? .infinity : nil)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(.ultraThinMaterial, in: Capsule())
@@ -413,9 +428,15 @@ struct SheetCardView: View {
                 HStack(spacing: 12) {
                     // Difficulty info
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(sheet.difficulty.uppercased())
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundColor(diffColor)
+                            if sheet.difficulty.lowercased() == "remaster" {
+                                Text("RE: MASTER")
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .foregroundColor(diffColor)
+                            } else {
+                                Text(sheet.difficulty.uppercased())
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .foregroundColor(diffColor)
+                            }
                         
                         if let designer = sheet.noteDesigner, !designer.isEmpty {
                             Text(designer)

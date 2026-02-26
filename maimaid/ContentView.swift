@@ -23,14 +23,13 @@ struct ContentView: View {
     
     var searchText: String = ""
     
-    @State private var selectedCategory: String? = nil
     @State private var filterSettings = FilterSettings()
     @State private var showFilterSheet = false
     @State private var isFetching = false
     @State private var sortOption: SortOption = .defaultOrder
     @State private var sortAscending: Bool = true
     
-    var categories: [String] {
+    var allCategories: [String] {
         Array(Set(songs.map { $0.category })).sorted()
     }
     
@@ -40,26 +39,49 @@ struct ContentView: View {
     
     var sortedAndFilteredSongs: [Song] {
         let filtered = songs.filter { song in
+            // 1. Search Text
             let matchesSearch = searchText.isEmpty || 
                                song.title.localizedCaseInsensitiveContains(searchText) || 
                                song.artist.localizedCaseInsensitiveContains(searchText) ||
                                song.sheets.contains(where: { $0.noteDesigner?.localizedCaseInsensitiveContains(searchText) ?? false }) ||
                                (song.searchKeywords?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                                song.aliases.contains(where: { $0.localizedCaseInsensitiveContains(searchText) })
+            if !matchesSearch { return false }
             
-            let matchesCategory = selectedCategory == nil || song.category == selectedCategory
+            // 2. Multi-Categories
+            if !filterSettings.selectedCategories.isEmpty && !filterSettings.selectedCategories.contains(song.category) {
+                return false
+            }
             
-            let matchesVersion = filterSettings.selectedVersions.isEmpty || 
-                                (song.version != nil && filterSettings.selectedVersions.contains(song.version!))
+            // 3. Versions
+            if !filterSettings.selectedVersions.isEmpty {
+                guard let version = song.version, filterSettings.selectedVersions.contains(version) else {
+                    return false
+                }
+            }
             
-            let matchesDifficulty = filterSettings.selectedDifficulties.isEmpty || 
-                                   song.sheets.contains(where: { filterSettings.selectedDifficulties.contains($0.difficulty.lowercased()) })
+            // 4. Types
+            if !filterSettings.selectedTypes.isEmpty {
+                let hasMatchingType = song.sheets.contains { sheet in
+                    filterSettings.selectedTypes.contains(sheet.type.lowercased())
+                }
+                if !hasMatchingType { return false }
+            }
             
-            let matchesType = filterSettings.selectedTypes.isEmpty || 
-                             song.sheets.contains(where: { filterSettings.selectedTypes.contains($0.type.lowercased()) })
+            // 5. Difficulty Range + Reference Levels
+            // User MUST select at least one difficulty as reference for the range to apply
+            if !filterSettings.selectedDifficulties.isEmpty {
+                let hasMatchingDifficultyInRange = song.sheets.contains { sheet in
+                    let difficultyMatches = filterSettings.selectedDifficulties.contains(sheet.difficulty.lowercased())
+                    if !difficultyMatches { return false }
+                    
+                    let level = sheet.internalLevelValue ?? sheet.levelValue ?? 0.0
+                    return level >= filterSettings.minLevel && level <= filterSettings.maxLevel
+                }
+                if !hasMatchingDifficultyInRange { return false }
+            }
             
-            
-            return matchesSearch && matchesCategory && matchesVersion && matchesDifficulty && matchesType
+            return true
         }
         
         return filtered.sorted { a, b in
@@ -98,23 +120,6 @@ struct ContentView: View {
                     }
                 } else {
                     ScrollView {
-                        // Category pills
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                categoryPill(title: "全部", isSelected: selectedCategory == nil) {
-                                    selectedCategory = nil
-                                }
-                                
-                                ForEach(categories, id: \.self) { category in
-                                    categoryPill(title: category, isSelected: selectedCategory == category) {
-                                        selectedCategory = category
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                        }
-                        .padding(.top, 8)
-                        
                         // Song list
                         LazyVStack(spacing: 8) {
                             ForEach(sortedAndFilteredSongs) { song in
@@ -137,9 +142,7 @@ struct ContentView: View {
             }
             .navigationTitle("Songs")
             .toolbar {
-                
-                
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Picker("排序方式", selection: $sortOption) {
                             ForEach(SortOption.allCases) { option in
@@ -156,42 +159,19 @@ struct ContentView: View {
                     }
                 }
                 
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showFilterSheet = true
                     } label: {
                         Image(systemName: "line.3.horizontal.decrease.circle")
-                            .foregroundColor(filterSettings.selectedVersions.isEmpty && 
-                                       filterSettings.selectedDifficulties.isEmpty && 
-                                       filterSettings.selectedTypes.isEmpty ? Color.primary : Color.blue)
+                            .foregroundColor(filterSettings == FilterSettings() ? Color.primary : Color.blue)
                     }
                 }
             }
         }
         .sheet(isPresented: $showFilterSheet) {
-            FilterView(settings: $filterSettings, allVersions: allVersions)
+            FilterView(settings: $filterSettings, allCategories: allCategories, allVersions: allVersions)
         }
-    }
-    
-    // MARK: - Category Pill
-    
-    private func categoryPill(title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 13, weight: .semibold))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .foregroundColor(isSelected ? .white : .primary)
-                .background(
-                    isSelected ? Color.blue : Color.primary.opacity(0.06),
-                    in: Capsule()
-                )
-                .overlay(
-                    Capsule()
-                        .strokeBorder(isSelected ? Color.blue.opacity(0.3) : Color.primary.opacity(0.08), lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
     }
 }
 

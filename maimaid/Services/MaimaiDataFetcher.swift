@@ -4,6 +4,11 @@ import SwiftData
 struct SongData: Decodable {
     let songs: [InternalSong]
     let updateTime: String
+    let versions: [VersionMetadata]?
+}
+
+struct VersionMetadata: Decodable {
+    let version: String
 }
 
 struct AliasListResponse: Decodable {
@@ -128,6 +133,12 @@ class MaimaiDataFetcher {
         statusMessage = "连接至 LXNS 获取别名和 ID 映射..."
         
         let songData = try JSONDecoder().decode(SongData.self, from: data)
+        
+        // Persist version sequence for data-driven sorting
+        if let versions = songData.versions {
+            let sequence = versions.map { $0.version }
+            UserDefaults.standard.set(sequence, forKey: "MaimaiVersionSequence")
+        }
         
         // Fetch Aliases and LXNS Song List
         var aliasMap: [String: [String]] = [:]

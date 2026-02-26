@@ -65,12 +65,15 @@ struct HomeView: View {
                             gradient: [Color.blue, Color.cyan]
                         )
                         
-                        functionCard(
-                            icon: "wand.and.stars",
-                            title: "歌曲推荐",
-                            subtitle: "根据实力推荐谱面",
-                            gradient: [Color.purple, Color.pink]
-                        )
+                        NavigationLink(destination: RandomSongView()) {
+                            functionCard(
+                                icon: "dice.fill",
+                                title: "随机抽选",
+                                subtitle: "老虎机式随机挑曲",
+                                gradient: [Color.purple, Color.pink]
+                            )
+                        }
+                        .buttonStyle(.plain)
                         
                         functionCard(
                             icon: "person.2.fill",

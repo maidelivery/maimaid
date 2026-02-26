@@ -227,7 +227,7 @@ struct BestTableView: View {
                 // Line 3: Type + Diff + FC + FS (all badges)
                 HStack(spacing: 4) {
                     badgeView(entry.type, bg: entry.type == "DX" ? .orange : .blue, fg: .white)
-                    badgeView(diffShort(entry.diff), bg: difficultyColor(entry.diff), fg: .white)
+                    badgeView(diffShort(entry.diff), bg: ThemeUtils.colorForDifficulty(entry.diff), fg: .white)
                     
                     if let fc = entry.fc, !fc.isEmpty {
                         badgeView(fc.uppercased(), bg: fcColor(fc), fg: .white)
@@ -296,16 +296,4 @@ struct BestTableView: View {
         if low.contains("fs")  { return Color(red: 0.3, green: 0.5, blue: 1.0) } // blue
         return .secondary
     }
-    
-    private func difficultyColor(_ diff: String) -> Color {
-        switch diff.uppercased() {
-        case "BASIC":    return Color(red: 0.35, green: 0.75, blue: 0.3)
-        case "ADVANCED": return Color(red: 1.0,  green: 0.65, blue: 0.0)
-        case "EXPERT":   return Color(red: 1.0,  green: 0.25, blue: 0.25)
-        case "MASTER":   return Color(red: 0.65, green: 0.2,  blue: 0.9)
-        case "REMASTER": return Color(red: 0.85, green: 0.55, blue: 1.0)
-        default:         return .secondary
-        }
-    }
 }
-
