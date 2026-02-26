@@ -620,14 +620,7 @@ struct ScannerView: View {
     
     
     private func colorForDifficulty(_ diff: String) -> Color {
-        switch diff.lowercased() {
-        case "basic": return .green
-        case "advanced": return .orange
-        case "expert": return .red
-        case "master": return .purple
-        case "remaster": return Color(red: 0.85, green: 0.65, blue: 1.0)
-        default: return .blue
-        }
+        ThemeUtils.colorForDifficulty(diff)
     }
     
     private func importScore(to song: Song, rate: Double, diff: String?) {

@@ -5,27 +5,32 @@ struct MarqueeText: View {
     var font: Font = .body
     var fontWeight: Font.Weight = .regular
     var color: Color = .primary
-    var spacing: CGFloat = 40
-    var speed: Double = 40 // pixels per second
+    var alignment: Alignment = .leading
+    var spacing: CGFloat = 60
+    var speed: Double = 30 // pixels per second (slower default)
+    var initialDelay: Double = 2.0 // pause on first character
     
     @State private var contentWidth: CGFloat = 0
     @State private var containerWidth: CGFloat = 0
-    @State private var isAnimating = false
+    @State private var offset: CGFloat = 0
+    @State private var animationTimer: Timer?
+    
+    private var needsScroll: Bool {
+        contentWidth > containerWidth && containerWidth > 0
+    }
     
     var body: some View {
         GeometryReader { container in
+            let cw = container.size.width
+            
             HStack(spacing: spacing) {
-                Text(text)
-                    .font(font)
-                    .fontWeight(fontWeight)
-                    .foregroundColor(color)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
+                textLabel
                     .background(
                         GeometryReader { content in
                             Color.clear
                                 .onAppear {
                                     contentWidth = content.size.width
+                                    containerWidth = cw
                                 }
                                 .onChange(of: text) { _, _ in
                                     contentWidth = content.size.width
@@ -33,41 +38,59 @@ struct MarqueeText: View {
                         }
                     )
                 
-                if contentWidth > container.size.width {
-                    Text(text)
-                        .font(font)
-                        .fontWeight(fontWeight)
-                        .foregroundColor(color)
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
+                // Duplicate for seamless loop
+                if needsScroll {
+                    textLabel
                 }
             }
-            .offset(x: isAnimating ? -(contentWidth + spacing) : 0)
+            .offset(x: offset)
+            .frame(width: cw, alignment: needsScroll ? .leading : alignment)
             .onAppear {
-                containerWidth = container.size.width
-                checkAndStartAnimation()
+                containerWidth = cw
+                startMarquee()
             }
             .onChange(of: contentWidth) { _, _ in
-                checkAndStartAnimation()
+                startMarquee()
             }
-            .onChange(of: container.size.width) { _, _ in
-                containerWidth = container.size.width
-                checkAndStartAnimation()
+            .onChange(of: cw) { _, newWidth in
+                containerWidth = newWidth
+                startMarquee()
+            }
+            .onDisappear {
+                stopMarquee()
             }
         }
         .clipped()
     }
     
-    private func checkAndStartAnimation() {
-        isAnimating = false
+    private var textLabel: some View {
+        Text(text)
+            .font(font)
+            .fontWeight(fontWeight)
+            .foregroundColor(color)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+    }
+    
+    private func startMarquee() {
+        stopMarquee()
+        offset = 0
         
-        guard contentWidth > containerWidth else { return }
+        guard needsScroll else { return }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            let duration = (contentWidth + spacing) / speed
+        // Pause at the beginning, then start animation
+        DispatchQueue.main.asyncAfter(deadline: .now() + initialDelay) {
+            guard needsScroll else { return }
+            let totalDistance = contentWidth + spacing
+            let duration = totalDistance / speed
+            
             withAnimation(.linear(duration: duration).repeatForever(autoreverses: false)) {
-                isAnimating = true
+                offset = -totalDistance
             }
         }
+    }
+    
+    private func stopMarquee() {
+        offset = 0
     }
 }

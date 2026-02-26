@@ -110,14 +110,7 @@ struct FilterView: View {
     }
     
     private func colorForDifficulty(_ diff: String) -> Color {
-        switch diff.lowercased() {
-        case "basic": return Color(.systemGreen)
-        case "advanced": return Color(.systemOrange)
-        case "expert": return Color(.systemRed)
-        case "master": return Color(.systemPurple)
-        case "remaster": return Color(red: 0.85, green: 0.65, blue: 1.0)
-        default: return .blue
-        }
+        ThemeUtils.colorForDifficulty(diff)
     }
 }
 

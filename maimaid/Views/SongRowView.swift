@@ -11,7 +11,7 @@ struct SongRowView: View {
     
     private var accentColor: Color {
         guard let sheet = highestSheet else { return .blue }
-        return colorForDifficulty(sheet.difficulty)
+        return ThemeUtils.colorForDifficulty(sheet.difficulty)
     }
     
     var body: some View {
@@ -87,7 +87,7 @@ struct SongRowView: View {
         let sheet: Sheet
         
         private var color: Color {
-            colorForDifficulty(sheet.difficulty)
+            ThemeUtils.colorForDifficulty(sheet.difficulty)
         }
         
         var body: some View {
@@ -107,17 +107,6 @@ struct SongRowView: View {
             }
         }
         
-        private func colorForDifficulty(_ difficulty: String) -> Color {
-            let low = difficulty.lowercased()
-            if low.contains("basic") { return Color(.systemGreen) }
-            if low.contains("advanced") { return Color(.systemOrange) }
-            if low.contains("expert") { return Color(.systemRed) }
-            if low.contains("master") { return Color(.systemPurple) }
-            if low.contains("remaster") { return Color(red: 0.85, green: 0.65, blue: 1.0) }
-            return .pink
-        }
-    }
-    
     private func difficultyOrder(_ difficulty: String) -> Int {
         switch difficulty.lowercased() {
         case "basic": return 0
@@ -127,15 +116,5 @@ struct SongRowView: View {
         case "remaster": return 4
         default: return -1
         }
-    }
-    
-    private func colorForDifficulty(_ difficulty: String) -> Color {
-        let low = difficulty.lowercased()
-        if low.contains("basic") { return Color(.systemGreen) }
-        if low.contains("advanced") { return Color(.systemOrange) }
-        if low.contains("expert") { return Color(.systemRed) }
-        if low.contains("master") { return Color(.systemPurple) }
-        if low.contains("remaster") { return Color(red: 0.85, green: 0.65, blue: 1.0) }
-        return .pink
     }
 }

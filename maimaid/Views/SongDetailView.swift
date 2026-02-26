@@ -42,6 +42,12 @@ struct SongDetailView: View {
                     // Metadata pills
                     metadataPills
                     
+                    // Region & Lock status
+                    availabilitySection
+                    
+                    // External search links
+                    externalLinksSection
+                    
                     // Type picker
                     if availableTypes.count > 1 {
                         typePicker
@@ -122,18 +128,25 @@ struct SongDetailView: View {
                 .shadow(color: .black.opacity(0.3), radius: 24, x: 0, y: 12)
             
             VStack(spacing: 6) {
-                MarqueeText(text: song.title, font: .title2, fontWeight: .bold, color: .primary)
+                MarqueeText(text: song.title, font: .title2, fontWeight: .bold, color: .primary, alignment: .center)
                     .frame(height: 32)
+                    .onTapGesture { copyToClipboard(song.title, label: "曲名") }
                 
-                MarqueeText(text: song.artist, font: .subheadline, color: .secondary)
+                MarqueeText(text: song.artist, font: .subheadline, color: .secondary, alignment: .center)
                     .frame(height: 20)
+                    .onTapGesture { copyToClipboard(song.artist, label: "曲师") }
                 
                 if let keywords = song.searchKeywords, !keywords.isEmpty {
-                    Text(keywords.replacingOccurrences(of: ",", with: " · "))
-                        .font(.caption)
-                        .foregroundColor(.secondary.opacity(0.6))
-                        .multilineTextAlignment(.center)
-                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        Image(systemName: "tag.fill")
+                            .font(.system(size: 8))
+                            .foregroundColor(.secondary.opacity(0.4))
+                        
+                        Text(keywords.replacingOccurrences(of: ",", with: " · "))
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary.opacity(0.6))
+                    }
+                    .padding(.top, 2)
                 }
                 
                 if !song.aliases.isEmpty {
@@ -177,7 +190,21 @@ struct SongDetailView: View {
                 metadataPill(icon: "clock", value: version, label: nil)
                     .onTapGesture { copyToClipboard(version, label: "版本") }
             }
+            if let releaseDate = song.releaseDate {
+                let formattedDate = formatDate(releaseDate)
+                metadataPill(icon: "calendar", value: formattedDate, label: nil)
+                    .onTapGesture { copyToClipboard(releaseDate, label: "上线日") }
+            }
         }
+    }
+    
+    private func formatDate(_ date: String) -> String {
+        let components = date.components(separatedBy: "-")
+        if components.count == 3 {
+            let year = String(components[0].suffix(2))
+            return "\(year)/\(components[1])/\(components[2])"
+        }
+        return date
     }
     
     private func metadataPill(icon: String, value: String, label: String?) -> some View {
@@ -205,6 +232,126 @@ struct SongDetailView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(.ultraThinMaterial, in: Capsule())
+    }
+    
+    // MARK: - Availability Section
+    
+    private var availabilitySection: some View {
+        let allSheets = song.sheets
+        // Aggregate: if ANY sheet is available in a region, the song is available there
+        let jp = allSheets.contains { $0.regionJp }
+        let intl = allSheets.contains { $0.regionIntl }
+        let usa = allSheets.contains { $0.regionUsa }
+        let cn = allSheets.contains { $0.regionCn }
+        
+        return HStack(spacing: 0) {
+            // Region flags
+            HStack(spacing: 12) {
+                regionFlag("🇯🇵", label: "日本", available: jp)
+                regionFlag("🌏", label: "国际", available: intl)
+                regionFlag("🇺🇸", label: "美国", available: usa)
+                regionFlag("🇨🇳", label: "中国", available: cn)
+            }
+            
+            Spacer()
+            
+            // Lock status
+            if song.isLocked {
+                HStack(spacing: 4) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                    Text("需要解锁")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundColor(.orange)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.orange.opacity(0.12), in: Capsule())
+            } else {
+                HStack(spacing: 4) {
+                    Image(systemName: "lock.open.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                    Text("无需解锁")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundColor(.green)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.green.opacity(0.12), in: Capsule())
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+        )
+    }
+    
+    private func regionFlag(_ flag: String, label: String, available: Bool) -> some View {
+        VStack(spacing: 3) {
+            Text(flag)
+                .font(.system(size: 22))
+                .opacity(available ? 1.0 : 0.25)
+                .saturation(available ? 1.0 : 0.0)
+            
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(available ? .primary : .secondary.opacity(0.4))
+        }
+    }
+    
+    // MARK: - External Links
+    
+    private var externalLinksSection: some View {
+        let query = song.title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? song.title
+        
+        return HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.secondary)
+            
+            externalLinkButton(
+                icon: "play.rectangle.fill",
+                label: "YouTube",
+                color: .red,
+                url: "https://www.youtube.com/results?search_query=maimai+\(query)"
+            )
+            
+            externalLinkButton(
+                icon: "video.fill",
+                label: "Bilibili",
+                color: Color(red: 0.0, green: 0.74, blue: 0.95),
+                url: "https://search.bilibili.com/all?keyword=maimai+\(query)"
+            )
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+        )
+    }
+    
+    private func externalLinkButton(icon: String, label: String, color: Color, url: String) -> some View {
+        Link(destination: URL(string: url)!) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .semibold))
+                Text(label)
+                    .font(.system(size: 11, weight: .bold))
+            }
+            .foregroundColor(color)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(color.opacity(0.1), in: Capsule())
+            .overlay(Capsule().strokeBorder(color.opacity(0.2), lineWidth: 1))
+        }
     }
     
     // MARK: - Type Picker
@@ -250,7 +397,7 @@ struct SheetCardView: View {
     @State private var isExpanded = false
     
     private var diffColor: Color {
-        colorForDifficulty(sheet.difficulty)
+        ThemeUtils.colorForDifficulty(sheet.difficulty)
     }
     
     var body: some View {
@@ -293,7 +440,7 @@ struct SheetCardView: View {
                     }
                     
                     // Level
-                    Text(sheet.level)
+                    Text(sheet.internalLevel ?? sheet.level)
                         .font(.system(size: 28, weight: .black, design: .rounded))
                         .foregroundColor(diffColor.opacity(0.85))
                         .frame(minWidth: 44)
@@ -331,30 +478,19 @@ struct SheetCardView: View {
     
     @ViewBuilder
     private var expandedContent: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 16) {
             // Divider with accent
             Rectangle()
                 .fill(diffColor.opacity(0.12))
                 .frame(height: 1)
                 .padding(.horizontal, 16)
             
-            // Internal level
-            if let internalLevel = sheet.internalLevel {
-                HStack {
-                    Text("定数")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text(internalLevel)
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
-                        .foregroundColor(.primary)
-                }
-                .padding(.horizontal, 20)
-            }
+            // Detailed Info Table (from Fig 1)
+            detailedInfoTable
             
-            // Note breakdown
-            if sheet.total != nil {
-                noteBreakdown
+            // Achievement → Rating table (from Fig 2)
+            if let level = sheet.internalLevelValue ?? sheet.levelValue, level > 0 {
+                ratingTable(level: level)
             }
             
             // Record button
@@ -375,6 +511,146 @@ struct SheetCardView: View {
         .padding(.bottom, 14)
     }
     
+    private var detailedInfoTable: some View {
+        VStack(spacing: 0) {
+            if sheet.total != nil {
+                HStack {
+                    Text("音符统计")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.primary)
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+                
+                noteBreakdown
+            }
+        }
+    }
+    
+    private func detailRow(label: String, value: String) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+                .frame(width: 80, alignment: .leading)
+            
+            Text(value)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.primary)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+        .border(Color.primary.opacity(0.03), width: 0.5)
+    }
+    
+    // MARK: - Rating Table
+    
+    private func ratingTable(level: Double) -> some View {
+        let thresholds: [(String, Double)] = [
+            ("SSS+",  100.5),
+            ("SSS",   100.0),
+            ("SS+",    99.5),
+            ("SS",     99.0),
+            ("S+",     98.0),
+            ("S",      97.0),
+            ("AAA",    94.0),
+            ("AA",     90.0),
+            ("A",      80.0),
+            ("BBB",    75.0),
+            ("BB",     70.0),
+            ("B",      60.0),
+            ("C",      50.0),
+        ]
+        
+        let ratings = thresholds.map { (rank, ach) in
+            (rank, ach, RatingUtils.calculateRating(internalLevel: level, achievements: ach))
+        }
+        
+        return VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("完成率 → 得分")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 8)
+            
+            // Table header row
+            HStack {
+                Text("完成率")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("得分")
+                    .frame(width: 50, alignment: .trailing)
+                Text("差分")
+                    .frame(width: 40, alignment: .trailing)
+            }
+            .font(.system(size: 9, weight: .bold))
+            .foregroundColor(.secondary)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 4)
+            
+            // Table rows
+            ForEach(Array(ratings.enumerated()), id: \.offset) { index, item in
+                let (rank, ach, rating) = item
+                let prevRating = index > 0 ? ratings[index - 1].2 : rating
+                let delta = index > 0 ? prevRating - rating : 0
+                
+                HStack {
+                    HStack(spacing: 6) {
+                        Text(rank)
+                            .font(.system(size: 11, weight: .black, design: .rounded))
+                            .foregroundColor(rankColor(rank))
+                            .frame(width: 36, alignment: .leading)
+                        
+                        Text(String(format: "%.4f%%", ach))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(.primary)
+                    }
+                    
+                    Spacer()
+                    
+                    Text("\(rating)")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundColor(.primary)
+                        .frame(width: 50, alignment: .trailing)
+                    
+                    if delta > 0 {
+                        Text("↑\(delta)")
+                            .font(.system(size: 9, weight: .medium, design: .monospaced))
+                            .foregroundColor(.secondary)
+                            .frame(width: 40, alignment: .trailing)
+                    } else {
+                        Text("")
+                            .frame(width: 40)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 5)
+                .background(index % 2 == 0 ? Color.primary.opacity(0.02) : Color.clear)
+            }
+        }
+    }
+    
+    private func rankColor(_ rank: String) -> Color {
+        switch rank {
+        case "SSS+": return Color(red: 1.0, green: 0.7, blue: 0.0)
+        case "SSS":  return Color(red: 1.0, green: 0.8, blue: 0.2)
+        case "SS+":  return Color(red: 0.95, green: 0.75, blue: 0.1)
+        case "SS":   return Color(red: 0.9, green: 0.7, blue: 0.0)
+        case "S+":   return Color(red: 0.8, green: 0.6, blue: 0.0)
+        case "S":    return Color(red: 0.7, green: 0.55, blue: 0.0)
+        case "AAA":  return Color(red: 0.9, green: 0.3, blue: 0.3)
+        case "AA":   return Color(red: 0.8, green: 0.3, blue: 0.3)
+        case "A":    return Color(red: 0.7, green: 0.3, blue: 0.3)
+        default:     return .secondary
+        }
+    }
+    
     @ViewBuilder
     private var noteBreakdown: some View {
         let totalWeight = calculateTotalWeight(sheet)
@@ -386,8 +662,8 @@ struct SheetCardView: View {
             ("BREAK", sheet.breakCount, 5.0, .orange),
         ]
         
-        VStack(spacing: 6) {
-            ForEach(items.filter { $0.1 != nil && $0.1! > 0 }, id: \.0) { item in
+        VStack(spacing: 0) {
+            ForEach(Array(items.filter { $0.1 != nil && $0.1! > 0 }.enumerated()), id: \.offset) { index, item in
                 let count = item.1!
                 let weight = Double(count) * item.2
                 let percent = totalWeight > 0 ? weight / totalWeight : 0
@@ -421,9 +697,11 @@ struct SheetCardView: View {
                         .foregroundColor(.secondary)
                         .frame(width: 30, alignment: .trailing)
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
+                .background(index % 2 == 0 ? Color.primary.opacity(0.02) : Color.clear)
             }
         }
-        .padding(.horizontal, 20)
     }
     
     private func calculateTotalWeight(_ sheet: Sheet) -> Double {
@@ -433,12 +711,6 @@ struct SheetCardView: View {
     }
     
     private func colorForDifficulty(_ difficulty: String) -> Color {
-        let low = difficulty.lowercased()
-        if low.contains("basic") { return Color(.systemGreen) }
-        if low.contains("advanced") { return Color(.systemOrange) }
-        if low.contains("expert") { return Color(.systemRed) }
-        if low.contains("master") { return Color(.systemPurple) }
-        if low.contains("remaster") { return Color(red: 0.85, green: 0.65, blue: 1.0) }
-        return .pink
+        ThemeUtils.colorForDifficulty(difficulty)
     }
 }

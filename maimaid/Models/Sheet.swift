@@ -20,6 +20,12 @@ final class Sheet {
     var breakCount: Int?
     var total: Int?
     
+    // Regional Availability
+    var regionJp: Bool = true
+    var regionIntl: Bool = true
+    var regionUsa: Bool = true
+    var regionCn: Bool = true
+    
     var song: Song?
     @Relationship(deleteRule: .cascade) var score: Score?
     

@@ -39,6 +39,13 @@ struct InternalSong: Decodable {
     let sheets: [InternalSheet]
 }
 
+struct SheetRegions: Decodable {
+    let jp: Bool?
+    let intl: Bool?
+    let usa: Bool?
+    let cn: Bool?
+}
+
 struct InternalSheet: Decodable {
     let type: String
     let difficulty: String
@@ -48,6 +55,7 @@ struct InternalSheet: Decodable {
     let internalLevelValue: Double?
     let noteDesigner: String?
     let noteCounts: InternalNoteCounts?
+    let regions: SheetRegions?
     let isSpecial: Bool?
 }
 
@@ -233,6 +241,13 @@ class MaimaiDataFetcher {
                         existingSheet.breakCount = notes.breakCount
                         existingSheet.total = notes.total
                     }
+                    
+                    if let regions = internalSheet.regions {
+                        existingSheet.regionJp = regions.jp ?? true
+                        existingSheet.regionIntl = regions.intl ?? true
+                        existingSheet.regionUsa = regions.usa ?? true
+                        existingSheet.regionCn = regions.cn ?? true
+                    }
                     newSheets.append(existingSheet)
                 } else {
                     let sheet = Sheet(
@@ -251,6 +266,12 @@ class MaimaiDataFetcher {
                         breakCount: internalSheet.noteCounts?.breakCount,
                         total: internalSheet.noteCounts?.total
                     )
+                    if let regions = internalSheet.regions {
+                        sheet.regionJp = regions.jp ?? true
+                        sheet.regionIntl = regions.intl ?? true
+                        sheet.regionUsa = regions.usa ?? true
+                        sheet.regionCn = regions.cn ?? true
+                    }
                     newSheets.append(sheet)
                 }
             }
