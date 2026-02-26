@@ -65,29 +65,63 @@ struct InternalNoteCounts: Decodable {
     }
 }
 
+@Observable
 @MainActor
 class MaimaiDataFetcher {
     static let shared = MaimaiDataFetcher()
     
-    // Default placeholder URL. User should replace this with their hosted data.json URL.
+    enum SyncStage: String {
+        case idle = "等待中"
+        case fetchingData = "正在从云端拉取静态数据..."
+        case fetchingAliases = "正在获取歌曲别名..."
+        case fetchingLxnsIds = "正在关联官方 ID..."
+        case processingSongs = "正在同步歌曲列表..."
+        case saving = "正在整理并保存数据..."
+        case completed = "同步完成"
+        case failed = "同步失败"
+    }
+    
+    var isSyncing = false
+    var currentStage: SyncStage = .idle
+    var progress: Double = 0
+    var statusMessage: String = ""
+    
     private let DATA_URL = "https://maimaid.shikoch.in/data.json"
     
     func fetchSongs(modelContext: ModelContext) async throws {
-        let data: Data
+        isSyncing = true
+        progress = 0.05
+        currentStage = .fetchingData
+        statusMessage = "正在拉取核心数据文件..."
         
-        // Try to load from Bundle first (Offline Mode)
-        if let bundleUrl = Bundle.main.url(forResource: "data", withExtension: "json") {
-            data = try Data(contentsOf: bundleUrl)
-        } else {
-            // Fallback to Network
-            guard let url = URL(string: DATA_URL) else { return }
-            let (networkData, _) = try await URLSession.shared.data(from: url)
-            data = networkData
+        let data: Data
+        do {
+            // Try to load from Bundle first (Offline Mode)
+            if let bundleUrl = Bundle.main.url(forResource: "data", withExtension: "json") {
+                data = try Data(contentsOf: bundleUrl)
+            } else {
+                guard let url = URL(string: DATA_URL) else { 
+                    isSyncing = false
+                    currentStage = .failed
+                    return 
+                }
+                let (networkData, _) = try await URLSession.shared.data(from: url)
+                data = networkData
+            }
+        } catch {
+            isSyncing = false
+            currentStage = .failed
+            statusMessage = "网络错误: \(error.localizedDescription)"
+            throw error
         }
+        
+        progress = 0.15
+        currentStage = .fetchingAliases
+        statusMessage = "连接至 LXNS 获取别名和 ID 映射..."
         
         let songData = try JSONDecoder().decode(SongData.self, from: data)
         
-        // Fetch Aliases and LXNS Song List to build a Title -> Aliases map
+        // Fetch Aliases and LXNS Song List
         var aliasMap: [String: [String]] = [:]
         var titleToLxnsId: [String: Int] = [:]
         do {
@@ -98,7 +132,11 @@ class MaimaiDataFetcher {
                 async let (lxnsSongData, _) = URLSession.shared.data(from: lxnsSongUrl)
                 
                 let aliasResponse = try await JSONDecoder().decode(AliasListResponse.self, from: aliasData)
+                progress = 0.25
+                currentStage = .fetchingLxnsIds
+                
                 let lxnsSongResponse = try await JSONDecoder().decode(LxnsSongListResponse.self, from: lxnsSongData)
+                progress = 0.35
                 
                 var lxnsIdToTitle: [Int: String] = [:]
                 for lxnsSong in lxnsSongResponse.songs {
@@ -116,15 +154,18 @@ class MaimaiDataFetcher {
             print("Failed to fetch aliases: \(error)")
         }
         
-        // 1. Map existing songs for efficient updates
+        progress = 0.45
+        currentStage = .processingSongs
+        statusMessage = "对比现有库，处理 \(songData.songs.count) 首歌曲..."
+        
         let existingSongs = try modelContext.fetch(FetchDescriptor<Song>())
         var songMap: [String: Song] = [:]
         for s in existingSongs {
             songMap[s.songId] = s
         }
         
-        // 2. Process songs
-        for internalSong in songData.songs {
+        let totalCount = songData.songs.count
+        for (index, internalSong) in songData.songs.enumerated() {
             let songId = internalSong.songId
             
             let song: Song
@@ -137,7 +178,7 @@ class MaimaiDataFetcher {
                     title: internalSong.title ?? "",
                     artist: internalSong.artist ?? "",
                     imageName: internalSong.imageName ?? "",
-                    imageUrl: "", // We'll rely on imageName/static assets
+                    imageUrl: "",
                     version: internalSong.version,
                     releaseDate: internalSong.releaseDate,
                     sortOrder: 0,
@@ -149,14 +190,10 @@ class MaimaiDataFetcher {
                 modelContext.insert(song)
             }
             
-            // Map LXNS ID by title if available
             if let title = internalSong.title, let officialId = titleToLxnsId[title] {
                 song.lxnsId = officialId
-                // If the data.json songId is just a placeholder (not matching official), 
-                // we technically want to use officialId for sync.
             }
             
-            // Update metadata
             song.category = internalSong.category ?? ""
             song.title = internalSong.title ?? ""
             song.artist = internalSong.artist ?? ""
@@ -171,9 +208,6 @@ class MaimaiDataFetcher {
                 song.aliases = aliases
             }
             
-            // Re-sync sheets
-            // Simple approach: clear and re-add for accuracy unless score exists
-            // To preserve scores, we match by (type, difficulty)
             var sheetMap: [String: Sheet] = [:]
             for sheet in song.sheets {
                 let key = "\(sheet.type)_\(sheet.difficulty)"
@@ -185,7 +219,6 @@ class MaimaiDataFetcher {
                 let key = "\(internalSheet.type)_\(internalSheet.difficulty)"
                 
                 if let existingSheet = sheetMap[key] {
-                    // Update metadata
                     existingSheet.level = internalSheet.level
                     existingSheet.levelValue = internalSheet.levelValue
                     existingSheet.internalLevel = internalSheet.internalLevel
@@ -222,7 +255,6 @@ class MaimaiDataFetcher {
                 }
             }
             
-            // Remove sheets that are no longer in the data and don't have scores
             for sheet in song.sheets {
                 let key = "\(sheet.type)_\(sheet.difficulty)"
                 if !internalSong.sheets.contains(where: { "\($0.type)_\($0.difficulty)" == key }) {
@@ -234,13 +266,32 @@ class MaimaiDataFetcher {
             
             song.sheets = newSheets
             
-            // Yield to keep UI responsive
-            if Int.random(in: 0...100) == 0 {
+            // Progress updates (from 45% to 90%)
+            if index % 20 == 0 {
+                progress = 0.45 + (Double(index) / Double(totalCount)) * 0.45
+                statusMessage = "正在处理歌曲: \(song.title)"
                 await Task.yield()
             }
         }
         
+        currentStage = .saving
+        statusMessage = "持久化本地数据..."
+        progress = 0.95
+        
         try modelContext.save()
+        
+        // Record sync time in config
+        if let config = try? modelContext.fetch(FetchDescriptor<SyncConfig>()).first {
+            config.lastStaticDataUpdateDate = Date()
+        }
+        
         UserDefaults.standard.set(true, forKey: "didPerformInitialSync")
+        
+        progress = 1.0
+        currentStage = .completed
+        statusMessage = "同步成功"
+        
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        isSyncing = false
     }
 }

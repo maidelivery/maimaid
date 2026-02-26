@@ -14,6 +14,30 @@ struct LxnsRecord: Decodable {
     let type: String
     let achievements: Double
     let rate: String
+    let fc: String?
+    let fs: String?
+    let dx_score: Int
+}
+
+struct LxnsPlayerResponse: Decodable {
+    let success: Bool
+    let data: LxnsPlayerData?
+    let message: String?
+}
+
+struct LxnsPlayerData: Decodable {
+    let name: String
+    let rating: Int
+    let trophy: LxnsTrophy?
+    let icon: LxnsIcon?
+}
+
+struct LxnsTrophy: Decodable {
+    let name: String
+}
+
+struct LxnsIcon: Decodable {
+    let url: String
 }
 
 struct LxnsTokenResponse: Decodable {
@@ -259,7 +283,27 @@ struct LxnsImportView: View {
     
     @MainActor
     private func importData(accessToken: String) async {
-        currentStep = "正在连接到 LXNS 拉取数据..."
+        currentStep = "正在获取玩家信息..."
+        
+        // 1. Fetch Player Info
+        do {
+            if let playerUrl = URL(string: "https://maimai.lxns.net/api/v0/user/maimai/player") {
+                var playerReq = URLRequest(url: playerUrl)
+                playerReq.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+                let (pData, _) = try await URLSession.shared.data(for: playerReq)
+                let pRes = try JSONDecoder().decode(LxnsPlayerResponse.self, from: pData)
+                if pRes.success, let p = pRes.data {
+                    if let currentConfig = configs.first {
+                        // Only update rating from LXNS as a data reference
+                        currentConfig.playerRating = p.rating
+                    }
+                }
+            }
+        } catch {
+            print("Failed to fetch player info: \(error)")
+        }
+
+        currentStep = "正在连接到 LXNS 拉取成绩数据..."
         
         let difficultyMap = [
             0: "basic",
@@ -329,20 +373,27 @@ struct LxnsImportView: View {
                 if let sheets = titleSheetMap[record.song_name],
                    let targetSheet = sheets.first(where: { $0.type == recType && $0.diff == recDiff })?.sheet {
                     
-                    let newRate = record.achievements
-                    let newRank = formatLxnsRank(record.rate)
+                    let newRank = RatingUtils.calculateRank(achievement: record.achievements)
                     
                     if let existingScore = targetSheet.score {
-                        if newRate > existingScore.rate {
-                            existingScore.rate = newRate
-                            existingScore.rank = newRank
+                        // Update if achievement improves OR if metadata is currently missing
+                        let shouldUpdateMetadata = existingScore.fc == nil || existingScore.fs == nil || existingScore.dxScore == 0
+                        if record.achievements > existingScore.rate || shouldUpdateMetadata {
+                            existingScore.rate = max(existingScore.rate, record.achievements)
+                            existingScore.rank = RatingUtils.calculateRank(achievement: existingScore.rate)
+                            existingScore.fc = record.fc
+                            existingScore.fs = record.fs
+                            existingScore.dxScore = record.dx_score
                             existingScore.achievementDate = Date()
                         }
                     } else {
                         let score = Score(
                             sheetId: "\(targetSheet.songId)_\(targetSheet.type)_\(targetSheet.difficulty)",
-                            rate: newRate,
+                            rate: record.achievements,
                             rank: newRank,
+                            dxScore: record.dx_score,
+                            fc: record.fc,
+                            fs: record.fs,
                             achievementDate: Date()
                         )
                         modelContext.insert(score)
@@ -375,19 +426,4 @@ struct LxnsImportView: View {
         isImporting = false
     }
     
-    private func formatLxnsRank(_ lxnsRate: String) -> String {
-        switch lxnsRate {
-        case "sssp": return "SSS+"
-        case "sss": return "SSS"
-        case "ssp": return "SS+"
-        case "ss": return "SS"
-        case "sp": return "S+"
-        case "s": return "S"
-        case "aaa": return "AAA"
-        case "aa": return "AA"
-        case "a": return "A"
-        case "b": return "B"
-        default: return lxnsRate.uppercased()
-        }
-    }
 }

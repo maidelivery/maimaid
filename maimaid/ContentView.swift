@@ -138,20 +138,6 @@ struct ContentView: View {
             .navigationTitle("Songs")
             .toolbar {
                 
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Task {
-                            isFetching = true
-                            try? await MaimaiDataFetcher.shared.fetchSongs(modelContext: modelContext)
-                            isFetching = false
-                        }
-                    } label: {
-                        Image(systemName: isFetching ? "arrow.triangle.2.circlepath" : "arrow.down.circle")
-                            .foregroundColor(.primary)
-                            .rotationEffect(Angle(degrees: isFetching ? 360 : 0))
-                            .animation(isFetching ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isFetching)
-                    }
-                }
                 
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {

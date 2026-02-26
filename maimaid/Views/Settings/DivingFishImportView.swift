@@ -16,6 +16,15 @@ struct DivingFishRecord: Decodable {
     let title: String
     let type: String
     let level_index: Int
+    let fc: String?
+    let fs: String?
+    let dx_score: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case achievements, title, type, fc, fs
+        case level_index = "level_index"
+        case dx_score = "dx_score"
+    }
 }
 
 struct DivingFishImportView: View {
@@ -228,9 +237,14 @@ struct DivingFishImportView: View {
                     let newRank = getRank(from: newRate)
                     
                     if let existingScore = targetSheet.score {
-                        if newRate > existingScore.rate {
-                            existingScore.rate = newRate
-                            existingScore.rank = newRank
+                        // Update if achievement improves OR if metadata is currently missing
+                        let shouldUpdateMetadata = existingScore.fc == nil || existingScore.fs == nil || existingScore.dxScore == 0
+                        if newRate > existingScore.rate || shouldUpdateMetadata {
+                            existingScore.rate = max(existingScore.rate, newRate)
+                            existingScore.rank = RatingUtils.calculateRank(achievement: existingScore.rate)
+                            existingScore.fc = record.fc
+                            existingScore.fs = record.fs
+                            existingScore.dxScore = record.dx_score ?? 0
                             existingScore.achievementDate = Date()
                         }
                     } else {
@@ -238,6 +252,9 @@ struct DivingFishImportView: View {
                             sheetId: "\(targetSheet.songId)_\(targetSheet.type)_\(targetSheet.difficulty)",
                             rate: newRate,
                             rank: newRank,
+                            dxScore: record.dx_score ?? 0,
+                            fc: record.fc,
+                            fs: record.fs,
                             achievementDate: Date()
                         )
                         modelContext.insert(score)

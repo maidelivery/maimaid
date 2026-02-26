@@ -14,45 +14,34 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                // Account Section
-                Section {
-                    HStack(spacing: 14) {
-                        Image(systemName: "person.crop.circle.fill")
-                            .font(.system(size: 44))
-                            .foregroundStyle(.linearGradient(
-                                colors: [.blue, .purple],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("未登录")
-                                .font(.system(size: 17, weight: .semibold))
-                            Text("登录以同步数据")
-                                .font(.system(size: 13))
-                                .foregroundColor(.secondary)
+                Section(header: Text("数据管理"), footer: Text("更新静态数据将同步最新的歌曲列表、别名以及官方 ID 映射。支持设置自动更新频率。")) {
+                    NavigationLink(destination: StaticDataUpdateView()) {
+                        HStack {
+                            settingsRowLabel(
+                                icon: MaimaiDataFetcher.shared.isSyncing ? "arrow.triangle.2.circlepath" : "arrow.down.circle.fill",
+                                iconColor: .blue,
+                                title: MaimaiDataFetcher.shared.isSyncing ? "正在更新静态数据..." : "更新所有静态数据"
+                            )
+                            Spacer()
+                            if MaimaiDataFetcher.shared.isSyncing {
+                                ProgressView()
+                            } else if let lastDate = config?.lastStaticDataUpdateDate {
+                                Text("\(lastDate.formatted(.dateTime.month().day().hour().minute()))")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
                         }
-                        
-                        Spacer()
-                        
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.secondary)
                     }
-                    .padding(.vertical, 4)
-                }
-                
-                // Data Section
-                Section("数据") {
+                    
                     NavigationLink {
                         DivingFishImportView()
                     } label: {
-                        settingsRowLabel(icon: "fish.fill", iconColor: .blue, title: "从 Diving Fish 导入")
+                        settingsRowLabel(icon: "fish.fill", iconColor: .blue, title: "从 Diving Fish 导入成绩")
                     }
                     
                     NavigationLink(destination: LxnsImportView()) {
                         HStack {
-                            settingsRowLabel(icon: "snowflake", iconColor: .cyan, title: "从 LXNS 导入")
+                            settingsRowLabel(icon: "snowflake", iconColor: .cyan, title: "从 LXNS 导入成绩")
                             Spacer()
                             if let c = config, !c.lxnsRefreshToken.isEmpty {
                                 Text("已绑定").font(.caption).foregroundColor(.green)
@@ -61,7 +50,7 @@ struct SettingsView: View {
                     }
                     
                     Toggle(isOn: $autoSync) {
-                        settingsRowLabel(icon: "icloud.and.arrow.down.fill", iconColor: .indigo, title: "iCloud 自动同步")
+                        settingsRowLabel(icon: "icloud.and.arrow.down.fill", iconColor: .indigo, title: "iCloud 自动同步配置")
                     }
                 }
                 
@@ -81,7 +70,17 @@ struct SettingsView: View {
                 
                 // Appearance Section
                 Section("外观") {
-                    Picker(selection: $selectedTheme) {
+                    Picker(selection: Binding(
+                        get: { config?.themeRawValue ?? 0 },
+                        set: { newValue in
+                            if let c = config {
+                                c.themeRawValue = newValue
+                            } else {
+                                let newConfig = SyncConfig(themeRawValue: newValue)
+                                modelContext.insert(newConfig)
+                            }
+                        }
+                    )) {
                         Text("跟随系统").tag(0)
                         Text("浅色").tag(1)
                         Text("深色").tag(2)

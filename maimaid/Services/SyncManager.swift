@@ -43,8 +43,8 @@ class SyncManager {
             "achievements": Double(String(format: "%.4f", score.rate)) ?? score.rate,
             "type": sheet.type.lowercased() == "dx" ? "DX" : "SD",
             "dxScore": score.dxScore,
-            "fc": "",
-            "fs": ""
+            "fc": score.fc as Any,
+            "fs": score.fs as Any
         ]
         
         var request = URLRequest(url: url)
@@ -92,7 +92,9 @@ class SyncManager {
             "level_index": mapDifficultyToIndex(sheet.difficulty),
             "type": sheet.type.lowercased() == "dx" ? "dx" : "std",
             "achievements": score.rate,
-            "dx_score": score.dxScore
+            "dx_score": score.dxScore,
+            "fc": score.fc as Any,
+            "fs": score.fs as Any
         ]
         
         var request = URLRequest(url: url)

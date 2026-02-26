@@ -122,24 +122,11 @@ struct SongDetailView: View {
                 .shadow(color: .black.opacity(0.3), radius: 24, x: 0, y: 12)
             
             VStack(spacing: 6) {
-                Text(song.title)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(3)
-                    .onTapGesture {
-                        copyToClipboard(song.title, label: "曲名")
-                    }
+                MarqueeText(text: song.title, font: .title2, fontWeight: .bold, color: .primary)
+                    .frame(height: 32)
                 
-                Text(song.artist)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .onTapGesture {
-                        copyToClipboard(song.artist, label: "曲师")
-                    }
+                MarqueeText(text: song.artist, font: .subheadline, color: .secondary)
+                    .frame(height: 20)
                 
                 if let keywords = song.searchKeywords, !keywords.isEmpty {
                     Text(keywords.replacingOccurrences(of: ",", with: " · "))
@@ -299,7 +286,7 @@ struct SheetCardView: View {
                             Text(String(format: "%.4f%%", score.rate))
                                 .font(.system(size: 12, weight: .bold, design: .monospaced))
                                 .foregroundColor(.primary)
-                            Text(score.rank)
+                            Text(RatingUtils.calculateRank(achievement: score.rate))
                                 .font(.system(size: 10, weight: .black, design: .rounded))
                                 .foregroundColor(diffColor)
                         }

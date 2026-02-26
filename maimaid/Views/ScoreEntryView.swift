@@ -18,6 +18,9 @@ struct ScoreEntryView: View {
     @FocusState private var isRateFocused: Bool
     @FocusState private var isDxScoreFocused: Bool
     
+    @State private var selectedFC: String? = nil
+    @State private var selectedFS: String? = nil
+    
     private var parsedRate: Double? {
         Double(rateText)
     }
@@ -26,18 +29,13 @@ struct ScoreEntryView: View {
         Int(dxScoreText)
     }
     
+    private var maxDxScore: Int {
+        (sheet.total ?? 0) * 3
+    }
+    
     private var calculatedRank: String {
         guard let rate = parsedRate else { return "-" }
-        if rate >= 100.5 { return "SSS+" }
-        if rate >= 100.0 { return "SSS" }
-        if rate >= 99.5 { return "SS+" }
-        if rate >= 99.0 { return "SS" }
-        if rate >= 98.0 { return "S+" }
-        if rate >= 97.0 { return "S" }
-        if rate >= 94.0 { return "AAA" }
-        if rate >= 90.0 { return "AA" }
-        if rate >= 80.0 { return "A" }
-        return "B"
+        return RatingUtils.calculateRank(achievement: rate)
     }
     
     private var diffColor: Color {
@@ -52,7 +50,14 @@ struct ScoreEntryView: View {
     
     private var isValid: Bool {
         guard let rate = parsedRate else { return false }
-        return rate >= 0 && rate <= 101.0
+        let rateValid = rate >= 0 && rate <= 101.0
+        
+        if let dxScore = parsedDxScore {
+            let dxValid = dxScore >= 0 && (maxDxScore == 0 || dxScore <= maxDxScore)
+            return rateValid && dxValid
+        }
+        
+        return rateValid
     }
     
     private var saveButtonBackground: Color {
@@ -101,6 +106,8 @@ struct ScoreEntryView: View {
             if let score = sheet.score {
                 rateText = String(format: "%.4f", score.rate)
                 dxScoreText = score.dxScore > 0 ? "\(score.dxScore)" : ""
+                selectedFC = score.fc
+                selectedFS = score.fs
             }
         }
         .onChange(of: selectedItem) { _, newValue in
@@ -133,7 +140,7 @@ struct ScoreEntryView: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
-                    Text(sheet.type.uppercased() == "STD" ? "标准" : sheet.type.uppercased())
+                    Text(sheet.type.uppercased())
                         .font(.system(size: 10, weight: .black))
                         .foregroundColor(.white)
                         .padding(.horizontal, 5)
@@ -169,7 +176,7 @@ struct ScoreEntryView: View {
         VStack(spacing: 16) {
             // Big rate display / input
             VStack(spacing: 8) {
-                Text("达成率")
+                Text("Achievement")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.secondary)
                 
@@ -207,24 +214,87 @@ struct ScoreEntryView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "star.fill")
                             .font(.system(size: 10))
-                            .foregroundColor(.yellow)
+                            .foregroundColor(dxScoreText.isEmpty ? .gray : .yellow)
                         
-                        TextField("DX分数", text: $dxScoreText)
+                        TextField("DX Score", text: $dxScoreText)
                             .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .frame(width: 60)
+                            .foregroundColor((parsedDxScore ?? 0) > maxDxScore && maxDxScore > 0 ? .red : .primary)
+                            .frame(width: 80)
                             .keyboardType(.numberPad)
                             .focused($isDxScoreFocused)
+                        
+                        if maxDxScore > 0 {
+                            Text("/ \(maxDxScore)")
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .foregroundColor(.secondary)
+                        }
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(Color.yellow.opacity(0.1), in: Capsule())
+                    .background(dxScoreText.isEmpty ? Color.gray.opacity(0.1) : Color.yellow.opacity(0.1), in: Capsule())
                 }
                 .transition(.scale.combined(with: .opacity))
+                
+                // FC / FS Selectors
+                HStack(spacing: 12) {
+                    Menu {
+                        Picker("Combo", selection: $selectedFC) {
+                            Text("None").tag(String?.none)
+                            Text("FC").tag(String?("fc"))
+                            Text("FC+").tag(String?("fcp"))
+                            Text("AP").tag(String?("ap"))
+                            Text("AP+").tag(String?("app"))
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "target")
+                                .font(.system(size: 10))
+                            ZStack {
+                                Text("COMBO")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .opacity(0)
+                                Text(selectedFC?.replacingOccurrences(of: "fcp", with: "fc+").replacingOccurrences(of: "app", with: "ap+").uppercased() ?? "Combo")
+                                    .font(.system(size: 12, weight: .bold))
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(selectedFC == nil ? Color.gray.opacity(0.1) : Color.green.opacity(0.1), in: Capsule())
+                        .foregroundColor(selectedFC == nil ? .gray : .green)
+                    }
+                    
+                    Menu {
+                        Picker("Sync", selection: $selectedFS) {
+                            Text("None").tag(String?.none)
+                            Text("S").tag(String?("sync"))
+                            Text("FS").tag(String?("fs"))
+                            Text("FS+").tag(String?("fsp"))
+                            Text("FDX").tag(String?("fsd"))
+                            Text("FDX+").tag(String?("fsdp"))
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "person.2.fill")
+                                .font(.system(size: 10))
+                            ZStack {
+                                Text("FDX+")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .opacity(0)
+                                Text(selectedFS?.replacingOccurrences(of: "fsdp", with: "fdx+").replacingOccurrences(of: "fsd", with: "fdx").replacingOccurrences(of: "fsp", with: "fs+").uppercased() ?? "Sync")
+                                    .font(.system(size: 12, weight: .bold))
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background((selectedFS == nil || selectedFS == "sync") ? Color.gray.opacity(0.1) : Color.blue.opacity(0.1), in: Capsule())
+                        .foregroundColor((selectedFS == nil || selectedFS == "sync") ? .gray : .blue)
+                    }
+                }
+                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: parsedRate != nil)
             }
         }
         .padding(24)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
-        .animation(.spring(response: 0.3), value: parsedRate != nil)
     }
     
     // MARK: - Photo Scan Section
@@ -396,7 +466,9 @@ struct ScoreEntryView: View {
                 sheetId: "\(sheet.songId)-\(sheet.type)-\(sheet.difficulty)",
                 rate: rate,
                 rank: calculatedRank,
-                dxScore: parsedDxScore ?? 0
+                dxScore: parsedDxScore ?? 0,
+                fc: selectedFC,
+                fs: selectedFS
             )
             modelContext.insert(newScore)
             sheet.score = newScore

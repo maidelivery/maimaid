@@ -8,14 +8,18 @@ final class Score {
     var rank: String // SSS+, SSS, SS, etc.
     var achievementDate: Date
     var dxScore: Int = 0
+    var fc: String?
+    var fs: String?
     
     var sheet: Sheet?
     
-    init(sheetId: String, rate: Double, rank: String, dxScore: Int = 0, achievementDate: Date = Date()) {
+    init(sheetId: String, rate: Double, rank: String, dxScore: Int = 0, fc: String? = nil, fs: String? = nil, achievementDate: Date = Date()) {
         self.sheetId = sheetId
         self.rate = rate
         self.rank = rank
         self.dxScore = dxScore
+        self.fc = fc
+        self.fs = fs
         self.achievementDate = achievementDate
     }
 }

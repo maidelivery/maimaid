@@ -28,15 +28,11 @@ struct SongRowView: View {
                 
                 // Info
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(song.title)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
+                    MarqueeText(text: song.title, font: .system(size: 15, weight: .semibold), fontWeight: .semibold, color: .primary)
+                        .frame(height: 20)
                     
-                    Text(song.artist)
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
+                    MarqueeText(text: song.artist, font: .system(size: 12), color: .secondary, speed: 30)
+                        .frame(height: 16)
                 }
                 
                 Spacer()
@@ -101,7 +97,7 @@ struct SongRowView: View {
                     .frame(width: 8, height: 8)
                 
                 if let score = sheet.score, score.rate > 0 {
-                    let progress = min(1.0, score.rate / 101.0)
+                    let progress = min(1.0, score.rate - 100)
                     Circle()
                         .trim(from: 0, to: progress)
                         .stroke(color, style: StrokeStyle(lineWidth: 4, lineCap: .butt))

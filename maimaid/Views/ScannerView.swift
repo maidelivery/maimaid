@@ -602,7 +602,7 @@ struct ScannerView: View {
             let existingScore = sheet.score
             if existingScore == nil || rate > existingScore!.rate {
                 if let existing = existingScore { modelContext.delete(existing) }
-                let newScore = Score(sheetId: "\(sheet.songId)-\(sheet.type)-\(sheet.difficulty)", rate: rate, rank: calculateRank(rate))
+                let newScore = Score(sheetId: "\(sheet.songId)-\(sheet.type)-\(sheet.difficulty)", rate: rate, rank: RatingUtils.calculateRank(achievement: rate))
                 modelContext.insert(newScore)
                 sheet.score = newScore
                 try? modelContext.save()
@@ -618,18 +618,6 @@ struct ScannerView: View {
         isLocked = false
     }
     
-    private func calculateRank(_ rate: Double) -> String {
-        if rate >= 100.5 { return "SSS+" }
-        if rate >= 100.0 { return "SSS" }
-        if rate >= 99.5 { return "SS+" }
-        if rate >= 99.0 { return "SS" }
-        if rate >= 98.0 { return "S+" }
-        if rate >= 97.0 { return "S" }
-        if rate >= 94.0 { return "AAA" }
-        if rate >= 90.0 { return "AA" }
-        if rate >= 80.0 { return "A" }
-        return "B"
-    }
     
     private func colorForDifficulty(_ diff: String) -> Color {
         switch diff.lowercased() {
