@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		377C29412F51634500779206 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 377C29402F51634500779206 /* SwiftSoup */; };
 		37C9CF1B2F4CE4DB002CBF7A /* maimaid.icon in Resources */ = {isa = PBXBuildFile; fileRef = 37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */; };
 /* End PBXBuildFile section */
 
@@ -41,6 +42,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				377C29412F51634500779206 /* SwiftSoup in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -76,6 +78,7 @@
 			);
 			name = maimaid;
 			packageProductDependencies = (
+				377C29402F51634500779206 /* SwiftSoup */,
 			);
 			productName = maimaid;
 			productReference = 37C9C3DD2F4CDAAB002CBF7A /* maimaid.app */;
@@ -105,6 +108,9 @@
 			);
 			mainGroup = 375868E02F4C78EB006316F5;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				377C293F2F51634500779206 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 375868E02F4C78EB006316F5;
 			projectDirPath = "";
@@ -373,6 +379,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		377C293F2F51634500779206 /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/scinfu/SwiftSoup.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.11.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		377C29402F51634500779206 /* SwiftSoup */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 377C293F2F51634500779206 /* XCRemoteSwiftPackageReference "SwiftSoup" */;
+			productName = SwiftSoup;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 375868E12F4C78EB006316F5 /* Project object */;
 }

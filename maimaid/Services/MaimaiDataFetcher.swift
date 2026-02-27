@@ -1,16 +1,6 @@
 import Foundation
 import SwiftData
 
-struct SongData: Decodable {
-    let songs: [InternalSong]
-    let updateTime: String
-    let versions: [VersionMetadata]?
-}
-
-struct VersionMetadata: Decodable {
-    let version: String
-}
-
 struct AliasListResponse: Decodable {
     let aliases: [AliasItem]
 }
@@ -27,9 +17,19 @@ struct LxnsSongListResponse: Decodable {
 struct LxnsSong: Decodable {
     let id: Int
     let title: String
+    let artist: String
 }
 
-struct InternalSong: Decodable {
+struct RemoteDataResponse: Decodable {
+    let songs: [RemoteSong]
+    let categories: [RemoteCategory]
+}
+
+struct RemoteCategory: Decodable {
+    let category: String
+}
+
+struct RemoteSong: Decodable {
     let songId: String
     let category: String?
     let title: String?
@@ -41,17 +41,10 @@ struct InternalSong: Decodable {
     let isNew: Bool?
     let isLocked: Bool?
     let comment: String?
-    let sheets: [InternalSheet]
+    let sheets: [RemoteSheet]
 }
 
-struct SheetRegions: Decodable {
-    let jp: Bool?
-    let intl: Bool?
-    let usa: Bool?
-    let cn: Bool?
-}
-
-struct InternalSheet: Decodable {
+struct RemoteSheet: Decodable {
     let type: String
     let difficulty: String
     let level: String
@@ -59,22 +52,22 @@ struct InternalSheet: Decodable {
     let internalLevel: String?
     let internalLevelValue: Double?
     let noteDesigner: String?
-    let noteCounts: InternalNoteCounts?
-    let regions: SheetRegions?
+    let noteCounts: RemoteNoteCounts?
+    let regions: [String: Bool]?
     let isSpecial: Bool?
 }
 
-struct InternalNoteCounts: Decodable {
+struct RemoteNoteCounts: Decodable {
     let tap: Int?
     let hold: Int?
     let slide: Int?
     let touch: Int?
-    let breakCount: Int?
+    let breakNote: Int?
     let total: Int?
     
     enum CodingKeys: String, CodingKey {
         case tap, hold, slide, touch, total
-        case breakCount = "break"
+        case breakNote = "break"
     }
 }
 
@@ -83,13 +76,15 @@ struct InternalNoteCounts: Decodable {
 class MaimaiDataFetcher {
     static let shared = MaimaiDataFetcher()
     
+    init() {}
+    
     enum SyncStage: String {
         case idle = "等待中"
-        case fetchingData = "正在从云端拉取静态数据..."
-        case fetchingAliases = "正在获取歌曲别名..."
-        case fetchingLxnsIds = "正在关联官方 ID..."
-        case processingSongs = "正在同步歌曲列表..."
-        case saving = "正在整理并保存数据..."
+        case fetchingRemoteData = "［1/5］获取汇总数据 (data.json)..."
+        case fetchingAliases = "［2/5］获取歌曲别名与歌曲 ID..."
+        case processingSongs = "［3/5］正在合并并分析数据..."
+        case downloadingImages = "［4/5］正在并发下载歌曲封面..."
+        case saving = "［5/5］正在保存到本地数据库..."
         case completed = "同步完成"
         case failed = "同步失败"
     }
@@ -98,232 +93,288 @@ class MaimaiDataFetcher {
     var currentStage: SyncStage = .idle
     var progress: Double = 0
     var statusMessage: String = ""
+    var syncLogs: String = ""
+    var estimatedTimeRemaining: TimeInterval? = nil
     
-    private let DATA_URL = "https://maimaid.shikoch.in/data.json"
+    nonisolated func log(_ message: String) {
+        print(message)
+        Task { @MainActor in
+            self.syncLogs += "[\(Date().formatted(date: .omitted, time: .standard))] \(message)\n"
+        }
+    }
+    private var syncStartTime: Date? = nil
     
-    func fetchSongs(modelContext: ModelContext) async throws {
+    var formattedETA: String {
+        guard let eta = estimatedTimeRemaining, eta > 0 else {
+            return "计算中..."
+        }
+        let minutes = Int(eta) / 60
+        let seconds = Int(eta) % 60
+        if minutes > 0 {
+            return String(format: "约剩余 %d分%02d秒", minutes, seconds)
+        } else {
+            return String(format: "约剩余 %d秒", seconds)
+        }
+    }
+    
+    // State references to update from backgrounds
+    private func updateProgress(_ subProgress: Double, totalForStage: Double, baseForStage: Double, status: String) {
+        Task { @MainActor in
+            self.progress = baseForStage + (subProgress * totalForStage)
+            self.statusMessage = status
+            
+            if let start = self.syncStartTime, self.progress > 0.02 {
+                let elapsed = Date().timeIntervalSince(start)
+                let totalEstimated = elapsed / self.progress
+                self.estimatedTimeRemaining = max(0, totalEstimated - elapsed)
+            }
+        }
+    }
+    
+    private func updateStage(_ stage: SyncStage, base: Double, message: String) {
+        Task { @MainActor in
+            self.currentStage = stage
+            self.progress = base
+            self.statusMessage = message
+        }
+    }
+    
+    struct SyncOptions {
+        var updateRemoteData = true
+        var updateAliases = true
+        var updateCovers = true
+    }
+    
+    func fetchSongs(modelContext: ModelContext, options: SyncOptions = SyncOptions()) async throws {
         isSyncing = true
-        progress = 0.05
-        currentStage = .fetchingData
-        statusMessage = "正在拉取核心数据文件..."
+        progress = 0.0
+        syncStartTime = Date()
+        estimatedTimeRemaining = nil
         
-        let data: Data
         do {
-            // Try to load from Bundle first (Offline Mode)
-            if let bundleUrl = Bundle.main.url(forResource: "data", withExtension: "json") {
-                data = try Data(contentsOf: bundleUrl)
-            } else {
-                guard let url = URL(string: DATA_URL) else { 
-                    isSyncing = false
-                    currentStage = .failed
-                    return 
+            var remoteSongs: [RemoteSong] = []
+            var aliasMap: [String: [String]] = [:]
+            var titleToLxnsId: [String: Int] = [:]
+            
+            syncLogs = ""
+            log("开始更新流程...")
+            
+            // --- 阶段 1: 远程 data.json ---
+            if options.updateRemoteData {
+                updateStage(.fetchingRemoteData, base: 0.1, message: "下载远程 data.json...")
+                guard let url = URL(string: "https://maimaid.shikoch.in/data.json") else {
+                    throw URLError(.badURL)
                 }
-                let (networkData, _) = try await URLSession.shared.data(from: url)
-                data = networkData
-            }
-        } catch {
-            isSyncing = false
-            currentStage = .failed
-            statusMessage = "网络错误: \(error.localizedDescription)"
-            throw error
-        }
-        
-        progress = 0.15
-        currentStage = .fetchingAliases
-        statusMessage = "连接至 LXNS 获取别名和 ID 映射..."
-        
-        let songData = try JSONDecoder().decode(SongData.self, from: data)
-        
-        // Persist version sequence for data-driven sorting
-        if let versions = songData.versions {
-            let sequence = versions.map { $0.version }
-            UserDefaults.standard.set(sequence, forKey: "MaimaiVersionSequence")
-        }
-        
-        // Fetch Aliases and LXNS Song List
-        var aliasMap: [String: [String]] = [:]
-        var titleToLxnsId: [String: Int] = [:]
-        do {
-            if let aliasUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/alias/list"),
-               let lxnsSongUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/song/list") {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                let response = try JSONDecoder().decode(RemoteDataResponse.self, from: data)
+                remoteSongs = response.songs
+                log("成功下载数据，共 \(remoteSongs.count) 首歌曲")
                 
-                async let (aliasData, _) = URLSession.shared.data(from: aliasUrl)
-                async let (lxnsSongData, _) = URLSession.shared.data(from: lxnsSongUrl)
-                
-                let aliasResponse = try await JSONDecoder().decode(AliasListResponse.self, from: aliasData)
-                progress = 0.25
-                currentStage = .fetchingLxnsIds
-                
-                let lxnsSongResponse = try await JSONDecoder().decode(LxnsSongListResponse.self, from: lxnsSongData)
-                progress = 0.35
-                
-                var lxnsIdToTitle: [Int: String] = [:]
-                for lxnsSong in lxnsSongResponse.songs {
-                    lxnsIdToTitle[lxnsSong.id] = lxnsSong.title
-                    titleToLxnsId[lxnsSong.title] = lxnsSong.id
-                }
-                
-                for item in aliasResponse.aliases {
-                    if let title = lxnsIdToTitle[item.song_id] {
-                        aliasMap[title] = item.aliases
-                    }
-                }
+                // 存一下版本序列用于排序
+                let sequence = response.categories.map { $0.category } // Using categories as version sequence fallback or similar
+                UserDefaults.standard.set(sequence, forKey: "MaimaiVersionSequence")
             }
-        } catch {
-            print("Failed to fetch aliases: \(error)")
-        }
-        
-        progress = 0.45
-        currentStage = .processingSongs
-        statusMessage = "对比现有库，处理 \(songData.songs.count) 首歌曲..."
-        
-        let existingSongs = try modelContext.fetch(FetchDescriptor<Song>())
-        var songMap: [String: Song] = [:]
-        for s in existingSongs {
-            songMap[s.songId] = s
-        }
-        
-        let totalCount = songData.songs.count
-        for (index, internalSong) in songData.songs.enumerated() {
-            let songId = internalSong.songId
-            
-            let song: Song
-            if let existing = songMap[songId] {
-                song = existing
-            } else {
-                song = Song(
-                    songId: songId,
-                    category: internalSong.category ?? "",
-                    title: internalSong.title ?? "",
-                    artist: internalSong.artist ?? "",
-                    imageName: internalSong.imageName ?? "",
-                    imageUrl: "",
-                    version: internalSong.version,
-                    releaseDate: internalSong.releaseDate,
-                    sortOrder: 0,
-                    bpm: internalSong.bpm,
-                    isNew: internalSong.isNew ?? false,
-                    isLocked: internalSong.isLocked ?? false,
-                    comment: internalSong.comment
-                )
-                modelContext.insert(song)
-            }
-            
-            if let title = internalSong.title, let officialId = titleToLxnsId[title] {
-                song.lxnsId = officialId
-            }
-            
-            song.category = internalSong.category ?? ""
-            song.title = internalSong.title ?? ""
-            song.artist = internalSong.artist ?? ""
-            song.bpm = internalSong.bpm
-            song.version = internalSong.version
-            song.releaseDate = internalSong.releaseDate
-            song.isNew = internalSong.isNew ?? false
-            song.isLocked = internalSong.isLocked ?? false
-            song.comment = internalSong.comment
-            
-            if let aliases = aliasMap[internalSong.title ?? ""], !aliases.isEmpty {
-                song.aliases = aliases
-            }
-            
-            var sheetMap: [String: Sheet] = [:]
-            for sheet in song.sheets {
-                let key = "\(sheet.type)_\(sheet.difficulty)"
-                sheetMap[key] = sheet
-            }
-            
-            var newSheets: [Sheet] = []
-            for internalSheet in internalSong.sheets {
-                let key = "\(internalSheet.type)_\(internalSheet.difficulty)"
-                
-                if let existingSheet = sheetMap[key] {
-                    existingSheet.level = internalSheet.level
-                    existingSheet.levelValue = internalSheet.levelValue
-                    existingSheet.internalLevel = internalSheet.internalLevel
-                    existingSheet.internalLevelValue = internalSheet.internalLevelValue
-                    existingSheet.noteDesigner = internalSheet.noteDesigner
+            // --- 阶段 2: Aliases & IDs ---
+            if options.updateAliases {
+                updateStage(.fetchingAliases, base: 0.30, message: "连接 LXNS API 获取别名...")
+                if let aliasUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/alias/list"),
+                   let lxnsSongUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/song/list") {
                     
-                    if let notes = internalSheet.noteCounts {
-                        existingSheet.tap = notes.tap
-                        existingSheet.hold = notes.hold
-                        existingSheet.slide = notes.slide
-                        existingSheet.touch = notes.touch
-                        existingSheet.breakCount = notes.breakCount
-                        existingSheet.total = notes.total
-                    }
+                    async let aliasDataFetch = URLSession.shared.data(from: aliasUrl)
+                    async let lxnsSongDataFetch = URLSession.shared.data(from: lxnsSongUrl)
                     
-                    if let regions = internalSheet.regions {
-                        existingSheet.regionJp = regions.jp ?? true
-                        existingSheet.regionIntl = regions.intl ?? true
-                        existingSheet.regionUsa = regions.usa ?? true
-                        existingSheet.regionCn = regions.cn ?? true
+                    if let (aliasData, _) = try? await aliasDataFetch,
+                       let (lxnsSongData, _) = try? await lxnsSongDataFetch {
+                        
+                        let aliasResponse = try? JSONDecoder().decode(AliasListResponse.self, from: aliasData)
+                        let lxnsSongResponse = try? JSONDecoder().decode(LxnsSongListResponse.self, from: lxnsSongData)
+                        
+                        if let aliasResponse = aliasResponse, let lxnsSongResponse = lxnsSongResponse {
+                            var lxnsIdToTitle: [Int: String] = [:]
+                            for lxnsSong in lxnsSongResponse.songs {
+                                lxnsIdToTitle[lxnsSong.id] = lxnsSong.title
+                                titleToLxnsId[lxnsSong.title] = lxnsSong.id
+                            }
+                            for item in aliasResponse.aliases {
+                                if let title = lxnsIdToTitle[item.song_id] {
+                                    aliasMap[title] = item.aliases
+                                }
+                            }
+                        }
                     }
-                    newSheets.append(existingSheet)
+                }
+            }
+            
+            // --- 阶段 3: 合并数据入库 (组装环节) ---
+            if options.updateRemoteData || options.updateAliases {
+                updateStage(.processingSongs, base: 0.55, message: "分析整理并入库本地乐曲数据...")
+                
+                let existingSongsFromDB = try modelContext.fetch(FetchDescriptor<Song>())
+                var existingSongMap: [String: Song] = [:]
+                for s in existingSongsFromDB { existingSongMap[s.songId] = s }
+
+                // 如果没选 Remote 但选了别的，我们需要现有的歌曲列表
+                var songsToProcess: [RemoteSong] = remoteSongs
+                if !options.updateRemoteData {
+                    songsToProcess = existingSongsFromDB.map { s in
+                        RemoteSong(
+                            songId: s.songId, category: s.category, title: s.title, artist: s.artist, bpm: s.bpm,
+                            imageName: s.imageName, version: s.version, releaseDate: s.releaseDate,
+                            isNew: s.isNew, isLocked: s.isLocked, comment: s.comment,
+                            sheets: s.sheets.map { sh in
+                                RemoteSheet(
+                                    type: sh.type, difficulty: sh.difficulty, level: sh.level, levelValue: sh.levelValue,
+                                    internalLevel: sh.internalLevel, internalLevelValue: sh.internalLevelValue,
+                                    noteDesigner: sh.noteDesigner,
+                                    noteCounts: RemoteNoteCounts(tap: sh.tap, hold: sh.hold, slide: sh.slide, touch: sh.touch, breakNote: sh.breakCount, total: sh.total),
+                                    regions: ["jp": sh.regionJp, "intl": sh.regionIntl, "usa": sh.regionUsa, "cn": sh.regionCn],
+                                    isSpecial: nil
+                                )
+                            }
+                        )
+                    }
                 } else {
-                    let sheet = Sheet(
-                        songId: songId,
-                        type: internalSheet.type,
-                        difficulty: internalSheet.difficulty,
-                        level: internalSheet.level,
-                        levelValue: internalSheet.levelValue,
-                        internalLevel: internalSheet.internalLevel,
-                        internalLevelValue: internalSheet.internalLevelValue,
-                        noteDesigner: internalSheet.noteDesigner,
-                        tap: internalSheet.noteCounts?.tap,
-                        hold: internalSheet.noteCounts?.hold,
-                        slide: internalSheet.noteCounts?.slide,
-                        touch: internalSheet.noteCounts?.touch,
-                        breakCount: internalSheet.noteCounts?.breakCount,
-                        total: internalSheet.noteCounts?.total
-                    )
-                    if let regions = internalSheet.regions {
-                        sheet.regionJp = regions.jp ?? true
-                        sheet.regionIntl = regions.intl ?? true
-                        sheet.regionUsa = regions.usa ?? true
-                        sheet.regionCn = regions.cn ?? true
+                    // 只有在完整更新 Remote 时才删除不存在的曲目
+                    let currentRemoteIds = Set(remoteSongs.map { $0.songId })
+                    for existing in existingSongsFromDB {
+                        if !currentRemoteIds.contains(existing.songId) {
+                            modelContext.delete(existing)
+                        }
                     }
-                    newSheets.append(sheet)
+                }
+                
+                for (index, remoteSong) in songsToProcess.enumerated() {
+                    let song: Song
+                    if let existing = existingSongMap[remoteSong.songId] {
+                        song = existing
+                    } else if options.updateRemoteData {
+                        song = Song(
+                            songId: remoteSong.songId, category: remoteSong.category ?? "", title: remoteSong.title ?? "",
+                            artist: remoteSong.artist ?? "", imageName: remoteSong.imageName ?? "", 
+                            imageUrl: "https://maimaidx.jp/maimai-mobile/img/Music/\(remoteSong.imageName ?? "")",
+                            version: remoteSong.version ?? "", releaseDate: remoteSong.releaseDate ?? "", sortOrder: 0,
+                            bpm: remoteSong.bpm, isNew: remoteSong.isNew ?? false, isLocked: remoteSong.isLocked ?? false,
+                            comment: remoteSong.comment
+                        )
+                        modelContext.insert(song)
+                        log("新增歌曲: \(song.title)")
+                    } else { continue }
+                    
+                    if options.updateRemoteData {
+                        song.category = remoteSong.category ?? ""
+                        song.title = remoteSong.title ?? ""
+                        song.artist = remoteSong.artist ?? ""
+                        song.imageName = remoteSong.imageName ?? ""
+                        song.bpm = remoteSong.bpm
+                        song.isNew = remoteSong.isNew ?? false
+                        song.isLocked = remoteSong.isLocked ?? false
+                        song.comment = remoteSong.comment
+                        if let version = remoteSong.version { song.version = version }
+                        if let date = remoteSong.releaseDate { song.releaseDate = date }
+                    }
+                    
+                    if options.updateAliases {
+                        if let officialId = titleToLxnsId[song.title] { song.lxnsId = officialId }
+                        if let aliases = aliasMap[song.title], !aliases.isEmpty { song.aliases = aliases }
+                    }
+                    
+                    var sheetMap: [String: Sheet] = [:]
+                    for sh in song.sheets { sheetMap["\(sh.type)_\(sh.difficulty)"] = sh }
+                    
+                    for remoteSheet in remoteSong.sheets {
+                        let key = "\(remoteSheet.type)_\(remoteSheet.difficulty)"
+                        let sheet: Sheet
+                        if let existingSheet = sheetMap[key] {
+                            sheet = existingSheet
+                        } else {
+                            sheet = Sheet(
+                                songId: song.songId, type: remoteSheet.type, difficulty: remoteSheet.difficulty,
+                                level: remoteSheet.level, levelValue: remoteSheet.levelValue ?? 0
+                            )
+                            sheet.song = song
+                            modelContext.insert(sheet)
+                            if song.sheets.isEmpty { song.sheets = [sheet] } else { song.sheets.append(sheet) }
+                        }
+                        
+                        if options.updateRemoteData {
+                            sheet.level = remoteSheet.level
+                            sheet.levelValue = remoteSheet.levelValue ?? 0
+                            sheet.internalLevel = remoteSheet.internalLevel
+                            sheet.internalLevelValue = remoteSheet.internalLevelValue
+                            sheet.noteDesigner = remoteSheet.noteDesigner
+                            
+                            if let nc = remoteSheet.noteCounts {
+                                sheet.tap = nc.tap; sheet.hold = nc.hold; sheet.slide = nc.slide; sheet.touch = nc.touch;
+                                sheet.breakCount = nc.breakNote; sheet.total = nc.total
+                            }
+                            
+                            if let regions = remoteSheet.regions {
+                                sheet.regionJp = regions["jp"] ?? false
+                                sheet.regionIntl = regions["intl"] ?? false
+                                sheet.regionUsa = regions["usa"] ?? false
+                                sheet.regionCn = regions["cn"] ?? false
+                            }
+                        }
+                    }
+                    
+                    if options.updateRemoteData {
+                        let currentSheetKeys = Set(remoteSong.sheets.map { "\($0.type)_\($0.difficulty)" })
+                        for sh in song.sheets {
+                            let key = "\(sh.type)_\(sh.difficulty)"
+                            if !currentSheetKeys.contains(key) && sh.score == nil {
+                                modelContext.delete(sh)
+                            }
+                        }
+                    }
+                    
+                    if index % 100 == 0 { updateProgress(Double(index) / Double(songsToProcess.count), totalForStage: 0.20, baseForStage: 0.55, status: "整理数据: \(song.title)") }
+                }
+            }
+
+            // --- 阶段 7: 下载图片资源 ---
+            if options.updateCovers {
+                updateStage(.downloadingImages, base: 0.75, message: "扫描并下载缺失封面...")
+                let descriptor = FetchDescriptor<Song>()
+                let allSongs = try modelContext.fetch(descriptor)
+                var coverDownloadTasks: [(String, String)] = []
+                for song in allSongs {
+                    if !ImageDownloader.shared.imageExists(imageName: song.imageName) {
+                        coverDownloadTasks.append((song.imageUrl, song.imageName))
+                    }
+                }
+                
+                if !coverDownloadTasks.isEmpty {
+                    let batchSize = 30
+                    for chunk in stride(from: 0, to: coverDownloadTasks.count, by: batchSize) {
+                        let endIndex = min(chunk + batchSize, coverDownloadTasks.count)
+                        let subTasks = coverDownloadTasks[chunk..<endIndex]
+                        updateProgress(Double(chunk) / Double(coverDownloadTasks.count), totalForStage: 0.15, baseForStage: 0.75, status: "下载封面 (\(chunk)/\(coverDownloadTasks.count))")
+                        await withTaskGroup(of: Void.self) { group in
+                            for task in subTasks {
+                                group.addTask { _ = try? await ImageDownloader.shared.downloadImage(from: task.0, as: task.1) }
+                            }
+                        }
+                    }
                 }
             }
             
-            for sheet in song.sheets {
-                let key = "\(sheet.type)_\(sheet.difficulty)"
-                if !internalSong.sheets.contains(where: { "\($0.type)_\($0.difficulty)" == key }) {
-                    if sheet.score == nil {
-                        modelContext.delete(sheet)
-                    }
-                }
-            }
+            // --- 阶段 8: 持久化 ---
+            updateStage(.saving, base: 0.95, message: "持久化数据...")
+            try modelContext.save()
             
-            song.sheets = newSheets
-            
-            // Progress updates (from 45% to 90%)
-            if index % 20 == 0 {
-                progress = 0.45 + (Double(index) / Double(totalCount)) * 0.45
-                statusMessage = "正在处理歌曲: \(song.title)"
-                await Task.yield()
+            if let config = try? modelContext.fetch(FetchDescriptor<SyncConfig>()).first {
+                config.lastStaticDataUpdateDate = Date()
+            } else {
+                let newConfig = SyncConfig(); newConfig.lastStaticDataUpdateDate = Date(); modelContext.insert(newConfig)
             }
+            UserDefaults.standard.set(true, forKey: "didPerformInitialSync")
+            updateStage(.completed, base: 1.0, message: "更新完成！")
+            _ = try? await Task.sleep(nanoseconds: 1_000_000_000)
+            isSyncing = false
+        } catch {
+            print("Fetch failed: \(error)")
+            updateStage(.failed, base: 0.0, message: "异常: \(error.localizedDescription)")
+            isSyncing = false; throw error
         }
-        
-        currentStage = .saving
-        statusMessage = "持久化本地数据..."
-        progress = 0.95
-        
-        try modelContext.save()
-        
-        // Record sync time in config
-        if let config = try? modelContext.fetch(FetchDescriptor<SyncConfig>()).first {
-            config.lastStaticDataUpdateDate = Date()
-        }
-        
-        UserDefaults.standard.set(true, forKey: "didPerformInitialSync")
-        
-        progress = 1.0
-        currentStage = .completed
-        statusMessage = "同步成功"
-        
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        isSyncing = false
     }
 }

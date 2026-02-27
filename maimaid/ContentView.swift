@@ -23,11 +23,11 @@ struct ContentView: View {
     
     var searchText: String = ""
     
-    @State private var filterSettings = FilterSettings()
+    @AppStorage("filterSettings") private var filterSettings = FilterSettings()
     @State private var showFilterSheet = false
     @State private var isFetching = false
-    @State private var sortOption: SortOption = .defaultOrder
-    @State private var sortAscending: Bool = true
+    @AppStorage("sortOption") private var sortOption: SortOption = .defaultOrder
+    @AppStorage("sortAscending") private var sortAscending: Bool = true
     
     var allCategories: [String] {
         Array(Set(songs.map { $0.category })).sorted()

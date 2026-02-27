@@ -1,6 +1,6 @@
 import Foundation
 
-struct FilterSettings: Equatable {
+struct FilterSettings: Equatable, Codable, RawRepresentable {
     var selectedCategories: Set<String> = []
     var selectedVersions: Set<String> = []
     var selectedDifficulties: Set<String> = []
@@ -9,6 +9,25 @@ struct FilterSettings: Equatable {
     var minLevel: Double = 1.0
     var maxLevel: Double = 15.0
     var showFavoritesOnly: Bool = false
+    
+    // RawRepresentable implementation for @AppStorage
+    public var rawValue: String {
+        guard let data = try? JSONEncoder().encode(self),
+              let result = String(data: data, encoding: .utf8) else {
+            return ""
+        }
+        return result
+    }
+    
+    public init?(rawValue: String) {
+        guard let data = rawValue.data(using: .utf8),
+              let result = try? JSONDecoder().decode(FilterSettings.self, from: data) else {
+            return nil
+        }
+        self = result
+    }
+    
+    init() {}
 }
 
 class FilterUtils {

@@ -35,15 +35,11 @@ struct SongJacketView: View {
     }
     
     private func loadLocalImage() -> UIImage? {
-        // Try to find the image in the "Covers" folder reference in the main bundle
-        // The imageName is expected to be the SHA256 string (e.g. "abc...def.png")
-        
-        let path = "Covers/\(imageName)"
-        if let bundlePath = Bundle.main.path(forResource: path, ofType: nil) {
-            return UIImage(contentsOfFile: bundlePath)
+        if let downloaded = ImageDownloader.shared.loadImage(imageName: imageName) {
+            return downloaded
         }
         
-        // Fallback: check if it was dragged as a simple group/asset
+        // Fallback: check if it was dragged as a simple asset catalog item
         if let assetImage = UIImage(named: imageName) {
             return assetImage
         }

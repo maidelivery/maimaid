@@ -31,12 +31,6 @@ struct SongRowView: View {
                     HStack(spacing: 4) {
                         MarqueeText(text: song.title, font: .system(size: 15, weight: .semibold), fontWeight: .semibold, color: .primary)
                             .frame(height: 20)
-                        
-                        if song.isFavorite {
-                            Image(systemName: "heart.fill")
-                                .font(.system(size: 10))
-                                .foregroundColor(.red)
-                        }
                     }
                     
                     MarqueeText(text: song.artist, font: .system(size: 12), color: .secondary, speed: 30)
@@ -81,7 +75,22 @@ struct SongRowView: View {
             .padding(.trailing, 14)
         }
         .padding(.vertical, 12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .background {
+            ZStack(alignment: .trailing) {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(.ultraThinMaterial)
+                
+                if song.isFavorite {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 80))
+                        .foregroundColor(.yellow.opacity(0.08))
+                        .offset(x: 20, y: 10)
+                        .rotationEffect(.degrees(-15))
+                        .clipped()
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(accentColor.opacity(0.12), lineWidth: 1)
@@ -114,8 +123,6 @@ struct SongRowView: View {
                 }
             }
         }
-        
-        }
     }
     
     private func difficultyOrder(_ difficulty: String) -> Int {
@@ -128,4 +135,5 @@ struct SongRowView: View {
         default: return -1
         }
     }
-
+    
+}
