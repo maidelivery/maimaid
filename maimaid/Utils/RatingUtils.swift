@@ -159,15 +159,7 @@ struct RatingUtils {
     }
     
     static func calculateB50(input: [RatingCalculationInput], b35Count: Int = 35, b15Count: Int = 15) -> (total: Int, b35: [RatingEntry], b15: [RatingEntry]) {
-        // Optimize version detection: O(N) single pass
-        var latestVersion = ""
-        var latestDate = ""
-        for song in input {
-            if let date = song.releaseDate, date > latestDate {
-                latestDate = date
-                latestVersion = song.version ?? ""
-            }
-        }
+        let latestVersion = ThemeUtils.latestVersion
         
         var newEntries: [RatingEntry] = []
         var oldEntries: [RatingEntry] = []

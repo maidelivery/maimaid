@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import UIKit
 
 struct AliasListResponse: Decodable {
     let aliases: [AliasItem]
@@ -23,6 +24,13 @@ struct LxnsSong: Decodable {
 struct RemoteDataResponse: Decodable {
     let songs: [RemoteSong]
     let categories: [RemoteCategory]
+    let versions: [RemoteVersion]
+}
+
+struct RemoteVersion: Codable {
+    let version: String
+    let abbr: String
+    let releaseDate: String?
 }
 
 struct RemoteCategory: Decodable {
@@ -36,6 +44,7 @@ struct RemoteSong: Decodable {
     let artist: String?
     let bpm: Double?
     let imageName: String?
+    let imageUrl: String?
     let version: String?
     let releaseDate: String?
     let isNew: Bool?
@@ -71,12 +80,12 @@ struct RemoteNoteCounts: Decodable {
     }
 }
 
-@Observable
 @MainActor
+@Observable
 class MaimaiDataFetcher {
     static let shared = MaimaiDataFetcher()
     
-    init() {}
+    private init() {}
     
     enum SyncStage: String {
         case idle = "等待中"
@@ -96,11 +105,9 @@ class MaimaiDataFetcher {
     var syncLogs: String = ""
     var estimatedTimeRemaining: TimeInterval? = nil
     
-    nonisolated func log(_ message: String) {
+    func log(_ message: String) {
         print(message)
-        Task { @MainActor in
-            self.syncLogs += "[\(Date().formatted(date: .omitted, time: .standard))] \(message)\n"
-        }
+        self.syncLogs += "[\(Date().formatted(date: .omitted, time: .standard))] \(message)\n"
     }
     private var syncStartTime: Date? = nil
     
@@ -119,24 +126,21 @@ class MaimaiDataFetcher {
     
     // State references to update from backgrounds
     private func updateProgress(_ subProgress: Double, totalForStage: Double, baseForStage: Double, status: String) {
-        Task { @MainActor in
-            self.progress = baseForStage + (subProgress * totalForStage)
-            self.statusMessage = status
-            
-            if let start = self.syncStartTime, self.progress > 0.02 {
-                let elapsed = Date().timeIntervalSince(start)
-                let totalEstimated = elapsed / self.progress
-                self.estimatedTimeRemaining = max(0, totalEstimated - elapsed)
-            }
+        self.progress = baseForStage + (subProgress * totalForStage)
+        self.statusMessage = status
+        
+        if let start = self.syncStartTime, self.progress > 0.02 {
+            let elapsed = Date().timeIntervalSince(start)
+            let totalEstimated = elapsed / self.progress
+            self.estimatedTimeRemaining = max(0, totalEstimated - elapsed)
         }
     }
     
     private func updateStage(_ stage: SyncStage, base: Double, message: String) {
-        Task { @MainActor in
-            self.currentStage = stage
-            self.progress = base
-            self.statusMessage = message
-        }
+        self.currentStage = stage
+        self.progress = base
+        self.statusMessage = message
+        self.log(message)
     }
     
     struct SyncOptions {
@@ -150,14 +154,13 @@ class MaimaiDataFetcher {
         progress = 0.0
         syncStartTime = Date()
         estimatedTimeRemaining = nil
+        syncLogs = ""
+        log("开始更新流程...")
         
         do {
             var remoteSongs: [RemoteSong] = []
             var aliasMap: [String: [String]] = [:]
             var titleToLxnsId: [String: Int] = [:]
-            
-            syncLogs = ""
-            log("开始更新流程...")
             
             // --- 阶段 1: 远程 data.json ---
             if options.updateRemoteData {
@@ -171,9 +174,16 @@ class MaimaiDataFetcher {
                 log("成功下载数据，共 \(remoteSongs.count) 首歌曲")
                 
                 // 存一下版本序列用于排序
-                let sequence = response.categories.map { $0.category } // Using categories as version sequence fallback or similar
+                if let encodedVersions = try? JSONEncoder().encode(response.versions) {
+                    UserDefaults.standard.set(encodedVersions, forKey: "MaimaiVersionsData")
+                }
+                let sequence = response.versions.map { $0.version }
                 UserDefaults.standard.set(sequence, forKey: "MaimaiVersionSequence")
+                
+                let catSequence = response.categories.map { $0.category }
+                UserDefaults.standard.set(catSequence, forKey: "MaimaiCategorySequence")
             }
+            
             // --- 阶段 2: Aliases & IDs ---
             if options.updateAliases {
                 updateStage(.fetchingAliases, base: 0.30, message: "连接 LXNS API 获取别名...")
@@ -205,7 +215,7 @@ class MaimaiDataFetcher {
                 }
             }
             
-            // --- 阶段 3: 合并数据入库 (组装环节) ---
+            // --- 阶段 3: 合并数据入库 ---
             if options.updateRemoteData || options.updateAliases {
                 updateStage(.processingSongs, base: 0.55, message: "分析整理并入库本地乐曲数据...")
                 
@@ -213,13 +223,12 @@ class MaimaiDataFetcher {
                 var existingSongMap: [String: Song] = [:]
                 for s in existingSongsFromDB { existingSongMap[s.songId] = s }
 
-                // 如果没选 Remote 但选了别的，我们需要现有的歌曲列表
                 var songsToProcess: [RemoteSong] = remoteSongs
                 if !options.updateRemoteData {
                     songsToProcess = existingSongsFromDB.map { s in
                         RemoteSong(
                             songId: s.songId, category: s.category, title: s.title, artist: s.artist, bpm: s.bpm,
-                            imageName: s.imageName, version: s.version, releaseDate: s.releaseDate,
+                            imageName: s.imageName, imageUrl: s.imageUrl, version: s.version, releaseDate: s.releaseDate,
                             isNew: s.isNew, isLocked: s.isLocked, comment: s.comment,
                             sheets: s.sheets.map { sh in
                                 RemoteSheet(
@@ -234,7 +243,6 @@ class MaimaiDataFetcher {
                         )
                     }
                 } else {
-                    // 只有在完整更新 Remote 时才删除不存在的曲目
                     let currentRemoteIds = Set(remoteSongs.map { $0.songId })
                     for existing in existingSongsFromDB {
                         if !currentRemoteIds.contains(existing.songId) {
@@ -249,9 +257,11 @@ class MaimaiDataFetcher {
                         song = existing
                     } else if options.updateRemoteData {
                         song = Song(
-                            songId: remoteSong.songId, category: remoteSong.category ?? "", title: remoteSong.title ?? "",
-                            artist: remoteSong.artist ?? "", imageName: remoteSong.imageName ?? "", 
-                            imageUrl: "https://maimaidx.jp/maimai-mobile/img/Music/\(remoteSong.imageName ?? "")",
+                            songId: remoteSong.songId, category: remoteSong.category ?? "", 
+                            title: (remoteSong.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
+                            artist: remoteSong.artist ?? "", 
+                            imageName: (remoteSong.imageName ?? "").trimmingCharacters(in: .whitespacesAndNewlines), 
+                            imageUrl: (remoteSong.imageUrl ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
                             version: remoteSong.version ?? "", releaseDate: remoteSong.releaseDate ?? "", sortOrder: 0,
                             bpm: remoteSong.bpm, isNew: remoteSong.isNew ?? false, isLocked: remoteSong.isLocked ?? false,
                             comment: remoteSong.comment
@@ -262,9 +272,10 @@ class MaimaiDataFetcher {
                     
                     if options.updateRemoteData {
                         song.category = remoteSong.category ?? ""
-                        song.title = remoteSong.title ?? ""
+                        song.title = (remoteSong.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                         song.artist = remoteSong.artist ?? ""
-                        song.imageName = remoteSong.imageName ?? ""
+                        song.imageName = (remoteSong.imageName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                        song.imageUrl = (remoteSong.imageUrl ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                         song.bpm = remoteSong.bpm
                         song.isNew = remoteSong.isNew ?? false
                         song.isLocked = remoteSong.isLocked ?? false
@@ -327,11 +338,13 @@ class MaimaiDataFetcher {
                         }
                     }
                     
-                    if index % 100 == 0 { updateProgress(Double(index) / Double(songsToProcess.count), totalForStage: 0.20, baseForStage: 0.55, status: "整理数据: \(song.title)") }
+                    if index % 100 == 0 {
+                        updateProgress(Double(index) / Double(songsToProcess.count), totalForStage: 0.20, baseForStage: 0.55, status: "整理数据: \(song.title)")
+                    }
                 }
             }
 
-            // --- 阶段 7: 下载图片资源 ---
+            // --- 阶段 4: 下载图片资源 ---
             if options.updateCovers {
                 updateStage(.downloadingImages, base: 0.75, message: "扫描并下载缺失封面...")
                 let descriptor = FetchDescriptor<Song>()
@@ -358,14 +371,16 @@ class MaimaiDataFetcher {
                 }
             }
             
-            // --- 阶段 8: 持久化 ---
+            // --- 阶段 5: 持久化 ---
             updateStage(.saving, base: 0.95, message: "持久化数据...")
             try modelContext.save()
             
             if let config = try? modelContext.fetch(FetchDescriptor<SyncConfig>()).first {
                 config.lastStaticDataUpdateDate = Date()
             } else {
-                let newConfig = SyncConfig(); newConfig.lastStaticDataUpdateDate = Date(); modelContext.insert(newConfig)
+                let newConfig = SyncConfig()
+                newConfig.lastStaticDataUpdateDate = Date()
+                modelContext.insert(newConfig)
             }
             UserDefaults.standard.set(true, forKey: "didPerformInitialSync")
             updateStage(.completed, base: 1.0, message: "更新完成！")
@@ -374,7 +389,8 @@ class MaimaiDataFetcher {
         } catch {
             print("Fetch failed: \(error)")
             updateStage(.failed, base: 0.0, message: "异常: \(error.localizedDescription)")
-            isSyncing = false; throw error
+            isSyncing = false
+            throw error
         }
     }
 }

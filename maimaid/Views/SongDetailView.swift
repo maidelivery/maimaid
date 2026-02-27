@@ -213,7 +213,7 @@ struct SongDetailView: View {
             .onTapGesture { copyToClipboard(song.category, label: "分类") }
         
         if let version = song.version {
-            metadataPill(icon: "clock", value: version, label: nil, isGrid: isGrid)
+            metadataPill(icon: "clock", value: ThemeUtils.versionAbbreviation(version), label: nil, isGrid: isGrid)
                 .onTapGesture { copyToClipboard(version, label: "版本") }
         }
         

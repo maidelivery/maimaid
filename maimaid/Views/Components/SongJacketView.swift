@@ -12,8 +12,8 @@ struct SongJacketView: View {
                 Image(uiImage: uiImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-            } else {
-                AsyncImage(url: URL(string: remoteUrl)) { image in
+            } else if let url = URL(string: remoteUrl) {
+                AsyncImage(url: url) { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -23,6 +23,12 @@ struct SongJacketView: View {
                         ProgressView()
                             .scaleEffect(0.5)
                     }
+                }
+            } else {
+                ZStack {
+                    Color.primary.opacity(0.05)
+                    Image(systemName: "music.note")
+                        .foregroundColor(.secondary.opacity(0.3))
                 }
             }
         }

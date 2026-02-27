@@ -42,7 +42,7 @@ struct SongRowView: View {
                 // Version + Type badge
                 VStack(alignment: .trailing, spacing: 4) {
                     if let version = song.version {
-                        Text(version)
+                        Text(ThemeUtils.versionAbbreviation(version))
                             .font(.system(size: 9, weight: .bold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 5)
@@ -75,22 +75,7 @@ struct SongRowView: View {
             .padding(.trailing, 14)
         }
         .padding(.vertical, 12)
-        .background {
-            ZStack(alignment: .trailing) {
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(.ultraThinMaterial)
-                
-                if song.isFavorite {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 80))
-                        .foregroundColor(.yellow.opacity(0.08))
-                        .offset(x: 20, y: 10)
-                        .rotationEffect(.degrees(-15))
-                        .clipped()
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-        }
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(accentColor.opacity(0.12), lineWidth: 1)
@@ -123,6 +108,8 @@ struct SongRowView: View {
                 }
             }
         }
+        
+        }
     }
     
     private func difficultyOrder(_ difficulty: String) -> Int {
@@ -135,5 +122,4 @@ struct SongRowView: View {
         default: return -1
         }
     }
-    
-}
+

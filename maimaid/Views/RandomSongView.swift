@@ -13,11 +13,11 @@ struct RandomSongView: View {
     
     // Computed properties for filter options
     private var allCategories: [String] {
-        Array(Set(allSongs.map { $0.category })).sorted()
+        Array(Set(allSongs.map { $0.category })).sorted { ThemeUtils.categorySortOrder($0) < ThemeUtils.categorySortOrder($1) }
     }
     
     private var allVersions: [String] {
-        Array(Set(allSongs.compactMap { $0.version })).sorted()
+        Array(Set(allSongs.compactMap { $0.version })).sorted { ThemeUtils.versionSortOrder($0) < ThemeUtils.versionSortOrder($1) }
     }
     
     private var currentSlotHeight: CGFloat {

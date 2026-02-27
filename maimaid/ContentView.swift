@@ -23,18 +23,18 @@ struct ContentView: View {
     
     var searchText: String = ""
     
-    @AppStorage("filterSettings") private var filterSettings = FilterSettings()
+    @State private var filterSettings = FilterSettings()
     @State private var showFilterSheet = false
     @State private var isFetching = false
-    @AppStorage("sortOption") private var sortOption: SortOption = .defaultOrder
-    @AppStorage("sortAscending") private var sortAscending: Bool = true
+    @State private var sortOption: SortOption = .defaultOrder
+    @State private var sortAscending: Bool = true
     
     var allCategories: [String] {
-        Array(Set(songs.map { $0.category })).sorted()
+        Array(Set(songs.map { $0.category })).sorted { ThemeUtils.categorySortOrder($0) < ThemeUtils.categorySortOrder($1) }
     }
     
     var allVersions: [String] {
-        Array(Set(songs.compactMap { $0.version })).sorted()
+        Array(Set(songs.compactMap { $0.version })).sorted { ThemeUtils.versionSortOrder($0) < ThemeUtils.versionSortOrder($1) }
     }
     
     var sortedAndFilteredSongs: [Song] {
@@ -52,7 +52,9 @@ struct ContentView: View {
                 if vA == vB {
                     return a.sortOrder < b.sortOrder
                 }
-                return sortAscending ? (vA < vB) : (vA > vB)
+                let orderA = ThemeUtils.versionSortOrder(vA)
+                let orderB = ThemeUtils.versionSortOrder(vB)
+                return sortAscending ? (orderA < orderB) : (orderA > orderB)
             case .difficulty:
                 let maxDiffA = a.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
                 let maxDiffB = b.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0

@@ -23,14 +23,52 @@ struct ThemeUtils {
         return .pink
     }
     
+    struct AppVersion: Decodable {
+        let version: String
+        let abbr: String
+        let releaseDate: String?
+    }
+    
     static func versionSortOrder(_ version: String) -> Int {
-        // Core logic: Use the sequence fetched from data.json and stored in UserDefaults
         let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
         
-        if let index = sequence.firstIndex(where: { version.contains($0) }) {
+        // Exact match preferred
+        if let index = sequence.firstIndex(of: version) {
             return index
         }
+        
+        // Fallback to contains
+        if let index = sequence.firstIndex(where: { version.contains($0) || $0.contains(version) }) {
+            return index
+        }
+        
         return 999 
+    }
+    
+    static var latestVersion: String {
+        let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
+        return sequence.last ?? ""
+    }
+    
+    static func versionAbbreviation(_ version: String) -> String {
+        guard let data = UserDefaults.standard.data(forKey: "MaimaiVersionsData"),
+              let versions = try? JSONDecoder().decode([AppVersion].self, from: data) else {
+            return version
+        }
+        
+        if let item = versions.first(where: { $0.version == version || version.contains($0.version) }) {
+            return item.abbr
+        }
+        
+        return version
+    }
+    
+    static func categorySortOrder(_ category: String) -> Int {
+        let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiCategorySequence") ?? []
+        if let index = sequence.firstIndex(of: category) {
+            return index
+        }
+        return 999
     }
 }
 
