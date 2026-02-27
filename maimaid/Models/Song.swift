@@ -19,6 +19,7 @@ final class Song {
     var searchKeywords: String?
     var aliases: [String] = []
     var lxnsId: Int = 0
+    var isFavorite: Bool = false
     
     @Relationship(deleteRule: .cascade, inverse: \Sheet.song)
     var sheets: [Sheet] = []
@@ -39,5 +40,6 @@ final class Song {
         self.comment = comment
         self.searchKeywords = searchKeywords
         self.aliases = aliases
+        self.isFavorite = false
     }
 }

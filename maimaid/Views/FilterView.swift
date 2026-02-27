@@ -1,15 +1,5 @@
 import SwiftUI
 
-struct FilterSettings: Equatable {
-    var selectedCategories: Set<String> = []
-    var selectedVersions: Set<String> = []
-    var selectedDifficulties: Set<String> = []
-    var selectedTypes: Set<String> = []
-    
-    var minLevel: Double = 1.0
-    var maxLevel: Double = 15.0
-}
-
 struct FilterView: View {
     @Environment(\.dismiss) var dismiss
     @Binding var settings: FilterSettings
@@ -27,9 +17,20 @@ struct FilterView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
+                    filterSection(title: "快速筛选") {
+                        HStack {
+                            Label("仅显示收藏", systemImage: settings.showFavoritesOnly ? "star.fill" : "star")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(settings.showFavoritesOnly ? .yellow : .primary)
+                            Spacer()
+                            Toggle("", isOn: $settings.showFavoritesOnly)
+                                .labelsHidden()
+                        }
+                    }
+
                     // Difficulty & Range Section (Grouped)
                     VStack(alignment: .leading, spacing: 8) {
-                        filterSection(title: "难度筛选（必选难度参考）") {
+                        filterSection(title: "难度筛选") {
                             VStack(alignment: .leading, spacing: 16) {
                                 FlowLayout(spacing: 10) {
                                     ForEach(allDifficulties, id: \.self) { diff in

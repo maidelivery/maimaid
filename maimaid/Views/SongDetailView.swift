@@ -63,6 +63,18 @@ struct SongDetailView: View {
         }
         .background(ambientBackground)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    song.isFavorite.toggle()
+                    try? modelContext.save()
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                } label: {
+                    Image(systemName: song.isFavorite ? "star.fill" : "star")
+                        .foregroundColor(song.isFavorite ? .yellow : .primary)
+                }
+            }
+        }
         .sheet(item: $selectedSheet) { sheet in
             ScoreEntryView(sheet: sheet)
         }
@@ -514,6 +526,11 @@ struct SheetCardView: View {
                 ratingTable(level: level)
             }
             
+            // Fault Tolerance Calculator
+            if sheet.total != nil {
+                FaultToleranceCalculatorView(sheet: sheet, diffColor: diffColor)
+            }
+            
             // Record button
             Button(action: onRecord) {
                 HStack(spacing: 6) {
@@ -570,24 +587,8 @@ struct SheetCardView: View {
     // MARK: - Rating Table
     
     private func ratingTable(level: Double) -> some View {
-        let thresholds: [(String, Double)] = [
-            ("SSS+",  100.5),
-            ("SSS",   100.0),
-            ("SS+",    99.5),
-            ("SS",     99.0),
-            ("S+",     98.0),
-            ("S",      97.0),
-            ("AAA",    94.0),
-            ("AA",     90.0),
-            ("A",      80.0),
-            ("BBB",    75.0),
-            ("BB",     70.0),
-            ("B",      60.0),
-            ("C",      50.0),
-        ]
-        
-        let ratings = thresholds.map { (rank, ach) in
-            (rank, ach, RatingUtils.calculateRating(internalLevel: level, achievements: ach))
+        let ratings = RatingUtils.rankThresholds.filter { $0.rank != "AP+" }.map { item in
+            (item.rank, item.threshold, RatingUtils.calculateRating(internalLevel: level, achievements: item.threshold))
         }
         
         return VStack(spacing: 0) {
@@ -625,7 +626,7 @@ struct SheetCardView: View {
                     HStack(spacing: 6) {
                         Text(rank)
                             .font(.system(size: 11, weight: .black, design: .rounded))
-                            .foregroundColor(rankColor(rank))
+                            .foregroundColor(RatingUtils.colorForRank(rank))
                             .frame(width: 36, alignment: .leading)
                         
                         Text(String(format: "%.4f%%", ach))
@@ -657,20 +658,6 @@ struct SheetCardView: View {
         }
     }
     
-    private func rankColor(_ rank: String) -> Color {
-        switch rank {
-        case "SSS+": return Color(red: 1.0, green: 0.7, blue: 0.0)
-        case "SSS":  return Color(red: 1.0, green: 0.8, blue: 0.2)
-        case "SS+":  return Color(red: 0.95, green: 0.75, blue: 0.1)
-        case "SS":   return Color(red: 0.9, green: 0.7, blue: 0.0)
-        case "S+":   return Color(red: 0.8, green: 0.6, blue: 0.0)
-        case "S":    return Color(red: 0.7, green: 0.55, blue: 0.0)
-        case "AAA":  return Color(red: 0.9, green: 0.3, blue: 0.3)
-        case "AA":   return Color(red: 0.8, green: 0.3, blue: 0.3)
-        case "A":    return Color(red: 0.7, green: 0.3, blue: 0.3)
-        default:     return .secondary
-        }
-    }
     
     @ViewBuilder
     private var noteBreakdown: some View {
@@ -733,5 +720,116 @@ struct SheetCardView: View {
     
     private func colorForDifficulty(_ difficulty: String) -> Color {
         ThemeUtils.colorForDifficulty(difficulty)
+    }
+}
+
+// MARK: - Fault Tolerance Calculator
+
+struct FaultToleranceCalculatorView: View {
+    let sheet: Sheet
+    let diffColor: Color
+    
+    @State private var targetAchievement: Double = 100.5
+    
+    private let targetRanks = RatingUtils.rankThresholds.filter { $0.rank != "AP+" }
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            // Header
+            HStack {
+                Text("容错计算器")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.primary)
+                Spacer()
+                Text("以 TAP 判定为基准，且 BREAK 全为大P")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(diffColor)
+            }
+            .padding(.horizontal, 20)
+            
+            // Target Picker (Rank Based)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(targetRanks) { target in
+                        Button {
+                            targetAchievement = target.threshold
+                        } label: {
+                            Text(target.rank)
+                                .font(.system(size: 10, weight: .bold))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(
+                                    targetAchievement == target.threshold ? diffColor : Color.primary.opacity(0.05),
+                                    in: Capsule()
+                                )
+                                .foregroundColor(targetAchievement == target.threshold ? .white : .primary)
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+            
+            // Results Grid
+            let results = calculateTolerance()
+            HStack(spacing: 12) {
+                toleranceInfoBox(title: "GREAT", value: results.great, color: .pink)
+                toleranceInfoBox(title: "GOOD", value: results.good, color: .green)
+                toleranceInfoBox(title: "MISS", value: results.miss, color: .red)
+            }
+            .padding(.horizontal, 20)
+
+        }
+    }
+    
+    private func calculateTolerance() -> (great: Int, good: Int, miss: Int) {
+        let totalBaseWeight = (Double(sheet.tap ?? 0) * 1.0) +
+                              (Double(sheet.hold ?? 0) * 2.0) +
+                              (Double(sheet.slide ?? 0) * 3.0) +
+                              (Double(sheet.touch ?? 0) * 1.0) +
+                              (Double(sheet.breakCount ?? 0) * 5.0)
+        
+        guard totalBaseWeight > 0 else { return (0, 0, 0) }
+        
+        let maxAllowedLoss = 101.0 - targetAchievement
+        if maxAllowedLoss <= 0 { return (0, 0, 0) }
+        
+        // Loss for 1 judgement on a TAP (the smallest unit)
+        let tapGreatLoss = (0.2 * 1.0 / totalBaseWeight) * 100.0
+        let tapGoodLoss = (0.5 * 1.0 / totalBaseWeight) * 100.0
+        let tapMissLoss = (1.0 * 1.0 / totalBaseWeight) * 100.0
+        
+        // Note: For simplicity and following community standard calculators,
+        // we show the tolerance assuming the errors occur on TAPs (the most lenient case).
+        // If the user wants precise break/hold loss, it's usually too complex for a quick UI.
+        
+        let allowedGreat = Int(floor(maxAllowedLoss / tapGreatLoss))
+        let allowedGood = Int(floor(maxAllowedLoss / tapGoodLoss))
+        let allowedMiss = Int(floor(maxAllowedLoss / tapMissLoss))
+        
+        let tapCount = sheet.tap ?? 0
+        return (min(allowedGreat, tapCount), min(allowedGood, tapCount), min(allowedMiss, tapCount))
+    }
+    
+    private func toleranceInfoBox(title: String, value: Int, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.system(size: 8, weight: .black))
+                .foregroundColor(color.opacity(0.8))
+            
+            Text("\(value)")
+                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .foregroundColor(.primary)
+            
+            Text("上限")
+                .font(.system(size: 8))
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(color.opacity(0.15), lineWidth: 1)
+        )
     }
 }

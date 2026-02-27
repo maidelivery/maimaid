@@ -154,41 +154,7 @@ struct RandomSongView: View {
     
     private func spin() {
         // 1. Apply Filters
-        let filteredSongs = allSongs.filter { song in
-            // Multi-Categories
-            if !filterSettings.selectedCategories.isEmpty && !filterSettings.selectedCategories.contains(song.category) {
-                return false
-            }
-            
-            // Versions
-            if !filterSettings.selectedVersions.isEmpty {
-                guard let version = song.version, filterSettings.selectedVersions.contains(version) else {
-                    return false
-                }
-            }
-            
-            // Types
-            if !filterSettings.selectedTypes.isEmpty {
-                let hasMatchingType = song.sheets.contains { sheet in
-                    filterSettings.selectedTypes.contains(sheet.type.lowercased())
-                }
-                if !hasMatchingType { return false }
-            }
-            
-            // Difficulty Range + Reference Levels
-            if !filterSettings.selectedDifficulties.isEmpty {
-                let hasMatchingDifficultyInRange = song.sheets.contains { sheet in
-                    let difficultyMatches = filterSettings.selectedDifficulties.contains(sheet.difficulty.lowercased())
-                    if !difficultyMatches { return false }
-                    
-                    let level = sheet.internalLevelValue ?? sheet.levelValue ?? 0.0
-                    return level >= filterSettings.minLevel && level <= filterSettings.maxLevel
-                }
-                if !hasMatchingDifficultyInRange { return false }
-            }
-            
-            return true
-        }
+        let filteredSongs = FilterUtils.filterSongs(allSongs, settings: filterSettings)
         
         guard !filteredSongs.isEmpty else { return }
         

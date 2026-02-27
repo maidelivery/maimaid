@@ -204,9 +204,10 @@ struct BestTableView: View {
                     .frame(height: 20)
                 // Line 2: Rank + Achievement + DX Score
                 HStack(spacing: 6) {
-                    Text(RatingUtils.calculateRank(achievement: entry.achievement))
+                    let rank = RatingUtils.calculateRank(achievement: entry.achievement)
+                    Text(rank)
                         .font(.system(size: 13, weight: .black, design: .rounded))
-                        .foregroundColor(.orange)
+                        .foregroundColor(RatingUtils.colorForRank(rank))
                     
                     Text(String(format: "%.4f%%", entry.achievement))
                         .font(.system(size: 12, design: .monospaced))

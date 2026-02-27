@@ -201,14 +201,15 @@ struct ScoreEntryView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "trophy.fill")
                             .font(.system(size: 10))
-                            .foregroundColor(.orange)
+                            .foregroundColor(RatingUtils.colorForRank(calculatedRank))
                         
                         Text(calculatedRank)
                             .font(.system(size: 16, weight: .black, design: .rounded))
+                            .foregroundColor(RatingUtils.colorForRank(calculatedRank))
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(Color.orange.opacity(0.1), in: Capsule())
+                    .background(RatingUtils.colorForRank(calculatedRank).opacity(0.1), in: Capsule())
                     
                     // DX Score mini input
                     HStack(spacing: 6) {

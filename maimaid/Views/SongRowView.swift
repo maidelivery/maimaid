@@ -28,8 +28,16 @@ struct SongRowView: View {
                 
                 // Info
                 VStack(alignment: .leading, spacing: 3) {
-                    MarqueeText(text: song.title, font: .system(size: 15, weight: .semibold), fontWeight: .semibold, color: .primary)
-                        .frame(height: 20)
+                    HStack(spacing: 4) {
+                        MarqueeText(text: song.title, font: .system(size: 15, weight: .semibold), fontWeight: .semibold, color: .primary)
+                            .frame(height: 20)
+                        
+                        if song.isFavorite {
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(.red)
+                        }
+                    }
                     
                     MarqueeText(text: song.artist, font: .system(size: 12), color: .secondary, speed: 30)
                         .frame(height: 16)

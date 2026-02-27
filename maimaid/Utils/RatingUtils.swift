@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 struct RatingUtils {
     static func calculateRating(internalLevel: Double, achievements: Double) -> Int {
@@ -65,6 +66,47 @@ struct RatingUtils {
         if achievement >= 60.0000 { return "B" }
         if achievement >= 50.0000 { return "C" }
         return "D"
+    }
+    
+    // MARK: - Rank Metadata
+    
+    struct RankThreshold: Identifiable, Sendable {
+        let id = UUID()
+        let rank: String
+        let threshold: Double
+    }
+    
+    static let rankThresholds: [RankThreshold] = [
+        RankThreshold(rank: "AP+", threshold: 101.0),
+        RankThreshold(rank: "SSS+", threshold: 100.5),
+        RankThreshold(rank: "SSS", threshold: 100.0),
+        RankThreshold(rank: "SS+", threshold: 99.5),
+        RankThreshold(rank: "SS", threshold: 99.0),
+        RankThreshold(rank: "S+", threshold: 98.0),
+        RankThreshold(rank: "S", threshold: 97.0),
+        RankThreshold(rank: "AAA", threshold: 94.0),
+        RankThreshold(rank: "AA", threshold: 90.0),
+        RankThreshold(rank: "A", threshold: 80.0),
+        RankThreshold(rank: "BBB", threshold: 75.0),
+        RankThreshold(rank: "BB", threshold: 70.0),
+        RankThreshold(rank: "B", threshold: 60.0),
+        RankThreshold(rank: "C", threshold: 50.0)
+    ]
+    
+    static func colorForRank(_ rank: String) -> Color {
+        switch rank {
+        case "AP+":   return Color(red: 1.0, green: 0.84, blue: 0.0) // Brighter Gold (#FFD700)
+        case "SSS+": return Color(red: 1.0, green: 0.7, blue: 0.0)
+        case "SSS":  return Color(red: 1.0, green: 0.8, blue: 0.2)
+        case "SS+":  return Color(red: 0.95, green: 0.75, blue: 0.1)
+        case "SS":   return Color(red: 0.9, green: 0.7, blue: 0.0)
+        case "S+":   return Color(red: 0.8, green: 0.6, blue: 0.0)
+        case "S":    return Color(red: 0.7, green: 0.55, blue: 0.0)
+        case "AAA":  return Color(red: 0.9, green: 0.3, blue: 0.3)
+        case "AA":   return Color(red: 0.8, green: 0.3, blue: 0.3)
+        case "A":    return Color(red: 0.7, green: 0.3, blue: 0.3)
+        default:     return .secondary
+        }
     }
     
     static func calculateRating(internalLevel: Double, achievement: Double, fc: String?) -> Int {

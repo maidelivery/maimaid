@@ -38,51 +38,7 @@ struct ContentView: View {
     }
     
     var sortedAndFilteredSongs: [Song] {
-        let filtered = songs.filter { song in
-            // 1. Search Text
-            let matchesSearch = searchText.isEmpty || 
-                               song.title.localizedCaseInsensitiveContains(searchText) || 
-                               song.artist.localizedCaseInsensitiveContains(searchText) ||
-                               song.sheets.contains(where: { $0.noteDesigner?.localizedCaseInsensitiveContains(searchText) ?? false }) ||
-                               (song.searchKeywords?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                               song.aliases.contains(where: { $0.localizedCaseInsensitiveContains(searchText) })
-            if !matchesSearch { return false }
-            
-            // 2. Multi-Categories
-            if !filterSettings.selectedCategories.isEmpty && !filterSettings.selectedCategories.contains(song.category) {
-                return false
-            }
-            
-            // 3. Versions
-            if !filterSettings.selectedVersions.isEmpty {
-                guard let version = song.version, filterSettings.selectedVersions.contains(version) else {
-                    return false
-                }
-            }
-            
-            // 4. Types
-            if !filterSettings.selectedTypes.isEmpty {
-                let hasMatchingType = song.sheets.contains { sheet in
-                    filterSettings.selectedTypes.contains(sheet.type.lowercased())
-                }
-                if !hasMatchingType { return false }
-            }
-            
-            // 5. Difficulty Range + Reference Levels
-            // User MUST select at least one difficulty as reference for the range to apply
-            if !filterSettings.selectedDifficulties.isEmpty {
-                let hasMatchingDifficultyInRange = song.sheets.contains { sheet in
-                    let difficultyMatches = filterSettings.selectedDifficulties.contains(sheet.difficulty.lowercased())
-                    if !difficultyMatches { return false }
-                    
-                    let level = sheet.internalLevelValue ?? sheet.levelValue ?? 0.0
-                    return level >= filterSettings.minLevel && level <= filterSettings.maxLevel
-                }
-                if !hasMatchingDifficultyInRange { return false }
-            }
-            
-            return true
-        }
+        let filtered = FilterUtils.filterSongs(songs, settings: filterSettings, searchText: searchText)
         
         return filtered.sorted { a, b in
             switch sortOption {
@@ -116,11 +72,10 @@ struct ContentView: View {
                     ContentUnavailableView {
                         Label("暂无歌曲", systemImage: "music.note.list")
                     } description: {
-                        Text("点击右上角下载按钮获取 maimai 数据")
+                        Text("进入设置页面下载数据")
                     }
                 } else {
                     ScrollView {
-                        // Song list
                         LazyVStack(spacing: 8) {
                             ForEach(sortedAndFilteredSongs) { song in
                                 NavigationLink {
@@ -132,11 +87,11 @@ struct ContentView: View {
                             }
                         }
                         .padding(.vertical, 12)
-                        
-                        if !searchText.isEmpty && sortedAndFilteredSongs.isEmpty {
-                            ContentUnavailableView.search(text: searchText)
-                                .padding(.top, 40)
-                        }
+                    }
+                    
+                    if !searchText.isEmpty && sortedAndFilteredSongs.isEmpty {
+                        ContentUnavailableView.search(text: searchText)
+                            .padding(.top, 40)
                     }
                 }
             }
