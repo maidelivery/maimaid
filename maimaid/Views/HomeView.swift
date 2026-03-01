@@ -6,6 +6,7 @@ struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var configs: [SyncConfig]
     @Query private var songs: [Song]
+    @Query(sort: \MaimaiIcon.id) private var icons: [MaimaiIcon]
     
     @State private var showingEditProfile = false
     @State private var computedB50Total: Int = 0
@@ -68,8 +69,8 @@ struct HomeView: View {
                         NavigationLink(destination: RandomSongView()) {
                             functionCard(
                                 icon: "dice.fill",
-                                title: "随机抽选",
-                                subtitle: "老虎机式随机挑曲",
+                                title: "随机歌曲",
+                                subtitle: "老虎机式随机抽曲",
                                 gradient: [Color.purple, Color.pink]
                             )
                         }
@@ -155,7 +156,6 @@ struct HomeView: View {
                 title: song.title,
                 version: song.version,
                 releaseDate: song.releaseDate,
-                imageUrl: song.imageUrl,
                 imageName: song.imageName,
                 sheets: song.sheets.compactMap { sheet in
                     guard let score = sheet.score else { return nil }
@@ -233,7 +233,7 @@ struct HomeView: View {
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     } else {
-                        Text("点击编辑或绑定 LXNS")
+                        Text("点击编辑")
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
@@ -301,6 +301,40 @@ struct ProfileEditSheet: View {
                                             .aspectRatio(contentMode: .fill)
                                             .frame(width: 100, height: 100)
                                             .clipShape(Circle())
+                                    } else if let urlString = config.avatarUrl {
+                                        // Try to load local version if it's a preset URL
+                                        let localImage: UIImage? = {
+                                            if let idString = urlString.components(separatedBy: "/").last?.replacingOccurrences(of: ".png", with: ""),
+                                               let id = Int(idString) {
+                                                return ImageDownloader.shared.loadImage(iconId: id)
+                                            }
+                                            return nil
+                                        }()
+                                        
+                                        if let uiImage = localImage {
+                                            Image(uiImage: uiImage)
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: 100, height: 100)
+                                                .clipShape(Circle())
+                                        } else if let url = URL(string: urlString) {
+                                            AsyncImage(url: url) { image in
+                                                image.resizable()
+                                                    .aspectRatio(contentMode: .fill)
+                                            } placeholder: {
+                                                ProgressView()
+                                            }
+                                            .frame(width: 100, height: 100)
+                                            .clipShape(Circle())
+                                        } else {
+                                            Circle()
+                                                .fill(Color.secondary.opacity(0.1))
+                                                .frame(width: 100, height: 100)
+                                            
+                                            Image(systemName: "person.fill")
+                                                .font(.system(size: 40))
+                                                .foregroundColor(.secondary)
+                                        }
                                     } else {
                                         Circle()
                                             .fill(Color.secondary.opacity(0.1))
@@ -332,6 +366,7 @@ struct ProfileEditSheet: View {
                                 Button("清除头像", role: .destructive) {
                                     selectedImageData = nil
                                     config.avatarData = nil
+                                    config.avatarUrl = nil
                                 }
                                 .font(.subheadline)
                             }
@@ -347,9 +382,40 @@ struct ProfileEditSheet: View {
                         TextField("输入名称", text: $userName)
                             .multilineTextAlignment(.trailing)
                     }
-                    LabeledContent("称号 (Plate)") {
+                    LabeledContent("称号") {
                         TextField("输入称号", text: $plate)
                             .multilineTextAlignment(.trailing)
+                    }
+                }
+                
+                Section("预设头像") {
+                    NavigationLink {
+                        IconPickerView(config: config, selectedImageData: $selectedImageData)
+                    } label: {
+                        HStack {
+                            Text("选择预设头像")
+                            Spacer()
+                            if let avatarUrl = config.avatarUrl, avatarUrl.contains("lxns.net") {
+                                if let idString = avatarUrl.components(separatedBy: "/").last?.replacingOccurrences(of: ".png", with: ""),
+                                   let id = Int(idString),
+                                   let localImage = ImageDownloader.shared.loadImage(iconId: id) {
+                                    Image(uiImage: localImage)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 30, height: 30)
+                                        .clipShape(Circle())
+                                } else {
+                                    AsyncImage(url: URL(string: avatarUrl)) { image in
+                                        image.resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                    } placeholder: {
+                                        Color.gray.opacity(0.1)
+                                    }
+                                    .frame(width: 30, height: 30)
+                                    .clipShape(Circle())
+                                }
+                            }
+                        }
                     }
                 }
                 
@@ -394,12 +460,84 @@ struct ProfileEditSheet: View {
         config.plate = plate.trimmingCharacters(in: .whitespaces)
         if let data = selectedImageData {
             config.avatarData = data
+            config.avatarUrl = nil // Clear preset if custom image is set
+            config.isCustomProfile = true
+        } else if config.avatarUrl != nil {
+            // Keep the preset URL set by IconPickerView
+            config.avatarData = nil
             config.isCustomProfile = true
         } else {
-            // If they explicitly cleared it or it was nil
+            // Truly cleared
             config.avatarData = nil
             config.avatarUrl = nil
+            config.isCustomProfile = false
         }
+        }
+}
+
+struct IconPickerView: View {
+    @Bindable var config: SyncConfig
+    @Binding var selectedImageData: Data?
+    @Query(sort: \MaimaiIcon.id) private var icons: [MaimaiIcon]
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var searchText = ""
+    
+    var filteredIcons: [MaimaiIcon] {
+        if searchText.isEmpty {
+            return icons
+        }
+        return icons.filter { $0.name.localizedCaseInsensitiveContains(searchText) || $0.genre.localizedCaseInsensitiveContains(searchText) }
+    }
+    
+    let columns = [
+        GridItem(.adaptive(minimum: 80, maximum: 100), spacing: 16)
+    ]
+    
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 20) {
+                ForEach(filteredIcons) { icon in
+                    Button {
+                        config.avatarUrl = icon.iconUrl
+                        config.avatarData = nil // Clear custom data in config
+                        selectedImageData = nil // Clear custom data in parent sheet state
+                        config.isCustomProfile = true
+                        dismiss()
+                    } label: {
+                        VStack(spacing: 8) {
+                            if let localImage = ImageDownloader.shared.loadImage(iconId: icon.id) {
+                                Image(uiImage: localImage)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 70, height: 70)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary.opacity(0.1), lineWidth: 1))
+                            } else {
+                                AsyncImage(url: URL(string: icon.iconUrl)) { image in
+                                    image.resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } placeholder: {
+                                    ProgressView()
+                                }
+                                .frame(width: 70, height: 70)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary.opacity(0.1), lineWidth: 1))
+                            }
+                            
+                            Text(icon.name)
+                                .font(.system(size: 10))
+                                .lineLimit(1)
+                                .foregroundColor(.primary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(16)
+        }
+        .navigationTitle("选择头像")
+        .searchable(text: $searchText, prompt: "搜索头像或分类")
     }
 }
 

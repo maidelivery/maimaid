@@ -10,6 +10,8 @@ struct RandomSongView: View {
     @State private var showFilterSheet = false
     @State private var spinOffsets: [Double] = [0, 0, 0, 0]
     @State private var displayedSongs: [[Song]] = [[], [], [], []]
+    @State private var pendingResults: [Song] = []
+    @State private var currentSpinTask: Task<Void, Never>? = nil
     
     // Computed properties for filter options
     private var allCategories: [String] {
@@ -55,17 +57,23 @@ struct RandomSongView: View {
                 .padding(.horizontal, 16)
                 
                 // Spin Button
-                Button(action: spin) {
+                Button(action: {
+                    if isSpinning {
+                        skipSpin()
+                    } else {
+                        spin()
+                    }
+                }) {
                     HStack {
-                        Image(systemName: isSpinning ? "arrow.clockwise" : "dice.fill")
-                        Text(isSpinning ? "正在抽取" : "立刻随机抽取")
+                        Image(systemName: isSpinning ? "forward.end.fill" : "dice.fill")
+                        Text(isSpinning ? "直接跳过" : "立刻随机抽取")
                             .font(.headline.bold())
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(isSpinning || allSongs.isEmpty)
+                .disabled(allSongs.isEmpty)
                 .padding(.horizontal, 40)
             }
             .padding(.bottom, 24)
@@ -74,46 +82,22 @@ struct RandomSongView: View {
             // Results Section
             if !isSpinning && !results.isEmpty {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 12) {
                         Text("抽选结果")
                             .font(.system(size: 13, weight: .bold))
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 24)
                             .padding(.bottom, 8)
                         
-                        ForEach(Array(results.enumerated()), id: \.element.id) { index, song in
+                        ForEach(results) { song in
                             NavigationLink(destination: SongDetailView(song: song)) {
-                                HStack(spacing: 16) {
-                                    SongJacketView(imageName: song.imageName, remoteUrl: song.imageUrl, size: 52, cornerRadius: 10)
-                                    
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(song.title)
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(.primary)
-                                        Text(song.artist)
-                                            .font(.system(size: 12))
-                                            .foregroundColor(.secondary)
-                                            .lineLimit(1)
-                                    }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundColor(.secondary.opacity(0.3))
-                                }
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 24)
-                                .background(Color(.systemBackground).opacity(0.001))
+                                SongRowView(song: song)
                             }
                             .buttonStyle(.plain)
                             .transition(.asymmetric(
                                 insertion: .move(edge: .bottom).combined(with: .opacity),
                                 removal: .opacity
                             ))
-                            
-                            if song.id != results.last?.id {
-                                Divider()
-                                    .padding(.leading, 92)
-                            }
                         }
                     }
                     .padding(.top, 8)
@@ -158,7 +142,7 @@ struct RandomSongView: View {
         
         guard !filteredSongs.isEmpty else { return }
         
-        // Haptic Feedback Generator
+        // Prepare haptics
         let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
         feedbackGenerator.prepare()
         
@@ -174,6 +158,7 @@ struct RandomSongView: View {
                 newResults.append(randomSong)
             }
         }
+        pendingResults = newResults
         
         // Build the scrolling list for each slot
         for i in 0..<songCount {
@@ -190,25 +175,46 @@ struct RandomSongView: View {
             
             // Animation for each column
             let columnDuration = 2.0 + Double(i) * 0.4
-            // Mechanical feel: decelerates and stops sharply without oscillation
             withAnimation(.timingCurve(0.4, 0, 0.2, 1, duration: columnDuration)) {
                 spinOffsets[i] = Double(-CGFloat(displayedSongs[i].count - 1) * currentSlotHeight)
-            }
-            
-            // Trigger haptic exactly when the column stops
-            DispatchQueue.main.asyncAfter(deadline: .now() + columnDuration) {
-                feedbackGenerator.impactOccurred()
             }
         }
         
         // Final completion logic
         let totalDuration = 2.0 + Double(songCount - 1) * 0.4
-        DispatchQueue.main.asyncAfter(deadline: .now() + totalDuration + 0.1) {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                results = newResults
-                isSpinning = false
+        
+        currentSpinTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(totalDuration * 1_000_000_000))
+            
+            if !Task.isCancelled {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    results = pendingResults
+                    isSpinning = false
+                    feedbackGenerator.impactOccurred()
+                }
             }
         }
+    }
+    
+    private func skipSpin() {
+        currentSpinTask?.cancel()
+        currentSpinTask = nil
+        
+        // Snap everything to end
+        withAnimation(.none) {
+            for i in 0..<songCount {
+                if i < displayedSongs.count && i < spinOffsets.count {
+                    spinOffsets[i] = Double(-CGFloat(displayedSongs[i].count - 1) * currentSlotHeight)
+                }
+            }
+        }
+        
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            results = pendingResults
+            isSpinning = false
+        }
+        
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
 }
 
@@ -237,7 +243,6 @@ struct SlotColumn: View {
                         ZStack {
                             SongJacketView(
                                 imageName: songs[index].imageName,
-                                remoteUrl: songs[index].imageUrl,
                                 size: jacketSize, // Applied dynamic size
                                 cornerRadius: 12
                             )

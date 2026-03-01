@@ -8,6 +8,13 @@ struct ScoreEntryView: View {
     @Query private var configs: [SyncConfig]
     let sheet: Sheet
     
+    // Optional initial pre-filled values from Scanner
+    let initialRate: Double?
+    let initialRank: String?
+    let initialDxScore: Int?
+    let initialFC: String?
+    let initialFS: String?
+    
     @StateObject private var visionService = VisionService()
     @State private var selectedItem: PhotosPickerItem? = nil
     @State private var selectedImage: UIImage? = nil
@@ -21,6 +28,17 @@ struct ScoreEntryView: View {
     @State private var selectedFC: String? = nil
     @State private var selectedFS: String? = nil
     
+    @State private var selectedRank = "SSS+" // Changed from calculatedRank
+    
+    init(sheet: Sheet, initialRate: Double? = nil, initialRank: String? = nil, initialDxScore: Int? = nil, initialFC: String? = nil, initialFS: String? = nil) {
+        self.sheet = sheet
+        self.initialRate = initialRate
+        self.initialRank = initialRank
+        self.initialDxScore = initialDxScore
+        self.initialFC = initialFC
+        self.initialFS = initialFS
+    }
+    
     private var parsedRate: Double? {
         Double(rateText)
     }
@@ -33,10 +51,7 @@ struct ScoreEntryView: View {
         (sheet.total ?? 0) * 3
     }
     
-    private var calculatedRank: String {
-        guard let rate = parsedRate else { return "-" }
-        return RatingUtils.calculateRank(achievement: rate)
-    }
+    // calculatedRank computed property removed, now using selectedRank @State
     
     private var diffColor: Color {
         let low = sheet.difficulty.lowercased()
@@ -103,10 +118,33 @@ struct ScoreEntryView: View {
             }
         }
         .onAppear {
-            if let score = sheet.score {
+            if let initRate = initialRate {
+                rateText = String(format: "%.4f", initRate)
+            } else if let score = sheet.score {
                 rateText = String(format: "%.4f", score.rate)
+            }
+            
+            if let initRank = initialRank {
+                selectedRank = initRank
+            } else if let score = sheet.score {
+                selectedRank = score.rank
+            }
+            
+            if let initDxScore = initialDxScore {
+                dxScoreText = "\(initDxScore)"
+            } else if let score = sheet.score {
                 dxScoreText = score.dxScore > 0 ? "\(score.dxScore)" : ""
+            }
+            
+            if let initFC = initialFC {
+                selectedFC = initFC
+            } else if let score = sheet.score {
                 selectedFC = score.fc
+            }
+            
+            if let initFS = initialFS {
+                selectedFS = initFS
+            } else if let score = sheet.score {
                 selectedFS = score.fs
             }
         }
@@ -201,15 +239,15 @@ struct ScoreEntryView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "trophy.fill")
                             .font(.system(size: 10))
-                            .foregroundColor(RatingUtils.colorForRank(calculatedRank))
+                            .foregroundColor(RatingUtils.colorForRank(selectedRank))
                         
-                        Text(calculatedRank)
+                        Text(selectedRank) // Changed from calculatedRank
                             .font(.system(size: 16, weight: .black, design: .rounded))
-                            .foregroundColor(RatingUtils.colorForRank(calculatedRank))
+                            .foregroundColor(RatingUtils.colorForRank(selectedRank))
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(RatingUtils.colorForRank(calculatedRank).opacity(0.1), in: Capsule())
+                    .background(RatingUtils.colorForRank(selectedRank).opacity(0.1), in: Capsule())
                     
                     // DX Score mini input
                     HStack(spacing: 6) {
@@ -277,18 +315,19 @@ struct ScoreEntryView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "person.2.fill")
                                 .font(.system(size: 10))
+                            
                             ZStack {
                                 Text("FDX+")
                                     .font(.system(size: 12, weight: .bold))
                                     .opacity(0)
-                                Text(selectedFS?.replacingOccurrences(of: "fsdp", with: "fdx+").replacingOccurrences(of: "fsd", with: "fdx").replacingOccurrences(of: "fsp", with: "fs+").uppercased() ?? "Sync")
+                                Text(selectedFS?.replacingOccurrences(of: "fsdp", with: "fdx+").replacingOccurrences(of: "fsd", with: "fdx").replacingOccurrences(of: "fsp", with: "fs+").uppercased() ?? "SYNC")
                                     .font(.system(size: 12, weight: .bold))
                             }
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background((selectedFS == nil || selectedFS == "sync") ? Color.gray.opacity(0.1) : Color.blue.opacity(0.1), in: Capsule())
-                        .foregroundColor((selectedFS == nil || selectedFS == "sync") ? .gray : .blue)
+                        .background(selectedFS == nil ? Color.gray.opacity(0.1) : Color.blue.opacity(0.1), in: Capsule())
+                        .foregroundColor(selectedFS == nil ? .gray : .blue)
                     }
                 }
                 .animation(.spring(response: 0.35, dampingFraction: 0.8), value: parsedRate != nil)
@@ -466,7 +505,7 @@ struct ScoreEntryView: View {
             let newScore = Score(
                 sheetId: "\(sheet.songId)-\(sheet.type)-\(sheet.difficulty)",
                 rate: rate,
-                rank: calculatedRank,
+                rank: selectedRank,
                 dxScore: parsedDxScore ?? 0,
                 fc: selectedFC,
                 fs: selectedFS

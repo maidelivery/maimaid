@@ -8,7 +8,6 @@ final class Song {
     var title: String
     var artist: String
     var imageName: String
-    var imageUrl: String
     var version: String?
     var releaseDate: String?
     var sortOrder: Int
@@ -24,13 +23,12 @@ final class Song {
     @Relationship(deleteRule: .cascade, inverse: \Sheet.song)
     var sheets: [Sheet] = []
     
-    init(songId: String, category: String, title: String, artist: String, imageName: String, imageUrl: String, version: String? = nil, releaseDate: String? = nil, sortOrder: Int, bpm: Double? = nil, isNew: Bool, isLocked: Bool, comment: String? = nil, searchKeywords: String? = nil, aliases: [String] = []) {
+    init(songId: String, category: String, title: String, artist: String, imageName: String, version: String? = nil, releaseDate: String? = nil, sortOrder: Int, bpm: Double? = nil, isNew: Bool, isLocked: Bool, comment: String? = nil, searchKeywords: String? = nil, aliases: [String] = []) {
         self.songId = songId
         self.category = category
         self.title = title
         self.artist = artist
         self.imageName = imageName
-        self.imageUrl = imageUrl
         self.version = version
         self.releaseDate = releaseDate
         self.sortOrder = sortOrder

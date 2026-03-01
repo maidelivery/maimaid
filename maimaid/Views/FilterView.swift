@@ -166,7 +166,7 @@ struct FilterView: View {
     }
     
     private func colorForDifficulty(_ diff: String) -> Color {
-        ThemeUtils.colorForDifficulty(internalName(for: diff))
+        ThemeUtils.colorForDifficulty(internalName(for: diff), nil)
     }
 }
 

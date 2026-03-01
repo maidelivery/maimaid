@@ -11,7 +11,7 @@ struct SongRowView: View {
     
     private var accentColor: Color {
         guard let sheet = highestSheet else { return .blue }
-        return ThemeUtils.colorForDifficulty(sheet.difficulty)
+        return ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
     }
     
     var body: some View {
@@ -24,7 +24,7 @@ struct SongRowView: View {
             
             HStack(spacing: 14) {
                 // Jacket
-                SongJacketView(imageName: song.imageName, remoteUrl: song.imageUrl, size: 52, cornerRadius: 12)
+                SongJacketView(imageName: song.imageName, size: 52, cornerRadius: 12)
                 
                 // Info
                 VStack(alignment: .leading, spacing: 3) {
@@ -89,7 +89,7 @@ struct SongRowView: View {
         let sheet: Sheet
         
         private var color: Color {
-            ThemeUtils.colorForDifficulty(sheet.difficulty)
+            ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
         }
         
         var body: some View {

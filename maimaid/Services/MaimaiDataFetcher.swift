@@ -15,6 +15,17 @@ struct LxnsSongListResponse: Decodable {
     let songs: [LxnsSong]
 }
 
+struct LxnsPresetIconListResponse: Decodable {
+    let icons: [LxnsPresetIcon]
+}
+
+struct LxnsPresetIcon: Decodable {
+    let id: Int
+    let name: String
+    let description: String
+    let genre: String
+}
+
 struct LxnsSong: Decodable {
     let id: Int
     let title: String
@@ -44,7 +55,6 @@ struct RemoteSong: Decodable {
     let artist: String?
     let bpm: Double?
     let imageName: String?
-    let imageUrl: String?
     let version: String?
     let releaseDate: String?
     let isNew: Bool?
@@ -85,15 +95,17 @@ struct RemoteNoteCounts: Decodable {
 class MaimaiDataFetcher {
     static let shared = MaimaiDataFetcher()
     
-    private init() {}
+    nonisolated init() {}
     
     enum SyncStage: String {
         case idle = "等待中"
-        case fetchingRemoteData = "［1/5］获取汇总数据 (data.json)..."
-        case fetchingAliases = "［2/5］获取歌曲别名与歌曲 ID..."
-        case processingSongs = "［3/5］正在合并并分析数据..."
-        case downloadingImages = "［4/5］正在并发下载歌曲封面..."
-        case saving = "［5/5］正在保存到本地数据库..."
+        case fetchingRemoteData = "［1/6］获取汇总数据 (data.json)..."
+        case fetchingAliases = "［2/6］获取歌曲别名与歌曲 ID..."
+        case fetchingIcons = "［3/6］获取预设头像..."
+        case processingSongs = "［4/6］正在合并并分析数据..."
+        case downloadingImages = "［5/7］正在并发下载歌曲封面..."
+        case downloadingIcons = "［6/7］正在并发下载预设头像..."
+        case saving = "［7/7］正在保存到本地数据库..."
         case completed = "同步完成"
         case failed = "同步失败"
     }
@@ -147,6 +159,7 @@ class MaimaiDataFetcher {
         var updateRemoteData = true
         var updateAliases = true
         var updateCovers = true
+        var updateIcons = true
     }
     
     func fetchSongs(modelContext: ModelContext, options: SyncOptions = SyncOptions()) async throws {
@@ -161,11 +174,13 @@ class MaimaiDataFetcher {
             var remoteSongs: [RemoteSong] = []
             var aliasMap: [String: [String]] = [:]
             var titleToLxnsId: [String: Int] = [:]
+            var lxnsIcons: [LxnsPresetIcon] = []
             
             // --- 阶段 1: 远程 data.json ---
             if options.updateRemoteData {
                 updateStage(.fetchingRemoteData, base: 0.1, message: "下载远程 data.json...")
-                guard let url = URL(string: "https://maimaid.shikoch.in/data.json") else {
+                // source 2: https://maimaid.shikoch.in/maimai/data.json
+                guard let url = URL(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json") else {
                     throw URLError(.badURL)
                 }
                 let (data, _) = try await URLSession.shared.data(from: url)
@@ -215,8 +230,19 @@ class MaimaiDataFetcher {
                 }
             }
             
-            // --- 阶段 3: 合并数据入库 ---
-            if options.updateRemoteData || options.updateAliases {
+            // --- 阶段 3: Icons ---
+            if options.updateIcons {
+                updateStage(.fetchingIcons, base: 0.45, message: "获取预设头像列表...")
+                if let iconUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/icon/list") {
+                    let (data, _) = try await URLSession.shared.data(from: iconUrl)
+                    let response = try JSONDecoder().decode(LxnsPresetIconListResponse.self, from: data)
+                    lxnsIcons = response.icons
+                    log("成功获取 \(lxnsIcons.count) 个预设头像")
+                }
+            }
+            
+            // --- 阶段 4: 合并数据入库 ---
+            if options.updateRemoteData || options.updateAliases || options.updateIcons {
                 updateStage(.processingSongs, base: 0.55, message: "分析整理并入库本地乐曲数据...")
                 
                 let existingSongsFromDB = try modelContext.fetch(FetchDescriptor<Song>())
@@ -228,7 +254,7 @@ class MaimaiDataFetcher {
                     songsToProcess = existingSongsFromDB.map { s in
                         RemoteSong(
                             songId: s.songId, category: s.category, title: s.title, artist: s.artist, bpm: s.bpm,
-                            imageName: s.imageName, imageUrl: s.imageUrl, version: s.version, releaseDate: s.releaseDate,
+                            imageName: s.imageName, version: s.version, releaseDate: s.releaseDate,
                             isNew: s.isNew, isLocked: s.isLocked, comment: s.comment,
                             sheets: s.sheets.map { sh in
                                 RemoteSheet(
@@ -260,9 +286,7 @@ class MaimaiDataFetcher {
                             songId: remoteSong.songId, category: remoteSong.category ?? "", 
                             title: (remoteSong.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
                             artist: remoteSong.artist ?? "", 
-                            imageName: (remoteSong.imageName ?? "").trimmingCharacters(in: .whitespacesAndNewlines), 
-                            imageUrl: (remoteSong.imageUrl ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
-                            version: remoteSong.version ?? "", releaseDate: remoteSong.releaseDate ?? "", sortOrder: 0,
+                            imageName: (remoteSong.imageName ?? "").trimmingCharacters(in: .whitespacesAndNewlines),                             version: remoteSong.version ?? "", releaseDate: remoteSong.releaseDate ?? "", sortOrder: 0,
                             bpm: remoteSong.bpm, isNew: remoteSong.isNew ?? false, isLocked: remoteSong.isLocked ?? false,
                             comment: remoteSong.comment
                         )
@@ -275,7 +299,6 @@ class MaimaiDataFetcher {
                         song.title = (remoteSong.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                         song.artist = remoteSong.artist ?? ""
                         song.imageName = (remoteSong.imageName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-                        song.imageUrl = (remoteSong.imageUrl ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                         song.bpm = remoteSong.bpm
                         song.isNew = remoteSong.isNew ?? false
                         song.isLocked = remoteSong.isLocked ?? false
@@ -340,11 +363,43 @@ class MaimaiDataFetcher {
                     
                     if index % 100 == 0 {
                         updateProgress(Double(index) / Double(songsToProcess.count), totalForStage: 0.20, baseForStage: 0.55, status: "整理数据: \(song.title)")
+                        try? modelContext.save()
                     }
+                }
+                
+                // Clear temporary song data
+                remoteSongs = []
+                aliasMap = [:]
+                titleToLxnsId = [:]
+                songsToProcess = []
+                existingSongMap = [:]
+                
+                // 处理 Icons 入库
+                if options.updateIcons && !lxnsIcons.isEmpty {
+                    let existingIcons = try modelContext.fetch(FetchDescriptor<MaimaiIcon>())
+                    var existingIconMap: [Int: MaimaiIcon] = [:]
+                    for icon in existingIcons { existingIconMap[icon.id] = icon }
+                    
+                    for lxIcon in lxnsIcons {
+                        if let existing = existingIconMap[lxIcon.id] {
+                            existing.name = lxIcon.name
+                            existing.descriptionText = lxIcon.description
+                            existing.genre = lxIcon.genre
+                        } else {
+                            let newIcon = MaimaiIcon(
+                                id: lxIcon.id,
+                                name: lxIcon.name,
+                                descriptionText: lxIcon.description,
+                                genre: lxIcon.genre
+                            )
+                            modelContext.insert(newIcon)
+                        }
+                    }
+                    lxnsIcons = []
                 }
             }
 
-            // --- 阶段 4: 下载图片资源 ---
+            // --- 阶段 5: 下载图片资源 ---
             if options.updateCovers {
                 updateStage(.downloadingImages, base: 0.75, message: "扫描并下载缺失封面...")
                 let descriptor = FetchDescriptor<Song>()
@@ -352,7 +407,7 @@ class MaimaiDataFetcher {
                 var coverDownloadTasks: [(String, String)] = []
                 for song in allSongs {
                     if !ImageDownloader.shared.imageExists(imageName: song.imageName) {
-                        coverDownloadTasks.append((song.imageUrl, song.imageName))
+                        coverDownloadTasks.append(("https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/\(song.imageName)", song.imageName))
                     }
                 }
                 
@@ -371,7 +426,52 @@ class MaimaiDataFetcher {
                 }
             }
             
-            // --- 阶段 5: 持久化 ---
+            // --- 阶段 6: 下载预设头像 ---
+            if options.updateIcons {
+                updateStage(.downloadingIcons, base: 0.85, message: "下载预设头像...")
+                let descriptor = FetchDescriptor<MaimaiIcon>()
+                let allIcons = try modelContext.fetch(descriptor)
+                var iconDownloadTasks: [(String, Int)] = []
+                for icon in allIcons {
+                    if !ImageDownloader.shared.iconExists(iconId: icon.id) {
+                        iconDownloadTasks.append((icon.iconUrl, icon.id))
+                    }
+                }
+                
+                if !iconDownloadTasks.isEmpty {
+                    log("正在下载 \(iconDownloadTasks.count) 个缺失的头像...")
+                    let total = Double(iconDownloadTasks.count)
+                    var completed = 0
+                    
+                    let batchSize = 30
+                    for chunk in stride(from: 0, to: iconDownloadTasks.count, by: batchSize) {
+                        let endIndex = min(chunk + batchSize, iconDownloadTasks.count)
+                        let subTasks = iconDownloadTasks[chunk..<endIndex]
+                        
+                        // Concurrent downloading for this batch
+                        await withTaskGroup(of: Void.self) { group in
+                            for task in subTasks {
+                                group.addTask {
+                                    do {
+                                        _ = try await ImageDownloader.shared.downloadIcon(from: task.0, id: task.1)
+                                    } catch {
+                                        print("Failed to download icon \(task.1): \(error)")
+                                    }
+                                }
+                            }
+                            
+                            for await _ in group {
+                                completed += 1
+                                if completed % 10 == 0 || completed == iconDownloadTasks.count {
+                                    updateProgress(Double(completed) / total, totalForStage: 0.10, baseForStage: 0.85, status: "下载头像: \(completed)/\(Int(total))")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // --- 阶段 7: 持久化 ---
             updateStage(.saving, base: 0.95, message: "持久化数据...")
             try modelContext.save()
             

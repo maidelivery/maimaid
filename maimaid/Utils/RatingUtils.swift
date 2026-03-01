@@ -125,7 +125,6 @@ struct RatingUtils {
         let title: String
         let version: String?
         let releaseDate: String?
-        let imageUrl: String?
         let imageName: String?
         let sheets: [SheetCalculationInput]
     }
@@ -145,7 +144,6 @@ struct RatingUtils {
         let id = UUID()
         let songId: String // Added for navigation
         let songTitle: String
-        let imageUrl: String?
         let imageName: String?
         let diff: String
         let type: String
@@ -173,7 +171,6 @@ struct RatingUtils {
                 let entry = RatingEntry(
                     songId: song.songId,
                     songTitle: song.title,
-                    imageUrl: song.imageUrl,
                     imageName: song.imageName,
                     diff: sheet.difficulty.uppercased(),
                     type: sheet.type.uppercased(),

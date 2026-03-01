@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SongJacketView: View {
     let imageName: String
-    let remoteUrl: String
     var size: CGFloat = 60
     var cornerRadius: CGFloat = 12
     
@@ -12,7 +11,7 @@ struct SongJacketView: View {
                 Image(uiImage: uiImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-            } else if let url = URL(string: remoteUrl) {
+            } else if let url = URL(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/\(imageName)") {
                 AsyncImage(url: url) { image in
                     image
                         .resizable()

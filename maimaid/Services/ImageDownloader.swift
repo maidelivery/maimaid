@@ -16,9 +16,25 @@ class ImageDownloader {
         return dir
     }
     
+    // The directory where icons will be stored
+    var iconsDirectory: URL {
+        let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+        let docDir = paths[0]
+        let dir = docDir.appendingPathComponent("Icons", isDirectory: true)
+        
+        if !FileManager.default.fileExists(atPath: dir.path) {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: nil)
+        }
+        return dir
+    }
+    
     func getCoverUrl(for imageName: String) -> URL {
         let cleanName = imageName.trimmingCharacters(in: .whitespacesAndNewlines)
         return coversDirectory.appendingPathComponent(cleanName)
+    }
+    
+    func getIconUrl(for iconId: Int) -> URL {
+        return iconsDirectory.appendingPathComponent("\(iconId).png")
     }
     
     private func isValidImageName(_ name: String) -> Bool {
@@ -35,12 +51,26 @@ class ImageDownloader {
         return FileManager.default.fileExists(atPath: url.path)
     }
     
+    func iconExists(iconId: Int) -> Bool {
+        let url = getIconUrl(for: iconId)
+        return FileManager.default.fileExists(atPath: url.path)
+    }
+    
     func downloadImage(from urlString: String, as imageName: String) async throws -> URL {
         guard isValidImageName(imageName) else {
             throw URLError(.badURL)
         }
         
         let destinationUrl = getCoverUrl(for: imageName)
+        return try await downloadAndSave(from: urlString, to: destinationUrl)
+    }
+    
+    func downloadIcon(from urlString: String, id: Int) async throws -> URL {
+        let destinationUrl = getIconUrl(for: id)
+        return try await downloadAndSave(from: urlString, to: destinationUrl)
+    }
+    
+    private func downloadAndSave(from urlString: String, to destinationUrl: URL) async throws -> URL {
         if FileManager.default.fileExists(atPath: destinationUrl.path) {
             return destinationUrl
         }
@@ -60,7 +90,12 @@ class ImageDownloader {
         }
         
         // Check if data is actually an image (rough check)
-        guard UIImage(data: data) != nil else {
+        // Wrap in autoreleasepool to release the UIImage instance immediately
+        let isValidImage = autoreleasepool {
+            return UIImage(data: data) != nil
+        }
+        
+        guard isValidImage else {
             throw URLError(.cannotDecodeContentData)
         }
         
@@ -74,6 +109,11 @@ class ImageDownloader {
     func loadImage(imageName: String) -> UIImage? {
         guard isValidImageName(imageName) else { return nil }
         let url = getCoverUrl(for: imageName)
+        return UIImage(contentsOfFile: url.path)
+    }
+    
+    func loadImage(iconId: Int) -> UIImage? {
+        let url = getIconUrl(for: iconId)
         return UIImage(contentsOfFile: url.path)
     }
 }

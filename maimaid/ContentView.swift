@@ -10,8 +10,7 @@ import SwiftData
 
 enum SortOption: String, CaseIterable, Identifiable {
     case defaultOrder = "默认"
-    case title = "标题"
-    case version = "版本"
+    case versionAndDate = "版本/日期"
     case difficulty = "最大难度"
     
     var id: String { self.rawValue }
@@ -44,17 +43,26 @@ struct ContentView: View {
             switch sortOption {
             case .defaultOrder:
                 return sortAscending ? (a.sortOrder < b.sortOrder) : (a.sortOrder > b.sortOrder)
-            case .title:
-                return sortAscending ? (a.title < b.title) : (a.title > b.title)
-            case .version:
+            case .versionAndDate:
                 let vA = a.version ?? ""
                 let vB = b.version ?? ""
-                if vA == vB {
-                    return a.sortOrder < b.sortOrder
-                }
                 let orderA = ThemeUtils.versionSortOrder(vA)
                 let orderB = ThemeUtils.versionSortOrder(vB)
-                return sortAscending ? (orderA < orderB) : (orderA > orderB)
+                
+                if orderA != orderB {
+                    return sortAscending ? (orderA < orderB) : (orderA > orderB)
+                }
+                
+                // Same version, sort by date
+                let dA = a.releaseDate ?? "0000-00-00"
+                let dB = b.releaseDate ?? "0000-00-00"
+                if dA != dB {
+                    // Dates are different
+                    return sortAscending ? (dA < dB) : (dA > dB)
+                }
+                
+                // Same date or missing, fallback to sortOrder
+                return a.sortOrder < b.sortOrder
             case .difficulty:
                 let maxDiffA = a.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
                 let maxDiffB = b.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0

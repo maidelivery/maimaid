@@ -93,26 +93,61 @@ struct SongDetailView: View {
         }
     }
     
-    private func copyToClipboard(_ text: String, label: String) {
-        UIPasteboard.general.string = text
+    
+    private func getJacketImage() -> UIImage? {
+        // Try local cache/bundle via ImageDownloader
+        if let image = ImageDownloader.shared.loadImage(imageName: song.imageName) {
+            return image
+        }
+        // Fallback or asset
+        return UIImage(named: song.imageName)
+    }
+    
+    private func shareImage(_ image: UIImage) {
+        let activityVC = UIActivityViewController(activityItems: [image], applicationActivities: nil)
         
+        // Find the top most view controller to present
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = scene.windows.first?.rootViewController {
+            
+            var topVC = rootVC
+            while let presented = topVC.presentedViewController {
+                topVC = presented
+            }
+            
+            // For iPad
+            if let popover = activityVC.popoverPresentationController {
+                popover.sourceView = topVC.view
+                popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: topVC.view.bounds.midY, width: 0, height: 0)
+                popover.permittedArrowDirections = []
+            }
+            
+            topVC.present(activityVC, animated: true)
+        }
+    }
+    
+    private func showToast(message: String) {
         // Haptic feedback
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
         
-        // Show toast
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-            toastMessage = "已复制\(label)"
+            toastMessage = message
         }
         
         // Hide toast after delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            withAnimation {
-                if toastMessage == "已复制\(label)" {
+            if toastMessage == message {
+                withAnimation {
                     toastMessage = nil
                 }
             }
         }
+    }
+    
+    private func copyToClipboard(_ text: String, label: String) {
+        UIPasteboard.general.string = text
+        showToast(message: "已复制\(label)")
     }
     
     // MARK: - Ambient Background
@@ -122,7 +157,7 @@ struct SongDetailView: View {
             Color(.systemBackground)
             
             GeometryReader { geo in
-                SongJacketView(imageName: song.imageName, remoteUrl: song.imageUrl, size: geo.size.width, cornerRadius: 0)
+                SongJacketView(imageName: song.imageName, size: geo.size.width, cornerRadius: 0)
                     .blur(radius: 80)
                     .opacity(0.4)
                     .allowsHitTesting(false)
@@ -136,8 +171,35 @@ struct SongDetailView: View {
     
     private var heroSection: some View {
         VStack(spacing: 16) {
-            SongJacketView(imageName: song.imageName, remoteUrl: song.imageUrl, size: 220, cornerRadius: 28)
+            SongJacketView(imageName: song.imageName, size: 220, cornerRadius: 28)
                 .shadow(color: .black.opacity(0.3), radius: 24, x: 0, y: 12)
+                .contextMenu {
+                    Button {
+                        if let image = getJacketImage() {
+                            UIPasteboard.general.image = image
+                            showToast(message: "图片已复制")
+                        }
+                    } label: {
+                        Label("复制图片", systemImage: "doc.on.doc")
+                    }
+                    
+                    Button {
+                        if let image = getJacketImage() {
+                            UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+                            showToast(message: "图片已保存至相册")
+                        }
+                    } label: {
+                        Label("保存图片", systemImage: "square.and.arrow.down")
+                    }
+                    
+                    Button {
+                        if let image = getJacketImage() {
+                            shareImage(image)
+                        }
+                    } label: {
+                        Label("分享图片", systemImage: "square.and.arrow.up")
+                    }
+                }
             
             VStack(spacing: 6) {
                 MarqueeText(text: song.title, font: .title2, fontWeight: .bold, color: .primary, alignment: .center)
@@ -424,7 +486,7 @@ struct SheetCardView: View {
     @State private var isExpanded = false
     
     private var diffColor: Color {
-        ThemeUtils.colorForDifficulty(sheet.difficulty)
+        ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
     }
     
     var body: some View {
@@ -719,7 +781,7 @@ struct SheetCardView: View {
     }
     
     private func colorForDifficulty(_ difficulty: String) -> Color {
-        ThemeUtils.colorForDifficulty(difficulty)
+        ThemeUtils.colorForDifficulty(difficulty, sheet.type)
     }
 }
 

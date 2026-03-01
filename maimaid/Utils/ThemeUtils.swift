@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ThemeUtils {
-    static func colorForDifficulty(_ difficulty: String) -> Color {
+    static func colorForDifficulty(_ difficulty: String, _ type: String?) -> Color {
         let low = difficulty.lowercased()
         
         if low.contains("basic") {
@@ -18,6 +18,9 @@ struct ThemeUtils {
         }
         if low.contains("master") {
             return Color(light: Color(hex: "#a34ee4"), dark: Color(hex: "#813db4"))
+        }
+        if type?.lowercased().contains("utage") == true {
+            return Color(light: Color(hex: "#ec48e9"), dark: Color(hex: "#bb38b9"))
         }
         
         return .pink

@@ -158,7 +158,6 @@ struct BestTableView: View {
                 title: song.title,
                 version: song.version,
                 releaseDate: song.releaseDate,
-                imageUrl: song.imageUrl,
                 imageName: song.imageName,
                 sheets: song.sheets.compactMap { sheet in
                     guard let score = sheet.score else { return nil }
@@ -193,7 +192,6 @@ struct BestTableView: View {
             // Song Jacket
             SongJacketView(
                 imageName: entry.imageName ?? "",
-                remoteUrl: entry.imageUrl ?? "",
                 size: 56,
                 cornerRadius: 10
             )
@@ -228,7 +226,7 @@ struct BestTableView: View {
                 // Line 3: Type + Diff + FC + FS (all badges)
                 HStack(spacing: 4) {
                     badgeView(entry.type, bg: entry.type == "DX" ? .orange : .blue, fg: .white)
-                    badgeView(diffShort(entry.diff), bg: ThemeUtils.colorForDifficulty(entry.diff), fg: .white)
+                    badgeView(diffShort(entry.diff), bg: ThemeUtils.colorForDifficulty(entry.diff, entry.type), fg: .white)
                     
                     if let fc = entry.fc, !fc.isEmpty {
                         badgeView(fc.uppercased(), bg: fcColor(fc), fg: .white)
@@ -294,7 +292,7 @@ struct BestTableView: View {
     private func fsColor(_ fs: String) -> Color {
         let low = fs.lowercased()
         if low.contains("fsd") { return Color(red: 0.7, green: 0.3, blue: 1.0) } // purple
-        if low.contains("fs")  { return Color(red: 0.3, green: 0.5, blue: 1.0) } // blue
+        if low.contains("fs") || low.contains("sync") { return Color(red: 0.3, green: 0.5, blue: 1.0) } // blue
         return .secondary
     }
 }

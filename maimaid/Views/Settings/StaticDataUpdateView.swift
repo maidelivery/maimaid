@@ -14,10 +14,12 @@ struct StaticDataUpdateView: View {
     @State private var songsWithAliases = 0
     @State private var sheetsWithInternalLevel = 0
     @State private var totalCategories = 0
+    @State private var totalIcons = 0
     
     @AppStorage("syncUpdateRemoteData") private var updateRemoteData = true
     @AppStorage("syncUpdateAliases") private var updateAliases = true
     @AppStorage("syncUpdateCovers") private var updateCovers = true
+    @AppStorage("syncUpdateIcons") private var updateIcons = true
     
     var body: some View {
         Form {
@@ -48,7 +50,8 @@ struct StaticDataUpdateView: View {
                             let options = MaimaiDataFetcher.SyncOptions(
                                 updateRemoteData: updateRemoteData,
                                 updateAliases: updateAliases,
-                                updateCovers: updateCovers
+                                updateCovers: updateCovers,
+                                updateIcons: updateIcons
                             )
                             Task {
                                 do {
@@ -65,7 +68,7 @@ struct StaticDataUpdateView: View {
                                 Spacer()
                             }
                         }
-                        .disabled(!updateRemoteData && !updateAliases && !updateCovers)
+                        .disabled(!updateRemoteData && !updateAliases && !updateCovers && !updateIcons)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
@@ -76,6 +79,7 @@ struct StaticDataUpdateView: View {
                 Toggle("基础数据", isOn: $updateRemoteData)
                 Toggle("歌曲别名与歌曲 ID", isOn: $updateAliases)
                 Toggle("歌曲封面", isOn: $updateCovers)
+                Toggle("预设头像", isOn: $updateIcons)
             }
             .disabled(MaimaiDataFetcher.shared.isSyncing)
             
@@ -135,6 +139,7 @@ struct StaticDataUpdateView: View {
                 LabeledContent("宴会曲数量", value: "\(utageSongs)")
                 LabeledContent("拥有别名曲目", value: "\(songsWithAliases)")
                 LabeledContent("已知内部定数谱面", value: "\(sheetsWithInternalLevel)")
+                LabeledContent("预设头像数量", value: "\(totalIcons)")
                 
                 if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
                     LabeledContent("App 版本", value: appVersion)
@@ -186,6 +191,9 @@ struct StaticDataUpdateView: View {
             sheetsWithInternalLevel = internalLevels
             totalCategories = categories.count
         }
+        
+        let iconDescriptor = FetchDescriptor<MaimaiIcon>()
+        totalIcons = (try? modelContext.fetch(iconDescriptor))?.count ?? 0
     }
 }
 
