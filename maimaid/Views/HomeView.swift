@@ -77,6 +77,14 @@ struct HomeView: View {
                                 gradient: [Color.orange, Color.red]
                             )
                         }
+                        NavigationLink(destination: PlateProgressView()) {
+                            functionCard(
+                                icon: "chart.bar.xaxis",
+                                title: "牌子进度",
+                                subtitle: "查看各版本牌子获取进度",
+                                gradient: [Color.green, Color.blue]
+                            )
+                        }
                         .buttonStyle(.plain)
                         
                         functionCard(
@@ -256,7 +264,12 @@ struct HomeView: View {
                     .foregroundColor(.secondary.opacity(0.3))
             }
             .padding(16)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.02), radius: 8, x: 0, y: 4)
         }
         .buttonStyle(.plain)
     }
@@ -282,7 +295,12 @@ struct HomeView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.02), radius: 8, x: 0, y: 4)
     }
 }
 
