@@ -10,6 +10,8 @@ struct RecommendationResult: Identifiable {
     let currentRate: Double?
     let potentialRating: Int
     let potentialGain: Int
+    let targetRank: String
+    let targetAchievement: Double
     let isNew: Bool
     var comprehensiveScore: Double = 0 // Used for internal sorting
 }
@@ -145,10 +147,13 @@ class RecommendationService {
             let b15Levels = b50.b15.map { $0.level }
             let avgB15InternalLevel = b15Levels.isEmpty ? 0.0 : b15Levels.reduce(0, +) / Double(b15Levels.count)
             
-            print("RecommendationService: B15 Avg Internal Level: \(String(format: "%.2f", avgB15InternalLevel))")
-            
             var b15Recs: [RecommendationResult] = []
             var b35Recs: [RecommendationResult] = []
+            
+            // Milestones to check: from 97.0 (S) to 100.5 (SSS+)
+            let targetMilestones: [(rank: String, achievement: Double)] = [
+                ("S", 97.0), ("S+", 98.0), ("SS", 99.0), ("SS+", 99.5), ("SSS", 100.0), ("SSS+", 100.5)
+            ]
             
             for song in songs {
                 if song.category.lowercased().contains("utage") || song.category.contains("宴") {
@@ -164,37 +169,51 @@ class RecommendationService {
                     guard internalLevelValue > 0 else { continue }
                     
                     let currentRate = sheet.score?.rate ?? 0.0
-                    guard currentRate < 100.45 else { continue }
+                    guard currentRate < 100.5 else { continue }
                     
                     let isNew = song.version == latestVersion
                     let threshold = isNew ? b15Threshold : b35Threshold
                     
-                    let potentialRating = RatingUtils.calculateRating(internalLevel: internalLevelValue, achievements: 100.5)
                     let currentRating = sheet.score.map { RatingUtils.calculateRating(internalLevel: internalLevelValue, achievement: $0.rate, fc: $0.fc) } ?? 0
-                    
                     let isInB50 = (isNew ? b50.b15 : b50.b35).contains(where: { $0.songId == song.songId && $0.diff == sheet.difficulty.uppercased() && $0.type == sheet.type.uppercased() })
                     
-                    let gain: Int
-                    if isInB50 {
-                        gain = max(0, potentialRating - currentRating)
-                    } else if potentialRating > threshold {
-                        gain = potentialRating - threshold
-                    } else {
-                        gain = 0
+                    // Find the MINIMUM rank that gives a gain
+                    var bestTarget: (rank: String, achievement: Double)?
+                    var bestPotentialRating: Int = 0
+                    var bestGain: Int = 0
+                    
+                    for milestone in targetMilestones {
+                        // Skip milestones the user has already reached (approximately)
+                        if milestone.achievement <= currentRate + 0.0001 { continue }
+                        
+                        let potentialRating = RatingUtils.calculateRating(internalLevel: internalLevelValue, achievements: milestone.achievement)
+                        let gain: Int
+                        if isInB50 {
+                            gain = max(0, potentialRating - currentRating)
+                        } else if potentialRating > threshold {
+                            gain = potentialRating - threshold
+                        } else {
+                            gain = 0
+                        }
+                        
+                        if gain > 0 {
+                            bestTarget = milestone
+                            bestPotentialRating = potentialRating
+                            bestGain = gain
+                            break // Found the lowest milestone that works
+                        }
                     }
                     
-                    if gain > 0 {
+                    if let target = bestTarget, bestGain > 0 {
                         let matchingStat = songStats != nil ? findMatchingStat(sheet: sheet, stats: songStats!) : nil
                         let fitDiff = matchingStat?.fit_diff
                         let diffGap = fitDiff.map { internalLevelValue - $0 }
                         
                         var score: Double = 0
                         if isNew {
-                            // B15 Algorithm: Priority = Potential Gain + Proximity to Capability
-                            // Prox: 1.0 if perfectly matched, drops as it gets farther. Range of interest: [avg-1, avg+1]
                             let proximity = max(0, 1.0 - abs(internalLevelValue - avgB15InternalLevel) / 2.0)
-                            // Comprehensive Score: Weight potential gain heavily but tie-break/shift by proximity
-                            score = Double(gain) * 1.0 + proximity * 5.0 
+                            // Prioritize higher gain, then proximity
+                            score = Double(bestGain) * 1.0 + proximity * 5.0 
                         }
                         
                         let result = RecommendationResult(
@@ -203,8 +222,10 @@ class RecommendationService {
                             fitDiff: fitDiff,
                             diffGap: diffGap,
                             currentRate: sheet.score?.rate,
-                            potentialRating: potentialRating,
-                            potentialGain: gain,
+                            potentialRating: bestPotentialRating,
+                            potentialGain: bestGain,
+                            targetRank: target.rank,
+                            targetAchievement: target.achievement,
                             isNew: isNew,
                             comprehensiveScore: score
                         )

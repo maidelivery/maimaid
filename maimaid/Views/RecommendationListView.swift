@@ -13,26 +13,19 @@ struct RecommendationListView: View {
             List {
                 if !isLoading {
                     // Capacity Settings Section
-                    Section {
-                        VStack(alignment: .leading, spacing: 12) {
+                    if let config = configs.first {
+                        Section("容量设置") {
+                            rowStepper(title: "新曲建议", value: Binding(
+                                get: { config.b15RecLimit },
+                                set: { config.b15RecLimit = $0 }
+                            ), range: 1...50)
                             
-                            if let config = configs.first {
-                                rowStepper(title: "新曲建议数量", value: Binding(
-                                    get: { config.b15RecLimit },
-                                    set: { config.b15RecLimit = $0 }
-                                ), range: 1...50)
-                                
-                                Divider()
-                                
-                                rowStepper(title: "旧曲建议数量", value: Binding(
-                                    get: { config.b35RecLimit },
-                                    set: { config.b35RecLimit = $0 }
-                                ), range: 1...50)
-                            }
+                            rowStepper(title: "旧曲建议", value: Binding(
+                                get: { config.b35RecLimit },
+                                set: { config.b35RecLimit = $0 }
+                            ), range: 1...50)
                         }
-                        .padding(.vertical, 8)
                     }
-                    .navigationTitle("容量设置")
                     
                     // B15 Recommendations
                     if let b15 = response?.b15, !b15.isEmpty {
@@ -54,10 +47,6 @@ struct RecommendationListView: View {
                                 }
                             }
                         }
-                        Text("拟合定数通过大量玩家成绩分析得出，仅供参考。由于个人差，推荐结果可能并不完全适合你。对于新曲，将结合你的 B15 平均能力与潜力点数进行综合推荐。")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .listRowBackground(Color.clear)
                     }
                 }
             }
@@ -163,13 +152,13 @@ struct RecommendationRow: View {
             
             Spacer()
             
-            // Right side: Potential Gain
+            // Right side: Target Rank & Gain
             VStack(alignment: .trailing, spacing: 2) {
                 Text("+\(result.potentialGain)")
                     .font(.system(size: 18, weight: .black, design: .rounded))
                     .foregroundColor(.orange)
                 
-                Text("\(result.potentialRating)")
+                Text("after \(result.targetRank)")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundColor(.secondary)
             }
