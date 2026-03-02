@@ -90,12 +90,12 @@ struct RemoteNoteCounts: Decodable {
     }
 }
 
-@MainActor
 @Observable
+@MainActor
 class MaimaiDataFetcher {
     static let shared = MaimaiDataFetcher()
     
-    nonisolated init() {}
+    private init() {}
     
     enum SyncStage: String {
         case idle = "等待中"

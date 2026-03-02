@@ -3,7 +3,7 @@ import CoreML
 import Vision
 import UIKit
 
-/// Processor that encapsulates the logic for parsing Maimai scores using the `best` CoreML model.
+/// Processor that encapsulates the logic for parsing Maimai scores using CoreML model.
 class MLScoreProcessor {
     static let shared = MLScoreProcessor()
     
@@ -21,25 +21,25 @@ class MLScoreProcessor {
             let config = MLModelConfiguration()
             config.computeUnits = .all
             
-            if let modelURL = Bundle.main.url(forResource: "maimaidv1.3", withExtension: "mlmodelc") {
+            if let modelURL = Bundle.main.url(forResource: "maimaidv1.31", withExtension: "mlmodelc") {
                 let mlModel = try MLModel(contentsOf: modelURL, configuration: config)
                 self.visionModel = try VNCoreMLModel(for: mlModel)
-                print("MLScoreProcessor: Successfully loaded maimaidv1.3 model from mlmodelc.")
+                print("MLScoreProcessor: Successfully loaded maimaidv1.31 model from mlmodelc.")
             } else if let urls = Bundle.main.urls(forResourcesWithExtension: "mlmodelc", subdirectory: nil), let first = urls.first {
                 print("MLScoreProcessor: Loaded fallback model \(first.lastPathComponent)")
                 let mlModel = try MLModel(contentsOf: first, configuration: config)
                 self.visionModel = try VNCoreMLModel(for: mlModel)
             } else {
-                print("MLScoreProcessor: maimaidv1.3.mlmodelc not found in bundle. Check Target Membership.")
+                print("MLScoreProcessor: maimaidv1.31.mlmodelc not found in bundle. Check Target Membership.")
             }
         } catch {
-            print("MLScoreProcessor: Error loading maimaidv1.3 model - \(error)")
+            print("MLScoreProcessor: Error loading maimaidv1.31 model - \(error)")
         }
     }
     
     // MARK: - Processing
     
-    /// Processes an image using `maimaidv1.3` object detection and targeted OCR.
+    /// Processes an image using `maimaidv1.31` object detection and targeted OCR.
     func process(_ image: UIImage) async -> MLScoreResult {
         let normalizedImage = image.normalized()
         guard let cgImage = normalizedImage.cgImage, let vnModel = visionModel else {
@@ -63,7 +63,7 @@ class MLScoreProcessor {
         // MLScoreResult holds our parsed data
         var scoreResult = MLScoreResult()
         
-        // Class labels expected from maimaidv1.3:
+        // Class labels expected from maimaidv1.31:
         // achievement, title, dx, std, utage, difficulty, fc, fcp, ap, app, sync, fs, fsp, fdx, fdxp, dxscore
         
         var achievementBox: CGRect?

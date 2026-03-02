@@ -59,13 +59,6 @@ struct HomeView: View {
                     .buttonStyle(.plain)
                     
                     LazyVGrid(columns: columns, spacing: 16) {
-                        functionCard(
-                            icon: "chart.bar.fill",
-                            title: "成绩分析",
-                            subtitle: "查看你的成绩趋势",
-                            gradient: [Color.blue, Color.cyan]
-                        )
-                        
                         NavigationLink(destination: RandomSongView()) {
                             functionCard(
                                 icon: "dice.fill",
@@ -75,6 +68,23 @@ struct HomeView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        
+                        NavigationLink(destination: RecommendationListView()) {
+                            functionCard(
+                                icon: "sparkles",
+                                title: "吃分推荐",
+                                subtitle: "定数拟合分析",
+                                gradient: [Color.orange, Color.red]
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        
+                        functionCard(
+                            icon: "chart.bar.fill",
+                            title: "成绩分析",
+                            subtitle: "查看你的成绩趋势",
+                            gradient: [Color.blue, Color.cyan]
+                        )
                         
                         functionCard(
                             icon: "person.2.fill",

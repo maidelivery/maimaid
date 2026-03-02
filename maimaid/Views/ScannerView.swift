@@ -39,6 +39,11 @@ struct ScannerView: View {
     private let processingQueue = DispatchQueue(label: "com.maimaid.scanner.processing", qos: .userInitiated)
     @State private var recognitionBuffer: [String: Int] = [:]
     
+    // Recognition Stabilization
+    @State private var rateBuffer: [Double] = []
+    @State private var dxScoreBuffer: [Int] = []
+    private let stabilizationThreshold = 3 // Require identical read 3 times
+    
     // Photo Import
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var isProcessingPhoto = false
@@ -539,10 +544,34 @@ struct ScannerView: View {
         }
         
         if isLocked {
-            if let r = rate { self.recognizedRate = r }
+            if let r = rate {
+                rateBuffer.append(r)
+                if rateBuffer.count > 5 { rateBuffer.removeFirst() }
+                
+                // Find most frequent rate in buffer
+                let counts = rateBuffer.reduce(into: [:]) { counts, value in counts[value, default: 0] += 1 }
+                if let (mostFrequentRate, count) = counts.max(by: { $0.value < $1.value }), count >= stabilizationThreshold {
+                    self.recognizedRate = mostFrequentRate
+                } else if rateBuffer.count < stabilizationThreshold {
+                    // Always show the first few reads so the screen isn't completely blank
+                    self.recognizedRate = rateBuffer.last
+                }
+            }
             if let d = diff { self.recognizedDifficulty = d }
             if let t = type { self.recognizedType = t }
-            if let dx = dxScore { self.recognizedDxScore = dx }
+            
+            if let dx = dxScore {
+                dxScoreBuffer.append(dx)
+                if dxScoreBuffer.count > 5 { dxScoreBuffer.removeFirst() }
+                
+                let counts = dxScoreBuffer.reduce(into: [:]) { counts, value in counts[value, default: 0] += 1 }
+                if let (mostFrequentScore, count) = counts.max(by: { $0.value < $1.value }), count >= stabilizationThreshold {
+                    self.recognizedDxScore = mostFrequentScore
+                } else if dxScoreBuffer.count < stabilizationThreshold {
+                    self.recognizedDxScore = dxScoreBuffer.last
+                }
+            }
+            
             if let f = fc { self.recognizedFC = f }
             if let s = fs { self.recognizedFS = s }
         }
@@ -565,6 +594,8 @@ struct ScannerView: View {
         self.recognizedFC = nil
         self.recognizedFS = nil
         self.recognitionBuffer.removeAll()
+        self.rateBuffer.removeAll()
+        self.dxScoreBuffer.removeAll()
         self.debugBoxes.removeAll()
         self.isLocked = false
     }
@@ -694,8 +725,9 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
     
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         frameCounter += 1
-        // Process 1 frame per ~5 calls to avoid blocking UI with expensive ML requests
-        guard frameCounter % 5 == 0 else { return }
+        // Process 1 frame per ~10 calls to reduce frequency (approx 3 fps instead of 6 fps)
+        // This helps stabilize the OCR readings and reduces immediate jitter
+        guard frameCounter % 10 == 0 else { return }
         
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         

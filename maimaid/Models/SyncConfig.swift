@@ -35,6 +35,10 @@ final class SyncConfig {
     var b35Count: Int = 35
     var b15Count: Int = 15
     
+    // Recommendation Settings
+    var b35RecLimit: Int = 10
+    var b15RecLimit: Int = 10
+    
     init(dfUsername: String = "", 
          dfImportToken: String = "", 
          lxnsRefreshToken: String = "", 
