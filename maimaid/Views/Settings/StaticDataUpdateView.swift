@@ -26,7 +26,7 @@ struct StaticDataUpdateView: View {
             Section(header: Text("update.control.header")) {
                 VStack(alignment: .leading, spacing: 12) {
                     if MaimaiDataFetcher.shared.isSyncing {
-                        Text(MaimaiDataFetcher.shared.currentStage.rawValue)
+                        Text(LocalizedStringKey(MaimaiDataFetcher.shared.currentStage.rawValue))
                                 .font(.system(size: 15, weight: .medium))
                         
                         ProgressView(value: MaimaiDataFetcher.shared.progress, total: 1.0)

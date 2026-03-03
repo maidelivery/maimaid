@@ -154,7 +154,7 @@ struct PlateProgressView: View {
         .padding(.vertical, 16)
     }
     
-    private func menuButton(title: String, selection: String, options: [String], onSelect: @escaping (String) -> Void) -> some View {
+    private func menuButton(title: LocalizedStringKey, selection: String, options: [String], onSelect: @escaping (String) -> Void) -> some View {
         Menu {
             ForEach(options, id: \.self) { option in
                 Button(option) {
@@ -183,7 +183,7 @@ struct PlateProgressView: View {
     
     private func levelSection(_ section: (level: String, sheets: [Sheet])) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(String(localized: "plate.section.count \(section.level) \(section.sheets.count)"))
+            Text("plate.section.count \(section.level) \(section.sheets.count)")
                 .font(.system(size: 13, weight: .black))
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 24)

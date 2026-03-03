@@ -30,6 +30,9 @@ struct SettingsView: View {
                         }
                     }
                     
+                }
+                
+                Section(header: Text("settings.sync.header"), footer: Text("settings.sync.footer")) {
                     NavigationLink {
                         DivingFishImportView()
                     } label: {
@@ -45,9 +48,6 @@ struct SettingsView: View {
                             }
                         }
                     }
-                }
-                
-                Section(header: Text("settings.sync.header"), footer: Text("settings.sync.footer")) {
                     Toggle("settings.sync.autoUpload", isOn: Binding(
                         get: { config?.isAutoUploadEnabled ?? false },
                         set: { newValue in

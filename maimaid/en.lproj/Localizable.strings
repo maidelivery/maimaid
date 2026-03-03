@@ -53,7 +53,7 @@
 
 // MARK: - Settings
 "settings.title" = "Settings";
-"settings.data.header" = "Data Management";
+"settings.data.header" = "Static Data";
 "settings.data.footer" = "Updates songs, aliases, and IDs. Auto-update supported.";
 "settings.data.syncing" = "Updating...";
 "settings.data.updateAll" = "Update static data";
@@ -61,7 +61,7 @@
 "settings.data.importLxns" = "Import from LXNS";
 "settings.data.bound" = "Bound";
 "settings.sync.header" = "Score Sync";
-"settings.sync.footer" = "Auto-uploads new scores to parsers.";
+"settings.sync.footer" = "Auto sync new scores to parsers.";
 "settings.sync.autoUpload" = "Auto Upload";
 "settings.appearance.header" = "Appearance";
 "settings.appearance.theme" = "Theme";
@@ -169,6 +169,11 @@
 "plate.menu.plate" = "Plate";
 "plate.section.count %@ %lld" = "Lv.%@ (%lld charts)";
 
+"极牌" = "极 Plate";
+"将牌" = "将 Plate";
+"神牌" = "神 Plate";
+"舞舞牌" = "舞舞 Plate";
+
 // MARK: - Data Import & Update
 "import.status.header" = "Status";
 "import.status.syncing" = "Syncing...";
@@ -272,6 +277,19 @@
 "bestTable.section.old %lld" = "Old B%lld";
 "bestTable.empty" = "No Data";
 "bestTable.base %.1f" = "Base %.1f";
+
+// MARK: - Recommendation
+"rec.title" = "Recommendation";
+"rec.settings.capacity" = "Capacity";
+"rec.settings.new" = "New song Sug.";
+"rec.settings.old" = "Old song Sug.";
+"rec.section.new" = "Recommended New";
+"rec.section.old" = "Recommended Old";
+"rec.loading" = "Analyzing data...";
+"rec.empty.title" = "No Recs";
+"rec.empty.desc" = "Insufficient data or no high-yield tracks found.";
+"rec.status.notPlayed" = "Not Played";
+"rec.afterRank %@" = "after %@";
 
 // MARK: - Data Sync
 "data.sync.stage.idle" = "Idle";

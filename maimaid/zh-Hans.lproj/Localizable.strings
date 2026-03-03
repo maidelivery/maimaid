@@ -52,7 +52,7 @@
 
 // MARK: - Settings
 "settings.title" = "设置";
-"settings.data.header" = "数据管理";
+"settings.data.header" = "静态数据";
 "settings.data.footer" = "更新静态数据将同步最新的歌曲列表、别名以及官方 ID 映射。支持设置自动更新频率。";
 "settings.data.syncing" = "正在更新静态数据...";
 "settings.data.updateAll" = "更新所有静态数据";
@@ -168,6 +168,11 @@
 "plate.menu.plate" = "牌子";
 "plate.section.count %@ %lld" = "Lv.%@ (%lld首)";
 
+"极牌" = "极牌";
+"将牌" = "将牌";
+"神牌" = "神牌";
+"舞舞牌" = "舞舞牌";
+
 // MARK: - Data Import & Update
 "import.status.header" = "状态";
 "import.status.syncing" = "正在同步...";
@@ -271,6 +276,19 @@
 "bestTable.section.old %lld" = "旧曲 B%lld";
 "bestTable.empty" = "暂无数据";
 "bestTable.base %.1f" = "定数 %.1f";
+
+// MARK: - Recommendation
+"rec.title" = "吃分推荐";
+"rec.settings.capacity" = "容量设置";
+"rec.settings.new" = "新曲建议";
+"rec.settings.old" = "旧曲建议";
+"rec.section.new" = "新曲推荐";
+"rec.section.old" = "旧曲推荐";
+"rec.loading" = "正在分析拟合数据...";
+"rec.empty.title" = "暂无推荐";
+"rec.empty.desc" = "你的 B50 数据不足，或当前没有明显的可吃分歌曲。";
+"rec.status.notPlayed" = "未游玩";
+"rec.afterRank %@" = "after %@";
 
 // MARK: - Data Sync
 "data.sync.stage.idle" = "等待中";

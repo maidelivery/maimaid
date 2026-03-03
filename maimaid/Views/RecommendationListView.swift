@@ -14,13 +14,13 @@ struct RecommendationListView: View {
                 if !isLoading {
                     // Capacity Settings Section
                     if let config = configs.first {
-                        Section("容量设置") {
-                            rowStepper(title: "新曲建议", value: Binding(
+                        Section("rec.settings.capacity") {
+                            rowStepper(title: "rec.settings.new", value: Binding(
                                 get: { config.b15RecLimit },
                                 set: { config.b15RecLimit = $0 }
                             ), range: 1...50)
                             
-                            rowStepper(title: "旧曲建议", value: Binding(
+                            rowStepper(title: "rec.settings.old", value: Binding(
                                 get: { config.b35RecLimit },
                                 set: { config.b35RecLimit = $0 }
                             ), range: 1...50)
@@ -29,7 +29,7 @@ struct RecommendationListView: View {
                     
                     // B15 Recommendations
                     if let b15 = response?.b15, !b15.isEmpty {
-                        Section("新曲推荐") {
+                        Section("rec.section.new") {
                             ForEach(b15) { result in
                                 NavigationLink(destination: SongDetailView(song: result.song)) {
                                     RecommendationRow(result: result)
@@ -40,7 +40,7 @@ struct RecommendationListView: View {
                     
                     // B35 Recommendations
                     if let b35 = response?.b35, !b35.isEmpty {
-                        Section("旧曲推荐") {
+                        Section("rec.section.old") {
                             ForEach(b35) { result in
                                 NavigationLink(destination: SongDetailView(song: result.song)) {
                                     RecommendationRow(result: result)
@@ -56,7 +56,7 @@ struct RecommendationListView: View {
             if isLoading {
                 VStack(spacing: 12) {
                     ProgressView()
-                    Text("正在分析拟合数据...")
+                    Text("rec.loading")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -65,15 +65,15 @@ struct RecommendationListView: View {
             } else if (response?.b15.isEmpty ?? true) && (response?.b35.isEmpty ?? true) {
                 // Empty State centered
                 ContentUnavailableView(
-                    "暂无推荐",
+                    "rec.empty.title",
                     systemImage: "sparkles",
-                    description: Text("你的 B50 数据不足，或当前没有明显的可吃分歌曲。")
+                    description: Text("rec.empty.desc")
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(.systemGroupedBackground))
             }
         }
-        .navigationTitle("吃分推荐")
+        .navigationTitle("rec.title")
         .task(id: songs) {
             if !songs.isEmpty {
                 await loadRecommendations()
@@ -87,7 +87,7 @@ struct RecommendationListView: View {
         }
     }
     
-    private func rowStepper(title: String, value: Binding<Int>, range: ClosedRange<Int>) -> some View {
+    private func rowStepper(title: LocalizedStringKey, value: Binding<Int>, range: ClosedRange<Int>) -> some View {
         HStack {
             Text(title)
                 .font(.subheadline)
@@ -136,7 +136,7 @@ struct RecommendationRow: View {
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundColor(.secondary)
                     } else {
-                        Text("未游玩")
+                        Text("rec.status.notPlayed")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
@@ -158,7 +158,7 @@ struct RecommendationRow: View {
                     .font(.system(size: 18, weight: .black, design: .rounded))
                     .foregroundColor(.orange)
                 
-                Text("after \(result.targetRank)")
+                Text("rec.afterRank \(result.targetRank)")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundColor(.secondary)
             }
