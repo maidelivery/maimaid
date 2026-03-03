@@ -17,9 +17,9 @@ struct FilterView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    filterSection(title: "快速筛选") {
+                    filterSection(title: "filter.quick") {
                         HStack {
-                            Label("仅显示收藏", systemImage: settings.showFavoritesOnly ? "star.fill" : "star")
+                            Label("filter.favorites", systemImage: settings.showFavoritesOnly ? "star.fill" : "star")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(settings.showFavoritesOnly ? .yellow : .primary)
                             Spacer()
@@ -30,7 +30,7 @@ struct FilterView: View {
 
                     // Difficulty & Range Section (Grouped)
                     VStack(alignment: .leading, spacing: 8) {
-                        filterSection(title: "难度筛选") {
+                        filterSection(title: "filter.difficulty") {
                             VStack(alignment: .leading, spacing: 16) {
                                 FlowLayout(spacing: 10) {
                                     ForEach(allDifficulties, id: \.self) { diff in
@@ -47,7 +47,7 @@ struct FilterView: View {
                                 Divider()
                                 
                                 HStack {
-                                    Text("定数区间")
+                                    Text("filter.levelRange")
                                         .font(.system(size: 11, weight: .bold))
                                         .foregroundColor(.secondary)
                                     Spacer()
@@ -61,14 +61,14 @@ struct FilterView: View {
                             }
                         }
                         
-                        Text("必须选择至少一个参考难度。系统将筛选出包含该难度、且该难度定数在下方区间内的歌曲。")
+                        Text("filter.levelRange.hint")
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 4)
                     }
                     
                     // Categories
-                    filterSection(title: "分类") {
+                    filterSection(title: "filter.category") {
                         FlowLayout(spacing: 10) {
                             ForEach(allCategories, id: \.self) { category in
                                 FilterChip(
@@ -84,7 +84,7 @@ struct FilterView: View {
                     }
                     
                     // Versions
-                    filterSection(title: "版本") {
+                    filterSection(title: "filter.version") {
                         FlowLayout(spacing: 10) {
                             ForEach(sortedVersions.reversed(), id: \.self) { version in
                                 FilterChip(
@@ -100,7 +100,7 @@ struct FilterView: View {
                     }
                     
                     // Types
-                    filterSection(title: "类型") {
+                    filterSection(title: "filter.type") {
                         HStack(spacing: 10) {
                             ForEach(allTypes, id: \.self) { type in
                                 FilterChip(
@@ -118,15 +118,15 @@ struct FilterView: View {
                 .padding(20)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("筛选")
+            .navigationTitle("filter.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("完成") { dismiss() }
+                    Button("filter.done") { dismiss() }
                         .fontWeight(.bold)
                 }
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("重置") {
+                    Button("filter.reset") {
                         withAnimation(.spring(response: 0.3)) {
                             settings = FilterSettings()
                         }
@@ -137,7 +137,7 @@ struct FilterView: View {
     }
     
     @ViewBuilder
-    private func filterSection<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+    private func filterSection<Content: View>(title: LocalizedStringKey, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.system(size: 12, weight: .semibold))

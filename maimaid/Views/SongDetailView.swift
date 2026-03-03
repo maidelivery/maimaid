@@ -147,7 +147,7 @@ struct SongDetailView: View {
     
     private func copyToClipboard(_ text: String, label: String) {
         UIPasteboard.general.string = text
-        showToast(message: "已复制\(label)")
+        showToast(message: String(localized: "song.detail.copy.success \(label)"))
     }
     
     // MARK: - Ambient Background
@@ -177,19 +177,19 @@ struct SongDetailView: View {
                     Button {
                         if let image = getJacketImage() {
                             UIPasteboard.general.image = image
-                            showToast(message: "图片已复制")
+                            showToast(message: String(localized: "song.detail.copy.image"))
                         }
                     } label: {
-                        Label("复制图片", systemImage: "doc.on.doc")
+                        Label("song.detail.copy.title", systemImage: "doc.on.doc")
                     }
                     
                     Button {
                         if let image = getJacketImage() {
                             UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-                            showToast(message: "图片已保存至相册")
+                            showToast(message: String(localized: "song.detail.save.image"))
                         }
                     } label: {
-                        Label("保存图片", systemImage: "square.and.arrow.down")
+                        Label("song.detail.save.action", systemImage: "square.and.arrow.down")
                     }
                     
                     Button {
@@ -197,18 +197,18 @@ struct SongDetailView: View {
                             shareImage(image)
                         }
                     } label: {
-                        Label("分享图片", systemImage: "square.and.arrow.up")
+                        Label("song.detail.share.action", systemImage: "square.and.arrow.up")
                     }
                 }
             
             VStack(spacing: 6) {
                 MarqueeText(text: song.title, font: .title2, fontWeight: .bold, color: .primary, alignment: .center)
                     .frame(height: 32)
-                    .onTapGesture { copyToClipboard(song.title, label: "曲名") }
+                    .onTapGesture { copyToClipboard(song.title, label: String(localized: "song.detail.label.title")) }
                 
                 MarqueeText(text: song.artist, font: .subheadline, color: .secondary, alignment: .center)
                     .frame(height: 20)
-                    .onTapGesture { copyToClipboard(song.artist, label: "曲师") }
+                    .onTapGesture { copyToClipboard(song.artist, label: String(localized: "song.detail.label.artist")) }
                 
                 if let keywords = song.searchKeywords, !keywords.isEmpty {
                     HStack(spacing: 6) {
@@ -234,7 +234,7 @@ struct SongDetailView: View {
                                     .padding(.vertical, 4)
                                     .background(.secondary.opacity(0.1), in: Capsule())
                                     .onTapGesture {
-                                        copyToClipboard(alias, label: "别名")
+                                        copyToClipboard(alias, label: String(localized: "profile.edit.titleName")) // Using TitleName or Alias if available, but I'll use common key
                                     }
                             }
                         }
@@ -267,22 +267,22 @@ struct SongDetailView: View {
     @ViewBuilder
     private func pillsContent(isGrid: Bool) -> some View {
         if let bpm = song.bpm {
-            metadataPill(icon: "metronome", value: "\(Int(bpm))", label: "BPM", isGrid: isGrid)
-                .onTapGesture { copyToClipboard("\(Int(bpm))", label: "BPM") }
+            metadataPill(icon: "metronome", value: "\(Int(bpm))", label: "song.detail.metadata.bpm", isGrid: isGrid)
+                .onTapGesture { copyToClipboard("\(Int(bpm))", label: String(localized: "song.detail.metadata.bpm")) }
         }
         
         metadataPill(icon: "square.grid.2x2", value: song.category, label: nil, isGrid: isGrid)
-            .onTapGesture { copyToClipboard(song.category, label: "分类") }
+            .onTapGesture { copyToClipboard(song.category, label: String(localized: "song.detail.metadata.category")) }
         
         if let version = song.version {
             metadataPill(icon: "clock", value: ThemeUtils.versionAbbreviation(version), label: nil, isGrid: isGrid)
-                .onTapGesture { copyToClipboard(version, label: "版本") }
+                .onTapGesture { copyToClipboard(version, label: String(localized: "song.detail.metadata.version")) }
         }
         
         if let releaseDate = song.releaseDate {
             let displayDate = isGrid ? releaseDate : formatDate(releaseDate)
             metadataPill(icon: "calendar", value: displayDate, label: nil, isGrid: isGrid)
-                .onTapGesture { copyToClipboard(releaseDate, label: "上线日") }
+                .onTapGesture { copyToClipboard(releaseDate, label: String(localized: "song.detail.metadata.releaseDate")) }
         }
     }
     
@@ -295,7 +295,7 @@ struct SongDetailView: View {
         return date
     }
     
-    private func metadataPill(icon: String, value: String, label: String?, isGrid: Bool = false) -> some View {
+    private func metadataPill(icon: String, value: String, label: LocalizedStringKey?, isGrid: Bool = false) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .semibold))
@@ -336,10 +336,10 @@ struct SongDetailView: View {
         return HStack(spacing: 0) {
             // Region flags
             HStack(spacing: 12) {
-                regionFlag("🇯🇵", label: "日本", available: jp)
-                regionFlag("🌏", label: "国际", available: intl)
-                regionFlag("🇺🇸", label: "美国", available: usa)
-                regionFlag("🇨🇳", label: "中国", available: cn)
+                regionFlag("🇯🇵", label: "song.detail.region.jp", available: jp)
+                regionFlag("🌏", label: "song.detail.region.intl", available: intl)
+                regionFlag("🇺🇸", label: "song.detail.region.usa", available: usa)
+                regionFlag("🇨🇳", label: "song.detail.region.cn", available: cn)
             }
             
             Spacer()
@@ -349,7 +349,7 @@ struct SongDetailView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 10, weight: .semibold))
-                    Text("需要解锁")
+                    Text("song.detail.lock.required")
                         .font(.system(size: 11, weight: .semibold))
                 }
                 .foregroundColor(.orange)
@@ -360,7 +360,7 @@ struct SongDetailView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "lock.open.fill")
                         .font(.system(size: 10, weight: .semibold))
-                    Text("无需解锁")
+                    Text("song.detail.lock.notRequired")
                         .font(.system(size: 11, weight: .semibold))
                 }
                 .foregroundColor(.green)
@@ -378,7 +378,7 @@ struct SongDetailView: View {
         )
     }
     
-    private func regionFlag(_ flag: String, label: String, available: Bool) -> some View {
+    private func regionFlag(_ flag: String, label: LocalizedStringKey, available: Bool) -> some View {
         VStack(spacing: 3) {
             Text(flag)
                 .font(.system(size: 22))
@@ -427,7 +427,7 @@ struct SongDetailView: View {
         )
     }
     
-    private func externalLinkButton(icon: String, label: String, color: Color, url: String) -> some View {
+    private func externalLinkButton(icon: String, label: LocalizedStringKey, color: Color, url: String) -> some View {
         Link(destination: URL(string: url)!) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
@@ -448,7 +448,7 @@ struct SongDetailView: View {
     private var typePicker: some View {
         Picker("Version", selection: $selectedType) {
             ForEach(availableTypes, id: \.self) { type in
-                Text(type.uppercased() == "STD" ? "标准" : type.uppercased()).tag(type)
+                Text(type.uppercased() == "STD" ? String(localized: "scanner.chart.std") : type.uppercased()).tag(type)
             }
         }
         .pickerStyle(.segmented)
@@ -589,7 +589,7 @@ struct SheetCardView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "pencil.line")
                         .font(.system(size: 12, weight: .semibold))
-                    Text("记录成绩")
+                    Text("song.detail.action.record")
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundColor(diffColor)
@@ -606,7 +606,7 @@ struct SheetCardView: View {
         VStack(spacing: 0) {
             if sheet.total != nil {
                 HStack {
-                    Text("音符统计")
+                    Text("song.detail.section.notes")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(.primary)
                     Spacer()
@@ -647,7 +647,7 @@ struct SheetCardView: View {
         return VStack(spacing: 0) {
             // Header
             HStack {
-                Text("完成率 → 得分")
+                Text("song.detail.section.rating")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.primary)
                 Spacer()
@@ -657,11 +657,11 @@ struct SheetCardView: View {
             
             // Table header row
             HStack {
-                Text("完成率")
+                Text("song.detail.table.achievement")
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text("得分")
+                Text("song.detail.table.rating")
                     .frame(width: 50, alignment: .trailing)
-                Text("差分")
+                Text("song.detail.table.delta")
                     .frame(width: 40, alignment: .trailing)
             }
             .font(.system(size: 9, weight: .bold))
@@ -788,11 +788,11 @@ struct FaultToleranceCalculatorView: View {
         VStack(spacing: 12) {
             // Header
             HStack {
-                Text("容错计算器")
+                Text("song.detail.calculator.title")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.primary)
                 Spacer()
-                Text("以 TAP 判定为基准，且 BREAK 全为大P")
+                Text("song.detail.calculator.hint")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(diffColor)
             }

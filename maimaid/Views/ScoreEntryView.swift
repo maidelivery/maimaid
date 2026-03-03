@@ -104,11 +104,11 @@ struct ScoreEntryView: View {
                 .padding(20)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("记录成绩")
+            .navigationTitle("score.entry.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("取消") { dismiss() }
+                    Button("profile.edit.cancel") { dismiss() }
                 }
             }
         }
@@ -344,7 +344,7 @@ struct ScoreEntryView: View {
                 Image(systemName: "camera.viewfinder")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.blue)
-                Text("从照片识别")
+                Text("score.entry.selectPhoto")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.primary)
                 Spacer()
@@ -353,7 +353,7 @@ struct ScoreEntryView: View {
             if isProcessingPhoto {
                 HStack(spacing: 10) {
                     ProgressView()
-                    Text("正在识别...")
+                    Text("score.entry.recognizing")
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
@@ -374,7 +374,7 @@ struct ScoreEntryView: View {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.green)
                                     .font(.system(size: 12))
-                                Text("识别成功")
+                                Text("score.entry.success")
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundColor(.green)
                             }
@@ -386,11 +386,11 @@ struct ScoreEntryView: View {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .foregroundColor(.orange)
                                     .font(.system(size: 12))
-                                Text("未能识别成绩")
+                                Text("score.entry.failed")
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundColor(.orange)
                             }
-                            Text("请手动输入达成率")
+                            Text("score.entry.manualHint")
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                         }
@@ -413,7 +413,7 @@ struct ScoreEntryView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "photo")
                             .font(.system(size: 16))
-                        Text("选择结算截图")
+                        Text("score.entry.selectPhoto")
                             .font(.system(size: 14, weight: .medium))
                     }
                     .foregroundColor(.blue)
@@ -440,7 +440,7 @@ struct ScoreEntryView: View {
                 .foregroundColor(.secondary)
             
             VStack(alignment: .leading, spacing: 2) {
-                Text("当前最佳")
+                Text("score.entry.currentBest")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
                 Text("\(String(format: "%.4f", score.rate))% · \(score.rank)")
@@ -468,12 +468,12 @@ struct ScoreEntryView: View {
                 if isSaved {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 16, weight: .semibold))
-                    Text("已保存")
+                    Text("score.entry.saved")
                         .font(.system(size: 16, weight: .bold))
                 } else {
                     Image(systemName: "square.and.arrow.down")
                         .font(.system(size: 16, weight: .semibold))
-                    Text("保存成绩")
+                    Text("score.entry.save")
                         .font(.system(size: 16, weight: .bold))
                 }
             }

@@ -21,5 +21,10 @@
     </array>
     <key>NSCameraUsageDescription</key>
     <string>We need camera access to scan maimai screens and scores.</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>zh-Hans</string>
+    </array>
 </dict>
 </plist>

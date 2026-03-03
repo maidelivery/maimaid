@@ -1,0 +1,306 @@
+/* 
+  Localizable.strings
+  maimaid
+*/
+
+// MARK: - Main Tab View
+"tab.home" = "主页";
+"tab.scan" = "扫码";
+"tab.settings" = "设置";
+"tab.search" = "搜索";
+"search.placeholder" = "歌曲、艺术家、别名...";
+
+// MARK: - Home View
+"home.title" = "主页";
+"home.profile.unbound" = "未绑定用户";
+"home.profile.editHint" = "点击编辑";
+"home.bestTable.button.title %lld" = "查看 Best %lld 成绩表";
+"home.bestTable.button.subtitle %lld %lld" = "基于 B%lld + N%lld 计算的 DX Rating";
+"home.randomSong.title" = "随机歌曲";
+"home.randomSong.subtitle" = "老虎机式随机抽曲";
+"home.recommendation.title" = "吃分推荐";
+"home.recommendation.subtitle" = "定数拟合分析";
+"home.plateProgress.title" = "牌子进度";
+"home.plateProgress.subtitle" = "查看各版本牌子获取进度";
+"home.usefulLinks.title" = "常用网站";
+"home.usefulLinks.subtitle" = "官方、维基、查分器等";
+
+// MARK: - Profile Edit
+"profile.edit.title" = "个人资料";
+"profile.edit.changeAvatar" = "更换头像";
+"profile.edit.clearAvatar" = "清除头像";
+"profile.edit.basicInfo" = "基本信息";
+"profile.edit.name" = "名字";
+"profile.edit.name.placeholder" = "输入名称";
+"profile.edit.titleName" = "称号";
+"profile.edit.titleName.placeholder" = "输入称号";
+"profile.edit.presetIcon" = "预设头像";
+"profile.edit.presetIcon.select" = "选择预设头像";
+"profile.edit.save" = "保存";
+"profile.edit.cancel" = "取消";
+"profile.picker.title" = "选择头像";
+"profile.picker.search" = "搜索头像或分类";
+
+// MARK: - Scanner
+"scanner.processing" = "正在识别照片...";
+"scanner.error.load" = "无法加载图片";
+"scanner.error.title" = "未能识别到歌曲标题";
+"scanner.chart.std" = "标准";
+"scanner.chart.dx" = "DX";
+"scanner.unlock.needed" = "需要解锁";
+"scanner.unlock.notNeeded" = "无需解锁";
+
+// MARK: - Settings
+"settings.title" = "设置";
+"settings.data.header" = "数据管理";
+"settings.data.footer" = "更新静态数据将同步最新的歌曲列表、别名以及官方 ID 映射。支持设置自动更新频率。";
+"settings.data.syncing" = "正在更新静态数据...";
+"settings.data.updateAll" = "更新所有静态数据";
+"settings.data.importDivingFish" = "从 Diving Fish 导入成绩";
+"settings.data.importLxns" = "从 LXNS 导入成绩";
+"settings.data.bound" = "已绑定";
+"settings.sync.header" = "成绩同步";
+"settings.sync.footer" = "开启后，在保存成绩时，App 会自动将新成绩同步上传到你已绑定的外部查分器。";
+"settings.sync.autoUpload" = "自动同步成绩";
+"settings.appearance.header" = "外观";
+"settings.appearance.theme" = "主题";
+"settings.appearance.system" = "跟随系统";
+"settings.appearance.light" = "浅色";
+"settings.appearance.dark" = "深色";
+"settings.about.header" = "关于";
+"settings.about.version" = "版本";
+
+// MARK: - Useful Links
+"links.title" = "常用网站";
+"links.tip" = "提示: 点击上方卡片将会在浏览器中打开网页";
+"links.dx_jp.title" = "maimai DX Japan";
+"links.dx_jp.subtitle" = "maimai DX 日文官网，包含最新曲目和活动信息";
+"links.df.title" = "Diving Fish";
+"links.df.subtitle" = "老牌查分工具，支持数据导入与 B50 计算";
+"links.lxns.title" = "落雪咖啡屋 maimai DX 查分器";
+"links.lxns.subtitle" = "落雪查分器，界面现代且功能完善";
+"links.gamerch.title" = "maimai 维基 (Gamerch)";
+"links.gamerch.subtitle" = "最详细的日服攻略 and 谱面信息维基";
+"links.dxrating.title" = "DXRating.net";
+"links.dxrating.subtitle" = "一个界面现代的 maimai 谱面信息大全";
+"links.mailv.title" = "maimai譜面定数ちほー🏖☀️";
+"links.mailv.subtitle" = "SEGA音ゲー｢maimaiでらっくす CiRCLE｣の譜面定数(内部定数、内部Lv.)非公式調査班";
+
+// MARK: - Song Detail
+"song.detail.copy.success %@" = "已复制%@";
+"song.detail.copy.image" = "图片已复制";
+"song.detail.save.image" = "图片已保存至相册";
+"song.detail.metadata.bpm" = "BPM";
+"song.detail.metadata.category" = "分类";
+"song.detail.metadata.version" = "版本";
+"song.detail.metadata.releaseDate" = "上线日";
+"song.detail.region.jp" = "日本";
+"song.detail.region.intl" = "国际";
+"song.detail.region.usa" = "美国";
+"song.detail.region.cn" = "中国";
+"song.detail.lock.required" = "需要解锁";
+"song.detail.lock.notRequired" = "无需解锁";
+"song.detail.action.record" = "记录成绩";
+"song.detail.section.notes" = "音符统计";
+"song.detail.section.rating" = "完成率 → 得分";
+"song.detail.table.achievement" = "完成率";
+"song.detail.table.rating" = "得分";
+"song.detail.table.delta" = "差分";
+"song.detail.calculator.title" = "容错计算器";
+"song.detail.calculator.hint" = "以 TAP 判定为基准，且 BREAK 全为大P";
+"song.detail.copy.title" = "复制图片";
+"song.detail.save.action" = "保存图片";
+"song.detail.share.action" = "分享图片";
+"song.detail.label.title" = "曲名";
+"song.detail.label.artist" = "曲师";
+
+// MARK: - Filter
+"filter.title" = "筛选";
+"filter.quick" = "快速筛选";
+"filter.favorites" = "仅显示收藏";
+"filter.difficulty" = "难度筛选";
+"filter.levelRange" = "定数区间";
+"filter.levelRange.hint" = "必须选择至少一个参考难度。系统将筛选出包含该难度、且该难度定数在下方区间内的歌曲。";
+"filter.category" = "分类";
+"filter.version" = "版本";
+"filter.type" = "类型";
+"filter.reset" = "重置";
+"filter.done" = "完成";
+
+// MARK: - Score Entry
+"score.entry.title" = "记录成绩";
+"score.entry.recognizing" = "正在识别...";
+"score.entry.success" = "识别成功";
+"score.entry.failed" = "未能识别成绩";
+"score.entry.manualHint" = "请手动输入达成率";
+"score.entry.selectPhoto" = "选择结算截图";
+"score.entry.currentBest" = "当前最佳";
+"score.entry.save" = "保存成绩";
+"score.entry.saved" = "已保存";
+
+// MARK: - Content View / Sorting
+"songs.title" = "歌曲";
+"songs.unavailable.title" = "暂无歌曲";
+"songs.unavailable.description" = "进入设置页面下载数据";
+"sort.title" = "排序方式";
+"sort.default" = "默认";
+"sort.versionDate" = "版本/日期";
+"sort.difficulty" = "最大难度";
+"sort.ascending" = "升序";
+"sort.descending" = "降序";
+
+// MARK: - Random Song
+"random.title" = "随机歌曲";
+"random.count" = "数量";
+"random.count.3" = "一次 3 首";
+"random.count.4" = "一次 4 首";
+"random.action.spin" = "立刻随机抽取";
+"random.action.skip" = "直接跳过";
+"random.results" = "抽选结果";
+"random.ready" = "准备好了吗？";
+
+// MARK: - Plate Progress
+"plate.title" = "牌子进度";
+"plate.unavailable.title" = "无更多谱面";
+"plate.unavailable.description" = "选择的版本和难度下没有找到谱面";
+"plate.menu.version" = "版本";
+"plate.menu.difficulty" = "难度";
+"plate.menu.plate" = "牌子";
+"plate.section.count %@ %lld" = "Lv.%@ (%lld首)";
+
+// MARK: - Data Import & Update
+"import.status.header" = "状态";
+"import.status.syncing" = "正在同步...";
+"import.status.importing" = "正在导入...";
+"import.status.failed" = "失败";
+"import.status.failed.network" = "导入失败：无效的网络响应";
+"import.status.failed.message %@" = "导入失败：%@";
+"import.status.failed.code %lld" = "导入失败：HTTP 错误 %lld";
+"import.status.failed.noRecords" = "导入失败：未找到成绩记录";
+"import.status.failed.empty" = "导入失败：没有任何成绩";
+"import.status.processing %lld" = "查找到 %lld 条成绩，正在处理...";
+"import.status.success %lld" = "导入成功！共写入/更新了 %lld 条成绩。";
+"import.status.error" = "错误";
+"import.status.error.message %@" = "导入错误：%@";
+"import.status.error.unknown" = "未知网络错误";
+
+// Diving Fish
+"import.df.title" = "从 Diving Fish 导入";
+"import.df.bound.header" = "已绑定账号";
+"import.df.username" = "当前账号";
+"import.df.action.quickSync" = "一键快速同步成绩";
+"import.df.rebind.header" = "重新绑定";
+"import.df.rebind.footer" = "如果你更换了账号或 Token，请在此处更新。成绩上送功能需要填写正确。";
+"import.df.username.placeholder" = "QQ号 / 用户名";
+"import.df.token.placeholder" = "导入令牌 (可选，用于同步上送)";
+"import.df.action.update" = "更新并绑定";
+"import.df.setup.header" = "账号设置";
+"import.df.setup.footer" = "请输入你的 Diving Fish (查分器) QQ号或用户名。";
+"import.df.token.setup.placeholder" = "导入令牌 (在查分器设置页获取，用于上送功能)";
+"import.df.action.bindImport" = "绑定并开始导入";
+"import.df.status.connecting" = "正在连接到 Diving Fish...";
+
+// LXNS
+"import.lxns.title" = "从 LXNS 导入";
+"import.lxns.bound.header" = "已绑定 LXNS";
+"import.lxns.status" = "授权状态";
+"import.lxns.status.connected" = "已连接";
+"import.lxns.action.quickSync" = "一键快速同步成绩";
+"import.lxns.manage.header" = "账号管理";
+"import.lxns.action.relogin" = "取消绑定 / 重新登录";
+"import.lxns.step1.header" = "第一步：获取授权码";
+"import.lxns.step1.footer" = "由于外部环境限制，请点击下方按钮在浏览器中打开授权页，登录后复制页面上显示的授权码。";
+"import.lxns.action.openBrowser" = "在浏览器中打开授权页面";
+"import.lxns.step2.header" = "第二步：输入授权码并导入";
+"import.lxns.step2.footer" = "将你在浏览器中复制的包含连字符的授权码粘贴到此处，然后开始导入。";
+"import.lxns.code.placeholder" = "授权码 (例如: JVJ6-VPTM-MGHZ)";
+"import.lxns.action.startImport" = "开始导入";
+"import.lxns.error.clientId" = "开发错误：请先在代码中配置 Client ID。";
+"import.lxns.error.security" = "安全状态丢失，请重新点击第一步按钮生成授权页面。";
+"import.lxns.status.exchanging" = "正在获取访问令牌...";
+"import.lxns.status.failed.token %@" = "令牌交换失败：%@";
+"import.lxns.status.failed.networkToken" = "网络错误：无法获取访问令牌。";
+"import.lxns.status.refreshing" = "刷新授权状态...";
+"import.lxns.status.failed.expired" = "授权已过期，请重新登录。";
+"import.lxns.status.player" = "正在获取玩家信息...";
+"import.lxns.status.fetching" = "正在连接到 LXNS 拉取成绩数据...";
+
+// Static Data Update
+"update.title" = "静态数据更新";
+"update.control.header" = "更新控制";
+"update.action.now" = "立即更新静态数据";
+"update.options.header" = "更新项选择";
+"update.option.basic" = "基础数据";
+"update.option.aliases" = "歌曲别名与歌曲 ID";
+"update.option.covers" = "歌曲封面";
+"update.option.icons" = "预设头像";
+"update.logs.header" = "同步日志";
+"update.auto.header" = "自动更新";
+"update.auto.footer" = "设定后台自动检查更新的频率。";
+"update.auto.interval" = "更新间隔";
+"update.interval.disabled" = "禁用";
+"update.interval.days.1" = "1 天";
+"update.interval.days.7" = "7 天";
+"update.interval.days.14" = "14 天";
+"update.interval.days.30" = "30 天";
+"update.debug.header" = "调试信息";
+"update.debug.lastUpdate" = "最后刷新时间";
+"update.debug.never" = "从未更新";
+"update.debug.timeSince" = "距离上次更新";
+"update.debug.timeAgo.days %lld %lld" = "%lld天%lld小时前";
+"update.debug.timeAgo.hours %lld" = "%lld小时前";
+"update.debug.totalSongs" = "歌曲总数";
+"update.debug.totalSheets" = "谱面总数";
+"update.debug.totalCategories" = "分类数量";
+"update.debug.utageSongs" = "宴会曲数量";
+"update.debug.songsWithAliases" = "拥有别名曲目";
+"update.debug.knownInternalLevels" = "已知内部定数谱面";
+"update.debug.totalIcons" = "预设头像数量";
+"update.debug.appVersion" = "App 版本";
+
+// MARK: - Best Table
+"bestTable.title" = "Best Table";
+"bestTable.rating" = "DX Rating";
+"bestTable.old.count %lld" = "旧曲: %lld";
+"bestTable.new.count %lld" = "新曲: %lld";
+"bestTable.settings.capacity" = "容量设置";
+"bestTable.settings.old" = "旧曲 (Old)";
+"bestTable.settings.new" = "新曲 (New)";
+"bestTable.settings.total" = "当前总计";
+"bestTable.section.new %lld" = "新曲 B%lld";
+"bestTable.section.old %lld" = "旧曲 B%lld";
+"bestTable.empty" = "暂无数据";
+"bestTable.base %.1f" = "定数 %.1f";
+
+// MARK: - Data Sync
+"data.sync.stage.idle" = "等待中";
+"data.sync.stage.fetchingRemoteData" = "［1/7］获取汇总数据 (data.json)...";
+"data.sync.stage.fetchingAliases" = "［2/7］获取歌曲别名与歌曲 ID...";
+"data.sync.stage.fetchingIcons" = "［3/7］获取预设头像...";
+"data.sync.stage.processingSongs" = "［4/7］正在合并并分析数据...";
+"data.sync.stage.downloadingImages" = "［5/7］正在并发下载歌曲封面...";
+"data.sync.stage.downloadingIcons" = "［6/7］正在并发下载预设头像...";
+"data.sync.stage.saving" = "［7/7］正在保存到本地数据库...";
+"data.sync.stage.completed" = "同步完成";
+"data.sync.stage.failed" = "同步失败";
+
+"data.sync.eta.calculating" = "计算中...";
+"data.sync.eta.minutes %lld %02lld" = "约剩余 %lld分%02lld秒";
+"data.sync.eta.seconds %lld" = "约剩余 %lld秒";
+"data.sync.log.start" = "开始更新流程...";
+"data.sync.status.fetchingData" = "下载远程 data.json...";
+"data.sync.log.fetchedData %lld" = "成功下载数据，共 %lld 首歌曲";
+"data.sync.status.fetchingAliases" = "连接 LXNS API 获取别名...";
+"data.sync.status.fetchingIcons" = "获取预设头像列表...";
+"data.sync.log.fetchedIcons %lld" = "成功获取 %lld 个预设头像";
+"data.sync.status.processing" = "分析整理并入库本地乐曲数据...";
+"data.sync.log.newSong %@" = "新增歌曲: %@";
+"data.sync.status.processingSong %@" = "整理数据: %@";
+"data.sync.status.scanningCovers" = "扫描并下载缺失封面...";
+"data.sync.status.downloadingCovers %lld %lld" = "下载封面 (%lld/%lld)";
+"data.sync.status.downloadingIcons" = "下载预设头像...";
+"data.sync.log.downloadingIcons %lld" = "正在下载 %lld 个缺失的头像...";
+"data.sync.status.downloadingIconsProgress %lld %lld" = "下载头像: %lld/%lld";
+"data.sync.status.saving" = "持久化数据...";
+"data.sync.status.completed" = "更新完成！";
+"data.sync.status.failed %@" = "异常: %@";

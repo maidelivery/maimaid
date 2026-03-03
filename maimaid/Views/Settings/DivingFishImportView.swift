@@ -44,9 +44,9 @@ struct DivingFishImportView: View {
     var body: some View {
         Form {
             if let currentConfig = config, !currentConfig.dfUsername.isEmpty {
-                Section(header: Text("已绑定账号")) {
+                Section(header: Text("import.df.bound.header")) {
                     HStack {
-                        Text("当前账号")
+                        Text("import.df.username")
                         Spacer()
                         Text(currentConfig.dfUsername)
                             .foregroundColor(.secondary)
@@ -62,26 +62,26 @@ struct DivingFishImportView: View {
                                 ProgressView()
                                     .padding(.trailing, 8)
                             }
-                            Text(isImporting ? "正在同步..." : "一键快速同步成绩")
+                            Text(isImporting ? "import.status.syncing" : "import.df.action.quickSync")
                         }
                         .frame(maxWidth: .infinity)
                     }
                     .disabled(isImporting)
                 }
                 
-                Section(header: Text("重新绑定"), footer: Text("如果你更换了账号或 Token，请在此处更新。成绩上送功能需要填写正确。")) {
-                    TextField("QQ号 / 用户名", text: $username)
-                    SecureField("导入令牌 (可选，用于同步上送)", text: $importToken)
+                Section(header: Text("import.df.rebind.header"), footer: Text("import.df.rebind.footer")) {
+                    TextField("import.df.username.placeholder", text: $username)
+                    SecureField("import.df.token.placeholder", text: $importToken)
                     
-                    Button("更新并绑定") {
+                    Button("import.df.action.update") {
                         updateConfig()
                     }
                     .disabled(username.isEmpty)
                 }
             } else {
-                Section(header: Text("账号设置"), footer: Text("请输入你的 Diving Fish (查分器) QQ号或用户名。")) {
-                    TextField("QQ号 / 用户名", text: $username)
-                    SecureField("导入令牌 (在查分器设置页获取，用于上送功能)", text: $importToken)
+                Section(header: Text("import.df.setup.header"), footer: Text("import.df.setup.footer")) {
+                    TextField("import.df.username.placeholder", text: $username)
+                    SecureField("import.df.token.setup.placeholder", text: $importToken)
                 }
                 
                 Section {
@@ -96,7 +96,7 @@ struct DivingFishImportView: View {
                                 ProgressView()
                                     .padding(.trailing, 8)
                             }
-                            Text(isImporting ? "正在导入..." : "绑定并开始导入")
+                            Text(isImporting ? "import.status.importing" : "import.df.action.bindImport")
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -105,9 +105,9 @@ struct DivingFishImportView: View {
             }
             
             if !importStatus.isEmpty {
-                Section(header: Text("状态")) {
+                Section(header: Text("import.status.header")) {
                     Text(importStatus)
-                        .foregroundColor(importStatus.contains("失败") || importStatus.contains("错误") ? .red : .primary)
+                        .foregroundColor(importStatus.contains(String(localized: "import.status.failed")) || importStatus.contains(String(localized: "import.status.error")) ? .red : .primary)
                     
                     if totalRecords > 0 {
                         ProgressView(value: progress, total: Double(totalRecords))
@@ -115,7 +115,7 @@ struct DivingFishImportView: View {
                 }
             }
         }
-        .navigationTitle("从 Diving Fish 导入")
+        .navigationTitle("import.df.title")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if let currentConfig = config {
@@ -143,7 +143,7 @@ struct DivingFishImportView: View {
         guard !targetUser.isEmpty else { return }
         
         isImporting = true
-        importStatus = "正在连接到 Diving Fish..."
+        importStatus = String(localized: "import.df.status.connecting")
         progress = 0
         totalRecords = 0
         
@@ -174,16 +174,16 @@ struct DivingFishImportView: View {
             let (data, response) = try await URLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
-                importStatus = "导入失败：无效的网络响应"
+                importStatus = String(localized: "import.status.failed.network")
                 isImporting = false
                 return
             }
             
             if httpResponse.statusCode != 200 {
                 if let dfResponse = try? JSONDecoder().decode(DivingFishResponse.self, from: data), let msg = dfResponse.message {
-                    importStatus = "导入失败：\(msg)"
+                    importStatus = String(localized: "import.status.failed.message \(msg)")
                 } else {
-                    importStatus = "导入失败：HTTP 错误 \(httpResponse.statusCode)"
+                    importStatus = String(localized: "import.status.failed.code \(httpResponse.statusCode)")
                 }
                 isImporting = false
                 return
@@ -192,7 +192,7 @@ struct DivingFishImportView: View {
             let dfResponse = try JSONDecoder().decode(DivingFishResponse.self, from: data)
             
             guard let charts = dfResponse.charts else {
-                importStatus = "导入失败：未找到成绩记录"
+                importStatus = String(localized: "import.status.failed.noRecords")
                 isImporting = false
                 return
             }
@@ -203,7 +203,7 @@ struct DivingFishImportView: View {
             if let sd = charts.sd { allRecords.append(contentsOf: sd) }
             
             guard !allRecords.isEmpty else {
-                importStatus = "导入失败：没有任何成绩"
+                importStatus = String(localized: "import.status.failed.empty")
                 isImporting = false
                 return
             }
@@ -284,9 +284,9 @@ struct DivingFishImportView: View {
                 }
             }
             
-            importStatus = "导入成功！共写入/更新了 \(importedCount) 条成绩。"
+            importStatus = String(localized: "import.status.success \(importedCount)")
         } catch {
-            importStatus = "导入错误：\(error.localizedDescription)"
+            importStatus = String(localized: "import.status.error.message \(error.localizedDescription)")
         }
         
         isImporting = false

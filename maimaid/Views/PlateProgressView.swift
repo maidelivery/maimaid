@@ -68,7 +68,7 @@ struct PlateProgressView: View {
                         .padding(.top, 40)
                 } else if filteredSections.isEmpty {
                     VStack {
-                        ContentUnavailableView("无更多谱面", systemImage: "music.note.list", description: Text("选择的版本和难度下没有找到谱面"))
+                        ContentUnavailableView("plate.unavailable.title", systemImage: "music.note.list", description: Text("plate.unavailable.description"))
                     }
                     .padding(.top, 60)
                 } else {
@@ -83,7 +83,7 @@ struct PlateProgressView: View {
             }
         }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle("牌子进度")
+        .navigationTitle("plate.title")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
             setupData()
@@ -125,14 +125,14 @@ struct PlateProgressView: View {
     private var headerView: some View {
         HStack(spacing: 10) {
             // Version Menu
-            menuButton(title: "版本", selection: selectedGroup?.name ?? "...", options: groups.map { $0.name }) { name in
+            menuButton(title: "plate.menu.version", selection: selectedGroup?.name ?? "...", options: groups.map { $0.name }) { name in
                 if let found = groups.first(where: { $0.name == name }) {
                     selectedGroup = found
                 }
             }
             
             // Difficulty Menu
-            menuButton(title: "难度", selection: selectedDifficulty.uppercased(), options: difficulties.map { $0.uppercased() }) { name in
+            menuButton(title: "plate.menu.difficulty", selection: selectedDifficulty.uppercased(), options: difficulties.map { $0.uppercased() }) { name in
                 let diff = name.lowercased()
                 if diff == "remaster" && selectedGroup?.name != "舞代" {
                     return 
@@ -141,7 +141,7 @@ struct PlateProgressView: View {
             }
             
             // Plate Menu
-            menuButton(title: "牌子", selection: selectedPlate.rawValue, options: PlateType.allCases.map { $0.rawValue }) { name in
+            menuButton(title: "plate.menu.plate", selection: selectedPlate.rawValue, options: PlateType.allCases.map { $0.rawValue }) { name in
                 if let plate = PlateType.allCases.first(where: { $0.rawValue == name }) {
                     if plate == .sho && selectedGroup?.platePrefix == "真" {
                         return
@@ -183,7 +183,7 @@ struct PlateProgressView: View {
     
     private func levelSection(_ section: (level: String, sheets: [Sheet])) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Lv.\(section.level) (\(section.sheets.count)首)")
+            Text(String(localized: "plate.section.count \(section.level) \(section.sheets.count)"))
                 .font(.system(size: 13, weight: .black))
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 24)

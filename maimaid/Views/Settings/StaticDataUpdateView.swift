@@ -23,7 +23,7 @@ struct StaticDataUpdateView: View {
     
     var body: some View {
         Form {
-            Section(header: Text("更新控制")) {
+            Section(header: Text("update.control.header")) {
                 VStack(alignment: .leading, spacing: 12) {
                     if MaimaiDataFetcher.shared.isSyncing {
                         Text(MaimaiDataFetcher.shared.currentStage.rawValue)
@@ -64,7 +64,7 @@ struct StaticDataUpdateView: View {
                         } label: {
                             HStack {
                                 Image(systemName: "arrow.down.circle.fill")
-                                Text("立即更新静态数据")
+                                Text("update.action.now")
                                 Spacer()
                             }
                         }
@@ -75,16 +75,16 @@ struct StaticDataUpdateView: View {
                 .padding(.vertical, 8)
             }
             
-            Section(header: Text("更新项选择")) {
-                Toggle("基础数据", isOn: $updateRemoteData)
-                Toggle("歌曲别名与歌曲 ID", isOn: $updateAliases)
-                Toggle("歌曲封面", isOn: $updateCovers)
-                Toggle("预设头像", isOn: $updateIcons)
+            Section(header: Text("update.options.header")) {
+                Toggle("update.option.basic", isOn: $updateRemoteData)
+                Toggle("update.option.aliases", isOn: $updateAliases)
+                Toggle("update.option.covers", isOn: $updateCovers)
+                Toggle("update.option.icons", isOn: $updateIcons)
             }
             .disabled(MaimaiDataFetcher.shared.isSyncing)
             
             if !MaimaiDataFetcher.shared.syncLogs.isEmpty || MaimaiDataFetcher.shared.isSyncing {
-                Section(header: Text("同步日志")) {
+                Section(header: Text("update.logs.header")) {
                     ScrollView {
                         Text(MaimaiDataFetcher.shared.syncLogs)
                             .font(.system(.caption, design: .monospaced))
@@ -95,10 +95,10 @@ struct StaticDataUpdateView: View {
                 }
             }
             
-            Section(header: Text("自动更新"), footer: Text("设定后台自动检查更新的频率。设置为 0 则禁用。")) {
+            Section(header: Text("update.auto.header"), footer: Text("update.auto.footer")) {
                 let currentInterval = config?.backgroundSyncInterval ?? 0
                 HStack {
-                    Picker("更新间隔", selection: Binding(
+                    Picker("update.auto.interval", selection: Binding(
                         get: { currentInterval },
                         set: { newValue in
                             if let config = config {
@@ -110,43 +110,43 @@ struct StaticDataUpdateView: View {
                             }
                         }
                     )) {
-                        Text("禁用").tag(0)
-                        Text("1 天").tag(24)
-                        Text("7 天").tag(168)
-                        Text("14 天").tag(336)
-                        Text("30 天").tag(720)
+                        Text("update.interval.disabled").tag(0)
+                        Text(String(localized: "update.interval.days.1")).tag(24)
+                        Text(String(localized: "update.interval.days.7")).tag(168)
+                        Text(String(localized: "update.interval.days.14")).tag(336)
+                        Text(String(localized: "update.interval.days.30")).tag(720)
                     }
                     .pickerStyle(.menu)
                 }
             }
             
-            Section(header: Text("调试信息")) {
+            Section(header: Text("update.debug.header")) {
                 if let lastDate = config?.lastStaticDataUpdateDate {
-                    LabeledContent("最后刷新时间", value: lastDate.formatted(date: .numeric, time: .standard))
+                    LabeledContent("update.debug.lastUpdate", value: lastDate.formatted(date: .numeric, time: .standard))
                     
                     let interval = Date().timeIntervalSince(lastDate)
                     let days = Int(interval / 86400)
                     let hours = Int(interval.truncatingRemainder(dividingBy: 86400) / 3600)
-                    let timeString = days > 0 ? "\(days)天\(hours)小时前" : "\(hours)小时前"
-                    LabeledContent("距离上次更新", value: timeString)
+                    let timeString = days > 0 ? String(localized: "update.debug.timeAgo.days \(days) \(hours)") : String(localized: "update.debug.timeAgo.hours \(hours)")
+                    LabeledContent("update.debug.timeSince", value: timeString)
                 } else {
-                    LabeledContent("最后刷新时间", value: "从未更新")
+                    LabeledContent("update.debug.lastUpdate", value: String(localized: "update.debug.never"))
                 }
                 
-                LabeledContent("歌曲总数", value: "\(totalSongs)")
-                LabeledContent("谱面总数", value: "\(totalSheets)")
-                LabeledContent("分类数量", value: "\(totalCategories)")
-                LabeledContent("宴会曲数量", value: "\(utageSongs)")
-                LabeledContent("拥有别名曲目", value: "\(songsWithAliases)")
-                LabeledContent("已知内部定数谱面", value: "\(sheetsWithInternalLevel)")
-                LabeledContent("预设头像数量", value: "\(totalIcons)")
+                LabeledContent("update.debug.totalSongs", value: "\(totalSongs)")
+                LabeledContent("update.debug.totalSheets", value: "\(totalSheets)")
+                LabeledContent("update.debug.totalCategories", value: "\(totalCategories)")
+                LabeledContent("update.debug.utageSongs", value: "\(utageSongs)")
+                LabeledContent("update.debug.songsWithAliases", value: "\(songsWithAliases)")
+                LabeledContent("update.debug.knownInternalLevels", value: "\(sheetsWithInternalLevel)")
+                LabeledContent("update.debug.totalIcons", value: "\(totalIcons)")
                 
                 if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-                    LabeledContent("App 版本", value: appVersion)
+                    LabeledContent("update.debug.appVersion", value: appVersion)
                 }
             }
         }
-        .navigationTitle("静态数据更新")
+        .navigationTitle("update.title")
         .navigationBarTitleDisplayMode(.inline)
         .interactiveDismissDisabled(MaimaiDataFetcher.shared.isSyncing)
         .navigationBarBackButtonHidden(MaimaiDataFetcher.shared.isSyncing)

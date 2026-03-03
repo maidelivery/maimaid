@@ -1,0 +1,307 @@
+/* 
+  Localizable.strings
+  maimaid
+*/
+
+// MARK: - Main Tab View
+"tab.home" = "Home";
+"tab.scan" = "Scan";
+"tab.settings" = "Settings";
+"tab.search" = "Search";
+"search.placeholder" = "Songs, Artists, Aliases...";
+
+// MARK: - Home View
+"home.title" = "Home";
+"home.profile.unbound" = "Unbound User";
+"home.profile.editHint" = "Tap to edit";
+"home.bestTable.button.title %lld" = "View Best %lld Table";
+"home.bestTable.button.subtitle %lld %lld" = "Rating: B%lld + N%lld";
+"home.randomSong.title" = "Random Song";
+"home.randomSong.subtitle" = "Slot-machine random";
+"home.recommendation.title" = "Recommendation";
+"home.recommendation.subtitle" = "Constant analysis";
+"home.plateProgress.title" = "Plate Progress";
+"home.plateProgress.subtitle" = "Version plate progress";
+"home.usefulLinks.title" = "Useful Links";
+"home.usefulLinks.subtitle" = "Wiki, Parsers, etc.";
+
+// MARK: - Profile Edit
+"profile.edit.title" = "Profile";
+"profile.edit.changeAvatar" = "Change Avatar";
+"profile.edit.clearAvatar" = "Clear Avatar";
+"profile.edit.basicInfo" = "Basic Info";
+"profile.edit.name" = "Name";
+"profile.edit.name.placeholder" = "Enter name";
+"profile.edit.titleName" = "Title";
+"profile.edit.titleName.placeholder" = "Enter title";
+"profile.edit.presetIcon" = "Preset Avatars";
+"profile.edit.presetIcon.select" = "Select Preset Avatar";
+"profile.edit.save" = "Save";
+"profile.edit.cancel" = "Cancel";
+"profile.picker.title" = "Select Avatar";
+"profile.picker.search" = "Search avatar or category";
+
+// MARK: - Scanner
+"scanner.processing" = "Recognizing photo...";
+"scanner.error.load" = "Unable to load image";
+"scanner.error.title" = "Failed to recognize song title";
+"scanner.chart.std" = "STD";
+"scanner.chart.dx" = "DX";
+"scanner.reset.hint" = "Unlocked needed"; // For lock status in scanner
+"scanner.unlock.needed" = "Unlock required";
+"scanner.unlock.notNeeded" = "No unlock required";
+
+// MARK: - Settings
+"settings.title" = "Settings";
+"settings.data.header" = "Data Management";
+"settings.data.footer" = "Updates songs, aliases, and IDs. Auto-update supported.";
+"settings.data.syncing" = "Updating...";
+"settings.data.updateAll" = "Update static data";
+"settings.data.importDivingFish" = "Import from Diving Fish";
+"settings.data.importLxns" = "Import from LXNS";
+"settings.data.bound" = "Bound";
+"settings.sync.header" = "Score Sync";
+"settings.sync.footer" = "Auto-uploads new scores to parsers.";
+"settings.sync.autoUpload" = "Auto Upload";
+"settings.appearance.header" = "Appearance";
+"settings.appearance.theme" = "Theme";
+"settings.appearance.system" = "Follow System";
+"settings.appearance.light" = "Light";
+"settings.appearance.dark" = "Dark";
+"settings.about.header" = "About";
+"settings.about.version" = "Version";
+
+// MARK: - Useful Links
+"links.title" = "Useful Links";
+"links.tip" = "Tap cards to open in browser";
+"links.dx_jp.title" = "maimai DX Japan";
+"links.dx_jp.subtitle" = "Official site (JP)";
+"links.df.title" = "Diving Fish";
+"links.df.subtitle" = "Score tool & B50 calc";
+"links.lxns.title" = "LXNS Coffee House";
+"links.lxns.subtitle" = "Modern score tool";
+"links.gamerch.title" = "maimai Wiki (Gamerch)";
+"links.gamerch.subtitle" = "JP strategies & charts";
+"links.dxrating.title" = "DXRating.net";
+"links.dxrating.subtitle" = "Chart database";
+"links.mailv.title" = "Chart Constant Station 🏖☀️";
+"links.mailv.subtitle" = "Chart constant info";
+
+// MARK: - Song Detail
+"song.detail.copy.success %@" = "Copied %@";
+"song.detail.copy.image" = "Image copied";
+"song.detail.save.image" = "Image saved to album";
+"song.detail.metadata.bpm" = "BPM";
+"song.detail.metadata.category" = "Category";
+"song.detail.metadata.version" = "Version";
+"song.detail.metadata.releaseDate" = "Release";
+"song.detail.region.jp" = "Japan";
+"song.detail.region.intl" = "Intl";
+"song.detail.region.usa" = "USA";
+"song.detail.region.cn" = "China";
+"song.detail.lock.required" = "Lock";
+"song.detail.lock.notRequired" = "No lock";
+"song.detail.action.record" = "Record Score";
+"song.detail.section.notes" = "Notes";
+"song.detail.section.rating" = "Rating Table";
+"song.detail.table.achievement" = "Achievement";
+"song.detail.table.rating" = "Rating";
+"song.detail.table.delta" = "Delta";
+"song.detail.calculator.title" = "Tolerance Calc";
+"song.detail.calculator.hint" = "TAP-based, BREAK as CP";
+"song.detail.copy.title" = "Copy Image";
+"song.detail.save.action" = "Save Image";
+"song.detail.share.action" = "Share Image";
+"song.detail.label.title" = "Title";
+"song.detail.label.artist" = "Artist";
+
+// MARK: - Filter
+"filter.title" = "Filter";
+"filter.quick" = "Quick Filter";
+"filter.favorites" = "Favorites Only";
+"filter.difficulty" = "Difficulty";
+"filter.levelRange" = "Level Range";
+"filter.levelRange.hint" = "Select at least one difficulty.";
+"filter.category" = "Category";
+"filter.version" = "Version";
+"filter.type" = "Type";
+"filter.reset" = "Reset";
+"filter.done" = "Done";
+
+// MARK: - Score Entry
+"score.entry.title" = "Record Score";
+"score.entry.recognizing" = "Recognizing...";
+"score.entry.success" = "Recognized successfully";
+"score.entry.failed" = "Recognition failed";
+"score.entry.manualHint" = "Enter achievement manually";
+"score.entry.selectPhoto" = "Select Screenshot";
+"score.entry.currentBest" = "Best";
+"score.entry.save" = "Save Score";
+"score.entry.saved" = "Saved";
+
+// MARK: - Content View / Sorting
+"songs.title" = "Songs";
+"songs.unavailable.title" = "No Songs";
+"songs.unavailable.description" = "Download data in Settings";
+"sort.title" = "Sort By";
+"sort.default" = "Default";
+"sort.versionDate" = "Version/Date";
+"sort.difficulty" = "Max Difficulty";
+"sort.ascending" = "Ascending";
+"sort.descending" = "Descending";
+
+// MARK: - Random Song
+"random.title" = "Random Song";
+"random.count" = "Count";
+"random.count.3" = "3 Songs";
+"random.count.4" = "4 Songs";
+"random.action.spin" = "Spin Now";
+"random.action.skip" = "Skip Now";
+"random.results" = "Results";
+"random.ready" = "Ready?";
+
+// MARK: - Plate Progress
+"plate.title" = "Plate Progress";
+"plate.unavailable.title" = "No Charts";
+"plate.unavailable.description" = "No charts found for selected version and difficulty";
+"plate.menu.version" = "Version";
+"plate.menu.difficulty" = "Difficulty";
+"plate.menu.plate" = "Plate";
+"plate.section.count %@ %lld" = "Lv.%@ (%lld charts)";
+
+// MARK: - Data Import & Update
+"import.status.header" = "Status";
+"import.status.syncing" = "Syncing...";
+"import.status.importing" = "Importing...";
+"import.status.failed" = "Failed";
+"import.status.failed.network" = "Network error";
+"import.status.failed.message %@" = "Failed: %@";
+"import.status.failed.code %lld" = "HTTP Error %lld";
+"import.status.failed.noRecords" = "No records";
+"import.status.failed.empty" = "No scores found";
+"import.status.processing %lld" = "Processing %lld records...";
+"import.status.success %lld" = "Imported %lld scores";
+"import.status.error" = "Error";
+"import.status.error.message %@" = "Error: %@";
+"import.status.error.unknown" = "Network error";
+
+// Diving Fish
+"import.df.title" = "Import from Diving Fish";
+"import.df.bound.header" = "Bound Account";
+"import.df.username" = "Current Account";
+"import.df.action.quickSync" = "Quick Sync Scores";
+"import.df.rebind.header" = "Rebind";
+"import.df.rebind.footer" = "Update account/token. Needed for auto-upload.";
+"import.df.username.placeholder" = "QQ / Username";
+"import.df.token.placeholder" = "Token (Optional, for sync)";
+"import.df.action.update" = "Update & Bind";
+"import.df.setup.header" = "Account Setup";
+"import.df.setup.footer" = "Enter QQ or username.";
+"import.df.token.setup.placeholder" = "Token (for sync)";
+"import.df.action.bindImport" = "Bind & Import";
+"import.df.status.connecting" = "Connecting...";
+
+// LXNS
+"import.lxns.title" = "Import from LXNS";
+"import.lxns.bound.header" = "Bound LXNS";
+"import.lxns.status" = "Auth Status";
+"import.lxns.status.connected" = "Connected";
+"import.lxns.action.quickSync" = "Quick Sync Scores";
+"import.lxns.manage.header" = "Account Management";
+"import.lxns.action.relogin" = "Unbind / Relogin";
+"import.lxns.step1.header" = "Step 1: Get Auth Code";
+"import.lxns.step1.footer" = "Open browser to login and copy the code.";
+"import.lxns.action.openBrowser" = "Open Browser";
+"import.lxns.step2.header" = "Step 2: Paste Code";
+"import.lxns.step2.footer" = "Paste code and import.";
+"import.lxns.code.placeholder" = "Auth Code (e.g. JVJ6-VPTM-MGHZ)";
+"import.lxns.action.startImport" = "Start Import";
+"import.lxns.error.clientId" = "Dev Error: Client ID not configured.";
+"import.lxns.error.security" = "Session lost, try Step 1 again.";
+"import.lxns.status.exchanging" = "Exchanging token...";
+"import.lxns.status.failed.token %@" = "Token error: %@";
+"import.lxns.status.failed.networkToken" = "Network error";
+"import.lxns.status.refreshing" = "Refreshing...";
+"import.lxns.status.failed.expired" = "Auth expired, relogin.";
+"import.lxns.status.player" = "Getting player info...";
+"import.lxns.status.fetching" = "Connecting...";
+
+// Static Data Update
+"update.title" = "Static Data Update";
+"update.control.header" = "Update Control";
+"update.action.now" = "Update Static Data Now";
+"update.options.header" = "Options";
+"update.option.basic" = "Basic Data";
+"update.option.aliases" = "Aliases & IDs";
+"update.option.covers" = "Jacket Covers";
+"update.option.icons" = "Preset Avatars";
+"update.logs.header" = "Logs";
+"update.auto.header" = "Auto Update";
+"update.auto.footer" = "Background check frequency.";
+"update.auto.interval" = "Check Interval";
+"update.interval.disabled" = "Disabled";
+"update.interval.days.1" = "1 Day";
+"update.interval.days.7" = "7 Days";
+"update.interval.days.14" = "14 Days";
+"update.interval.days.30" = "30 Days";
+"update.debug.header" = "Debug Info";
+"update.debug.lastUpdate" = "Last Update";
+"update.debug.never" = "Never";
+"update.debug.timeSince" = "Time Since";
+"update.debug.timeAgo.days %lld %lld" = "%lldd %lldh ago";
+"update.debug.timeAgo.hours %lld" = "%lldh ago";
+"update.debug.totalSongs" = "Total Songs";
+"update.debug.totalSheets" = "Total Sheets";
+"update.debug.totalCategories" = "Categories";
+"update.debug.utageSongs" = "Utage Songs";
+"update.debug.songsWithAliases" = "Songs with Aliases";
+"update.debug.knownInternalLevels" = "Known Constants";
+"update.debug.totalIcons" = "Preset Avatars";
+"update.debug.appVersion" = "App Version";
+
+// MARK: - Best Table
+"bestTable.title" = "Best Table";
+"bestTable.rating" = "DX Rating";
+"bestTable.old.count %lld" = "Old: %lld";
+"bestTable.new.count %lld" = "New: %lld";
+"bestTable.settings.capacity" = "Capacity";
+"bestTable.settings.old" = "Old";
+"bestTable.settings.new" = "New";
+"bestTable.settings.total" = "Total";
+"bestTable.section.new %lld" = "New B%lld";
+"bestTable.section.old %lld" = "Old B%lld";
+"bestTable.empty" = "No Data";
+"bestTable.base %.1f" = "Base %.1f";
+
+// MARK: - Data Sync
+"data.sync.stage.idle" = "Idle";
+"data.sync.stage.fetchingRemoteData" = "[1/7] Fetching data.json...";
+"data.sync.stage.fetchingAliases" = "[2/7] Fetching aliases...";
+"data.sync.stage.fetchingIcons" = "[3/7] Fetching icons...";
+"data.sync.stage.processingSongs" = "[4/7] Analyzing data...";
+"data.sync.stage.downloadingImages" = "[5/7] Downloading covers...";
+"data.sync.stage.downloadingIcons" = "[6/7] Downloading icons...";
+"data.sync.stage.saving" = "[7/7] Saving database...";
+"data.sync.stage.completed" = "Sync Completed";
+"data.sync.stage.failed" = "Sync Failed";
+
+"data.sync.eta.calculating" = "Calculating...";
+"data.sync.eta.minutes %lld %02lld" = "Est. %lldm %02llds left";
+"data.sync.eta.seconds %lld" = "Est. %llds left";
+"data.sync.log.start" = "Starting update process...";
+"data.sync.status.fetchingData" = "Fetching remote data...";
+"data.sync.log.fetchedData %lld" = "Fetched %lld songs";
+"data.sync.status.fetchingAliases" = "Fetching aliases from LXNS...";
+"data.sync.status.fetchingIcons" = "Fetching icon list...";
+"data.sync.log.fetchedIcons %lld" = "Fetched %lld icons";
+"data.sync.status.processing" = "Processing data...";
+"data.sync.log.newSong %@" = "New: %@";
+"data.sync.status.processingSong %@" = "Processing: %@";
+"data.sync.status.scanningCovers" = "Scanning covers...";
+"data.sync.status.downloadingCovers %lld %lld" = "Downloding covers (%lld/%lld)";
+"data.sync.status.downloadingIcons" = "Downloading icons...";
+"data.sync.log.downloadingIcons %lld" = "Downloading %lld icons...";
+"data.sync.status.downloadingIconsProgress %lld %lld" = "Downloading icons: %lld/%lld";
+"data.sync.status.saving" = "Saving data...";
+"data.sync.status.completed" = "Update completed!";
+"data.sync.status.failed %@" = "Error: %@";

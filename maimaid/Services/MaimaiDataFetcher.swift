@@ -98,16 +98,16 @@ class MaimaiDataFetcher {
     private init() {}
     
     enum SyncStage: String {
-        case idle = "等待中"
-        case fetchingRemoteData = "［1/6］获取汇总数据 (data.json)..."
-        case fetchingAliases = "［2/6］获取歌曲别名与歌曲 ID..."
-        case fetchingIcons = "［3/6］获取预设头像..."
-        case processingSongs = "［4/6］正在合并并分析数据..."
-        case downloadingImages = "［5/7］正在并发下载歌曲封面..."
-        case downloadingIcons = "［6/7］正在并发下载预设头像..."
-        case saving = "［7/7］正在保存到本地数据库..."
-        case completed = "同步完成"
-        case failed = "同步失败"
+        case idle = "data.sync.stage.idle"
+        case fetchingRemoteData = "data.sync.stage.fetchingRemoteData"
+        case fetchingAliases = "data.sync.stage.fetchingAliases"
+        case fetchingIcons = "data.sync.stage.fetchingIcons"
+        case processingSongs = "data.sync.stage.processingSongs"
+        case downloadingImages = "data.sync.stage.downloadingImages"
+        case downloadingIcons = "data.sync.stage.downloadingIcons"
+        case saving = "data.sync.stage.saving"
+        case completed = "data.sync.stage.completed"
+        case failed = "data.sync.stage.failed"
     }
     
     var isSyncing = false
@@ -125,14 +125,14 @@ class MaimaiDataFetcher {
     
     var formattedETA: String {
         guard let eta = estimatedTimeRemaining, eta > 0 else {
-            return "计算中..."
+            return String(localized: "data.sync.eta.calculating")
         }
         let minutes = Int(eta) / 60
         let seconds = Int(eta) % 60
         if minutes > 0 {
-            return String(format: "约剩余 %d分%02d秒", minutes, seconds)
+            return String(localized: "data.sync.eta.minutes \(minutes) \(seconds)")
         } else {
-            return String(format: "约剩余 %d秒", seconds)
+            return String(localized: "data.sync.eta.seconds \(seconds)")
         }
     }
     
@@ -168,7 +168,7 @@ class MaimaiDataFetcher {
         syncStartTime = Date()
         estimatedTimeRemaining = nil
         syncLogs = ""
-        log("开始更新流程...")
+        log(String(localized: "data.sync.log.start"))
         
         do {
             var remoteSongs: [RemoteSong] = []
@@ -178,7 +178,7 @@ class MaimaiDataFetcher {
             
             // --- 阶段 1: 远程 data.json ---
             if options.updateRemoteData {
-                updateStage(.fetchingRemoteData, base: 0.1, message: "下载远程 data.json...")
+                updateStage(.fetchingRemoteData, base: 0.1, message: String(localized: "data.sync.status.fetchingData"))
                 // source 2: https://maimaid.shikoch.in/maimai/data.json
                 guard let url = URL(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json") else {
                     throw URLError(.badURL)
@@ -186,7 +186,7 @@ class MaimaiDataFetcher {
                 let (data, _) = try await URLSession.shared.data(from: url)
                 let response = try JSONDecoder().decode(RemoteDataResponse.self, from: data)
                 remoteSongs = response.songs
-                log("成功下载数据，共 \(remoteSongs.count) 首歌曲")
+                log(String(localized: "data.sync.log.fetchedData \(remoteSongs.count)"))
                 
                 // 存一下版本序列用于排序
                 if let encodedVersions = try? JSONEncoder().encode(response.versions) {
@@ -201,7 +201,7 @@ class MaimaiDataFetcher {
             
             // --- 阶段 2: Aliases & IDs ---
             if options.updateAliases {
-                updateStage(.fetchingAliases, base: 0.30, message: "连接 LXNS API 获取别名...")
+                updateStage(.fetchingAliases, base: 0.30, message: String(localized: "data.sync.status.fetchingAliases"))
                 if let aliasUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/alias/list"),
                    let lxnsSongUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/song/list") {
                     
@@ -232,18 +232,18 @@ class MaimaiDataFetcher {
             
             // --- 阶段 3: Icons ---
             if options.updateIcons {
-                updateStage(.fetchingIcons, base: 0.45, message: "获取预设头像列表...")
+                updateStage(.fetchingIcons, base: 0.45, message: String(localized: "data.sync.status.fetchingIcons"))
                 if let iconUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/icon/list") {
                     let (data, _) = try await URLSession.shared.data(from: iconUrl)
                     let response = try JSONDecoder().decode(LxnsPresetIconListResponse.self, from: data)
                     lxnsIcons = response.icons
-                    log("成功获取 \(lxnsIcons.count) 个预设头像")
+                    log(String(localized: "data.sync.log.fetchedIcons \(lxnsIcons.count)"))
                 }
             }
             
             // --- 阶段 4: 合并数据入库 ---
             if options.updateRemoteData || options.updateAliases || options.updateIcons {
-                updateStage(.processingSongs, base: 0.55, message: "分析整理并入库本地乐曲数据...")
+                updateStage(.processingSongs, base: 0.55, message: String(localized: "data.sync.status.processing"))
                 
                 let existingSongsFromDB = try modelContext.fetch(FetchDescriptor<Song>())
                 var existingSongMap: [String: Song] = [:]
@@ -291,7 +291,7 @@ class MaimaiDataFetcher {
                             comment: remoteSong.comment
                         )
                         modelContext.insert(song)
-                        log("新增歌曲: \(song.title)")
+                        log(String(localized: "data.sync.log.newSong \(song.title)"))
                     } else { continue }
                     
                     if options.updateRemoteData {
@@ -362,7 +362,7 @@ class MaimaiDataFetcher {
                     }
                     
                     if index % 100 == 0 {
-                        updateProgress(Double(index) / Double(songsToProcess.count), totalForStage: 0.20, baseForStage: 0.55, status: "整理数据: \(song.title)")
+                        updateProgress(Double(index) / Double(songsToProcess.count), totalForStage: 0.20, baseForStage: 0.55, status: String(localized: "data.sync.status.processingSong \(song.title)"))
                         try? modelContext.save()
                     }
                 }
@@ -401,7 +401,7 @@ class MaimaiDataFetcher {
 
             // --- 阶段 5: 下载图片资源 ---
             if options.updateCovers {
-                updateStage(.downloadingImages, base: 0.75, message: "扫描并下载缺失封面...")
+                updateStage(.downloadingImages, base: 0.75, message: String(localized: "data.sync.status.scanningCovers"))
                 let descriptor = FetchDescriptor<Song>()
                 let allSongs = try modelContext.fetch(descriptor)
                 var coverDownloadTasks: [(String, String)] = []
@@ -416,7 +416,7 @@ class MaimaiDataFetcher {
                     for chunk in stride(from: 0, to: coverDownloadTasks.count, by: batchSize) {
                         let endIndex = min(chunk + batchSize, coverDownloadTasks.count)
                         let subTasks = coverDownloadTasks[chunk..<endIndex]
-                        updateProgress(Double(chunk) / Double(coverDownloadTasks.count), totalForStage: 0.15, baseForStage: 0.75, status: "下载封面 (\(chunk)/\(coverDownloadTasks.count))")
+                        updateProgress(Double(chunk) / Double(coverDownloadTasks.count), totalForStage: 0.15, baseForStage: 0.75, status: String(localized: "data.sync.status.downloadingCovers \(chunk) \(coverDownloadTasks.count)"))
                         await withTaskGroup(of: Void.self) { group in
                             for task in subTasks {
                                 group.addTask { _ = try? await ImageDownloader.shared.downloadImage(from: task.0, as: task.1) }
@@ -428,7 +428,7 @@ class MaimaiDataFetcher {
             
             // --- 阶段 6: 下载预设头像 ---
             if options.updateIcons {
-                updateStage(.downloadingIcons, base: 0.85, message: "下载预设头像...")
+                updateStage(.downloadingIcons, base: 0.85, message: String(localized: "data.sync.status.downloadingIcons"))
                 let descriptor = FetchDescriptor<MaimaiIcon>()
                 let allIcons = try modelContext.fetch(descriptor)
                 var iconDownloadTasks: [(String, Int)] = []
@@ -439,7 +439,7 @@ class MaimaiDataFetcher {
                 }
                 
                 if !iconDownloadTasks.isEmpty {
-                    log("正在下载 \(iconDownloadTasks.count) 个缺失的头像...")
+                    log(String(localized: "data.sync.log.downloadingIcons \(iconDownloadTasks.count)"))
                     let total = Double(iconDownloadTasks.count)
                     var completed = 0
                     
@@ -463,7 +463,7 @@ class MaimaiDataFetcher {
                             for await _ in group {
                                 completed += 1
                                 if completed % 10 == 0 || completed == iconDownloadTasks.count {
-                                    updateProgress(Double(completed) / total, totalForStage: 0.10, baseForStage: 0.85, status: "下载头像: \(completed)/\(Int(total))")
+                                    updateProgress(Double(completed) / total, totalForStage: 0.10, baseForStage: 0.85, status: String(localized: "data.sync.status.downloadingIconsProgress \(completed) \(Int(total))"))
                                 }
                             }
                         }
@@ -472,7 +472,7 @@ class MaimaiDataFetcher {
             }
             
             // --- 阶段 7: 持久化 ---
-            updateStage(.saving, base: 0.95, message: "持久化数据...")
+            updateStage(.saving, base: 0.95, message: String(localized: "data.sync.status.saving"))
             try modelContext.save()
             
             if let config = try? modelContext.fetch(FetchDescriptor<SyncConfig>()).first {
@@ -483,12 +483,12 @@ class MaimaiDataFetcher {
                 modelContext.insert(newConfig)
             }
             UserDefaults.standard.set(true, forKey: "didPerformInitialSync")
-            updateStage(.completed, base: 1.0, message: "更新完成！")
+            updateStage(.completed, base: 1.0, message: String(localized: "data.sync.status.completed"))
             _ = try? await Task.sleep(nanoseconds: 1_000_000_000)
             isSyncing = false
         } catch {
             print("Fetch failed: \(error)")
-            updateStage(.failed, base: 0.0, message: "异常: \(error.localizedDescription)")
+            updateStage(.failed, base: 0.0, message: String(localized: "data.sync.status.failed \(error.localizedDescription)"))
             isSyncing = false
             throw error
         }

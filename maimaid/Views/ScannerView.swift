@@ -3,6 +3,7 @@ import SwiftUI
 import Vision
 import SwiftData
 import PhotosUI
+import os
 
 @MainActor
 struct ScannerView: View {
@@ -57,7 +58,7 @@ struct ScannerView: View {
                         HStack(spacing: 10) {
                             ProgressView()
                                 .tint(.white)
-                            Text("正在识别照片...")
+                            Text("scanner.processing")
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(.white)
                         }
@@ -131,7 +132,7 @@ struct ScannerView: View {
         guard let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data) else {
             isProcessingPhoto = false
-            showFeedback("无法加载图片")
+            showFeedback(String(localized: "scanner.error.load"))
             return
         }
         
@@ -187,14 +188,15 @@ struct ScannerView: View {
             self.isLocked = true
             self.lastSeenDate = Date()
         } else {
-            showFeedback("未能识别到歌曲标题")
+            showFeedback(String(localized: "scanner.error.title"))
         }
     }
     
     
     private func showFeedback(_ message: String) {
         withAnimation { photoImportFeedback = message }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2.5))
             withAnimation { photoImportFeedback = nil }
         }
     }
@@ -281,7 +283,7 @@ struct ScannerView: View {
                             // Info
                             VStack(alignment: .leading, spacing: 3) {
                                 HStack(spacing: 4) {
-                                    Text(chartType.uppercased() == "STD" ? "标准" : chartType.uppercased())
+                                    Text(chartType.uppercased() == "STD" ? String(localized: "scanner.chart.std") : chartType.uppercased())
                                         .font(.system(size: 8, weight: .black))
                                         .padding(.horizontal, 4)
                                         .padding(.vertical, 1)
@@ -527,14 +529,18 @@ struct CameraPreviewView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: CameraViewController, context: Context) {}
 }
 
-// Removed @MainActor - this class handles its own threading
+// CameraViewController runs captureOutput on background queue, so we manage thread-safety explicitly
 class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
     var onImageCaptured: ((UIImage) -> Void)?
     private var captureSession: AVCaptureSession?
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private let processingQueue = DispatchQueue(label: "com.maimaid.camera.queue", qos: .userInteractive)
-    private var frameCounter = 0
-    private static let rawContext = CIContext(options: [.useSoftwareRenderer: false])
+    
+    // Thread-safe counter using OSAllocatedUnfairLock
+    private let frameCounter = OSAllocatedUnfairLock(initialState: 0)
+    
+    // CIContext is thread-safe, mark as nonisolated to allow access from background queue
+    nonisolated private static let rawContext = CIContext(options: [.useSoftwareRenderer: false])
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -574,16 +580,20 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
     
     // Explicitly nonisolated since this is called on processingQueue (background thread)
     nonisolated func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        frameCounter += 1
+        // Thread-safe increment
+        let count = frameCounter.withLock { 
+            $0 += 1
+            return $0 
+        }
+        
         // Process 1 frame per ~10 calls to reduce frequency (approx 3 fps instead of 6 fps)
-        // This helps stabilize the OCR readings and reduces immediate jitter
-        guard frameCounter % 10 == 0 else { return }
+        guard count % 10 == 0 else { return }
         
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         
         let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
         guard let cgImage = Self.rawContext.createCGImage(ciImage, from: ciImage.extent) else { return }
-        let uiImage = UIImage(cgImage: cgImage) // Implicitly .up and portrait
+        let uiImage = UIImage(cgImage: cgImage)
         
         DispatchQueue.main.async {
             self.onImageCaptured?(uiImage)

@@ -11,13 +11,13 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section(header: Text("数据管理"), footer: Text("更新静态数据将同步最新的歌曲列表、别名以及官方 ID 映射。支持设置自动更新频率。")) {
+                Section(header: Text("settings.data.header"), footer: Text("settings.data.footer")) {
                     NavigationLink(destination: StaticDataUpdateView()) {
                         HStack {
                             settingsRowLabel(
                                 icon: MaimaiDataFetcher.shared.isSyncing ? "arrow.triangle.2.circlepath" : "arrow.down.circle.fill",
                                 iconColor: .blue,
-                                title: MaimaiDataFetcher.shared.isSyncing ? "正在更新静态数据..." : "更新所有静态数据"
+                                title: MaimaiDataFetcher.shared.isSyncing ? "settings.data.syncing" : "settings.data.updateAll"
                             )
                             Spacer()
                             if MaimaiDataFetcher.shared.isSyncing {
@@ -33,22 +33,22 @@ struct SettingsView: View {
                     NavigationLink {
                         DivingFishImportView()
                     } label: {
-                        settingsRowLabel(icon: "fish.fill", iconColor: .blue, title: "从 Diving Fish 导入成绩")
+                        settingsRowLabel(icon: "fish.fill", iconColor: .blue, title: "settings.data.importDivingFish")
                     }
                     
                     NavigationLink(destination: LxnsImportView()) {
                         HStack {
-                            settingsRowLabel(icon: "snowflake", iconColor: .cyan, title: "从 LXNS 导入成绩")
+                            settingsRowLabel(icon: "snowflake", iconColor: .cyan, title: "settings.data.importLxns")
                             Spacer()
                             if let c = config, !c.lxnsRefreshToken.isEmpty {
-                                Text("已绑定").font(.caption).foregroundColor(.green)
+                                Text("settings.data.bound").font(.caption).foregroundColor(.green)
                             }
                         }
                     }
                 }
                 
-                Section(header: Text("成绩同步"), footer: Text("开启后，在保存成绩时，App 会自动将新成绩同步上传到你已绑定的外部查分器。")) {
-                    Toggle("自动同步成绩", isOn: Binding(
+                Section(header: Text("settings.sync.header"), footer: Text("settings.sync.footer")) {
+                    Toggle("settings.sync.autoUpload", isOn: Binding(
                         get: { config?.isAutoUploadEnabled ?? false },
                         set: { newValue in
                             if let c = config {
@@ -62,7 +62,7 @@ struct SettingsView: View {
                 }
                 
                 // Appearance Section
-                Section("外观") {
+                Section("settings.appearance.header") {
                     Picker(selection: Binding(
                         get: { config?.themeRawValue ?? 0 },
                         set: { newValue in
@@ -74,25 +74,25 @@ struct SettingsView: View {
                             }
                         }
                     )) {
-                        Text("跟随系统").tag(0)
-                        Text("浅色").tag(1)
-                        Text("深色").tag(2)
+                        Text("settings.appearance.system").tag(0)
+                        Text("settings.appearance.light").tag(1)
+                        Text("settings.appearance.dark").tag(2)
                     } label: {
-                        settingsRowLabel(icon: "moon.fill", iconColor: .indigo, title: "主题")
+                        settingsRowLabel(icon: "moon.fill", iconColor: .indigo, title: "settings.appearance.theme")
                     }
                 }
                 
                 
                 // About Section
-                Section("关于") {
-                    settingsRow(icon: "info.circle.fill", iconColor: .gray, title: "版本", value: "1.0.0")
+                Section("settings.about.header") {
+                    settingsRow(icon: "info.circle.fill", iconColor: .gray, title: "settings.about.version", value: "1.0.0")
                 }
             }
-            .navigationTitle("设置")
+            .navigationTitle("settings.title")
         }
     }
     
-    private func settingsRow(icon: String, iconColor: Color, title: String, value: String) -> some View {
+    private func settingsRow(icon: String, iconColor: Color, title: LocalizedStringKey, value: String) -> some View {
         HStack {
             settingsRowLabel(icon: icon, iconColor: iconColor, title: title)
             Spacer()
@@ -102,7 +102,7 @@ struct SettingsView: View {
         }
     }
     
-    private func settingsRowLabel(icon: String, iconColor: Color, title: String) -> some View {
+    private func settingsRowLabel(icon: String, iconColor: Color, title: LocalizedStringKey) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 14))

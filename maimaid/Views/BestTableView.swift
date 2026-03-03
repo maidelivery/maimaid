@@ -14,7 +14,7 @@ struct BestTableView: View {
             Section {
                 HStack {
                     VStack(alignment: .leading) {
-                        Text("DX Rating")
+                        Text("bestTable.rating")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         Text("\(b50Result.total)")
@@ -24,8 +24,8 @@ struct BestTableView: View {
                     }
                     Spacer()
                     VStack(alignment: .trailing) {
-                        Text("Old: \(b50Result.b35.reduce(0) { $0 + $1.rating })")
-                        Text("New: \(b50Result.b15.reduce(0) { $0 + $1.rating })")
+                        Text(String(localized: "bestTable.old.count \(b50Result.b35.reduce(0) { $0 + $1.rating })"))
+                        Text(String(localized: "bestTable.new.count \(b50Result.b15.reduce(0) { $0 + $1.rating })"))
                     }
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -33,9 +33,9 @@ struct BestTableView: View {
                 .padding(.vertical, 8)
             }
 
-            Section("容量设置") {
+            Section("bestTable.settings.capacity") {
                 HStack(spacing: 20) {
-                    capacityInput(title: "旧曲 (Old)", value: Binding(
+                    capacityInput(title: "bestTable.settings.old", value: Binding(
                         get: { configs.first?.b35Count ?? 35 },
                         set: { configs.first?.b35Count = max(1, $0) }
                     ))
@@ -46,7 +46,7 @@ struct BestTableView: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    capacityInput(title: "新曲 (New)", value: Binding(
+                    capacityInput(title: "bestTable.settings.new", value: Binding(
                         get: { configs.first?.b15Count ?? 15 },
                         set: { configs.first?.b15Count = max(1, $0) }
                     ))
@@ -55,7 +55,7 @@ struct BestTableView: View {
                         .frame(height: 30)
                     
                     VStack(alignment: .center, spacing: 4) {
-                        Text("当前总计").font(.caption2).foregroundColor(.secondary)
+                        Text("bestTable.settings.total").font(.caption2).foregroundColor(.secondary)
                         Text("\((configs.first?.b35Count ?? 35) + (configs.first?.b15Count ?? 15))")
                             .font(.system(.body, design: .rounded).bold())
                             .foregroundColor(.orange)
@@ -67,11 +67,11 @@ struct BestTableView: View {
             
             
             
-            Section("新曲 B\(configs.first?.b15Count ?? 15)") {
+            Section(String(localized: "bestTable.section.new \(configs.first?.b15Count ?? 15)")) {
                 if isLoading {
                     ProgressView().padding()
                 } else if b50Result.b15.isEmpty {
-                    Text("暂无数据")
+                    Text("bestTable.empty")
                         .foregroundColor(.secondary)
                 } else {
                     ForEach(b50Result.b15) { entry in
@@ -86,11 +86,11 @@ struct BestTableView: View {
                 }
             }
             
-            Section("旧曲 B\(configs.first?.b35Count ?? 35)") {
+            Section(String(localized: "bestTable.section.old \(configs.first?.b35Count ?? 35)")) {
                 if isLoading {
                     ProgressView().padding()
                 } else if b50Result.b35.isEmpty {
-                    Text("暂无数据")
+                    Text("bestTable.empty")
                         .foregroundColor(.secondary)
                 } else {
                     ForEach(b50Result.b35) { entry in
@@ -105,8 +105,8 @@ struct BestTableView: View {
                 }
             }
         }
-        .navigationTitle("Best Table")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("bestTable.title")
+//        .navigationBarTitleDisplayMode(.inline)
         .task(id: songs) {
             await calculateRating()
         }
@@ -118,7 +118,7 @@ struct BestTableView: View {
         }
     }
     
-    private func capacityInput(title: String, value: Binding<Int>) -> some View {
+    private func capacityInput(title: LocalizedStringKey, value: Binding<Int>) -> some View {
         VStack(alignment: .center, spacing: 6) {
             Text(title).font(.caption2).foregroundColor(.secondary)
             
@@ -222,7 +222,7 @@ struct BestTableView: View {
                 Text("\(entry.rating)")
                     .font(.system(size: 18, weight: .black, design: .rounded))
                     .foregroundColor(.orange)
-                Text("Base \(String(format: "%.1f", entry.level))")
+                Text("bestTable.base \(entry.level, specifier: "%.1f")")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }

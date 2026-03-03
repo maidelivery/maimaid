@@ -16,40 +16,37 @@ struct MainTabView: View {
     }
     
     var body: some View {
-        ZStack {
-            TabView {
-                Tab("Home", systemImage: "house") {
-                    HomeView()
-                }
-                
-                Tab("Scan", systemImage: "camera.viewfinder") {
-                    ScannerView()
-                }
-                
-                Tab("Settings", systemImage: "gearshape") {
-                    SettingsView()
-                }
-                
-                Tab("搜索", systemImage: "magnifyingglass", role: .search) {
-                    ContentView(searchText: searchText)
-                        .searchable(text: $searchText, prompt: "歌曲、艺术家、别名...")
-                }
+        TabView {
+            Tab("tab.home", systemImage: "house") {
+                HomeView()
             }
-            .preferredColorScheme(preferredScheme)
-            .tabBarMinimizeBehavior(.onScrollDown)
             
-        }
-        .task {
-            // Background Sync Check
-            if let config = configs.first, config.backgroundSyncInterval > 0 {
-                let lastSync = config.lastStaticDataUpdateDate ?? .distantPast
-                let intervalSeconds = Double(config.backgroundSyncInterval * 3600)
-                
-                if Date().timeIntervalSince(lastSync) > intervalSeconds {
-                    print("MainTabView: Background static data sync triggered (interval: \(config.backgroundSyncInterval)h)")
-                    try? await MaimaiDataFetcher.shared.fetchSongs(modelContext: modelContext)
-                }
+            Tab("tab.scan", systemImage: "camera.viewfinder") {
+                ScannerView()
+            }
+            
+            Tab("tab.settings", systemImage: "gearshape") {
+                SettingsView()
+            }
+            
+            Tab("tab.search", systemImage: "magnifyingglass", role: .search) {
+                ContentView(searchText: searchText)
+                    .searchable(text: $searchText, prompt: "search.placeholder")
             }
         }
+        .preferredColorScheme(preferredScheme)
+        .task {
+                // Background Sync Check
+                if let config = configs.first, config.backgroundSyncInterval > 0 {
+                    let lastSync = config.lastStaticDataUpdateDate ?? .distantPast
+                    let intervalSeconds = Double(config.backgroundSyncInterval * 3600)
+                    
+                    if Date().timeIntervalSince(lastSync) > intervalSeconds {
+                        print("MainTabView: Background static data sync triggered (interval: \(config.backgroundSyncInterval)h)")
+                        try? await MaimaiDataFetcher.shared.fetchSongs(modelContext: modelContext)
+                    }
+                }
+            }
+        
     }
 }

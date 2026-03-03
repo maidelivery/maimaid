@@ -9,9 +9,9 @@ import SwiftUI
 import SwiftData
 
 enum SortOption: String, CaseIterable, Identifiable {
-    case defaultOrder = "默认"
-    case versionAndDate = "版本/日期"
-    case difficulty = "最大难度"
+    case defaultOrder = "sort.default"
+    case versionAndDate = "sort.versionDate"
+    case difficulty = "sort.difficulty"
     
     var id: String { self.rawValue }
 }
@@ -80,9 +80,9 @@ struct ContentView: View {
             ZStack {
                 if songs.isEmpty && !isFetching {
                     ContentUnavailableView {
-                        Label("暂无歌曲", systemImage: "music.note.list")
+                        Label("songs.unavailable.title", systemImage: "music.note.list")
                     } description: {
-                        Text("进入设置页面下载数据")
+                        Text("songs.unavailable.description")
                     }
                 } else {
                     ScrollView {
@@ -105,18 +105,18 @@ struct ContentView: View {
                     }
                 }
             }
-            .navigationTitle("Songs")
+            .navigationTitle("songs.title")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Picker("排序方式", selection: $sortOption) {
+                        Picker("sort.title", selection: $sortOption) {
                             ForEach(SortOption.allCases) { option in
-                                Text(option.rawValue).tag(option)
+                                Text(LocalizedStringKey(option.rawValue)).tag(option)
                             }
                         }
                         
                         Toggle(isOn: $sortAscending) {
-                            Label("升序", systemImage: sortAscending ? "arrow.up" : "arrow.down")
+                            Label(sortAscending ? "sort.ascending" : "sort.descending", systemImage: sortAscending ? "arrow.up" : "arrow.down")
                         }
                     } label: {
                         Image(systemName: "arrow.up.arrow.down")

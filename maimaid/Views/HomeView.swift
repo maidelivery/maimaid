@@ -35,9 +35,9 @@ struct HomeView: View {
                             
                             VStack(alignment: .leading, spacing: 2) {
                                 let totalCount = (config?.b35Count ?? 35) + (config?.b15Count ?? 15)
-                                Text("查看 Best \(totalCount) 成绩表")
+                                Text("home.bestTable.button.title \(totalCount)")
                                     .font(.system(size: 16, weight: .bold))
-                                Text("基于 B\(config?.b35Count ?? 35) + N\(config?.b15Count ?? 15) 计算的 DX Rating")
+                                Text("home.bestTable.button.subtitle \(config?.b35Count ?? 35) \(config?.b15Count ?? 15)")
                                     .font(.system(size: 11))
                                     .foregroundColor(.secondary)
                             }
@@ -62,8 +62,8 @@ struct HomeView: View {
                         NavigationLink(destination: RandomSongView()) {
                             functionCard(
                                 icon: "dice.fill",
-                                title: "随机歌曲",
-                                subtitle: "老虎机式随机抽曲",
+                                title: "home.randomSong.title",
+                                subtitle: "home.randomSong.subtitle",
                                 gradient: [Color.purple, Color.pink]
                             )
                         }
@@ -72,17 +72,27 @@ struct HomeView: View {
                         NavigationLink(destination: RecommendationListView()) {
                             functionCard(
                                 icon: "sparkles",
-                                title: "吃分推荐",
-                                subtitle: "定数拟合分析",
+                                title: "home.recommendation.title",
+                                subtitle: "home.recommendation.subtitle",
                                 gradient: [Color.orange, Color.red]
                             )
                         }
                         NavigationLink(destination: PlateProgressView()) {
                             functionCard(
                                 icon: "chart.bar.xaxis",
-                                title: "牌子进度",
-                                subtitle: "查看各版本牌子获取进度",
+                                title: "home.plateProgress.title",
+                                subtitle: "home.plateProgress.subtitle",
                                 gradient: [Color.green, Color.blue]
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        
+                        NavigationLink(destination: UsefulLinksView()) {
+                            functionCard(
+                                icon: "link",
+                                title: "home.usefulLinks.title",
+                                subtitle: "home.usefulLinks.subtitle",
+                                gradient: [Color.blue, Color.cyan]
                             )
                         }
                         .buttonStyle(.plain)
@@ -92,7 +102,7 @@ struct HomeView: View {
                 .padding(16)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("主页")
+            .navigationTitle("home.title")
             .sheet(isPresented: $showingEditProfile) {
                 if let config = config {
                     ProfileEditSheet(config: config)
@@ -184,7 +194,7 @@ struct HomeView: View {
                 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 4) {
-                        Text(config?.userName ?? "未绑定用户")
+                        Text(config?.userName ?? String(localized: "home.profile.unbound"))
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(.primary)
                     }
@@ -194,7 +204,7 @@ struct HomeView: View {
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     } else {
-                        Text("点击编辑")
+                        Text("home.profile.editHint")
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
@@ -217,7 +227,7 @@ struct HomeView: View {
         .buttonStyle(.plain)
     }
     
-    private func functionCard(icon: String, title: String, subtitle: String, gradient: [Color]) -> some View {
+    private func functionCard(icon: String, title: LocalizedStringKey, subtitle: LocalizedStringKey, gradient: [Color]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 28))
@@ -247,6 +257,7 @@ struct HomeView: View {
     }
 }
 
+@MainActor
 struct ProfileEditSheet: View {
     @Environment(\.dismiss) var dismiss
     @Bindable var config: SyncConfig
@@ -319,7 +330,7 @@ struct ProfileEditSheet: View {
                                     // Overlay hint
                                     VStack {
                                         Spacer()
-                                        Text("更换头像")
+                                        Text("profile.edit.changeAvatar")
                                             .font(.system(size: 10, weight: .medium))
                                             .foregroundColor(.white)
                                             .padding(.vertical, 4)
@@ -334,7 +345,7 @@ struct ProfileEditSheet: View {
                             }
                             
                             if selectedImageData != nil || config.avatarData != nil {
-                                Button("清除头像", role: .destructive) {
+                                Button("profile.edit.clearAvatar", role: .destructive) {
                                     selectedImageData = nil
                                     config.avatarData = nil
                                     config.avatarUrl = nil
@@ -348,23 +359,23 @@ struct ProfileEditSheet: View {
                     .padding(.vertical, 10)
                 }
                 
-                Section("基本信息") {
-                    LabeledContent("名字") {
-                        TextField("输入名称", text: $userName)
+                Section("profile.edit.basicInfo") {
+                    LabeledContent("profile.edit.name") {
+                        TextField("profile.edit.name.placeholder", text: $userName)
                             .multilineTextAlignment(.trailing)
                     }
-                    LabeledContent("称号") {
-                        TextField("输入称号", text: $plate)
+                    LabeledContent("profile.edit.titleName") {
+                        TextField("profile.edit.titleName.placeholder", text: $plate)
                             .multilineTextAlignment(.trailing)
                     }
                 }
                 
-                Section("预设头像") {
+                Section("profile.edit.presetIcon") {
                     NavigationLink {
                         IconPickerView(config: config, selectedImageData: $selectedImageData)
                     } label: {
                         HStack {
-                            Text("选择预设头像")
+                            Text("profile.edit.presetIcon.select")
                             Spacer()
                             if let avatarUrl = config.avatarUrl, avatarUrl.contains("lxns.net") {
                                 if let idString = avatarUrl.components(separatedBy: "/").last?.replacingOccurrences(of: ".png", with: ""),
@@ -389,21 +400,15 @@ struct ProfileEditSheet: View {
                         }
                     }
                 }
-                
-                Section {
-                    // Empty for now, or could keep Clear Avatar here
-                } footer: {
-                    Text("所有资料将保存在本地，不会与服务器同步。")
-                }
             }
-            .navigationTitle("个人资料")
+            .navigationTitle("profile.edit.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("取消") { dismiss() }
+                    Button("profile.edit.cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("保存") {
+                    Button("profile.edit.save") {
                         saveChanges()
                         dismiss()
                     }
@@ -443,9 +448,10 @@ struct ProfileEditSheet: View {
             config.avatarUrl = nil
             config.isCustomProfile = false
         }
-        }
+    }
 }
 
+@MainActor
 struct IconPickerView: View {
     @Bindable var config: SyncConfig
     @Binding var selectedImageData: Data?
@@ -469,7 +475,7 @@ struct IconPickerView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 20) {
                 ForEach(filteredIcons) { icon in
-                    Button {
+                    Button { [config] in
                         config.avatarUrl = icon.iconUrl
                         config.avatarData = nil // Clear custom data in config
                         selectedImageData = nil // Clear custom data in parent sheet state
@@ -507,8 +513,7 @@ struct IconPickerView: View {
             }
             .padding(16)
         }
-        .navigationTitle("选择头像")
-        .searchable(text: $searchText, prompt: "搜索头像或分类")
+        .navigationTitle("profile.picker.title")
+        .searchable(text: $searchText, prompt: "profile.picker.search")
     }
 }
-

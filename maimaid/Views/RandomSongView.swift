@@ -32,9 +32,9 @@ struct RandomSongView: View {
         VStack(spacing: 0) {
             // Top Section
             VStack(spacing: 24) {
-                Picker("数量", selection: $songCount) {
-                    Text("一次 3 首").tag(3)
-                    Text("一次 4 首").tag(4)
+                Picker("random.count", selection: $songCount) {
+                    Text("random.count.3").tag(3)
+                    Text("random.count.4").tag(4)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 40)
@@ -66,7 +66,7 @@ struct RandomSongView: View {
                 }) {
                     HStack {
                         Image(systemName: isSpinning ? "forward.end.fill" : "dice.fill")
-                        Text(isSpinning ? "直接跳过" : "立刻随机抽取")
+                        Text(isSpinning ? "random.action.skip" : "random.action.spin")
                             .font(.headline.bold())
                     }
                     .frame(maxWidth: .infinity)
@@ -83,7 +83,7 @@ struct RandomSongView: View {
             if !isSpinning && !results.isEmpty {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("抽选结果")
+                        Text("random.results")
                             .font(.system(size: 13, weight: .bold))
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 24)
@@ -108,7 +108,7 @@ struct RandomSongView: View {
                 Spacer()
             }
         }
-        .navigationTitle("随机歌曲")
+        .navigationTitle("random.title")
         .background(Color(.systemGroupedBackground))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -232,7 +232,7 @@ struct SlotColumn: View {
                         Image(systemName: "questionmark.circle.fill")
                             .font(.system(size: 40))
                             .foregroundColor(.gray.opacity(0.3))
-                        Text("Ready?")
+                        Text("random.ready")
                             .font(.caption.bold())
                             .foregroundColor(.gray.opacity(0.4))
                     }

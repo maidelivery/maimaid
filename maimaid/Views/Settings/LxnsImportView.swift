@@ -78,11 +78,11 @@ struct LxnsImportView: View {
     var body: some View {
         Form {
             if let currentConfig = config, !currentConfig.lxnsRefreshToken.isEmpty {
-                Section(header: Text("已绑定 LXNS")) {
+                Section(header: Text("import.lxns.bound.header")) {
                     HStack {
-                        Text("授权状态")
+                        Text("import.lxns.status")
                         Spacer()
-                        Text("已连接")
+                        Text("import.lxns.status.connected")
                             .foregroundColor(.green)
                     }
                     
@@ -96,33 +96,33 @@ struct LxnsImportView: View {
                                 ProgressView()
                                     .padding(.trailing, 8)
                             }
-                            Text(isImporting ? "正在同步..." : "一键快速同步成绩")
+                            Text(isImporting ? "import.status.syncing" : "import.lxns.action.quickSync")
                         }
                         .frame(maxWidth: .infinity)
                     }
                     .disabled(isImporting)
                 }
                 
-                Section(header: Text("账号管理")) {
-                    Button("取消绑定 / 重新登录", role: .destructive) {
+                Section(header: Text("import.lxns.manage.header")) {
+                    Button("import.lxns.action.relogin", role: .destructive) {
                         currentConfig.lxnsRefreshToken = ""
                     }
                 }
             } else {
-                Section(header: Text("第一步：获取授权码"), footer: Text("由于外部环境限制，请点击下方按钮在浏览器中打开授权页，登录后复制页面上显示的授权码。")) {
+                Section(header: Text("import.lxns.step1.header"), footer: Text("import.lxns.step1.footer")) {
                     Button {
                         openAuthPage()
                     } label: {
                         HStack {
                             Image(systemName: "safari")
-                            Text("在浏览器中打开授权页面")
+                            Text("import.lxns.action.openBrowser")
                         }
                         .frame(maxWidth: .infinity)
                     }
                 }
                 
-                Section(header: Text("第二步：输入授权码并导入"), footer: Text("将你在浏览器中复制的包含连字符的授权码粘贴到此处，然后开始导入。")) {
-                    TextField("授权码 (例如: JVJ6-VPTM-MGHZ)", text: $authCode)
+                Section(header: Text("import.lxns.step2.header"), footer: Text("import.lxns.step2.footer")) {
+                    TextField("import.lxns.code.placeholder", text: $authCode)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
                     
@@ -136,7 +136,7 @@ struct LxnsImportView: View {
                                 ProgressView()
                                     .padding(.trailing, 8)
                             }
-                            Text(isImporting ? "正在导入..." : "开始导入")
+                            Text(isImporting ? "import.status.importing" : "import.lxns.action.startImport")
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -145,7 +145,7 @@ struct LxnsImportView: View {
             }
             
             if isImporting || !importStatus.isEmpty {
-                Section(header: Text("状态")) {
+                Section(header: Text("import.status.header")) {
                     if isImporting {
                         HStack {
                             ProgressView()
@@ -157,7 +157,7 @@ struct LxnsImportView: View {
                     
                     if !importStatus.isEmpty {
                         Text(importStatus)
-                            .foregroundColor(importStatus.contains("失败") || importStatus.contains("错误") ? .red : .primary)
+                            .foregroundColor(importStatus.contains(String(localized: "import.status.failed")) || importStatus.contains(String(localized: "import.status.error")) ? .red : .primary)
                     }
                     
                     if totalRecords > 0 {
@@ -166,14 +166,14 @@ struct LxnsImportView: View {
                 }
             }
         }
-        .navigationTitle("从 LXNS 导入")
+        .navigationTitle("import.lxns.title")
         .navigationBarTitleDisplayMode(.inline)
     }
     
     @MainActor
     private func openAuthPage() {
         if clientId == "YOUR_CLIENT_ID_HERE" {
-            importStatus = "开发错误：请先在代码中配置 Client ID。"
+            importStatus = String(localized: "import.lxns.error.clientId")
             return
         }
         
@@ -203,13 +203,13 @@ struct LxnsImportView: View {
     @MainActor
     private func exchangeCodeAndImport() async {
         if generatedCodeVerifier.isEmpty {
-            importStatus = "安全状态丢失，请重新点击第一步按钮生成授权页面。"
+            importStatus = String(localized: "import.lxns.error.security")
             return
         }
         
         isImporting = true
         importStatus = ""
-        currentStep = "正在获取访问令牌..."
+        currentStep = String(localized: "import.lxns.status.exchanging")
         progress = 0
         totalRecords = 0
         
@@ -242,7 +242,7 @@ struct LxnsImportView: View {
             let tokenResponse = try JSONDecoder().decode(LxnsTokenResponse.self, from: data)
             
             if httpResponse.statusCode != 200 || tokenResponse.data?.access_token == nil {
-                importStatus = "令牌交换失败：\(tokenResponse.message ?? "未知网络错误")"
+                importStatus = String(localized: "import.lxns.status.failed.token \(tokenResponse.message ?? String(localized: "import.status.error.unknown"))")
                 isImporting = false
                 return
             }
@@ -260,7 +260,7 @@ struct LxnsImportView: View {
             
             await importData(accessToken: accessToken)
         } catch {
-            importStatus = "网络错误：无法获取访问令牌。"
+            importStatus = String(localized: "import.lxns.status.failed.networkToken")
             isImporting = false
         }
     }
@@ -269,21 +269,21 @@ struct LxnsImportView: View {
     private func startQuickImport(config: SyncConfig) async {
         isImporting = true
         importStatus = ""
-        currentStep = "刷新授权状态..."
+        currentStep = String(localized: "import.lxns.status.refreshing")
         progress = 0
         totalRecords = 0
         
         if let token = await SyncManager.shared.refreshLxnsToken(config: config) {
             await importData(accessToken: token)
         } else {
-            importStatus = "授权已过期，请重新登录。"
+            importStatus = String(localized: "import.lxns.status.failed.expired")
             isImporting = false
         }
     }
     
     @MainActor
     private func importData(accessToken: String) async {
-        currentStep = "正在获取玩家信息..."
+        currentStep = String(localized: "import.lxns.status.player")
         
         // 1. Fetch Player Info
         do {
@@ -303,7 +303,7 @@ struct LxnsImportView: View {
             print("Failed to fetch player info: \(error)")
         }
 
-        currentStep = "正在连接到 LXNS 拉取成绩数据..."
+        currentStep = String(localized: "import.lxns.status.fetching")
         
         let difficultyMap = [
             0: "basic",
@@ -325,7 +325,7 @@ struct LxnsImportView: View {
             let (data, response) = try await URLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
-                importStatus = "导入失败：无效的网络响应"
+                importStatus = String(localized: "import.status.failed.network")
                 isImporting = false
                 return
             }
@@ -334,22 +334,22 @@ struct LxnsImportView: View {
             
             if !lxnsResponse.success || httpResponse.statusCode != 200 {
                 if let msg = lxnsResponse.message {
-                    importStatus = "导入失败：\(msg)"
+                    importStatus = String(localized: "import.status.failed.message \(msg)")
                 } else {
-                    importStatus = "导入失败：HTTP 错误 \(httpResponse.statusCode)"
+                    importStatus = String(localized: "import.status.failed.code \(httpResponse.statusCode)")
                 }
                 isImporting = false
                 return
             }
             
             guard let records = lxnsResponse.data else {
-                importStatus = "导入失败：未找到成绩记录"
+                importStatus = String(localized: "import.status.failed.noRecords")
                 isImporting = false
                 return
             }
             
             totalRecords = records.count
-            importStatus = "查找到 \(totalRecords) 条成绩，正在处理..."
+            importStatus = String(localized: "import.status.processing \(totalRecords)")
             
             // Optimization map using song titles (Local mapping by title)
             var titleSheetMap: [String: [(type: String, diff: String, sheet: Sheet)]] = [:]
@@ -418,9 +418,9 @@ struct LxnsImportView: View {
                 }
             }
             
-            importStatus = "导入成功！共写入/更新了 \(importedCount) 条成绩。"
+            importStatus = String(localized: "import.status.success \(importedCount)")
         } catch {
-            importStatus = "导入错误：\(error.localizedDescription)"
+            importStatus = String(localized: "import.status.error.message \(error.localizedDescription)")
         }
         
         isImporting = false
