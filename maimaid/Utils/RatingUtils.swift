@@ -200,3 +200,34 @@ struct RatingUtils {
         return (total, topOld, topNew)
     }
 }
+
+// MARK: - Song Array Extension for B50 Calculation
+
+extension Array where Element: Song {
+    /// Converts a `[Song]` into the `Sendable` input format required by `RatingUtils.calculateB50`.
+    /// Consolidates duplicate `prepareCalculationInput()` logic from HomeView, BestTableView, RecommendationService.
+    func toCalculationInput() -> [RatingUtils.RatingCalculationInput] {
+        map { song in
+            RatingUtils.RatingCalculationInput(
+                songId: song.songId,
+                title: song.title,
+                version: song.version,
+                releaseDate: song.releaseDate,
+                imageName: song.imageName,
+                sheets: song.sheets.compactMap { sheet in
+                    guard let score = sheet.score else { return nil }
+                    return RatingUtils.SheetCalculationInput(
+                        difficulty: sheet.difficulty,
+                        type: sheet.type,
+                        internalLevel: sheet.internalLevelValue,
+                        level: sheet.levelValue,
+                        rate: score.rate,
+                        fc: score.fc,
+                        fs: score.fs,
+                        dxScore: score.dxScore
+                    )
+                }
+            )
+        }
+    }
+}

@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 
+@MainActor
 class ImageDownloader {
     static let shared = ImageDownloader()
     

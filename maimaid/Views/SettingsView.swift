@@ -7,9 +7,6 @@ struct SettingsView: View {
     
     private var config: SyncConfig? { configs.first }
     @State private var selectedTheme = 0
-    @State private var notificationsEnabled = true
-    @State private var autoSync = true
-    @State private var hapticFeedback = true
     
     var body: some View {
         NavigationStack {
@@ -48,10 +45,6 @@ struct SettingsView: View {
                             }
                         }
                     }
-                    
-                    Toggle(isOn: $autoSync) {
-                        settingsRowLabel(icon: "icloud.and.arrow.down.fill", iconColor: .indigo, title: "iCloud 自动同步配置")
-                    }
                 }
                 
                 Section(header: Text("成绩同步"), footer: Text("开启后，在保存成绩时，App 会自动将新成绩同步上传到你已绑定的外部查分器。")) {
@@ -87,38 +80,12 @@ struct SettingsView: View {
                     } label: {
                         settingsRowLabel(icon: "moon.fill", iconColor: .indigo, title: "主题")
                     }
-                    
-                    Toggle(isOn: $hapticFeedback) {
-                        settingsRowLabel(icon: "hand.tap.fill", iconColor: .orange, title: "触觉反馈")
-                    }
                 }
                 
-                // Notifications Section
-                Section("通知") {
-                    Toggle(isOn: $notificationsEnabled) {
-                        settingsRowLabel(icon: "bell.badge.fill", iconColor: .red, title: "推送通知")
-                    }
-                }
                 
                 // About Section
                 Section("关于") {
                     settingsRow(icon: "info.circle.fill", iconColor: .gray, title: "版本", value: "1.0.0")
-                    
-                    HStack {
-                        settingsRowLabel(icon: "star.fill", iconColor: .yellow, title: "给 App 评分")
-                        Spacer()
-                        Image(systemName: "arrow.up.forward")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        settingsRowLabel(icon: "envelope.fill", iconColor: .green, title: "反馈与建议")
-                        Spacer()
-                        Image(systemName: "arrow.up.forward")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.secondary)
-                    }
                 }
             }
             .navigationTitle("设置")

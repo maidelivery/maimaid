@@ -36,6 +36,7 @@ struct MainTabView: View {
                 }
             }
             .preferredColorScheme(preferredScheme)
+            .tabBarMinimizeBehavior(.onScrollDown)
             
         }
         .task {

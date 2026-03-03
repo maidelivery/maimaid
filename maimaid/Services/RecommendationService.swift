@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-struct RecommendationResult: Identifiable {
+struct RecommendationResult: Identifiable, Sendable {
     let id = UUID()
     let song: Song
     let sheet: Sheet
@@ -16,11 +16,12 @@ struct RecommendationResult: Identifiable {
     var comprehensiveScore: Double = 0 // Used for internal sorting
 }
 
-struct RecommendationResponse {
+struct RecommendationResponse: Sendable {
     let b15: [RecommendationResult]
     let b35: [RecommendationResult]
 }
 
+@MainActor
 class RecommendationService {
     static let shared = RecommendationService()
     
@@ -116,28 +117,7 @@ class RecommendationService {
             let b35RecLimit = configs.first?.b35RecLimit ?? 10
             
             // 1. Calculate current B50 thresholds
-            let input = songs.map { song in
-                RatingUtils.RatingCalculationInput(
-                    songId: song.songId,
-                    title: song.title,
-                    version: song.version,
-                    releaseDate: song.releaseDate,
-                    imageName: song.imageName,
-                    sheets: song.sheets.compactMap { sheet in
-                        guard let score = sheet.score else { return nil }
-                        return RatingUtils.SheetCalculationInput(
-                            difficulty: sheet.difficulty,
-                            type: sheet.type,
-                            internalLevel: sheet.internalLevelValue,
-                            level: sheet.levelValue,
-                            rate: score.rate,
-                            fc: score.fc,
-                            fs: score.fs,
-                            dxScore: score.dxScore
-                        )
-                    }
-                )
-            }
+            let input = songs.toCalculationInput()
             
             let b50 = RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit)
             let b15Threshold = b50.b15.last?.rating ?? 0

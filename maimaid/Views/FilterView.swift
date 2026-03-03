@@ -37,7 +37,7 @@ struct FilterView: View {
                                         FilterChip(
                                             title: diff,
                                             isSelected: settings.selectedDifficulties.contains(internalName(for: diff)),
-                                            color: colorForDifficulty(diff)
+                                            color: ThemeUtils.colorForDifficulty(internalName(for: diff), nil)
                                         ) {
                                             toggleSet(&settings.selectedDifficulties, internalName(for: diff))
                                         }
@@ -165,9 +165,7 @@ struct FilterView: View {
         }
     }
     
-    private func colorForDifficulty(_ diff: String) -> Color {
-        ThemeUtils.colorForDifficulty(internalName(for: diff), nil)
-    }
+
 }
 
 // MARK: - Components

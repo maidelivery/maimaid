@@ -144,8 +144,8 @@ struct RecommendationRow: View {
                 
                 // Line 3: Badges
                 HStack(spacing: 4) {
-                    badgeView(result.sheet.type.uppercased(), bg: result.sheet.type.lowercased() == "dx" ? .orange : .blue, fg: .white)
-                    badgeView(diffShort(result.sheet.difficulty), bg: ThemeUtils.colorForDifficulty(result.sheet.difficulty, result.sheet.type), fg: .white)
+                    BadgeView(text: result.sheet.type.uppercased(), background: result.sheet.type.lowercased() == "dx" ? .orange : .blue)
+                    BadgeView(text: ThemeUtils.diffShort(result.sheet.difficulty), background: ThemeUtils.colorForDifficulty(result.sheet.difficulty, result.sheet.type))
                 }
             }
             .frame(minHeight: 56, alignment: .leading)
@@ -165,27 +165,5 @@ struct RecommendationRow: View {
             .fixedSize()
         }
         .padding(.vertical, 4)
-    }
-    
-    private func badgeView(_ text: String, bg: Color, fg: Color) -> some View {
-        Text(text.uppercased())
-            .font(.system(size: 9, weight: .heavy))
-            .fixedSize()
-            .padding(.horizontal, 4)
-            .padding(.vertical, 2)
-            .background(bg)
-            .foregroundColor(fg)
-            .cornerRadius(4)
-    }
-    
-    private func diffShort(_ diff: String) -> String {
-        switch diff.uppercased() {
-        case "BASIC":    return "BAS"
-        case "ADVANCED": return "ADV"
-        case "EXPERT":   return "EXP"
-        case "MASTER":   return "MAS"
-        case "REMASTER": return "ReM"
-        default:         return diff
-        }
     }
 }

@@ -24,7 +24,7 @@ struct SongDetailView: View {
     private var filteredSheets: [Sheet] {
         song.sheets
             .filter { $0.type.lowercased() == selectedType }
-            .sorted { difficultyOrder($0.difficulty) < difficultyOrder($1.difficulty) }
+            .sorted { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) }
     }
     
     private var availableTypes: [String] {
@@ -466,16 +466,7 @@ struct SongDetailView: View {
         }
     }
     
-    private func difficultyOrder(_ difficulty: String) -> Int {
-        switch difficulty.lowercased() {
-        case "basic": return 4
-        case "advanced": return 3
-        case "expert": return 2
-        case "master": return 1
-        case "remaster": return 0
-        default: return -1
-        }
-    }
+
 }
 
 // MARK: - Sheet Card View
@@ -780,9 +771,7 @@ struct SheetCardView: View {
         (Double(sheet.breakCount ?? 0) * 5.0)
     }
     
-    private func colorForDifficulty(_ difficulty: String) -> Color {
-        ThemeUtils.colorForDifficulty(difficulty, sheet.type)
-    }
+
 }
 
 // MARK: - Fault Tolerance Calculator

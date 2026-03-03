@@ -1,6 +1,6 @@
 import Foundation
 
-struct FilterSettings: Equatable {
+struct FilterSettings: Equatable, Sendable {
     var selectedCategories: Set<String> = []
     var selectedVersions: Set<String> = []
     var selectedDifficulties: Set<String> = []

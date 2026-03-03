@@ -4,7 +4,7 @@ import Vision
 import UIKit
 
 /// Processor that encapsulates the logic for parsing Maimai scores using CoreML model.
-class MLScoreProcessor {
+class MLScoreProcessor: Sendable {
     static let shared = MLScoreProcessor()
     
     // The compiled CoreML model
@@ -109,7 +109,7 @@ class MLScoreProcessor {
                 let cleaned = text.replacingOccurrences(of: ",", with: ".")
                                   .replacingOccurrences(of: "%", with: "")
                 if let val = Double(cleaned), val <= 101.0 {
-                    scoreResult.achievementRate = val
+                    scoreResult.rate = val
                 }
             }
         }
@@ -232,14 +232,14 @@ class MLScoreProcessor {
 }
 
 /// Bounding box debug info
-struct RecognizedBox {
+struct RecognizedBox: Sendable {
     let label: String
     let rect: CGRect
 }
 
 /// Data structure representing the output of the `MLScoreProcessor`.
-struct MLScoreResult {
-    var achievementRate: Double?
+struct MLScoreResult: Sendable {
+    var rate: Double?
     var difficulty: String?
     var type: String? // dx, std, utage
     var title: String?

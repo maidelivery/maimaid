@@ -73,6 +73,86 @@ struct ThemeUtils {
         }
         return 999
     }
+    
+    // MARK: - Difficulty Helpers
+    
+    /// Canonical ordering for difficulties (higher = harder). Used for sorting sheets.
+    static func difficultyOrder(_ difficulty: String) -> Int {
+        switch difficulty.lowercased() {
+        case "basic":    return 0
+        case "advanced": return 1
+        case "expert":   return 2
+        case "master":   return 3
+        case "remaster": return 4
+        default:         return -1
+        }
+    }
+    
+    /// Abbreviated difficulty name for compact badge display.
+    static func diffShort(_ diff: String) -> String {
+        switch diff.uppercased() {
+        case "BASIC":    return "BAS"
+        case "ADVANCED": return "ADV"
+        case "EXPERT":   return "EXP"
+        case "MASTER":   return "MAS"
+        case "REMASTER": return "ReM"
+        default:         return diff
+        }
+    }
+    
+    /// Maps difficulty string to numeric index (0–4).
+    static func mapDifficultyToIndex(_ diff: String) -> Int {
+        switch diff.lowercased() {
+        case "basic":    return 0
+        case "advanced": return 1
+        case "expert":   return 2
+        case "master":   return 3
+        case "remaster": return 4
+        default:         return 3
+        }
+    }
+    
+    // MARK: - Status Colors
+    
+    /// Color for Full Combo status badges.
+    static func fcColor(_ fc: String) -> Color {
+        let low = fc.lowercased()
+        if low.contains("ap") { return Color(red: 1.0, green: 0.6, blue: 0.0) }   // gold
+        if low.contains("fc") { return Color(red: 0.2, green: 0.75, blue: 0.2) }  // green
+        return .secondary
+    }
+    
+    /// Color for Full Sync status badges.
+    static func fsColor(_ fs: String) -> Color {
+        let low = fs.lowercased()
+        if low.contains("fsd") { return Color(red: 0.7, green: 0.3, blue: 1.0) } // purple
+        if low.contains("fs") || low.contains("sync") { return Color(red: 0.3, green: 0.5, blue: 1.0) } // blue
+        return .secondary
+    }
+    
+    // MARK: - Status Normalization
+    
+    /// Normalizes FC status codes to display strings (fc→FC, fcp→FC+, ap→AP, app→AP+).
+    static func normalizeFC(_ fc: String) -> String {
+        switch fc.lowercased() {
+        case "app": return "AP+"
+        case "ap":  return "AP"
+        case "fcp": return "FC+"
+        case "fc":  return "FC"
+        default:    return fc.uppercased()
+        }
+    }
+    
+    /// Normalizes FS status codes to display strings (fs→FS, fsp→FS+, fsd→FDX, fsdp→FDX+).
+    static func normalizeFS(_ fs: String) -> String {
+        switch fs.lowercased() {
+        case "fsdp": return "FDX+"
+        case "fsd":  return "FDX"
+        case "fsp":  return "FS+"
+        case "fs":   return "FS"
+        default:     return fs.uppercased()
+        }
+    }
 }
 
 extension Color {

@@ -86,42 +86,8 @@ struct HomeView: View {
                             )
                         }
                         .buttonStyle(.plain)
-                        
-                        functionCard(
-                            icon: "chart.bar.fill",
-                            title: "成绩分析",
-                            subtitle: "查看你的成绩趋势",
-                            gradient: [Color.blue, Color.cyan]
-                        )
-                        
-                        functionCard(
-                            icon: "person.2.fill",
-                            title: "排行榜",
-                            subtitle: "查看好友排名",
-                            gradient: [Color.green, Color.mint]
-                        )
-                        
-                        functionCard(
-                            icon: "target",
-                            title: "目标管理",
-                            subtitle: "设定分数目标",
-                            gradient: [Color.red, Color.orange]
-                        )
-                        
-                        functionCard(
-                            icon: "square.and.arrow.up.fill",
-                            title: "成绩导出",
-                            subtitle: "导出为图片或文件",
-                            gradient: [Color.indigo, Color.blue]
-                        )
-                        
-                        functionCard(
-                            icon: "star.fill",
-                            title: "Rating计算器",
-                            subtitle: "手动模拟计算",
-                            gradient: [Color.orange, Color.yellow]
-                        )
                     }
+
                 }
                 .padding(16)
             }
@@ -146,7 +112,7 @@ struct HomeView: View {
     }
     
     private func updateStandardB50() async {
-        let input = prepareCalculationInput()
+        let input = songs.toCalculationInput()
         let result = await Task.detached(priority: .userInitiated) {
             await RatingUtils.calculateB50(input: input, b35Count: 35, b15Count: 15)
         }.value
@@ -154,7 +120,7 @@ struct HomeView: View {
     }
     
     private func updateB50() async {
-        let input = prepareCalculationInput()
+        let input = songs.toCalculationInput()
         
         let b35Limit = config?.b35Count ?? 35
         let b15Limit = config?.b15Count ?? 15
@@ -167,30 +133,7 @@ struct HomeView: View {
         self.computedB50Total = result.total
     }
     
-    private func prepareCalculationInput() -> [RatingUtils.RatingCalculationInput] {
-        songs.map { song in
-            RatingUtils.RatingCalculationInput(
-                songId: song.songId,
-                title: song.title,
-                version: song.version,
-                releaseDate: song.releaseDate,
-                imageName: song.imageName,
-                sheets: song.sheets.compactMap { sheet in
-                    guard let score = sheet.score else { return nil }
-                    return RatingUtils.SheetCalculationInput(
-                        difficulty: sheet.difficulty,
-                        type: sheet.type,
-                        internalLevel: sheet.internalLevelValue,
-                        level: sheet.levelValue,
-                        rate: score.rate,
-                        fc: score.fc,
-                        fs: score.fs,
-                        dxScore: score.dxScore
-                    )
-                }
-            )
-        }
-    }
+
     
     private var profileHeader: some View {
         Button {

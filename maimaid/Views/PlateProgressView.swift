@@ -239,66 +239,33 @@ struct PlateProgressView: View {
             switch selectedPlate {
             case .kiwami:
                 if let fc = score?.fc, !fc.isEmpty {
-                    badgeView(normalizeFC(fc), color: fcColor(fc))
+                    badgeLabel(ThemeUtils.normalizeFC(fc), color: ThemeUtils.fcColor(fc))
                 }
             case .sho:
                 if let score = score {
                     let rank = RatingUtils.calculateRank(achievement: score.rate)
                     if rank.contains("SSS") {
-                        badgeView(rank, color: RatingUtils.colorForRank(rank))
+                        badgeLabel(rank, color: RatingUtils.colorForRank(rank))
                     }
                 }
             case .shin:
                 if let fc = score?.fc, fc.lowercased().contains("ap") {
-                    badgeView(normalizeFC(fc), color: fcColor(fc))
+                    badgeLabel(ThemeUtils.normalizeFC(fc), color: ThemeUtils.fcColor(fc))
                 }
             case .maimai:
                 if let fs = score?.fs, fs.lowercased().contains("fsd") {
-                    badgeView(normalizeFS(fs), color: fsColor(fs))
+                    badgeLabel(ThemeUtils.normalizeFS(fs), color: ThemeUtils.fsColor(fs))
                 }
             }
         }
     }
     
-    private func badgeView(_ text: String, color: Color) -> some View {
+    private func badgeLabel(_ text: String, color: Color) -> some View {
         Text(text)
             .font(.system(size: 11, weight: .black, design: .rounded))
             .italic()
             .foregroundColor(.white)
             .shadow(color: .black.opacity(0.8), radius: 2)
     }
-    
-    // Text normalization helpers
-    private func normalizeFC(_ fc: String) -> String {
-        let low = fc.lowercased()
-        if low == "app" { return "AP+" }
-        if low == "ap" { return "AP" }
-        if low == "fcp" { return "FC+" }
-        if low == "fc" { return "FC" }
-        return fc.uppercased()
-    }
-    
-    private func normalizeFS(_ fs: String) -> String {
-        let low = fs.lowercased()
-        if low == "fsdp" { return "FDX+" }
-        if low == "fsd" { return "FDX" }
-        if low == "fsp" { return "FS+" }
-        if low == "fs" { return "FS" }
-        return fs.uppercased()
-    }
-    
-    // Status color helpers from BestTableView style
-    private func fcColor(_ fc: String) -> Color {
-        let low = fc.lowercased()
-        if low.contains("ap") { return Color(red: 1.0, green: 0.6, blue: 0.0) }   // gold
-        if low.contains("fc") { return Color(red: 0.2, green: 0.75, blue: 0.2) }  // green
-        return .secondary
-    }
-    
-    private func fsColor(_ fs: String) -> Color {
-        let low = fs.lowercased()
-        if low.contains("fsd") { return Color(red: 0.7, green: 0.3, blue: 1.0) } // purple
-        if low.contains("fs") || low.contains("sync") { return Color(red: 0.3, green: 0.5, blue: 1.0) } // blue
-        return .secondary
-    }
 }
+

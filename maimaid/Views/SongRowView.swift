@@ -6,7 +6,7 @@ struct SongRowView: View {
     private var highestSheet: Sheet? {
         let dxSheets = song.sheets.filter { $0.type.lowercased() == "dx" }
         let pool = dxSheets.isEmpty ? song.sheets.filter { $0.type.lowercased() == "std" } : dxSheets
-        return pool.max(by: { difficultyOrder($0.difficulty) < difficultyOrder($1.difficulty) })
+        return pool.max(by: { ThemeUtils.difficultyOrder($0.difficulty) < ThemeUtils.difficultyOrder($1.difficulty) })
     }
     
     private var accentColor: Color {
@@ -58,11 +58,11 @@ struct SongRowView: View {
                         let prioritizedSheets: [Sheet] = {
                             let dxSheets = song.sheets.filter { $0.type.lowercased() == "dx" }
                             if !dxSheets.isEmpty {
-                                return dxSheets.sorted(by: { difficultyOrder($0.difficulty) > difficultyOrder($1.difficulty) })
+                                return dxSheets.sorted(by: { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) })
                             }
                             return song.sheets
                                 .filter { $0.type.lowercased() == "std" }
-                                .sorted(by: { difficultyOrder($0.difficulty) > difficultyOrder($1.difficulty) })
+                                .sorted(by: { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) })
                         }()
                         
                         ForEach(prioritizedSheets) { sheet in
@@ -109,17 +109,6 @@ struct SongRowView: View {
             }
         }
         
-        }
-    }
-    
-    private func difficultyOrder(_ difficulty: String) -> Int {
-        switch difficulty.lowercased() {
-        case "basic": return 0
-        case "advanced": return 1
-        case "expert": return 2
-        case "master": return 3
-        case "remaster": return 4
-        default: return -1
         }
     }
 

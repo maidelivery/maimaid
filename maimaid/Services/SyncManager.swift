@@ -39,7 +39,7 @@ class SyncManager {
         // Diving Fish expects: { "level_index": 0-14, "achievements": 100.0000, "type": "DX"/"SD", "title": "...", "dxScore": 0, "fc": "", "fs": "" }
         let record: [String: Any] = [
             "title": sheet.song?.title ?? "",
-            "level_index": mapDifficultyToIndex(sheet.difficulty),
+            "level_index": ThemeUtils.mapDifficultyToIndex(sheet.difficulty),
             "achievements": Double(String(format: "%.4f", score.rate)) ?? score.rate,
             "type": sheet.type.lowercased() == "dx" ? "DX" : "SD",
             "dxScore": score.dxScore,
@@ -89,7 +89,7 @@ class SyncManager {
         let record: [String: Any] = [
             "id": sheet.song?.lxnsId ?? (Int(sheet.songId) ?? 0),
             "song_name": sheet.song?.title ?? "",
-            "level_index": mapDifficultyToIndex(sheet.difficulty),
+            "level_index": ThemeUtils.mapDifficultyToIndex(sheet.difficulty),
             "type": sheet.type.lowercased() == "dx" ? "dx" : "std",
             "achievements": score.rate,
             "dx_score": score.dxScore,
@@ -172,14 +172,5 @@ class SyncManager {
         return nil
     }
     
-    private func mapDifficultyToIndex(_ diff: String) -> Int {
-        switch diff.lowercased() {
-        case "basic": return 0
-        case "advanced": return 1
-        case "expert": return 2
-        case "master": return 3
-        case "remaster": return 4
-        default: return 3
-        }
-    }
+
 }

@@ -15,7 +15,8 @@ struct ScoreEntryView: View {
     let initialFC: String?
     let initialFS: String?
     
-    @StateObject private var visionService = VisionService()
+    @State private var isProcessingPhoto = false
+    @State private var recognizedRate: Double?
     @State private var selectedItem: PhotosPickerItem? = nil
     @State private var selectedImage: UIImage? = nil
     
@@ -54,13 +55,7 @@ struct ScoreEntryView: View {
     // calculatedRank computed property removed, now using selectedRank @State
     
     private var diffColor: Color {
-        let low = sheet.difficulty.lowercased()
-        if low.contains("basic") { return Color(.systemGreen) }
-        if low.contains("advanced") { return Color(.systemOrange) }
-        if low.contains("expert") { return Color(.systemRed) }
-        if low.contains("master") { return Color(.systemPurple) }
-        if low.contains("remaster") { return Color(red: 0.85, green: 0.65, blue: 1.0) }
-        return .pink
+        ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
     }
     
     private var isValid: Bool {
@@ -148,21 +143,25 @@ struct ScoreEntryView: View {
                 selectedFS = score.fs
             }
         }
-        .onChange(of: selectedItem) { _, newValue in
+        .onChange(of: selectedItem) { _, newItem in
             Task {
-                if let data = try? await newValue?.loadTransferable(type: Data.self),
+                guard let item = newItem else { return }
+                if let data = try? await item.loadTransferable(type: Data.self),
                    let image = UIImage(data: data) {
                     selectedImage = image
-                    visionService.recognizeScore(from: image)
+                    isProcessingPhoto = true
+                    
+                    let result = await MLScoreProcessor.shared.process(image)
+                    if let rate = result.rate {
+                        self.recognizedRate = rate
+                        withAnimation(.spring(response: 0.3)) {
+                            rateText = String(format: "%.4f", rate)
+                        }
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
+                    
+                    isProcessingPhoto = false
                 }
-            }
-        }
-        .onChange(of: visionService.recognizedRate) { _, newValue in
-            if let rate = newValue {
-                withAnimation(.spring(response: 0.3)) {
-                    rateText = String(format: "%.4f", rate)
-                }
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
             }
         }
     }
@@ -351,7 +350,7 @@ struct ScoreEntryView: View {
                 Spacer()
             }
             
-            if visionService.isProcessing {
+            if isProcessingPhoto {
                 HStack(spacing: 10) {
                     ProgressView()
                     Text("正在识别...")
@@ -370,7 +369,7 @@ struct ScoreEntryView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        if let rate = visionService.recognizedRate {
+                        if let rate = recognizedRate {
                             HStack(spacing: 4) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.green)

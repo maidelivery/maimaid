@@ -151,34 +151,10 @@ struct BestTableView: View {
     private func calculateRating() async {
         isLoading = true
         
-        // Prepare sendable data on MainActor
-        let input = songs.map { song in
-            RatingUtils.RatingCalculationInput(
-                songId: song.songId,
-                title: song.title,
-                version: song.version,
-                releaseDate: song.releaseDate,
-                imageName: song.imageName,
-                sheets: song.sheets.compactMap { sheet in
-                    guard let score = sheet.score else { return nil }
-                    return RatingUtils.SheetCalculationInput(
-                        difficulty: sheet.difficulty,
-                        type: sheet.type,
-                        internalLevel: sheet.internalLevelValue,
-                        level: sheet.levelValue,
-                        rate: score.rate,
-                        fc: score.fc,
-                        fs: score.fs,
-                        dxScore: score.dxScore
-                    )
-                }
-            )
-        }
-        
+        let input = songs.toCalculationInput()
         let b35Limit = configs.first?.b35Count ?? 35
         let b15Limit = configs.first?.b15Count ?? 15
         
-        // Background calculation with sendable input
         let result = await Task.detached(priority: .userInitiated) {
             await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit)
         }.value
@@ -225,15 +201,15 @@ struct BestTableView: View {
                 
                 // Line 3: Type + Diff + FC + FS (all badges)
                 HStack(spacing: 4) {
-                    badgeView(entry.type, bg: entry.type == "DX" ? .orange : .blue, fg: .white)
-                    badgeView(diffShort(entry.diff), bg: ThemeUtils.colorForDifficulty(entry.diff, entry.type), fg: .white)
+                    BadgeView(text: entry.type, background: entry.type == "DX" ? .orange : .blue)
+                    BadgeView(text: ThemeUtils.diffShort(entry.diff), background: ThemeUtils.colorForDifficulty(entry.diff, entry.type))
                     
                     if let fc = entry.fc, !fc.isEmpty {
-                        badgeView(fc.uppercased(), bg: fcColor(fc), fg: .white)
+                        BadgeView(text: fc.uppercased(), background: ThemeUtils.fcColor(fc))
                     }
                     
                     if let fs = entry.fs, !fs.isEmpty {
-                        badgeView(fs.uppercased(), bg: fsColor(fs), fg: .white)
+                        BadgeView(text: fs.uppercased(), background: ThemeUtils.fsColor(fs))
                     }
                 }
             }
@@ -255,44 +231,5 @@ struct BestTableView: View {
         .padding(.vertical, 6)
     }
 
-    
-    /// Reusable pill badge — fixedSize prevents text wrapping
-    private func badgeView(_ text: String, bg: Color, fg: Color) -> some View {
-        Text(text)
-            .font(.system(size: 9, weight: .heavy))
-            .fixedSize()
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
-            .background(bg)
-            .foregroundColor(fg)
-            .cornerRadius(4)
-    }
-    
-    // MARK: - Helpers
-    
-    /// Abbreviated difficulty names to save horizontal space
-    private func diffShort(_ diff: String) -> String {
-        switch diff.uppercased() {
-        case "BASIC":    return "BAS"
-        case "ADVANCED": return "ADV"
-        case "EXPERT":   return "EXP"
-        case "MASTER":   return "MAS"
-        case "REMASTER": return "ReM"
-        default:         return diff
-        }
-    }
-    
-    private func fcColor(_ fc: String) -> Color {
-        let low = fc.lowercased()
-        if low.contains("ap") { return Color(red: 1.0, green: 0.6, blue: 0.0) }   // gold
-        if low.contains("fc") { return Color(red: 0.2, green: 0.75, blue: 0.2) }  // green
-        return .secondary
-    }
-    
-    private func fsColor(_ fs: String) -> Color {
-        let low = fs.lowercased()
-        if low.contains("fsd") { return Color(red: 0.7, green: 0.3, blue: 1.0) } // purple
-        if low.contains("fs") || low.contains("sync") { return Color(red: 0.3, green: 0.5, blue: 1.0) } // blue
-        return .secondary
-    }
 }
+

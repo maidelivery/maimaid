@@ -47,6 +47,7 @@ struct VersionPlateGroup: Identifiable, Hashable {
     }
 }
 
+@MainActor
 class PlateService {
     static let shared = PlateService()
     
