@@ -519,9 +519,30 @@ struct SheetCardView: View {
                             Text(String(format: "%.4f%%", score.rate))
                                 .font(.system(size: 12, weight: .bold, design: .monospaced))
                                 .foregroundColor(.primary)
-                            Text(RatingUtils.calculateRank(achievement: score.rate))
-                                .font(.system(size: 10, weight: .black, design: .rounded))
-                                .foregroundColor(diffColor)
+                                // add here
+                            HStack(spacing: 4) {
+                                Text(RatingUtils.calculateRank(achievement: score.rate))
+                                    .font(.system(size: 10, weight: .black, design: .rounded))
+                                    .foregroundColor(diffColor)
+                                
+                                if let fc = score.fc, !fc.isEmpty {
+                                    Text(ThemeUtils.normalizeFC(fc))
+                                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1)
+                                        .background(ThemeUtils.fcColor(fc), in: RoundedRectangle(cornerRadius: 3))
+                                }
+                                
+                                if let fs = score.fs, !fs.isEmpty {
+                                    Text(ThemeUtils.normalizeFS(fs))
+                                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1)
+                                        .background(ThemeUtils.fsColor(fs), in: RoundedRectangle(cornerRadius: 3))
+                                }
+                            }
                         }
                     }
                     

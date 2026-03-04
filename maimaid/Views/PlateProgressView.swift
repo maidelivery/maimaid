@@ -125,8 +125,8 @@ struct PlateProgressView: View {
     private var headerView: some View {
         HStack(spacing: 10) {
             // Version Menu
-            menuButton(title: "plate.menu.version", selection: selectedGroup?.name ?? "...", options: groups.map { $0.name }) { name in
-                if let found = groups.first(where: { $0.name == name }) {
+            menuButton(title: "plate.menu.version", selection: displayName(for: selectedGroup), options: groups.map { displayName(for: $0) }) { displayName in
+                if let found = groups.first(where: { self.displayName(for: $0) == displayName }) {
                     selectedGroup = found
                 }
             }
@@ -152,6 +152,14 @@ struct PlateProgressView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
+    }
+    
+    private func displayName(for group: VersionPlateGroup?) -> String {
+        guard let group = group else { return "..." }
+        if group.name == group.platePrefix || group.name == "舞代" {
+            return group.name
+        }
+        return group.platePrefix
     }
     
     private func menuButton(title: LocalizedStringKey, selection: String, options: [String], onSelect: @escaping (String) -> Void) -> some View {
