@@ -8,6 +8,7 @@ struct SongDetailView: View {
     @State private var selectedSheet: Sheet? = nil
     @State private var selectedType: String = ""
     @State private var toastMessage: String? = nil
+    @State private var statsService = ChartStatsService.shared
     
     init(song: Song) {
         self.song = song
@@ -62,6 +63,7 @@ struct SongDetailView: View {
             }
         }
         .background(ambientBackground)
+        .navigationTitle(song.lxnsId > 0 ? "#\(String(song.lxnsId + (selectedType == "dx" ? 10000 : 0)))" : "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -90,6 +92,9 @@ struct SongDetailView: View {
                     .padding(.bottom, 24)
                     .zIndex(100)
             }
+        }
+        .task {
+            await statsService.fetchStats()
         }
     }
     
@@ -459,7 +464,8 @@ struct SongDetailView: View {
     private var sheetCards: some View {
         VStack(spacing: 12) {
             ForEach(filteredSheets) { sheet in
-                SheetCardView(sheet: sheet) {
+                let stat = statsService.getStat(for: sheet)
+                SheetCardView(sheet: sheet, stat: stat) {
                     selectedSheet = sheet
                 }
             }
@@ -469,12 +475,17 @@ struct SongDetailView: View {
 
 }
 
+
+
 // MARK: - Sheet Card View
 
 struct SheetCardView: View {
     let sheet: Sheet
+    let stat: ChartStat?
     let onRecord: () -> Void
     @State private var isExpanded = false
+    @State private var isNotesExpanded = false
+    @State private var isRatingExpanded = false
     
     private var diffColor: Color {
         ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
@@ -584,6 +595,47 @@ struct SheetCardView: View {
     }
     
     @ViewBuilder
+    private var chartStatsGrid: some View {
+        if let stat = stat {
+            HStack(spacing: 0) {
+                VStack(spacing: 4) {
+                    Text("song.detail.stats.fitDiff")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                    Text(stat.formattedFitDiff)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                }
+                .frame(maxWidth: .infinity)
+                
+                VStack(spacing: 4) {
+                    Text("song.detail.stats.avgRate")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                    Text(stat.formattedAvg)
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundColor(.primary)
+                }
+                .frame(maxWidth: .infinity)
+                
+                VStack(spacing: 4) {
+                    Text("song.detail.stats.sampleCount")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                    Text("\(Int(stat.cnt ?? 0))")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 16)
+            .padding(.top, 4)
+            .padding(.bottom, 12)
+        }
+    }
+    
+    @ViewBuilder
     private var expandedContent: some View {
         VStack(spacing: 16) {
             // Divider with accent
@@ -592,10 +644,13 @@ struct SheetCardView: View {
                 .frame(height: 1)
                 .padding(.horizontal, 16)
             
-            // Detailed Info Table (from Fig 1)
+            // Chart Stats
+            chartStatsGrid
+            
+            // Detailed Info Table (Notes)
             detailedInfoTable
             
-            // Achievement → Rating table (from Fig 2)
+            // Achievement → Rating table
             if let level = sheet.internalLevelValue ?? sheet.levelValue, level > 0 {
                 ratingTable(level: level)
             }
@@ -626,16 +681,29 @@ struct SheetCardView: View {
     private var detailedInfoTable: some View {
         VStack(spacing: 0) {
             if sheet.total != nil {
-                HStack {
-                    Text("song.detail.section.notes")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.primary)
-                    Spacer()
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        isNotesExpanded.toggle()
+                    }
+                } label: {
+                    HStack {
+                        Text("song.detail.section.notes")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.secondary.opacity(0.4))
+                            .rotationEffect(.degrees(isNotesExpanded ? 90 : 0))
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, isNotesExpanded ? 8 : 0)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 8)
                 
-                noteBreakdown
+                if isNotesExpanded {
+                    noteBreakdown
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
         }
     }
@@ -667,67 +735,82 @@ struct SheetCardView: View {
         
         return VStack(spacing: 0) {
             // Header
-            HStack {
-                Text("song.detail.section.rating")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.primary)
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
-            
-            // Table header row
-            HStack {
-                Text("song.detail.table.achievement")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Text("song.detail.table.rating")
-                    .frame(width: 50, alignment: .trailing)
-                Text("song.detail.table.delta")
-                    .frame(width: 40, alignment: .trailing)
-            }
-            .font(.system(size: 9, weight: .bold))
-            .foregroundColor(.secondary)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 4)
-            
-            // Table rows
-            ForEach(Array(ratings.enumerated()), id: \.offset) { index, item in
-                let (rank, ach, rating) = item
-                let prevRating = index > 0 ? ratings[index - 1].2 : rating
-                let delta = index > 0 ? prevRating - rating : 0
-                
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    isRatingExpanded.toggle()
+                }
+            } label: {
                 HStack {
-                    HStack(spacing: 6) {
-                        Text(rank)
-                            .font(.system(size: 11, weight: .black, design: .rounded))
-                            .foregroundColor(RatingUtils.colorForRank(rank))
-                            .frame(width: 36, alignment: .leading)
-                        
-                        Text(String(format: "%.4f%%", ach))
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(.primary)
-                    }
-                    
-                    Spacer()
-                    
-                    Text("\(rating)")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    Text("song.detail.section.rating")
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundColor(.primary)
-                        .frame(width: 50, alignment: .trailing)
-                    
-                    if delta > 0 {
-                        Text("↑\(delta)")
-                            .font(.system(size: 9, weight: .medium, design: .monospaced))
-                            .foregroundColor(.secondary)
-                            .frame(width: 40, alignment: .trailing)
-                    } else {
-                        Text("")
-                            .frame(width: 40)
-                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.secondary.opacity(0.4))
+                        .rotationEffect(.degrees(isRatingExpanded ? 90 : 0))
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 5)
-                .background(index % 2 == 0 ? Color.primary.opacity(0.02) : Color.clear)
+                .padding(.bottom, isRatingExpanded ? 8 : 0)
+            }
+            
+            if isRatingExpanded {
+                VStack(spacing: 0) {
+                    // Table header row
+                    HStack {
+                        Text("song.detail.table.achievement")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Text("song.detail.table.rating")
+                            .frame(width: 50, alignment: .trailing)
+                        Text("song.detail.table.delta")
+                            .frame(width: 40, alignment: .trailing)
+                    }
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 4)
+                    
+                    // Table rows
+                    ForEach(Array(ratings.enumerated()), id: \.offset) { index, item in
+                        let (rank, ach, rating) = item
+                        let prevRating = index > 0 ? ratings[index - 1].2 : rating
+                        let delta = index > 0 ? prevRating - rating : 0
+                        
+                        HStack {
+                            HStack(spacing: 6) {
+                                Text(rank)
+                                    .font(.system(size: 11, weight: .black, design: .rounded))
+                                    .foregroundColor(RatingUtils.colorForRank(rank))
+                                    .frame(width: 36, alignment: .leading)
+                                
+                                Text(String(format: "%.4f%%", ach))
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundColor(.primary)
+                            }
+                            
+                            Spacer()
+                            
+                            Text("\(rating)")
+                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                .foregroundColor(.primary)
+                                .frame(width: 50, alignment: .trailing)
+                            
+                            if delta > 0 {
+                                Text("↑\(delta)")
+                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 40, alignment: .trailing)
+                            } else {
+                                Text("")
+                                    .frame(width: 40)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 5)
+                        .background(index % 2 == 0 ? Color.primary.opacity(0.02) : Color.clear)
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
     }

@@ -179,12 +179,13 @@ struct HomeView: View {
                         Spacer()
                         HStack {
                             Spacer()
-                            Text("\(max(standardB50Total, config?.playerRating ?? 0))")
+                            let displayRating = max(standardB50Total, config?.playerRating ?? 0)
+                            Text("\(displayRating)")
                                 .font(.system(size: 10, weight: .black, design: .rounded))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(Color.orange, in: Capsule())
+                                .background(ThemeUtils.ratingColor(displayRating), in: Capsule())
                                 .overlay(Capsule().stroke(Color.white, lineWidth: 1))
                                 .offset(x: 4, y: 4)
                         }

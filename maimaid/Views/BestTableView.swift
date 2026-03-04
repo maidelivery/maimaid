@@ -7,6 +7,7 @@ struct BestTableView: View {
     
     @State private var b50Result: (total: Int, b35: [RatingUtils.RatingEntry], b15: [RatingUtils.RatingEntry]) = (0, [], [])
     @State private var isLoading = true
+    @State private var isExporting = false
     
     var body: some View {
         List {
@@ -19,7 +20,7 @@ struct BestTableView: View {
                             .foregroundColor(.secondary)
                         Text("\(b50Result.total)")
                             .font(.system(size: 34, weight: .black, design: .rounded))
-                            .foregroundColor(.orange)
+                            .foregroundStyle(ThemeUtils.ratingGradient(b50Result.total))
                             .opacity(isLoading ? 0.3 : 1.0)
                     }
                     Spacer()
@@ -107,6 +108,21 @@ struct BestTableView: View {
         }
         .navigationTitle("bestTable.title")
 //        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    exportImage()
+                } label: {
+                    if isExporting {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Label("bestTable.action.export", systemImage: "square.and.arrow.up")
+                    }
+                }
+                .disabled(isLoading || isExporting || (b50Result.b35.isEmpty && b50Result.b15.isEmpty))
+            }
+        }
         .task(id: songs) {
             await calculateRating()
         }
@@ -115,6 +131,48 @@ struct BestTableView: View {
         }
         .task(id: configs.first?.b15Count) {
             await calculateRating()
+        }
+    }
+    
+    // MARK: - Export
+    
+    private func exportImage() {
+        isExporting = true
+        
+        Task {
+            let image = await MainActor.run {
+                B50ExportView.renderImage(
+                    b35: b50Result.b35,
+                    b15: b50Result.b15,
+                    totalRating: b50Result.total,
+                    userName: configs.first?.userName
+                )
+            }
+            
+            isExporting = false
+            
+            guard let image = image else { return }
+            
+            // Present share sheet
+            if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootVC = scene.windows.first?.rootViewController {
+                
+                var topVC = rootVC
+                while let presented = topVC.presentedViewController {
+                    topVC = presented
+                }
+                
+                let activityVC = UIActivityViewController(activityItems: [image], applicationActivities: nil)
+                
+                // iPad support
+                if let popover = activityVC.popoverPresentationController {
+                    popover.sourceView = topVC.view
+                    popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: 0, width: 0, height: 0)
+                    popover.permittedArrowDirections = []
+                }
+                
+                topVC.present(activityVC, animated: true)
+            }
         }
     }
     

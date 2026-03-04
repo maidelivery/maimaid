@@ -153,6 +153,60 @@ struct ThemeUtils {
         default:     return fs.uppercased()
         }
     }
+    
+    // MARK: - Rating Colors
+    
+    static func ratingColor(_ rating: Int) -> Color {
+        if rating >= 15000 { return Color(hex: "#FF6100") } // Rainbow base
+        if rating >= 14500 { return Color(hex: "#E5E4E2") } // Platinum
+        if rating >= 14000 { return Color(hex: "#FFD700") } // Gold
+        if rating >= 13000 { return Color(hex: "#C0C0C0") } // Silver
+        if rating >= 12000 { return Color(hex: "#CD7F32") } // Bronze
+        if rating >= 10000 { return Color(hex: "#D084FF") } // Purple
+        if rating >= 7000  { return Color(hex: "#FF5E5E") } // Red
+        if rating >= 4000  { return Color(hex: "#FFD400") } // Yellow
+        if rating >= 2000  { return Color(hex: "#46D246") } // Green
+        if rating >= 1000  { return Color(hex: "#56A6FF") } // Blue
+        return .white // White
+    }
+    
+    static func ratingGradient(_ rating: Int) -> LinearGradient {
+        if rating >= 15000 {
+            // Rainbow
+            return LinearGradient(
+                colors: [
+                    Color(hex: "#FF5E5E"),
+                    Color(hex: "#FFBA5E"),
+                    Color(hex: "#FFF75E"),
+                    Color(hex: "#5EFF5E"),
+                    Color(hex: "#5EBAFF"),
+                    Color(hex: "#BA5EFF"),
+                    Color(hex: "#FF5EBA")
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+        if rating >= 14500 {
+            // Platinum
+            return LinearGradient(
+                colors: [Color(hex: "#D3D3D3"), Color(hex: "#FFFFFF"), Color(hex: "#D3D3D3")],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+        if rating >= 14000 {
+            // Gold
+            return LinearGradient(
+                colors: [Color(hex: "#FFD700"), Color(hex: "#FFA500")],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        
+        let color = ratingColor(rating)
+        return LinearGradient(colors: [color], startPoint: .top, endPoint: .bottom)
+    }
 }
 
 extension Color {

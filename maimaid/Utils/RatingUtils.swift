@@ -121,7 +121,8 @@ struct RatingUtils {
     }
     
     struct RatingCalculationInput: Sendable {
-        let songId: String // Added for navigation
+        let songId: String // Internal ID
+        let lxnsId: Int // Numeric ID from LXNS
         let title: String
         let version: String?
         let releaseDate: String?
@@ -138,11 +139,13 @@ struct RatingUtils {
         let fc: String?
         let fs: String? // Added FS status
         let dxScore: Int // Added DX score
+        let maxDxScore: Int // Added for stars calculation
     }
     
     struct RatingEntry: Identifiable, Sendable {
         let id = UUID()
-        let songId: String // Added for navigation
+        let songId: String // Internal ID
+        let lxnsId: Int // Numeric ID
         let songTitle: String
         let imageName: String?
         let diff: String
@@ -154,6 +157,7 @@ struct RatingUtils {
         let fc: String? // Added for UI
         let fs: String? // Added for UI
         let dxScore: Int // Added for UI
+        let maxDxScore: Int // Added for stars
     }
     
     static func calculateB50(input: [RatingCalculationInput], b35Count: Int = 35, b15Count: Int = 15) -> (total: Int, b35: [RatingEntry], b15: [RatingEntry]) {
@@ -170,6 +174,7 @@ struct RatingUtils {
                 
                 let entry = RatingEntry(
                     songId: song.songId,
+                    lxnsId: song.lxnsId,
                     songTitle: song.title,
                     imageName: song.imageName,
                     diff: sheet.difficulty.uppercased(),
@@ -180,7 +185,8 @@ struct RatingUtils {
                     isNew: isNew,
                     fc: sheet.fc,
                     fs: sheet.fs,
-                    dxScore: sheet.dxScore
+                    dxScore: sheet.dxScore,
+                    maxDxScore: sheet.maxDxScore
                 )
                 
                 if isNew {
@@ -210,6 +216,7 @@ extension Array where Element: Song {
         map { song in
             RatingUtils.RatingCalculationInput(
                 songId: song.songId,
+                lxnsId: song.lxnsId,
                 title: song.title,
                 version: song.version,
                 releaseDate: song.releaseDate,
@@ -224,7 +231,8 @@ extension Array where Element: Song {
                         rate: score.rate,
                         fc: score.fc,
                         fs: score.fs,
-                        dxScore: score.dxScore
+                        dxScore: score.dxScore,
+                        maxDxScore: (sheet.total ?? 0) * 3
                     )
                 }
             )
