@@ -49,6 +49,8 @@
 "scanner.chart.dx" = "DX";
 "scanner.unlock.needed" = "需要解锁";
 "scanner.unlock.notNeeded" = "无需解锁";
+"scanner.photo.saved" = "已保存至 maimai 相册";
+"scanner.photo.error" = "照片保存失败";
 
 // MARK: - Settings
 "settings.title" = "设置";

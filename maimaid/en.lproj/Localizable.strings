@@ -50,6 +50,8 @@
 "scanner.reset.hint" = "Unlocked needed"; // For lock status in scanner
 "scanner.unlock.needed" = "Unlock required";
 "scanner.unlock.notNeeded" = "No unlock required";
+"scanner.photo.saved" = "Saved to maimai Album";
+"scanner.photo.error" = "Failed to save photo";
 
 // MARK: - Settings
 "settings.title" = "Settings";

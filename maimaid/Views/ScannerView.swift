@@ -25,6 +25,10 @@ struct ScannerView: View {
     @AppStorage("showScannerBoundingBox") private var showScannerBoundingBox: Bool = false
     @State private var recognizedClass: MaimaiImageType = .unknown
     
+    // Photo Capture States
+    @State private var showFlashOverlay = false
+    @State private var isSavingPhoto = false
+    
     // Stabilization & Persistence
     @State private var isLocked = false
     @State private var lastSeenDate = Date()
@@ -50,12 +54,19 @@ struct ScannerView: View {
                 
                 debugOverlayView()
                 
+                // Flash Overlay (Top Most layer within ZStack behind overlay items)
+                if showFlashOverlay {
+                    Color.white
+                        .ignoresSafeArea()
+                        .zIndex(10)
+                        .transition(.opacity)
+                }
+                
                 // Overlay
                 VStack {
                     headerView()
                     Spacer()
                     
-                    // Photo processing indicator
                     if isProcessingPhoto {
                         HStack(spacing: 10) {
                             ProgressView()
@@ -81,7 +92,34 @@ struct ScannerView: View {
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                             .padding(.bottom, 8)
                     }
-                    
+                }
+                
+                VStack {
+                    Spacer()
+                    // Camera Shutter Button (only show when a score is recognized to take photo of)
+                    if recognizedClass == .score {
+                        Button(action: {
+                            triggerPhotoCapture()
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .stroke(.white, lineWidth: 3)
+                                    .frame(width: 64, height: 64)
+                                
+                                Circle()
+                                    .fill(isSavingPhoto ? .gray : .white)
+                                    .frame(width: 54, height: 54)
+                                
+                                if isSavingPhoto {
+                                    ProgressView()
+                                        .tint(.white)
+                                }
+                            }
+                        }
+                        .disabled(isSavingPhoto)
+                        .transition(.scale.combined(with: .opacity))
+                        .padding(.bottom, 20)
+                    }
                     resultView()
                 }
             }
@@ -270,6 +308,67 @@ struct ScannerView: View {
             }
         }
         .padding()
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ScannerPhotoCaptured"))) { notification in
+            if let image = notification.object as? UIImage {
+                handleCapturedScannerPhoto(image)
+            }
+        }
+    }
+    
+    private func triggerPhotoCapture() {
+        guard !isSavingPhoto else { return }
+        let generator = UIImpactFeedbackGenerator(style: .rigid)
+        generator.impactOccurred()
+        
+        // Flash effect
+        withAnimation(.easeOut(duration: 0.1)) {
+            showFlashOverlay = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            withAnimation(.easeIn(duration: 0.2)) {
+                self.showFlashOverlay = false
+            }
+        }
+        
+        isSavingPhoto = true
+        NotificationCenter.default.post(name: NSNotification.Name("TakeScannerPhoto"), object: nil)
+    }
+    
+    private func handleCapturedScannerPhoto(_ image: UIImage) {
+        let title = recognizedSong?.title
+        var tags: [String] = []
+        
+        if let t = title { tags.append(t) }
+        
+        if let song = recognizedSong, let diff = recognizedDifficulty {
+            let type = recognizedType ?? "dx"
+            if let sheet = matchedSheet(for: song, diff: diff, type: type) {
+                tags.append("LV\(sheet.level)")
+            }
+            tags.append(diff.uppercased())
+            tags.append(type.uppercased())
+        }
+        
+        if let rate = recognizedRate {
+            let rank = RatingUtils.calculateRank(achievement: rate)
+            tags.append(rank)
+        }
+        
+        Task {
+            do {
+                try await PhotoService.shared.saveImageWithMetadata(image, title: title, tags: tags)
+                await MainActor.run {
+                    self.isSavingPhoto = false
+                    showFeedback(String(localized: "scanner.photo.saved"))
+                }
+            } catch {
+                await MainActor.run {
+                    self.isSavingPhoto = false
+                    showFeedback(String(localized: "scanner.photo.error"))
+                }
+                print("Scanner photo save error: \(error)")
+            }
+        }
     }
     
     @ViewBuilder
@@ -689,6 +788,7 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
     var onImageCaptured: ((UIImage) -> Void)?
     private var captureSession: AVCaptureSession?
     private var previewLayer: AVCaptureVideoPreviewLayer?
+    private var photoOutput: AVCapturePhotoOutput?
     private let processingQueue = DispatchQueue(label: "com.maimaid.camera.queue", qos: .userInteractive)
     
     // Thread-safe counter using OSAllocatedUnfairLock
@@ -700,6 +800,12 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
     override func viewDidLoad() {
         super.viewDidLoad()
         setupCaptureSession()
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(takePhoto), name: Notification.Name("TakeScannerPhoto"), object: nil)
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     private func setupCaptureSession() {
@@ -713,6 +819,13 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
         videoOutput.alwaysDiscardsLateVideoFrames = true
         videoOutput.setSampleBufferDelegate(self, queue: processingQueue)
         if captureSession.canAddOutput(videoOutput) { captureSession.addOutput(videoOutput) }
+        
+        let photoOut = AVCapturePhotoOutput()
+        if captureSession.canAddOutput(photoOut) {
+            captureSession.addOutput(photoOut)
+            photoOut.isHighResolutionCaptureEnabled = true
+            self.photoOutput = photoOut
+        }
         
         if let connection = videoOutput.connection(with: .video) {
             if #available(iOS 17.0, *) {
@@ -736,9 +849,9 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
     // Explicitly nonisolated since this is called on processingQueue (background thread)
     nonisolated func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         // Thread-safe increment
-        let count = frameCounter.withLock { 
-            $0 += 1
-            return $0 
+        let count = frameCounter.withLock { value -> Int in
+            value += 1
+            return value
         }
         
         // Process 1 frame per ~10 calls to reduce frequency (approx 3 fps instead of 6 fps)
@@ -772,5 +885,32 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         captureSession?.stopRunning()
+    }
+}
+
+extension CameraViewController: AVCapturePhotoCaptureDelegate {
+    @objc private func takePhoto() {
+        guard let output = photoOutput else { return }
+        
+        // Settings must be recreated for each capture
+        let settings = AVCapturePhotoSettings()
+        if let videoConnection = output.connection(with: .video) {
+            // Apply current screen orientation to the photo output connection
+            videoConnection.videoOrientation = .portrait
+        }
+        
+        if output.availablePhotoCodecTypes.contains(.jpeg) {
+            settings.isHighResolutionPhotoEnabled = true
+        }
+        
+        output.capturePhoto(with: settings, delegate: self)
+    }
+    
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        guard let data = photo.fileDataRepresentation(), let image = UIImage(data: data) else { return }
+        
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: NSNotification.Name("ScannerPhotoCaptured"), object: image)
+        }
     }
 }
