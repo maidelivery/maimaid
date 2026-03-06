@@ -8,6 +8,7 @@ struct SettingsView: View {
     
     private var config: SyncConfig? { configs.first }
     @State private var selectedTheme = 0
+    @AppStorage("showScannerBoundingBox") private var showScannerBoundingBox: Bool = false
     
     // Data transfer states
     @State private var showFileImporter = false
@@ -185,6 +186,10 @@ struct SettingsView: View {
                         Text("settings.appearance.dark").tag(2)
                     } label: {
                         settingsRowLabel(icon: "moon.fill", iconColor: .indigo, title: "settings.appearance.theme")
+                    }
+                    
+                    Toggle(isOn: $showScannerBoundingBox) {
+                        settingsRowLabel(icon: "viewfinder", iconColor: .green, title: "settings.appearance.showBoundingBox")
                     }
                 }
                 

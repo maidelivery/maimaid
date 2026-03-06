@@ -77,6 +77,9 @@ class MLScoreProcessor: Sendable {
             let label = topLabel.identifier.lowercased()
             let box = obs.boundingBox // Vision coordinates (0,0 is bottom-left)
             
+            // Add box for debugging
+            scoreResult.boxes.append(RecognizedBox(label: label, rect: box))
+            
             switch label {
             case "dx": scoreResult.type = "dx"
             case "std": scoreResult.type = "std"

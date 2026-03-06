@@ -69,6 +69,7 @@
 "settings.appearance.dark" = "深色";
 "settings.about.header" = "关于";
 "settings.about.version" = "版本";
+"settings.appearance.showBoundingBox" = "显示识别框";
 
 // MARK: - Data Transfer
 "settings.transfer.header" = "数据管理";

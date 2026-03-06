@@ -22,6 +22,7 @@ struct ScannerView: View {
     @State private var recognizedFC: String? = nil
     @State private var recognizedFS: String? = nil
     @State private var debugBoxes: [RecognizedBox] = []
+    @AppStorage("showScannerBoundingBox") private var showScannerBoundingBox: Bool = false
     @State private var recognizedClass: MaimaiImageType = .unknown
     
     // Stabilization & Persistence
@@ -273,8 +274,9 @@ struct ScannerView: View {
     
     @ViewBuilder
     private func debugOverlayView() -> some View {
-        GeometryReader { geo in
-            ZStack(alignment: .topLeading) {
+        if showScannerBoundingBox {
+            GeometryReader { geo in
+                ZStack(alignment: .topLeading) {
                 ForEach(debugBoxes.indices, id: \.self) { i in
                     let box = debugBoxes[i]
                     let rect = box.rect
@@ -299,10 +301,11 @@ struct ScannerView: View {
                         .background(Color.green)
                         .position(x: x + w / 2, y: max(10, y - 8))
                 }
+                }
             }
+            .allowsHitTesting(false)
+            .ignoresSafeArea()
         }
-        .allowsHitTesting(false)
-        .ignoresSafeArea()
     }
     
     @ViewBuilder

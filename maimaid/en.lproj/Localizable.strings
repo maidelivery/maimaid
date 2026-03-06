@@ -70,6 +70,7 @@
 "settings.appearance.dark" = "Dark";
 "settings.about.header" = "About";
 "settings.about.version" = "Version";
+"settings.appearance.showBoundingBox" = "Show bounding box";
 
 // MARK: - Data Transfer
 "settings.transfer.header" = "Data Management";
