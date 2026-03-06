@@ -70,9 +70,37 @@
 "settings.about.header" = "关于";
 "settings.about.version" = "版本";
 
+// MARK: - Data Transfer
+"settings.transfer.header" = "数据管理";
+"settings.transfer.footer" = "导出你的所有成绩、收藏和设置。导入时将自动合并数据，仅覆盖更高成绩。";
+"settings.transfer.export" = "导出数据";
+"settings.transfer.import" = "导入数据";
+"settings.transfer.error" = "错误";
+"settings.transfer.importConfirm" = "确认导入";
+"settings.transfer.importConfirmMessage" = "导入将合并数据到当前 App 中。已有的更高成绩不会被覆盖。确定继续吗？";
+"settings.transfer.importAction" = "导入";
+"settings.transfer.cancel" = "取消";
+"settings.transfer.importSuccess" = "导入成功";
+"settings.transfer.importSummary" = "已导入 %d 条成绩，恢复 %d 个收藏。";
+
+// MARK: - iCloud Backup
+"settings.icloud.header" = "iCloud 备份";
+"settings.icloud.footer" = "开启后，App 会在进入后台时自动将数据备份到 iCloud，可在新设备上恢复。";
+"settings.icloud.unavailable" = "iCloud 不可用。请在系统设置中登录 iCloud 账号。";
+"settings.icloud.autoBackup" = "自动备份到 iCloud";
+"settings.icloud.lastBackup" = "上次备份";
+"settings.icloud.backupNow" = "立即备份";
+"settings.icloud.restore" = "从 iCloud 恢复";
+"settings.icloud.restoreConfirm" = "确认恢复";
+"settings.icloud.restoreConfirmMessage" = "将从 iCloud 备份恢复数据。已有的更高成绩不会被覆盖。确定继续吗？";
+"settings.icloud.restoreAction" = "恢复";
+"settings.icloud.restoreSuccess" = "恢复成功";
+
 // MARK: - Useful Links
 "links.title" = "常用网站";
 "links.tip" = "提示: 点击上方卡片将会在浏览器中打开网页";
+"links.nearcade.title" = "nearcade";
+"links.nearcade.subtitle" = "附近机厅 · 一键导航";
 "links.dx_jp.title" = "maimai DX Japan";
 "links.dx_jp.subtitle" = "maimai DX 日文官网，包含最新曲目和活动信息";
 "links.df.title" = "Diving Fish";

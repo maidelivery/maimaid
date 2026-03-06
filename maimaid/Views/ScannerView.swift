@@ -22,6 +22,7 @@ struct ScannerView: View {
     @State private var recognizedFC: String? = nil
     @State private var recognizedFS: String? = nil
     @State private var debugBoxes: [RecognizedBox] = []
+    @State private var recognizedClass: MaimaiImageType = .unknown
     
     // Stabilization & Persistence
     @State private var isLocked = false
@@ -136,59 +137,109 @@ struct ScannerView: View {
             return
         }
         
-        let recognition = await MLScoreProcessor.shared.process(image)
+        let imageType = await MLDistinguishProcessor.shared.classify(image)
         
-        // Match title candidates against song database
-        var matchedSongs: [Song] = []
-        var seenIds = Set<String>()
-        
-        var allCandidates = recognition.titleCandidates
-        if let exactTitle = recognition.title {
-            allCandidates.insert(exactTitle, at: 0)
-        }
-        
-        let inputDifficulty = recognition.difficulty ?? "master"
-        
-        for candidate in allCandidates {
-            let matches = songs.filter { song in
-                let hasDifficulty = song.sheets.contains { $0.difficulty.lowercased() == inputDifficulty.lowercased() }
-                if recognition.difficulty != nil && !hasDifficulty { return false }
-                
-                return song.title.localizedCaseInsensitiveContains(candidate) ||
-                candidate.localizedCaseInsensitiveContains(song.title) ||
-                (song.searchKeywords?.localizedCaseInsensitiveContains(candidate) ?? false)
+        if imageType == .choose {
+            let recognition = await MLChooseProcessor.shared.process(image)
+            
+            var matchedSongs: [Song] = []
+            var seenIds = Set<String>()
+            
+            var allCandidates = recognition.titleCandidates
+            if let exactTitle = recognition.title {
+                allCandidates.insert(exactTitle, at: 0)
             }
             
-            for song in matches {
-                if !seenIds.contains(song.songId) {
-                    matchedSongs.append(song)
-                    seenIds.insert(song.songId)
+            for candidate in allCandidates {
+                let matches = songs.filter { song in
+                    song.title.localizedCaseInsensitiveContains(candidate) ||
+                    candidate.localizedCaseInsensitiveContains(song.title) ||
+                    (song.searchKeywords?.localizedCaseInsensitiveContains(candidate) ?? false)
+                }
+                
+                for song in matches {
+                    if !seenIds.contains(song.songId) {
+                        matchedSongs.append(song)
+                        seenIds.insert(song.songId)
+                    }
                 }
             }
-        }
-        
-        matchedSongs.sort { a, b in
-            let aIsExact = allCandidates.contains(where: { $0.localizedCaseInsensitiveCompare(a.title) == .orderedSame })
-            let bIsExact = allCandidates.contains(where: { $0.localizedCaseInsensitiveCompare(b.title) == .orderedSame })
-            if aIsExact != bIsExact { return aIsExact }
-            return a.title.count > b.title.count
-        }
-        
-        isProcessingPhoto = false
-        
-        if let firstMatch = matchedSongs.first {
-            self.recognizedSong = firstMatch
-            self.recognizedRate = recognition.rate
-            self.recognizedDifficulty = recognition.difficulty
-            self.recognizedType = recognition.type
-            self.recognizedDxScore = recognition.dxScore
-            self.recognizedFC = recognition.comboStatus
-            self.recognizedFS = recognition.syncStatus
-            self.debugBoxes = recognition.boxes
-            self.isLocked = true
-            self.lastSeenDate = Date()
+            
+            matchedSongs.sort { a, b in
+                let aIsExact = allCandidates.contains(where: { $0.localizedCaseInsensitiveCompare(a.title) == .orderedSame })
+                let bIsExact = allCandidates.contains(where: { $0.localizedCaseInsensitiveCompare(b.title) == .orderedSame })
+                if aIsExact != bIsExact { return aIsExact }
+                return a.title.count > b.title.count
+            }
+            
+            isProcessingPhoto = false
+            
+            if let firstMatch = matchedSongs.first {
+                self.recognizedSong = firstMatch
+                self.recognizedClass = .choose
+                self.debugBoxes = recognition.boxes
+                self.isLocked = true
+                self.lastSeenDate = Date()
+            } else {
+                showFeedback(String(localized: "scanner.error.title"))
+            }
+
         } else {
-            showFeedback(String(localized: "scanner.error.title"))
+            let recognition = await MLScoreProcessor.shared.process(image)
+            
+            // Match title candidates against song database
+            var matchedSongs: [Song] = []
+            var seenIds = Set<String>()
+            
+            var allCandidates = recognition.titleCandidates
+            if let exactTitle = recognition.title {
+                allCandidates.insert(exactTitle, at: 0)
+            }
+            
+            let inputDifficulty = recognition.difficulty ?? "master"
+            
+            for candidate in allCandidates {
+                let matches = songs.filter { song in
+                    let hasDifficulty = song.sheets.contains { $0.difficulty.lowercased() == inputDifficulty.lowercased() }
+                    if recognition.difficulty != nil && !hasDifficulty { return false }
+                    
+                    return song.title.localizedCaseInsensitiveContains(candidate) ||
+                    candidate.localizedCaseInsensitiveContains(song.title) ||
+                    (song.searchKeywords?.localizedCaseInsensitiveContains(candidate) ?? false)
+                }
+                
+                for song in matches {
+                    if !seenIds.contains(song.songId) {
+                        matchedSongs.append(song)
+                        seenIds.insert(song.songId)
+                    }
+                }
+            }
+            
+            matchedSongs.sort { a, b in
+                let aIsExact = allCandidates.contains(where: { $0.localizedCaseInsensitiveCompare(a.title) == .orderedSame })
+                let bIsExact = allCandidates.contains(where: { $0.localizedCaseInsensitiveCompare(b.title) == .orderedSame })
+                if aIsExact != bIsExact { return aIsExact }
+                return a.title.count > b.title.count
+            }
+            
+            isProcessingPhoto = false
+            
+            if let firstMatch = matchedSongs.first {
+                self.recognizedSong = firstMatch
+                self.recognizedClass = .score
+                self.recognizedRate = recognition.rate
+                self.recognizedDifficulty = recognition.difficulty
+                self.recognizedType = recognition.type
+                self.recognizedDxScore = recognition.dxScore
+                self.recognizedFC = recognition.comboStatus
+                self.recognizedFS = recognition.syncStatus
+                self.debugBoxes = recognition.boxes
+                self.isLocked = true
+                self.lastSeenDate = Date()
+            } else {
+                showFeedback(String(localized: "scanner.error.title"))
+            }
         }
     }
     
@@ -257,103 +308,150 @@ struct ScannerView: View {
     @ViewBuilder
     private func resultView() -> some View {
         if let song = recognizedSong {
-            Button {
-                isShowingScoreEntry = true
-            } label: {
-                let chartType = recognizedType ?? "dx"
-                let diff = recognizedDifficulty ?? "master"
-                let diffColor = ThemeUtils.colorForDifficulty(diff, chartType)
-                
-                // Find matching sheet if possible to show level
-                let sheet = song.sheets.first(where: { $0.difficulty.lowercased() == diff.lowercased() && $0.type.lowercased() == chartType.lowercased() })
-                
-                VStack(spacing: 0) {
-                    HStack(spacing: 0) {
-                        // Difficulty accent bar
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(diffColor)
-                            .frame(width: 4)
-                            .padding(.vertical, 4)
-                        
+            if recognizedClass == .choose {
+                NavigationLink(destination: {
+                    SongDetailView(song: song)
+                        .onDisappear { resetScanner() }
+                }) {
+                    VStack(spacing: 0) {
                         HStack(spacing: 12) {
-                            // Jacket
                             SongJacketView(imageName: song.imageName, size: 40, cornerRadius: 8)
                                 .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
                             
-                            // Info
                             VStack(alignment: .leading, spacing: 3) {
-                                HStack(spacing: 4) {
-                                    Text(chartType.uppercased() == "STD" ? String(localized: "scanner.chart.std") : chartType.uppercased())
-                                        .font(.system(size: 8, weight: .black))
-                                        .padding(.horizontal, 4)
-                                        .padding(.vertical, 1)
-                                        .background(chartType.lowercased() == "dx" ? Color.orange : Color.blue)
-                                        .foregroundColor(.white)
-                                        .cornerRadius(3)
-                                    
-                                    Text(song.title)
-                                    .font(.system(size: 12, weight: .bold))
+                                Text(song.title)
+                                    .font(.system(size: 14, weight: .bold))
                                     .foregroundColor(.primary)
                                     .lineLimit(1)
-                                }
                                 
-                                if diff.lowercased() == "remaster" {
-                                        Text("RE: MASTER")
-                                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                                            .foregroundColor(diffColor)
-                                    } else {
-                                        Text(diff.uppercased())
-                                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                                            .foregroundColor(diffColor)
-                                    }
+                                Text(song.artist)
+                                    .font(.system(size: 11, weight: .regular))
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
                             }
                             
                             Spacer()
                             
-                            // Score info
-                            if let rate = recognizedRate {
-                                VStack(alignment: .trailing, spacing: 1) {
-                                    Text(String(format: "%.4f%%", rate))
-                                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                        .foregroundColor(.primary)
-                                    Text(RatingUtils.calculateRank(achievement: rate))
-                                        .font(.system(size: 10, weight: .black, design: .rounded))
-                                        .foregroundColor(diffColor)
-                                }
-                            }
-                            
-                            // Level
-                            if let levelStr = sheet?.internalLevel ?? sheet?.level {
-                                Text(levelStr)
-                                    .font(.system(size: 28, weight: .black, design: .rounded))
-                                    .foregroundColor(diffColor.opacity(0.85))
-                                    .frame(minWidth: 44)
-                            }
-                            
-                            // Edit chevron
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.secondary.opacity(0.4))
                         }
-                        .padding(.leading, 12)
-                        .padding(.trailing, 16)
+                        .padding(.vertical, 14)
+                        .padding(.horizontal, 16)
                     }
-                    .padding(.vertical, 14)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .strokeBorder(Color.primary.opacity(0.1), lineWidth: 1)
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 40)
                 }
-                .fixedSize(horizontal: false, vertical: true)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(diffColor.opacity(0.2), lineWidth: 1)
-                )
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
+                .buttonStyle(.plain)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)),
+                    removal: .opacity.combined(with: .scale(scale: 0.95))
+                ))
+            } else {
+                Button {
+                    isShowingScoreEntry = true
+                } label: {
+                    let chartType = recognizedType ?? "dx"
+                    let diff = recognizedDifficulty ?? "master"
+                    let diffColor = ThemeUtils.colorForDifficulty(diff, chartType)
+                    
+                    // Find matching sheet if possible to show level
+                    let sheet = song.sheets.first(where: { $0.difficulty.lowercased() == diff.lowercased() && $0.type.lowercased() == chartType.lowercased() })
+                    
+                    VStack(spacing: 0) {
+                        HStack(spacing: 0) {
+                            // Difficulty accent bar
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(diffColor)
+                                .frame(width: 4)
+                                .padding(.vertical, 4)
+                            
+                            HStack(spacing: 12) {
+                                // Jacket
+                                SongJacketView(imageName: song.imageName, size: 40, cornerRadius: 8)
+                                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                                
+                                // Info
+                                VStack(alignment: .leading, spacing: 3) {
+                                    HStack(spacing: 4) {
+                                        Text(chartType.uppercased() == "STD" ? String(localized: "scanner.chart.std") : chartType.uppercased())
+                                            .font(.system(size: 8, weight: .black))
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(chartType.lowercased() == "dx" ? Color.orange : Color.blue)
+                                            .foregroundColor(.white)
+                                            .cornerRadius(3)
+                                        
+                                        Text(song.title)
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.primary)
+                                        .lineLimit(1)
+                                    }
+                                    
+                                    if diff.lowercased() == "remaster" {
+                                            Text("RE: MASTER")
+                                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                                .foregroundColor(diffColor)
+                                        } else {
+                                            Text(diff.uppercased())
+                                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                                .foregroundColor(diffColor)
+                                        }
+                                }
+                                
+                                Spacer()
+                                
+                                // Score info
+                                if let rate = recognizedRate {
+                                    VStack(alignment: .trailing, spacing: 1) {
+                                        Text(String(format: "%.4f%%", rate))
+                                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                            .foregroundColor(.primary)
+                                        Text(RatingUtils.calculateRank(achievement: rate))
+                                            .font(.system(size: 10, weight: .black, design: .rounded))
+                                            .foregroundColor(diffColor)
+                                    }
+                                }
+                                
+                                // Level
+                                if let levelStr = sheet?.internalLevel ?? sheet?.level {
+                                    Text(levelStr)
+                                        .font(.system(size: 28, weight: .black, design: .rounded))
+                                        .foregroundColor(diffColor.opacity(0.85))
+                                        .frame(minWidth: 44)
+                                }
+                                
+                                // Edit chevron
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.secondary.opacity(0.4))
+                            }
+                            .padding(.leading, 12)
+                            .padding(.trailing, 16)
+                        }
+                        .padding(.vertical, 14)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .strokeBorder(diffColor.opacity(0.2), lineWidth: 1)
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 40)
+                }
+                .buttonStyle(.plain)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)),
+                    removal: .opacity.combined(with: .scale(scale: 0.95))
+                ))
             }
-            .buttonStyle(.plain)
-            .transition(.asymmetric(
-                insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)),
-                removal: .opacity.combined(with: .scale(scale: 0.95))
-            ))
         }
     }
     
@@ -363,52 +461,96 @@ struct ScannerView: View {
     private func handleCameraFrame(_ image: UIImage) {
         guard !isShowingScoreEntry else { return }
         Task {
-            let recognition = await MLScoreProcessor.shared.process(image)
+            let imageType = await MLDistinguishProcessor.shared.classify(image)
             
-            var frameMatches: [String] = []
-            
-            var allCandidates = recognition.titleCandidates
-            if let exactTitle = recognition.title {
-                allCandidates.insert(exactTitle, at: 0)
+            if imageType == .unknown {
+                updateUIWithResults(songIds: [], rate: nil, diff: nil, type: nil, dxScore: nil, fc: nil, fs: nil, boxes: [], imageClass: .unknown)
+                return
             }
             
-            let inputDifficulty = recognition.difficulty ?? "master"
-            
-            for candidate in allCandidates {
-                let cleaned = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard cleaned.count >= 2 else { continue }
+            if imageType == .choose {
+                let recognition = await MLChooseProcessor.shared.process(image)
                 
-                var foundFast = false
-                for song in songs {
-                    let hasDifficulty = song.sheets.contains { $0.difficulty.lowercased() == inputDifficulty.lowercased() }
-                    if recognition.difficulty != nil && !hasDifficulty { continue }
-                    
-                    if song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title) {
-                        frameMatches.append(song.songId)
-                        foundFast = true
-                        if frameMatches.count > 3 { break }
-                    }
+                var frameMatches: [String] = []
+                
+                var allCandidates = recognition.titleCandidates
+                if let exactTitle = recognition.title {
+                    allCandidates.insert(exactTitle, at: 0)
                 }
                 
-                if !foundFast && cleaned.count > 4 {
+                for candidate in allCandidates {
+                    let cleaned = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard cleaned.count >= 2 else { continue }
+                    
+                    var foundFast = false
+                    for song in songs {
+                        if song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title) {
+                            frameMatches.append(song.songId)
+                            foundFast = true
+                            if frameMatches.count > 3 { break }
+                        }
+                    }
+                    
+                    if !foundFast && cleaned.count > 4 {
+                        for song in songs {
+                            if fuzzyMatch(cleaned, song.title) {
+                                frameMatches.append(song.songId)
+                                if frameMatches.count > 3 { break }
+                            }
+                        }
+                    }
+                    if !frameMatches.isEmpty { break }
+                }
+                
+                updateUIWithResults(songIds: frameMatches, rate: nil, diff: nil, type: nil, dxScore: nil, fc: nil, fs: nil, boxes: recognition.boxes, imageClass: .choose)
+            } else {
+                let recognition = await MLScoreProcessor.shared.process(image)
+                
+                var frameMatches: [String] = []
+                
+                var allCandidates = recognition.titleCandidates
+                if let exactTitle = recognition.title {
+                    allCandidates.insert(exactTitle, at: 0)
+                }
+                
+                let inputDifficulty = recognition.difficulty ?? "master"
+                
+                for candidate in allCandidates {
+                    let cleaned = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard cleaned.count >= 2 else { continue }
+                    
+                    var foundFast = false
                     for song in songs {
                         let hasDifficulty = song.sheets.contains { $0.difficulty.lowercased() == inputDifficulty.lowercased() }
                         if recognition.difficulty != nil && !hasDifficulty { continue }
                         
-                        if fuzzyMatch(cleaned, song.title) {
+                        if song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title) {
                             frameMatches.append(song.songId)
+                            foundFast = true
                             if frameMatches.count > 3 { break }
                         }
                     }
+                    
+                    if !foundFast && cleaned.count > 4 {
+                        for song in songs {
+                            let hasDifficulty = song.sheets.contains { $0.difficulty.lowercased() == inputDifficulty.lowercased() }
+                            if recognition.difficulty != nil && !hasDifficulty { continue }
+                            
+                            if fuzzyMatch(cleaned, song.title) {
+                                frameMatches.append(song.songId)
+                                if frameMatches.count > 3 { break }
+                            }
+                        }
+                    }
+                    if !frameMatches.isEmpty { break }
                 }
-                if !frameMatches.isEmpty { break }
+                
+                updateUIWithResults(songIds: frameMatches, rate: recognition.rate as Double?, diff: recognition.difficulty, type: recognition.type, dxScore: recognition.dxScore, fc: recognition.comboStatus, fs: recognition.syncStatus, boxes: recognition.boxes, imageClass: .score)
             }
-            
-            updateUIWithResults(songIds: frameMatches, rate: recognition.rate as Double?, diff: recognition.difficulty, type: recognition.type, dxScore: recognition.dxScore, fc: recognition.comboStatus, fs: recognition.syncStatus, boxes: recognition.boxes)
         }
     }
     
-    private func updateUIWithResults(songIds: [String], rate: Double?, diff: String?, type: String?, dxScore: Int?, fc: String?, fs: String?, boxes: [RecognizedBox]) {
+    private func updateUIWithResults(songIds: [String], rate: Double?, diff: String?, type: String?, dxScore: Int?, fc: String?, fs: String?, boxes: [RecognizedBox], imageClass: MaimaiImageType) {
         self.debugBoxes = boxes
         
         for id in recognitionBuffer.keys {
@@ -417,14 +559,23 @@ struct ScannerView: View {
         }
         
         for id in songIds {
-            recognitionBuffer[id, default: 0] += 5
+            recognitionBuffer[id, default: 0] += 6
+            // Cap the buffer value so it doesn't grow infinitely, allowing fast switching
+            if recognitionBuffer[id]! > 30 {
+                recognitionBuffer[id] = 30
+            }
         }
         
         if let topCandidate = recognitionBuffer.max(by: { $0.value < $1.value }), topCandidate.value > 15 {
             if let song = songs.first(where: { $0.songId == topCandidate.key }) {
-                if recognizedSong?.songId != song.songId {
+                let newClass = songIds.contains(song.songId) ? imageClass : recognizedClass
+                
+                if recognizedSong?.songId != song.songId || recognizedClass != newClass {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         self.recognizedSong = song
+                        if newClass != .unknown {
+                            self.recognizedClass = newClass
+                        }
                         self.isLocked = true
                     }
                 }
@@ -482,6 +633,7 @@ struct ScannerView: View {
         self.recognizedDxScore = nil
         self.recognizedFC = nil
         self.recognizedFS = nil
+        self.recognizedClass = .unknown
         self.recognitionBuffer.removeAll()
         self.rateBuffer.removeAll()
         self.dxScoreBuffer.removeAll()

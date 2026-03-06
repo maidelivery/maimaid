@@ -71,9 +71,37 @@
 "settings.about.header" = "About";
 "settings.about.version" = "Version";
 
+// MARK: - Data Transfer
+"settings.transfer.header" = "Data Management";
+"settings.transfer.footer" = "Export all scores, favorites and settings. Imports merge data, keeping higher scores.";
+"settings.transfer.export" = "Export Data";
+"settings.transfer.import" = "Import Data";
+"settings.transfer.error" = "Error";
+"settings.transfer.importConfirm" = "Confirm Import";
+"settings.transfer.importConfirmMessage" = "Import will merge data into the current app. Existing higher scores won't be overwritten. Continue?";
+"settings.transfer.importAction" = "Import";
+"settings.transfer.cancel" = "Cancel";
+"settings.transfer.importSuccess" = "Import Successful";
+"settings.transfer.importSummary" = "Imported %d scores, restored %d favorites.";
+
+// MARK: - iCloud Backup
+"settings.icloud.header" = "iCloud Backup";
+"settings.icloud.footer" = "Automatically backs up data to iCloud when app enters background. Restore on new devices.";
+"settings.icloud.unavailable" = "iCloud is not available. Please sign in to iCloud in Settings.";
+"settings.icloud.autoBackup" = "Auto Backup to iCloud";
+"settings.icloud.lastBackup" = "Last Backup";
+"settings.icloud.backupNow" = "Back Up Now";
+"settings.icloud.restore" = "Restore from iCloud";
+"settings.icloud.restoreConfirm" = "Confirm Restore";
+"settings.icloud.restoreConfirmMessage" = "Data will be restored from iCloud backup. Existing higher scores won't be overwritten. Continue?";
+"settings.icloud.restoreAction" = "Restore";
+"settings.icloud.restoreSuccess" = "Restore Successful";
+
 // MARK: - Useful Links
 "links.title" = "Useful Links";
 "links.tip" = "Tap cards to open in browser";
+"links.nearcade.title" = "nearcade";
+"links.nearcade.subtitle" = "Find nearby arcade locations";
 "links.dx_jp.title" = "maimai DX Japan";
 "links.dx_jp.subtitle" = "Official site (JP)";
 "links.df.title" = "Diving Fish";

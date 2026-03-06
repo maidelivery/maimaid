@@ -9,12 +9,16 @@
 /* Begin PBXBuildFile section */
 		37A565442F551D8D00378A95 /* maimaidv1.31.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 37A565432F551D8D00378A95 /* maimaidv1.31.mlpackage */; };
 		37C9CF1B2F4CE4DB002CBF7A /* maimaid.icon in Resources */ = {isa = PBXBuildFile; fileRef = 37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */; };
+		37D401ED2F5B3C0D004DC0EC /* maimaidistinguish v1.1-26.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 37D401EC2F5B3C0D004DC0EC /* maimaidistinguish v1.1-26.mlpackage */; };
+		37D401F32F5B5518004DC0EC /* maimaidetectorv1.0.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 37D401F22F5B5518004DC0EC /* maimaidetectorv1.0.mlpackage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		37A565432F551D8D00378A95 /* maimaidv1.31.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = maimaidv1.31.mlpackage; sourceTree = "<group>"; };
 		37C9C3DD2F4CDAAB002CBF7A /* maimaid.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = maimaid.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = maimaid.icon; sourceTree = "<group>"; };
+		37D401EC2F5B3C0D004DC0EC /* maimaidistinguish v1.1-26.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaidistinguish v1.1-26.mlpackage"; sourceTree = "<group>"; };
+		37D401F22F5B5518004DC0EC /* maimaidetectorv1.0.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = maimaidetectorv1.0.mlpackage; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -56,6 +60,8 @@
 				37C9C3DD2F4CDAAB002CBF7A /* maimaid.app */,
 				37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */,
 				37A565432F551D8D00378A95 /* maimaidv1.31.mlpackage */,
+				37D401EC2F5B3C0D004DC0EC /* maimaidistinguish v1.1-26.mlpackage */,
+				37D401F22F5B5518004DC0EC /* maimaidetectorv1.0.mlpackage */,
 			);
 			sourceTree = "<group>";
 		};
@@ -137,6 +143,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				37D401ED2F5B3C0D004DC0EC /* maimaidistinguish v1.1-26.mlpackage in Sources */,
+				37D401F32F5B5518004DC0EC /* maimaidetectorv1.0.mlpackage in Sources */,
 				37A565442F551D8D00378A95 /* maimaidv1.31.mlpackage in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -162,6 +170,7 @@
 				INFOPLIST_FILE = maimaid/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = maimaid;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSCameraUsageDescription = "We need camera access to scan maimai screens and scores.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -212,6 +221,7 @@
 				INFOPLIST_FILE = maimaid/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = maimaid;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSCameraUsageDescription = "We need camera access to scan maimai screens and scores.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

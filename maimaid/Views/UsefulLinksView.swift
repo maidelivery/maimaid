@@ -14,6 +14,13 @@ struct UsefulLinksView: View {
     // To add more websites, simply add a new MaimaiLink item to this array!
     private let links = [
         MaimaiLink(
+            title: String(localized: "links.nearcade.title"),
+            subtitle: String(localized: "links.nearcade.subtitle"),
+            url: "https://nearcade.phizone.cn",
+            icon: "location.fill",
+            color: .red
+        ),
+        MaimaiLink(
             title: String(localized: "links.dx_jp.title"),
             subtitle: String(localized: "links.dx_jp.subtitle"),
             url: "https://maimai.sega.jp/",

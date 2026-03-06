@@ -27,6 +27,7 @@ struct ContentView: View {
     @State private var isFetching = false
     @State private var sortOption: SortOption = .defaultOrder
     @State private var sortAscending: Bool = true
+    @State private var isGridView: Bool = false
     
     var allCategories: [String] {
         Array(Set(songs.map { $0.category })).sorted { ThemeUtils.categorySortOrder($0) < ThemeUtils.categorySortOrder($1) }
@@ -86,17 +87,11 @@ struct ContentView: View {
                     }
                 } else {
                     ScrollView {
-                        LazyVStack(spacing: 8) {
-                            ForEach(sortedAndFilteredSongs) { song in
-                                NavigationLink {
-                                    SongDetailView(song: song)
-                                } label: {
-                                    SongRowView(song: song)
-                                }
-                                .buttonStyle(.plain)
-                            }
+                        if isGridView {
+                            gridContent
+                        } else {
+                            listContent
                         }
-                        .padding(.vertical, 12)
                     }
                     
                     if !searchText.isEmpty && sortedAndFilteredSongs.isEmpty {
@@ -107,6 +102,18 @@ struct ContentView: View {
             }
             .navigationTitle("songs.title")
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            isGridView.toggle()
+                        }
+                    } label: {
+                        Image(systemName: isGridView ? "list.bullet" : "square.grid.2x2")
+                            .foregroundColor(.blue)
+                            .contentTransition(.symbolEffect(.replace))
+                    }
+                }
+                
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Picker("sort.title", selection: $sortOption) {
@@ -137,6 +144,88 @@ struct ContentView: View {
         .sheet(isPresented: $showFilterSheet) {
             FilterView(settings: $filterSettings, allCategories: allCategories, allVersions: allVersions)
         }
+    }
+    
+    // MARK: - List Layout
+    
+    private var listContent: some View {
+        LazyVStack(spacing: 8) {
+            ForEach(sortedAndFilteredSongs) { song in
+                NavigationLink {
+                    SongDetailView(song: song)
+                } label: {
+                    SongRowView(song: song)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.vertical, 12)
+    }
+    
+    // MARK: - Grid Layout
+    
+    private let gridColumns = [
+        GridItem(.flexible(), spacing: 0),
+        GridItem(.flexible(), spacing: 0),
+        GridItem(.flexible(), spacing: 0)
+    ]
+    
+    private var gridContent: some View {
+        LazyVGrid(columns: gridColumns, spacing: 0) {
+            ForEach(sortedAndFilteredSongs) { song in
+                NavigationLink {
+                    SongDetailView(song: song)
+                } label: {
+                    SongGridCell(song: song)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 1) // Offset for borders
+    }
+}
+
+// MARK: - Grid Cell
+
+private struct SongGridCell: View {
+    let song: Song
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            // Jacket
+            SongJacketView(imageName: song.imageName, size: 80, cornerRadius: 4)
+            
+            VStack(spacing: 4) {
+                // Title
+                Text(song.title)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(height: 28)
+                
+                // Difficulty dots
+                HStack(spacing: 2) {
+                    let prioritizedSheets: [Sheet] = {
+                        let dxSheets = song.sheets.filter { $0.type.lowercased() == "dx" }
+                        if !dxSheets.isEmpty {
+                            return dxSheets.sorted(by: { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) })
+                        }
+                        return song.sheets
+                            .filter { $0.type.lowercased() == "std" }
+                            .sorted(by: { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) })
+                    }()
+                    
+                    ForEach(prioritizedSheets) { sheet in
+                        SongRowView.ScoreProgressDot(sheet: sheet)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .padding(.horizontal, 4)
+        .border(Color.primary.opacity(0.1), width: 0.5)
     }
 }
 
