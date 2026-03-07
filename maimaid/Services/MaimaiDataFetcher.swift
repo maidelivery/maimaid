@@ -11,6 +11,11 @@ struct AliasItem: Decodable {
     let aliases: [String]
 }
 
+struct SongIdItem: Decodable {
+    let id: Int
+    let name: String
+}
+
 struct LxnsSongListResponse: Decodable {
     let songs: [LxnsSong]
 }
@@ -95,7 +100,7 @@ struct RemoteNoteCounts: Decodable {
 class MaimaiDataFetcher {
     static let shared = MaimaiDataFetcher()
     
-    private init() {}
+    nonisolated private init() {}
     
     enum SyncStage: String {
         case idle = "data.sync.stage.idle"
@@ -173,13 +178,13 @@ class MaimaiDataFetcher {
         do {
             var remoteSongs: [RemoteSong] = []
             var aliasMap: [String: [String]] = [:]
-            var titleToLxnsId: [String: Int] = [:]
+            var titleToSongId: [String: Int] = [:]
             var lxnsIcons: [LxnsPresetIcon] = []
+            var nameToProviderIds: [String: [Int]] = [:] // Map song name to list of IDs from songid.json
             
             // --- 阶段 1: 远程 data.json ---
             if options.updateRemoteData {
                 updateStage(.fetchingRemoteData, base: 0.1, message: String(localized: "data.sync.status.fetchingData"))
-                // source 2: https://maimaid.shikoch.in/maimai/data.json
                 guard let url = URL(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json") else {
                     throw URLError(.badURL)
                 }
@@ -203,10 +208,12 @@ class MaimaiDataFetcher {
             if options.updateAliases {
                 updateStage(.fetchingAliases, base: 0.30, message: String(localized: "data.sync.status.fetchingAliases"))
                 if let aliasUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/alias/list"),
-                   let lxnsSongUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/song/list") {
+                   let lxnsSongUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/song/list"),
+                   let providerIdUrl = URL(string: "https://maimaid.shikoch.in/songid.json") {
                     
                     async let aliasDataFetch = URLSession.shared.data(from: aliasUrl)
                     async let lxnsSongDataFetch = URLSession.shared.data(from: lxnsSongUrl)
+                    async let providerIdDataFetch = URLSession.shared.data(from: providerIdUrl)
                     
                     if let (aliasData, _) = try? await aliasDataFetch,
                        let (lxnsSongData, _) = try? await lxnsSongDataFetch {
@@ -215,16 +222,29 @@ class MaimaiDataFetcher {
                         let lxnsSongResponse = try? JSONDecoder().decode(LxnsSongListResponse.self, from: lxnsSongData)
                         
                         if let aliasResponse = aliasResponse, let lxnsSongResponse = lxnsSongResponse {
-                            var lxnsIdToTitle: [Int: String] = [:]
+                            var songIdToTitle: [Int: String] = [:]
                             for lxnsSong in lxnsSongResponse.songs {
-                                lxnsIdToTitle[lxnsSong.id] = lxnsSong.title
-                                titleToLxnsId[lxnsSong.title] = lxnsSong.id
+                                songIdToTitle[lxnsSong.id] = lxnsSong.title
+                                titleToSongId[lxnsSong.title] = lxnsSong.id
                             }
                             for item in aliasResponse.aliases {
-                                if let title = lxnsIdToTitle[item.song_id] {
+                                if let title = songIdToTitle[item.song_id] {
                                     aliasMap[title] = item.aliases
                                 }
                             }
+                        }
+                    }
+                    
+                    if let (providerIdData, _) = try? await providerIdDataFetch {
+                        do {
+                            let providerIds = try JSONDecoder().decode([SongIdItem].self, from: providerIdData)
+                            for item in providerIds {
+                                let trimmedName = item.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                                nameToProviderIds[trimmedName, default: []].append(item.id)
+                            }
+                            log(String(localized: "data.sync.log.fetchedProviderIds \(providerIds.count)"))
+                        } catch {
+                            log(String(localized: "data.sync.log.providerIdError \(error.localizedDescription)"))
                         }
                     }
                 }
@@ -247,13 +267,13 @@ class MaimaiDataFetcher {
                 
                 let existingSongsFromDB = try modelContext.fetch(FetchDescriptor<Song>())
                 var existingSongMap: [String: Song] = [:]
-                for s in existingSongsFromDB { existingSongMap[s.songId] = s }
+                for s in existingSongsFromDB { existingSongMap[s.songIdentifier] = s }
 
                 var songsToProcess: [RemoteSong] = remoteSongs
                 if !options.updateRemoteData {
                     songsToProcess = existingSongsFromDB.map { s in
                         RemoteSong(
-                            songId: s.songId, category: s.category, title: s.title, artist: s.artist, bpm: s.bpm,
+                            songId: s.songIdentifier, category: s.category, title: s.title, artist: s.artist, bpm: s.bpm,
                             imageName: s.imageName, version: s.version, releaseDate: s.releaseDate,
                             isNew: s.isNew, isLocked: s.isLocked, comment: s.comment,
                             sheets: s.sheets.map { sh in
@@ -271,19 +291,21 @@ class MaimaiDataFetcher {
                 } else {
                     let currentRemoteIds = Set(remoteSongs.map { $0.songId })
                     for existing in existingSongsFromDB {
-                        if !currentRemoteIds.contains(existing.songId) {
+                        if !currentRemoteIds.contains(existing.songIdentifier) {
                             modelContext.delete(existing)
                         }
                     }
                 }
                 
+                var providerMatchCount = 0
+                var sheetMatchCount = 0
                 for (index, remoteSong) in songsToProcess.enumerated() {
                     let song: Song
                     if let existing = existingSongMap[remoteSong.songId] {
                         song = existing
                     } else if options.updateRemoteData {
                         song = Song(
-                            songId: remoteSong.songId, category: remoteSong.category ?? "", 
+                            songIdentifier: remoteSong.songId, category: remoteSong.category ?? "", 
                             title: (remoteSong.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
                             artist: remoteSong.artist ?? "", 
                             imageName: (remoteSong.imageName ?? "").trimmingCharacters(in: .whitespacesAndNewlines),                             version: remoteSong.version ?? "", releaseDate: remoteSong.releaseDate ?? "", sortOrder: 0,
@@ -308,8 +330,34 @@ class MaimaiDataFetcher {
                     }
                     
                     if options.updateAliases {
-                        if let officialId = titleToLxnsId[song.title] { song.lxnsId = officialId }
+                        if let officialId = titleToSongId[song.title] { song.songId = officialId }
                         if let aliases = aliasMap[song.title], !aliases.isEmpty { song.aliases = aliases }
+                        
+                        // New: Provider ID matching based on ranges
+                        // Std < 10000, 10000 <= DX < 100000, Utage >= 100000
+                        let searchTitle = song.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if let possibleIds = nameToProviderIds[searchTitle] {
+                            // Find the most appropriate ID for the song's sheet content
+                            let hasUtage = remoteSong.sheets.contains { $0.type.lowercased() == "utage" }
+                            let hasDX = remoteSong.sheets.contains { $0.type.lowercased() == "dx" }
+                            let hasStd = remoteSong.sheets.contains { $0.type.lowercased() == "std" }
+                            
+                            var assignedId: Int? = nil
+                            if hasUtage {
+                                assignedId = possibleIds.first { $0 >= 100000 }
+                            }
+                            if assignedId == nil && hasDX {
+                                assignedId = possibleIds.first { $0 >= 10000 && $0 < 100000 }
+                            }
+                            if assignedId == nil && hasStd {
+                                assignedId = possibleIds.first { $0 < 10000 }
+                            }
+                            
+                            if let finalId = assignedId {
+                                song.songId = finalId
+                                providerMatchCount += 1
+                            }
+                        }
                     }
                     
                     var sheetMap: [String: Sheet] = [:]
@@ -322,12 +370,28 @@ class MaimaiDataFetcher {
                             sheet = existingSheet
                         } else {
                             sheet = Sheet(
-                                songId: song.songId, type: remoteSheet.type, difficulty: remoteSheet.difficulty,
+                                songIdentifier: song.songIdentifier, type: remoteSheet.type, difficulty: remoteSheet.difficulty,
                                 level: remoteSheet.level, levelValue: remoteSheet.levelValue ?? 0
                             )
                             sheet.song = song
                             modelContext.insert(sheet)
                             if song.sheets.isEmpty { song.sheets = [sheet] } else { song.sheets.append(sheet) }
+                        }
+                        
+                        // Assign sheet-specific songId from provider
+                        let searchTitle = song.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if let possibleIds = nameToProviderIds[searchTitle] {
+                            let type = remoteSheet.type.lowercased()
+                            if type == "utage" {
+                                if let id = possibleIds.first(where: { $0 >= 100000 }) { sheet.songId = id }
+                            } else if type == "dx" {
+                                if let id = possibleIds.first(where: { $0 >= 10000 && $0 < 100000 }) { sheet.songId = id }
+                            } else if type == "std" {
+                                if let id = possibleIds.first(where: { $0 < 10000 }) { sheet.songId = id }
+                            }
+                            if sheet.songId > 0 {
+                                sheetMatchCount += 1
+                            }
                         }
                         
                         if options.updateRemoteData {
@@ -366,11 +430,13 @@ class MaimaiDataFetcher {
                         try? modelContext.save()
                     }
                 }
+                log(String(localized: "data.sync.log.processingCompleted \(providerMatchCount) \(songsToProcess.count)"))
+                log(String(localized: "data.sync.log.syncedSummary \(providerMatchCount) \(sheetMatchCount)"))
                 
                 // Clear temporary song data
                 remoteSongs = []
                 aliasMap = [:]
-                titleToLxnsId = [:]
+                titleToSongId = [:]
                 songsToProcess = []
                 existingSongMap = [:]
                 

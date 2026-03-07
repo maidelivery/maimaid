@@ -496,7 +496,7 @@ struct ScoreEntryView: View {
         
         // 1. Always create a new historical PlayRecord
         let newPlayRecord = PlayRecord(
-            sheetId: "\(sheet.songId)-\(sheet.type)-\(sheet.difficulty)",
+            sheetId: "\(sheet.songIdentifier)-\(sheet.type)-\(sheet.difficulty)",
             rate: rate,
             rank: selectedRank,
             dxScore: parsedDxScore ?? 0,
@@ -534,7 +534,7 @@ struct ScoreEntryView: View {
         } else {
             // No existing score, create the baseline
             let newScore = Score(
-                sheetId: "\(sheet.songId)-\(sheet.type)-\(sheet.difficulty)",
+                sheetId: "\(sheet.songIdentifier)-\(sheet.type)-\(sheet.difficulty)",
                 rate: rate,
                 rank: selectedRank,
                 dxScore: parsedDxScore ?? 0,

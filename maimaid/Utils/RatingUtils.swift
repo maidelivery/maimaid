@@ -121,8 +121,8 @@ struct RatingUtils {
     }
     
     struct RatingCalculationInput: Sendable {
-        let songId: String // Internal ID
-        let lxnsId: Int // Numeric ID from LXNS
+        let songIdentifier: String // Internal ID
+        let songId: Int // Numeric ID
         let title: String
         let version: String?
         let releaseDate: String?
@@ -140,12 +140,13 @@ struct RatingUtils {
         let fs: String? // Added FS status
         let dxScore: Int // Added DX score
         let maxDxScore: Int // Added for stars calculation
+        let songId: Int // Sheet-specific numeric ID
     }
     
     struct RatingEntry: Identifiable, Sendable {
         let id = UUID()
-        let songId: String // Internal ID
-        let lxnsId: Int // Numeric ID
+        let songIdentifier: String // Internal ID
+        let songId: Int // Numeric ID
         let songTitle: String
         let imageName: String?
         let diff: String
@@ -173,8 +174,8 @@ struct RatingUtils {
                 let rating = calculateRating(internalLevel: level, achievement: sheet.rate, fc: sheet.fc)
                 
                 let entry = RatingEntry(
-                    songId: song.songId,
-                    lxnsId: song.lxnsId,
+                    songIdentifier: song.songIdentifier,
+                    songId: sheet.songId > 0 ? sheet.songId : song.songId,
                     songTitle: song.title,
                     imageName: song.imageName,
                     diff: sheet.difficulty.uppercased(),
@@ -215,8 +216,8 @@ extension Array where Element: Song {
     func toCalculationInput() -> [RatingUtils.RatingCalculationInput] {
         map { song in
             RatingUtils.RatingCalculationInput(
+                songIdentifier: song.songIdentifier,
                 songId: song.songId,
-                lxnsId: song.lxnsId,
                 title: song.title,
                 version: song.version,
                 releaseDate: song.releaseDate,
@@ -232,7 +233,8 @@ extension Array where Element: Song {
                         fc: score.fc,
                         fs: score.fs,
                         dxScore: score.dxScore,
-                        maxDxScore: (sheet.total ?? 0) * 3
+                        maxDxScore: (sheet.total ?? 0) * 3,
+                        songId: sheet.songId
                     )
                 }
             )

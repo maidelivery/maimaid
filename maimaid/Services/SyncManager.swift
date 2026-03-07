@@ -87,7 +87,7 @@ class SyncManager {
         
         // LXNS expects: { "id": 123, "song_name": "...", "level_index": 0-4, "type": "dx"/"std", "achievements": 100.0, "dx_score": 0 }
         let record: [String: Any] = [
-            "id": sheet.song?.lxnsId ?? (Int(sheet.songId) ?? 0),
+            "id": sheet.song?.songId ?? 0,
             "song_name": sheet.song?.title ?? "",
             "level_index": ThemeUtils.mapDifficultyToIndex(sheet.difficulty),
             "type": sheet.type.lowercased() == "dx" ? "dx" : "std",

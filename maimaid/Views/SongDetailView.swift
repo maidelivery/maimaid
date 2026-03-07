@@ -33,6 +33,35 @@ struct SongDetailView: View {
     }
     
     var body: some View {
+        SongDetailContent(song: song, selectedType: $selectedType, selectedSheet: $selectedSheet, toastMessage: $toastMessage)
+    }
+}
+
+struct SongDetailContent: View {
+    let song: Song
+    @Binding var selectedType: String
+    @Binding var selectedSheet: Sheet?
+    @Binding var toastMessage: String?
+    @Environment(\.modelContext) private var modelContext
+    @State private var statsService = ChartStatsService.shared
+    
+    private var filteredSheets: [Sheet] {
+        song.sheets
+            .filter { $0.type.lowercased() == selectedType }
+            .sorted { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) }
+    }
+    
+    private var availableTypes: [String] {
+        Array(Set(song.sheets.map { $0.type.lowercased() })).sorted().reversed()
+    }
+    
+    private var currentTitle: String {
+        let sheetId = filteredSheets.first?.songId ?? 0
+        let displayId = sheetId > 0 ? sheetId : song.songId
+        return displayId > 0 ? "#\(String(displayId))" : ""
+    }
+    
+    var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 // MARK: - Hero Section
@@ -63,7 +92,7 @@ struct SongDetailView: View {
             }
         }
         .background(ambientBackground)
-        .navigationTitle(song.lxnsId > 0 ? "#\(String(song.lxnsId + (selectedType == "dx" ? 10000 : 0)))" : "")
+        .navigationTitle(currentTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -471,8 +500,6 @@ struct SongDetailView: View {
             }
         }
     }
-    
-
 }
 
 
@@ -488,6 +515,7 @@ struct SheetCardView: View {
     @State private var isRatingExpanded = false
     @State private var isHistoryExpanded = false
     @State private var historySortByDate = true
+    @State private var historyPage = 1
     
     private var diffColor: Color {
         ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
@@ -522,6 +550,7 @@ struct SheetCardView: View {
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
                         }
+                        
                     }
                     
                     Spacer()
@@ -834,6 +863,13 @@ struct SheetCardView: View {
             }
         }
         
+        let itemsPerPage = 5
+        let totalPages = max(1, Int(ceil(Double(sortedRecords.count) / Double(itemsPerPage))))
+        let validPage = max(1, min(historyPage, totalPages))
+        let startIndex = (validPage - 1) * itemsPerPage
+        let endIndex = min(startIndex + itemsPerPage, sortedRecords.count)
+        let displayRecords = Array(sortedRecords[startIndex..<endIndex])
+        
         return VStack(spacing: 0) {
             // Header
             Button {
@@ -867,11 +903,14 @@ struct SheetCardView: View {
                         .pickerStyle(.segmented)
                         .frame(width: 140)
                         .scaleEffect(0.8)
+                        .onChange(of: historySortByDate) { _, _ in
+                            historyPage = 1
+                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 4)
                     
-                    ForEach(Array(sortedRecords.enumerated()), id: \.offset) { index, record in
+                    ForEach(Array(displayRecords.enumerated()), id: \.offset) { index, record in
                         HStack(spacing: 12) {
                             // Left: Date
                             VStack(alignment: .leading, spacing: 2) {
@@ -933,6 +972,46 @@ struct SheetCardView: View {
                         .padding(.horizontal, 20)
                         .padding(.vertical, 8)
                         .background(index % 2 == 0 ? Color.primary.opacity(0.02) : Color.clear)
+                    }
+                    
+                    if totalPages > 1 {
+                        HStack(spacing: 12) {
+                            Button {
+                                if historyPage > 1 { historyPage -= 1 }
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(historyPage > 1 ? diffColor : .secondary.opacity(0.3))
+                                    .padding(8)
+                            }
+                            .disabled(historyPage <= 1)
+                            
+                            Menu {
+                                Picker("Page", selection: $historyPage) {
+                                    ForEach(1...totalPages, id: \.self) { page in
+                                        Text("Page \(page)").tag(page)
+                                    }
+                                }
+                            } label: {
+                                Text("\(validPage) / \(totalPages)")
+                                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.primary)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 6)
+                                    .background(Color.primary.opacity(0.05), in: Capsule())
+                            }
+                            
+                            Button {
+                                if historyPage < totalPages { historyPage += 1 }
+                            } label: {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(historyPage < totalPages ? diffColor : .secondary.opacity(0.3))
+                                    .padding(8)
+                            }
+                            .disabled(historyPage >= totalPages)
+                        }
+                        .padding(.vertical, 12)
                     }
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))

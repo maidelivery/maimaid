@@ -208,9 +208,9 @@ struct ScannerView: View {
                 }
                 
                 for song in matches {
-                    if !seenIds.contains(song.songId) {
+                    if !seenIds.contains(song.songIdentifier) {
                         matchedSongs.append(song)
-                        seenIds.insert(song.songId)
+                        seenIds.insert(song.songIdentifier)
                     }
                 }
             }
@@ -309,9 +309,9 @@ struct ScannerView: View {
                 }
                 
                 for song in matches {
-                    if !seenIds.contains(song.songId) {
+                    if !seenIds.contains(song.songIdentifier) {
                         matchedSongs.append(song)
-                        seenIds.insert(song.songId)
+                        seenIds.insert(song.songIdentifier)
                     }
                 }
             }
@@ -527,7 +527,7 @@ struct ScannerView: View {
                     var foundFast = false
                     for song in songs {
                         if song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title) {
-                            frameMatches.append(song.songId)
+                            frameMatches.append(song.songIdentifier)
                             foundFast = true
                             if frameMatches.count > 3 { break }
                         }
@@ -536,7 +536,7 @@ struct ScannerView: View {
                     if !foundFast && cleaned.count > 4 {
                         for song in songs {
                             if fuzzyMatch(cleaned, song.title) {
-                                frameMatches.append(song.songId)
+                                frameMatches.append(song.songIdentifier)
                                 if frameMatches.count > 3 { break }
                             }
                         }
@@ -567,7 +567,7 @@ struct ScannerView: View {
                         if recognition.difficulty != nil && !hasDifficulty { continue }
                         
                         if song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title) {
-                            frameMatches.append(song.songId)
+                            frameMatches.append(song.songIdentifier)
                             foundFast = true
                             if frameMatches.count > 3 { break }
                         }
@@ -579,7 +579,7 @@ struct ScannerView: View {
                             if recognition.difficulty != nil && !hasDifficulty { continue }
                             
                             if fuzzyMatch(cleaned, song.title) {
-                                frameMatches.append(song.songId)
+                                frameMatches.append(song.songIdentifier)
                                 if frameMatches.count > 3 { break }
                             }
                         }
@@ -609,10 +609,10 @@ struct ScannerView: View {
         }
         
         if let topCandidate = recognitionBuffer.max(by: { $0.value < $1.value }), topCandidate.value > 15 {
-            if let song = songs.first(where: { $0.songId == topCandidate.key }) {
-                let newClass = songIds.contains(song.songId) ? imageClass : recognizedClass
+            if let song = songs.first(where: { $0.songIdentifier == topCandidate.key }) {
+                let newClass = songIds.contains(song.songIdentifier) ? imageClass : recognizedClass
                 
-                if recognizedSong?.songId != song.songId || recognizedClass != newClass {
+                if recognizedSong?.songIdentifier != song.songIdentifier || recognizedClass != newClass {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         self.recognizedSong = song
                         if newClass != .unknown {
@@ -879,7 +879,7 @@ struct ScannerResultCardView: View, Equatable {
     let onResetTap: () -> Void
     
     static func == (lhs: ScannerResultCardView, rhs: ScannerResultCardView) -> Bool {
-        lhs.song.songId == rhs.song.songId &&
+        lhs.song.songIdentifier == rhs.song.songIdentifier &&
         lhs.recognizedClass == rhs.recognizedClass &&
         lhs.recognizedType == rhs.recognizedType &&
         lhs.recognizedDifficulty == rhs.recognizedDifficulty &&

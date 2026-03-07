@@ -3,7 +3,7 @@ import SwiftData
 
 @Model
 final class Song {
-    @Attribute(.unique) var songId: String
+    @Attribute(.unique) var songIdentifier: String
     var category: String
     var title: String
     var artist: String
@@ -17,14 +17,14 @@ final class Song {
     var comment: String?
     var searchKeywords: String?
     var aliases: [String] = []
-    var lxnsId: Int = 0
+    var songId: Int = 0
     var isFavorite: Bool = false
     
     @Relationship(deleteRule: .cascade, inverse: \Sheet.song)
     var sheets: [Sheet] = []
     
-    init(songId: String, category: String, title: String, artist: String, imageName: String, version: String? = nil, releaseDate: String? = nil, sortOrder: Int, bpm: Double? = nil, isNew: Bool, isLocked: Bool, comment: String? = nil, searchKeywords: String? = nil, aliases: [String] = []) {
-        self.songId = songId
+    init(songIdentifier: String, category: String, title: String, artist: String, imageName: String, version: String? = nil, releaseDate: String? = nil, sortOrder: Int, bpm: Double? = nil, isNew: Bool, isLocked: Bool, comment: String? = nil, searchKeywords: String? = nil, aliases: [String] = []) {
+        self.songIdentifier = songIdentifier
         self.category = category
         self.title = title
         self.artist = artist

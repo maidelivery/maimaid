@@ -352,7 +352,11 @@
 "data.sync.log.fetchedData %lld" = "Fetched %lld songs";
 "data.sync.status.fetchingAliases" = "Fetching aliases from LXNS...";
 "data.sync.status.fetchingIcons" = "Fetching icon list...";
-"data.sync.log.fetchedIcons %lld" = "Fetched %lld icons";
+"data.sync.log.fetchedIcons %lld" = "Fetched %lld icons from LXNS";
+"data.sync.log.fetchedProviderIds %lld" = "Fetched %lld IDs from provider";
+"data.sync.log.providerIdError %@" = "Failed to decode provider IDs: %@";
+"data.sync.log.processingCompleted %lld %lld" = "Processing completed. Provider matches: %lld/%lld";
+"data.sync.log.syncedSummary %lld %lld" = "Synced %lld songs and %lld sheets with provider IDs";
 "data.sync.status.processing" = "Processing data...";
 "data.sync.log.newSong %@" = "New: %@";
 "data.sync.status.processingSong %@" = "Processing: %@";

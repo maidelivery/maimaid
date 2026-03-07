@@ -35,14 +35,19 @@ struct ThemeUtils {
     static func versionSortOrder(_ version: String) -> Int {
         let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
         
-        // Exact match preferred
+        // 1. Exact match preferred
         if let index = sequence.firstIndex(of: version) {
             return index
         }
         
-        // Fallback to contains
-        if let index = sequence.firstIndex(where: { version.contains($0) || $0.contains(version) }) {
-            return index
+        // 2. Fallback to longest matching candidate (Longest Match Wins)
+        // This prevents greedy substring matches like Matching "maimai" against "maimai でらっくす"
+        let matches = sequence.enumerated().filter { _, item in
+            version.contains(item) || item.contains(version)
+        }
+        
+        if let bestMatch = matches.max(by: { $0.element.count < $1.element.count }) {
+            return bestMatch.offset
         }
         
         return 999 
@@ -59,8 +64,14 @@ struct ThemeUtils {
             return version
         }
         
-        if let item = versions.first(where: { $0.version == version || version.contains($0.version) }) {
+        if let item = versions.first(where: { $0.version == version }) {
             return item.abbr
+        }
+        
+        // Longest Match Wins strategy for abbreviations
+        let matches = versions.filter { version.contains($0.version) || $0.version.contains(version) }
+        if let bestMatch = matches.max(by: { $0.version.count < $1.version.count }) {
+            return bestMatch.abbr
         }
         
         return version

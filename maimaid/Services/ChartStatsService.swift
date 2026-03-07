@@ -91,8 +91,8 @@ class ChartStatsService {
         // "diff": "13", "diff": "14+", etc.
         
         let diffValue = sheet.level
-        let songId = sheet.song?.lxnsId ?? 0
-        guard songId > 0 else { return nil }
+        let songId = sheet.songId > 0 ? sheet.songId : (sheet.song?.songId ?? 0)
+        if songId == 0 { return nil }
         
         // Strategy 1: Try with DX offset if song is DX
         if sheet.type.lowercased() == "dx" {

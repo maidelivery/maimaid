@@ -79,7 +79,7 @@ struct DataTransferService {
         // 2. Gather favorites
         let songDescriptor = FetchDescriptor<Song>()
         let songs = try context.fetch(songDescriptor)
-        let favorites = songs.filter { $0.isFavorite }.map { $0.songId }
+        let favorites = songs.filter { $0.isFavorite }.map { $0.songIdentifier }
         
         // 3. Gather config
         let configDescriptor = FetchDescriptor<SyncConfig>()
@@ -145,7 +145,7 @@ struct DataTransferService {
         let sheetDescriptor = FetchDescriptor<Sheet>()
         let allSheets = try context.fetch(sheetDescriptor)
         let sheetLookup = Dictionary(uniqueKeysWithValues: allSheets.compactMap { sheet -> (String, Sheet)? in
-            let key = "\(sheet.songId)_\(sheet.type)_\(sheet.difficulty)"
+            let key = "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)"
             return (key, sheet)
         })
         
@@ -186,7 +186,7 @@ struct DataTransferService {
         if !transfer.favorites.isEmpty {
             let songDescriptor = FetchDescriptor<Song>()
             let allSongs = try context.fetch(songDescriptor)
-            let songLookup = Dictionary(uniqueKeysWithValues: allSongs.map { ($0.songId, $0) })
+            let songLookup = Dictionary(uniqueKeysWithValues: allSongs.map { ($0.songIdentifier, $0) })
             
             for songId in transfer.favorites {
                 if let song = songLookup[songId] {

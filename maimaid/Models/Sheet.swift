@@ -3,7 +3,7 @@ import SwiftData
 
 @Model
 final class Sheet {
-    var songId: String
+    var songIdentifier: String
     var type: String // "dx", "std", "utage"
     var difficulty: String // "basic", "advanced", "expert", "master", "remaster", or Utage Kanji
     var level: String
@@ -26,12 +26,14 @@ final class Sheet {
     var regionUsa: Bool = false
     var regionCn: Bool = false
     
+    var songId: Int = 0
+    
     var song: Song?
     @Relationship(deleteRule: .cascade) var score: Score?
     @Relationship(deleteRule: .cascade) var playRecords: [PlayRecord]?
     
-    init(songId: String, type: String, difficulty: String, level: String, levelValue: Double? = nil, internalLevel: String? = nil, internalLevelValue: Double? = nil, noteDesigner: String? = nil, tap: Int? = nil, hold: Int? = nil, slide: Int? = nil, touch: Int? = nil, breakCount: Int? = nil, total: Int? = nil) {
-        self.songId = songId
+    init(songIdentifier: String, type: String, difficulty: String, level: String, levelValue: Double? = nil, internalLevel: String? = nil, internalLevelValue: Double? = nil, noteDesigner: String? = nil, tap: Int? = nil, hold: Int? = nil, slide: Int? = nil, touch: Int? = nil, breakCount: Int? = nil, total: Int? = nil, songId: Int = 0) {
+        self.songIdentifier = songIdentifier
         self.type = type
         self.difficulty = difficulty
         self.level = level
@@ -45,5 +47,6 @@ final class Sheet {
         self.touch = touch
         self.breakCount = breakCount
         self.total = total
+        self.songId = songId
     }
 }

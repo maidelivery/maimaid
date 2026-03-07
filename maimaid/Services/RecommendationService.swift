@@ -140,7 +140,7 @@ class RecommendationService {
                     continue
                 }
                 
-                let songStats = stats[song.songId] ?? (song.lxnsId > 0 ? stats[String(song.lxnsId)] : nil)
+                let songStats = stats[song.songIdentifier] ?? (song.songId > 0 ? stats[String(song.songId)] : nil)
                 
                 for sheet in song.sheets {
                     if sheet.type.lowercased().contains("utage") { continue }

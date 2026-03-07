@@ -388,7 +388,7 @@ struct LxnsImportView: View {
                         }
                     } else {
                         let score = Score(
-                            sheetId: "\(targetSheet.songId)_\(targetSheet.type)_\(targetSheet.difficulty)",
+                            sheetId: "\(targetSheet.songIdentifier)_\(targetSheet.type)_\(targetSheet.difficulty)",
                             rate: record.achievements,
                             rank: newRank,
                             dxScore: record.dx_score,

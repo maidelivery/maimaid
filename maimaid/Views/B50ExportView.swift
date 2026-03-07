@@ -135,7 +135,7 @@ struct B50ExportView: View {
                 ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                     HStack(spacing: cardSpacing) {
                         ForEach(row) { entry in
-                            songCard(entry: entry, accentColor: accentColor)
+                           songCard(entry: entry, accentColor: accentColor)
                         }
                         // Fill empty slots
                         if row.count < columns {
@@ -185,9 +185,8 @@ struct B50ExportView: View {
                 
                 // Achievement Rank Small Badge (Optional: if we want to show it on image)
                 // ID overlay at bottom
-                if entry.lxnsId > 0 {
-                    let displayId = entry.lxnsId + (entry.type == "DX" ? 10000 : 0)
-                    Text("#\(displayId)")
+                if entry.songId > 0 {
+                    Text("#\(entry.songId)")
                         .font(.system(size: 8, weight: .bold, design: .monospaced))
                         .foregroundColor(.white)
                         .padding(.horizontal, 3)

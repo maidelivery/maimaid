@@ -76,7 +76,7 @@ struct BestTableView: View {
                         .foregroundColor(.secondary)
                 } else {
                     ForEach(b50Result.b15) { entry in
-                        if let song = songs.first(where: { $0.songId == entry.songId }) {
+                        if let song = songs.first(where: { $0.songIdentifier == entry.songIdentifier }) {
                             NavigationLink(destination: SongDetailView(song: song)) {
                                 ratingRow(entry: entry)
                             }
@@ -95,7 +95,7 @@ struct BestTableView: View {
                         .foregroundColor(.secondary)
                 } else {
                     ForEach(b50Result.b35) { entry in
-                        if let song = songs.first(where: { $0.songId == entry.songId }) {
+                        if let song = songs.first(where: { $0.songIdentifier == entry.songIdentifier }) {
                             NavigationLink(destination: SongDetailView(song: song)) {
                                 ratingRow(entry: entry)
                             }
