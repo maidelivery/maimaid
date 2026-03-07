@@ -130,7 +130,42 @@ struct ThemeUtils {
         return .secondary
     }
     
-    // MARK: - Status Normalization
+    // MARK: - Status Normalization & Ordering
+    
+    // Canonical ordering for FC badges
+    static func fcOrder(_ fc: String?) -> Int {
+        guard let fc = fc?.lowercased() else { return 0 }
+        switch fc {
+        case "app": return 4 // AP+
+        case "ap":  return 3 // AP
+        case "fcp": return 2 // FC+
+        case "fc":  return 1 // FC
+        default:    return 0
+        }
+    }
+    
+    static func bestFC(_ a: String?, _ b: String?) -> String? {
+        if fcOrder(a) >= fcOrder(b) { return a }
+        return b
+    }
+    
+    // Canonical ordering for FS badges
+    static func fsOrder(_ fs: String?) -> Int {
+        guard let fs = fs?.lowercased() else { return 0 }
+        switch fs {
+        case "fsdp": return 5 // FDX+
+        case "fsd":  return 4 // FDX
+        case "fsp":  return 3 // FS+
+        case "fs":   return 2 // FS
+        case "sync": return 1 // SYNC
+        default:     return 0
+        }
+    }
+    
+    static func bestFS(_ a: String?, _ b: String?) -> String? {
+        if fsOrder(a) >= fsOrder(b) { return a }
+        return b
+    }
     
     /// Normalizes FC status codes to display strings (fc→FC, fcp→FC+, ap→AP, app→AP+).
     static func normalizeFC(_ fc: String) -> String {

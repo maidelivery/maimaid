@@ -21,9 +21,18 @@ struct FilterView: View {
                         HStack {
                             Label("filter.favorites", systemImage: settings.showFavoritesOnly ? "star.fill" : "star")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(settings.showFavoritesOnly ? .yellow : .primary)
+                                .foregroundColor(.primary)
                             Spacer()
                             Toggle("", isOn: $settings.showFavoritesOnly)
+                                .labelsHidden()
+                        }
+                        
+                        HStack {
+                            Label("filter.hideDeleted", systemImage: settings.hideDeletedSongs ? "eye.slash.fill" : "eye.slash")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Toggle("", isOn: $settings.hideDeletedSongs)
                                 .labelsHidden()
                         }
                     }
@@ -132,6 +141,9 @@ struct FilterView: View {
                         }
                     }
                 }
+            }
+            .onChange(of: settings.hideDeletedSongs) { _, newValue in
+                UserDefaults.standard.set(newValue, forKey: "filter.hideDeletedSongs")
             }
         }
     }

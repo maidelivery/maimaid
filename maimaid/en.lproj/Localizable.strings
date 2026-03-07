@@ -139,6 +139,9 @@
 "song.detail.action.record" = "Record Score";
 "song.detail.section.notes" = "Notes";
 "song.detail.section.rating" = "Rating Table";
+"song.detail.section.history" = "Play History";
+"song.detail.sort.time" = "Time";
+"song.detail.sort.rate" = "Rate";
 "song.detail.table.achievement" = "Achievement";
 "song.detail.table.rating" = "Rating";
 "song.detail.table.delta" = "Delta";
@@ -151,8 +154,9 @@
 "song.detail.label.artist" = "Artist";
 
 // MARK: - Filter
-"filter.title" = "Filter";
-"filter.quick" = "Quick Filter";
+"filter.title" = "Filter Options";
+"filter.quick" = "Quick Filters";
+"filter.hideDeleted" = "Hide Deleted Songs";
 "filter.favorites" = "Favorites Only";
 "filter.difficulty" = "Difficulty";
 "filter.levelRange" = "Level Range";

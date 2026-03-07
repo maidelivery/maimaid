@@ -494,13 +494,45 @@ struct ScoreEntryView: View {
     private func saveScore() {
         guard let rate = parsedRate, isValid else { return }
         
+        // 1. Always create a new historical PlayRecord
+        let newPlayRecord = PlayRecord(
+            sheetId: "\(sheet.songId)-\(sheet.type)-\(sheet.difficulty)",
+            rate: rate,
+            rank: selectedRank,
+            dxScore: parsedDxScore ?? 0,
+            fc: selectedFC,
+            fs: selectedFS
+        )
+        modelContext.insert(newPlayRecord)
+        
+        if sheet.playRecords == nil {
+            sheet.playRecords = []
+        }
+        sheet.playRecords?.append(newPlayRecord)
+        
+        // 2. Monotonically update the main Score
         let existingScore = sheet.score
         
-        if existingScore == nil || rate > existingScore!.rate {
-            if let existing = existingScore {
-                modelContext.delete(existing)
+        if let existing = existingScore {
+            // Update individual metrics only if they are strictly better
+            let isNewRateBetter = rate > existing.rate
+            if isNewRateBetter {
+                existing.rate = rate
+                existing.rank = selectedRank
+                existing.achievementDate = Date()
             }
             
+            existing.dxScore = max(existing.dxScore, parsedDxScore ?? 0)
+            existing.fc = ThemeUtils.bestFC(existing.fc, selectedFC)
+            existing.fs = ThemeUtils.bestFS(existing.fs, selectedFS)
+            
+            // Trigger Auto-Sync for manual entry with the updated monotonic score
+            if let config = configs.first, isNewRateBetter || (parsedDxScore ?? 0) > existing.dxScore || existing.fc != selectedFC || existing.fs != selectedFS {
+                 Task { await SyncManager.shared.uploadScoreIfNeeded(sheet: sheet, score: existing, config: config) }
+            }
+            
+        } else {
+            // No existing score, create the baseline
             let newScore = Score(
                 sheetId: "\(sheet.songId)-\(sheet.type)-\(sheet.difficulty)",
                 rate: rate,
@@ -512,15 +544,13 @@ struct ScoreEntryView: View {
             modelContext.insert(newScore)
             sheet.score = newScore
             
-            try? modelContext.save()
-            
             // Trigger Auto-Sync for manual entry
             if let config = configs.first {
-                Task {
-                    await SyncManager.shared.uploadScoreIfNeeded(sheet: sheet, score: newScore, config: config)
-                }
+                Task { await SyncManager.shared.uploadScoreIfNeeded(sheet: sheet, score: newScore, config: config) }
             }
         }
+        
+        try? modelContext.save()
         
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         

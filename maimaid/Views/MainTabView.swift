@@ -30,7 +30,7 @@ struct MainTabView: View {
             }
             
             Tab("tab.search", systemImage: "magnifyingglass", role: .search) {
-                ContentView(searchText: searchText)
+                SongsView(searchText: searchText)
                     .searchable(text: $searchText, prompt: "search.placeholder")
             }
         }

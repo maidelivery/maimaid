@@ -16,7 +16,7 @@ enum SortOption: String, CaseIterable, Identifiable {
     var id: String { self.rawValue }
 }
 
-struct ContentView: View {
+struct SongsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Song.sortOrder, order: .forward) private var songs: [Song]
     
@@ -28,6 +28,8 @@ struct ContentView: View {
     @State private var sortOption: SortOption = .defaultOrder
     @State private var sortAscending: Bool = true
     @State private var isGridView: Bool = false
+    @State private var displayedSongs: [Song] = []
+    @State private var isSorting: Bool = false
     
     var allCategories: [String] {
         Array(Set(songs.map { $0.category })).sorted { ThemeUtils.categorySortOrder($0) < ThemeUtils.categorySortOrder($1) }
@@ -37,44 +39,62 @@ struct ContentView: View {
         Array(Set(songs.compactMap { $0.version })).sorted { ThemeUtils.versionSortOrder($0) < ThemeUtils.versionSortOrder($1) }
     }
     
-    var sortedAndFilteredSongs: [Song] {
-        let filtered = FilterUtils.filterSongs(songs, settings: filterSettings, searchText: searchText)
+    private func updateDisplayedSongs() {
+        isSorting = true
         
-        return filtered.sorted { a, b in
-            switch sortOption {
-            case .defaultOrder:
-                return sortAscending ? (a.sortOrder < b.sortOrder) : (a.sortOrder > b.sortOrder)
-            case .versionAndDate:
-                let vA = a.version ?? ""
-                let vB = b.version ?? ""
-                let orderA = ThemeUtils.versionSortOrder(vA)
-                let orderB = ThemeUtils.versionSortOrder(vB)
+        // Capture dependencies
+        let currentSongs = songs
+        let currentFilter = filterSettings
+        let currentSearch = searchText
+        let currentSort = sortOption
+        let currentAscending = sortAscending
+        
+        // Allow UI to flush (e.g. menu close animations)
+        Task {
+            // Small delay to let UI animations finish
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            
+            // Execute heavy logic in background
+            let result = await Task.detached { () -> [Song] in
+                let filtered = FilterUtils.filterSongs(currentSongs, settings: currentFilter, searchText: currentSearch)
                 
-                if orderA != orderB {
-                    return sortAscending ? (orderA < orderB) : (orderA > orderB)
+                return filtered.sorted { a, b in
+                    switch currentSort {
+                    case .defaultOrder:
+                        return currentAscending ? (a.sortOrder < b.sortOrder) : (a.sortOrder > b.sortOrder)
+                    case .versionAndDate:
+                        let vA = a.version ?? ""
+                        let vB = b.version ?? ""
+                        let orderA = ThemeUtils.versionSortOrder(vA)
+                        let orderB = ThemeUtils.versionSortOrder(vB)
+                        
+                        if orderA != orderB {
+                            return currentAscending ? (orderA < orderB) : (orderA > orderB)
+                        }
+                        
+                        let dA = a.releaseDate ?? "0000-00-00"
+                        let dB = b.releaseDate ?? "0000-00-00"
+                        if dA != dB {
+                            return currentAscending ? (dA < dB) : (dA > dB)
+                        }
+                        return a.sortOrder < b.sortOrder
+                    case .difficulty:
+                        let maxDiffA = a.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
+                        let maxDiffB = b.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
+                        if maxDiffA == maxDiffB {
+                            return a.sortOrder < b.sortOrder
+                        }
+                        return currentAscending ? (maxDiffA < maxDiffB) : (maxDiffA > maxDiffB)
+                    }
                 }
-                
-                // Same version, sort by date
-                let dA = a.releaseDate ?? "0000-00-00"
-                let dB = b.releaseDate ?? "0000-00-00"
-                if dA != dB {
-                    // Dates are different
-                    return sortAscending ? (dA < dB) : (dA > dB)
-                }
-                
-                // Same date or missing, fallback to sortOrder
-                return a.sortOrder < b.sortOrder
-            case .difficulty:
-                let maxDiffA = a.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
-                let maxDiffB = b.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
-                if maxDiffA == maxDiffB {
-                    return a.sortOrder < b.sortOrder
-                }
-                return sortAscending ? (maxDiffA < maxDiffB) : (maxDiffA > maxDiffB)
+            }.value
+            
+            await MainActor.run {
+                self.displayedSongs = result
+                self.isSorting = false
             }
         }
     }
-
     
     var body: some View {
         NavigationStack {
@@ -93,8 +113,16 @@ struct ContentView: View {
                             listContent
                         }
                     }
+                    .overlay {
+                        if isSorting && !displayedSongs.isEmpty {
+                            ProgressView()
+                                .padding()
+                                .background(.ultraThinMaterial)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                    }
                     
-                    if !searchText.isEmpty && sortedAndFilteredSongs.isEmpty {
+                    if !searchText.isEmpty && displayedSongs.isEmpty && !isSorting {
                         ContentUnavailableView.search(text: searchText)
                             .padding(.top, 40)
                     }
@@ -144,13 +172,23 @@ struct ContentView: View {
         .sheet(isPresented: $showFilterSheet) {
             FilterView(settings: $filterSettings, allCategories: allCategories, allVersions: allVersions)
         }
+        .onAppear {
+            if displayedSongs.isEmpty && !songs.isEmpty {
+                updateDisplayedSongs()
+            }
+        }
+        .onChange(of: songs) { _, _ in updateDisplayedSongs() }
+        .onChange(of: searchText) { _, _ in updateDisplayedSongs() }
+        .onChange(of: filterSettings) { _, _ in updateDisplayedSongs() }
+        .onChange(of: sortOption) { _, _ in updateDisplayedSongs() }
+        .onChange(of: sortAscending) { _, _ in updateDisplayedSongs() }
     }
     
     // MARK: - List Layout
     
     private var listContent: some View {
         LazyVStack(spacing: 8) {
-            ForEach(sortedAndFilteredSongs) { song in
+            ForEach(displayedSongs) { song in
                 NavigationLink {
                     SongDetailView(song: song)
                 } label: {
@@ -172,7 +210,7 @@ struct ContentView: View {
     
     private var gridContent: some View {
         LazyVGrid(columns: gridColumns, spacing: 0) {
-            ForEach(sortedAndFilteredSongs) { song in
+            ForEach(displayedSongs) { song in
                 NavigationLink {
                     SongDetailView(song: song)
                 } label: {
@@ -227,10 +265,4 @@ private struct SongGridCell: View {
         .padding(.horizontal, 4)
         .border(Color.primary.opacity(0.1), width: 0.5)
     }
-}
-
-
-
-#Preview {
-    ContentView()
 }

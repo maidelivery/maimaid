@@ -191,9 +191,20 @@ struct ScannerView: View {
             
             for candidate in allCandidates {
                 let matches = songs.filter { song in
-                    song.title.localizedCaseInsensitiveContains(candidate) ||
+                    // Requirement 1: Filter out songs where all standard (dx/std) sheets are disabled (deleted)
+                    // We ignore 'utage' sheets here because a song might be deleted from regular play but keep its utage chart
+                    let standardSheets = song.sheets.filter { $0.type.lowercased() != "utage" }
+                    
+                    // If a song has no standard sheets at all, or if all its standard sheets are region disabled
+                    let isDeleted = standardSheets.isEmpty || standardSheets.allSatisfy { sheet in
+                        !sheet.regionJp && !sheet.regionIntl && !sheet.regionUsa && !sheet.regionCn
+                    }
+                    if isDeleted { return false }
+                    
+                    return song.title.localizedCaseInsensitiveContains(candidate) ||
                     candidate.localizedCaseInsensitiveContains(song.title) ||
-                    (song.searchKeywords?.localizedCaseInsensitiveContains(candidate) ?? false)
+                    (song.searchKeywords?.localizedCaseInsensitiveContains(candidate) ?? false) ||
+                    song.aliases.contains(where: { $0.localizedCaseInsensitiveContains(candidate) })
                 }
                 
                 for song in matches {
@@ -204,11 +215,52 @@ struct ScannerView: View {
                 }
             }
             
-            matchedSongs.sort { a, b in
-                let aIsExact = allCandidates.contains(where: { $0.localizedCaseInsensitiveCompare(a.title) == .orderedSame })
-                let bIsExact = allCandidates.contains(where: { $0.localizedCaseInsensitiveCompare(b.title) == .orderedSame })
-                if aIsExact != bIsExact { return aIsExact }
-                return a.title.count > b.title.count
+            // Helper for Levenshtein distance directly in the closure
+            func levenshtein(_ a: String, _ b: String) -> Int {
+                let a = Array(a.lowercased())
+                let b = Array(b.lowercased())
+                if a.isEmpty { return b.count }
+                if b.isEmpty { return a.count }
+                var dist = [[Int]](repeating: [Int](repeating: 0, count: b.count + 1), count: a.count + 1)
+                for i in 0...a.count { dist[i][0] = i }
+                for j in 0...b.count { dist[0][j] = j }
+                for i in 1...a.count {
+                    for j in 1...b.count {
+                        if a[i - 1] == b[j - 1] {
+                            dist[i][j] = dist[i - 1][j - 1]
+                        } else {
+                            dist[i][j] = min(dist[i - 1][j] + 1, dist[i][j - 1] + 1, dist[i - 1][j - 1] + 1)
+                        }
+                    }
+                }
+                return dist[a.count][b.count]
+            }
+            
+            // Requirement 2: Enhanced sorting logic
+            if let targetCandidate = allCandidates.first {
+                matchedSongs.sort { a, b in
+                    // Exact Title Match takes supreme priority
+                    let aIsExact = a.title.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame
+                    let bIsExact = b.title.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame
+                    if aIsExact != bIsExact { return aIsExact }
+                    
+                    // Exact Alias Match takes secondary priority
+                    let aAliasExact = a.aliases.contains { $0.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame }
+                    let bAliasExact = b.aliases.contains { $0.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame }
+                    if aAliasExact != bAliasExact { return aAliasExact }
+                    
+                    // Levenshtein distance (smaller is better)
+                    let aDist = levenshtein(a.title, targetCandidate)
+                    let bDist = levenshtein(b.title, targetCandidate)
+                    if aDist != bDist { return aDist < bDist }
+                    
+                    // Fallback to title length (shorter is more exact)
+                    return a.title.count < b.title.count
+                }
+            } else {
+                matchedSongs.sort { a, b in
+                    return a.title.count < b.title.count
+                }
             }
             
             isProcessingPhoto = false
@@ -239,12 +291,21 @@ struct ScannerView: View {
             
             for candidate in allCandidates {
                 let matches = songs.filter { song in
+                    // Requirement 1: Filter out songs where all standard (dx/std) sheets are disabled (deleted)
+                    let standardSheets = song.sheets.filter { $0.type.lowercased() != "utage" }
+                    
+                    let isDeleted = standardSheets.isEmpty || standardSheets.allSatisfy { sheet in
+                        !sheet.regionJp && !sheet.regionIntl && !sheet.regionUsa && !sheet.regionCn
+                    }
+                    if isDeleted { return false }
+                    
                     let hasDifficulty = song.sheets.contains { $0.difficulty.lowercased() == inputDifficulty.lowercased() }
                     if recognition.difficulty != nil && !hasDifficulty { return false }
                     
                     return song.title.localizedCaseInsensitiveContains(candidate) ||
                     candidate.localizedCaseInsensitiveContains(song.title) ||
-                    (song.searchKeywords?.localizedCaseInsensitiveContains(candidate) ?? false)
+                    (song.searchKeywords?.localizedCaseInsensitiveContains(candidate) ?? false) ||
+                    song.aliases.contains(where: { $0.localizedCaseInsensitiveContains(candidate) })
                 }
                 
                 for song in matches {
@@ -255,11 +316,52 @@ struct ScannerView: View {
                 }
             }
             
-            matchedSongs.sort { a, b in
-                let aIsExact = allCandidates.contains(where: { $0.localizedCaseInsensitiveCompare(a.title) == .orderedSame })
-                let bIsExact = allCandidates.contains(where: { $0.localizedCaseInsensitiveCompare(b.title) == .orderedSame })
-                if aIsExact != bIsExact { return aIsExact }
-                return a.title.count > b.title.count
+            // Helper for Levenshtein distance directly in the closure
+            func levenshtein(_ a: String, _ b: String) -> Int {
+                let a = Array(a.lowercased())
+                let b = Array(b.lowercased())
+                if a.isEmpty { return b.count }
+                if b.isEmpty { return a.count }
+                var dist = [[Int]](repeating: [Int](repeating: 0, count: b.count + 1), count: a.count + 1)
+                for i in 0...a.count { dist[i][0] = i }
+                for j in 0...b.count { dist[0][j] = j }
+                for i in 1...a.count {
+                    for j in 1...b.count {
+                        if a[i - 1] == b[j - 1] {
+                            dist[i][j] = dist[i - 1][j - 1]
+                        } else {
+                            dist[i][j] = min(dist[i - 1][j] + 1, dist[i][j - 1] + 1, dist[i - 1][j - 1] + 1)
+                        }
+                    }
+                }
+                return dist[a.count][b.count]
+            }
+            
+            // Requirement 2: Enhanced sorting logic
+            if let targetCandidate = allCandidates.first {
+                matchedSongs.sort { a, b in
+                    // Exact Title Match takes supreme priority
+                    let aIsExact = a.title.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame
+                    let bIsExact = b.title.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame
+                    if aIsExact != bIsExact { return aIsExact }
+                    
+                    // Exact Alias Match takes secondary priority
+                    let aAliasExact = a.aliases.contains { $0.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame }
+                    let bAliasExact = b.aliases.contains { $0.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame }
+                    if aAliasExact != bAliasExact { return aAliasExact }
+                    
+                    // Levenshtein distance (smaller is better)
+                    let aDist = levenshtein(a.title, targetCandidate)
+                    let bDist = levenshtein(b.title, targetCandidate)
+                    if aDist != bDist { return aDist < bDist }
+                    
+                    // Fallback to title length (shorter is more exact)
+                    return a.title.count < b.title.count
+                }
+            } else {
+                matchedSongs.sort { a, b in
+                    return a.title.count < b.title.count
+                }
             }
             
             isProcessingPhoto = false
@@ -373,187 +475,25 @@ struct ScannerView: View {
     
     @ViewBuilder
     private func debugOverlayView() -> some View {
-        if showScannerBoundingBox {
-            GeometryReader { geo in
-                ZStack(alignment: .topLeading) {
-                ForEach(debugBoxes.indices, id: \.self) { i in
-                    let box = debugBoxes[i]
-                    let rect = box.rect
-                    
-                    // CoreML / Vision returns normalized coordinates where (0,0) is bottom-left
-                    // CameraFeed is AspectFill, which means the sides might be cropped.
-                    // To simply draw them, we convert from Vision (bottom-left) to UIKit (top-left)
-                    let x = rect.origin.x * geo.size.width
-                    let y = (1 - rect.origin.y - rect.height) * geo.size.height
-                    let w = rect.width * geo.size.width
-                    let h = rect.height * geo.size.height
-                    
-                    Path { path in
-                        path.addRect(CGRect(x: x, y: y, width: w, height: h))
-                    }
-                    .stroke(Color.green, lineWidth: 2)
-                    
-                    Text(box.label)
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 2)
-                        .background(Color.green)
-                        .position(x: x + w / 2, y: max(10, y - 8))
-                }
-                }
-            }
-            .allowsHitTesting(false)
-            .ignoresSafeArea()
-        }
+        ScannerDebugOverlayView(
+            showScannerBoundingBox: showScannerBoundingBox,
+            debugBoxes: debugBoxes
+        )
     }
     
     @ViewBuilder
     private func resultView() -> some View {
         if let song = recognizedSong {
-            if recognizedClass == .choose {
-                NavigationLink(destination: {
-                    SongDetailView(song: song)
-                        .onDisappear { resetScanner() }
-                }) {
-                    VStack(spacing: 0) {
-                        HStack(spacing: 12) {
-                            SongJacketView(imageName: song.imageName, size: 40, cornerRadius: 8)
-                                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                            
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(song.title)
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(.primary)
-                                    .lineLimit(1)
-                                
-                                Text(song.artist)
-                                    .font(.system(size: 11, weight: .regular))
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                            }
-                            
-                            Spacer()
-                            
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.secondary.opacity(0.4))
-                        }
-                        .padding(.vertical, 14)
-                        .padding(.horizontal, 16)
-                    }
-                    .fixedSize(horizontal: false, vertical: true)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .strokeBorder(Color.primary.opacity(0.1), lineWidth: 1)
-                    )
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 40)
-                }
-                .buttonStyle(.plain)
-                .transition(.asymmetric(
-                    insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)),
-                    removal: .opacity.combined(with: .scale(scale: 0.95))
-                ))
-            } else {
-                Button {
-                    isShowingScoreEntry = true
-                } label: {
-                    let chartType = recognizedType ?? "dx"
-                    let diff = recognizedDifficulty ?? "master"
-                    let diffColor = ThemeUtils.colorForDifficulty(diff, chartType)
-                    
-                    // Find matching sheet if possible to show level
-                    let sheet = song.sheets.first(where: { $0.difficulty.lowercased() == diff.lowercased() && $0.type.lowercased() == chartType.lowercased() })
-                    
-                    VStack(spacing: 0) {
-                        HStack(spacing: 0) {
-                            // Difficulty accent bar
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(diffColor)
-                                .frame(width: 4)
-                                .padding(.vertical, 4)
-                            
-                            HStack(spacing: 12) {
-                                // Jacket
-                                SongJacketView(imageName: song.imageName, size: 40, cornerRadius: 8)
-                                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                                
-                                // Info
-                                VStack(alignment: .leading, spacing: 3) {
-                                    HStack(spacing: 4) {
-                                        Text(chartType.uppercased() == "STD" ? String(localized: "scanner.chart.std") : chartType.uppercased())
-                                            .font(.system(size: 8, weight: .black))
-                                            .padding(.horizontal, 4)
-                                            .padding(.vertical, 1)
-                                            .background(chartType.lowercased() == "dx" ? Color.orange : Color.blue)
-                                            .foregroundColor(.white)
-                                            .cornerRadius(3)
-                                        
-                                        Text(song.title)
-                                        .font(.system(size: 12, weight: .bold))
-                                        .foregroundColor(.primary)
-                                        .lineLimit(1)
-                                    }
-                                    
-                                    if diff.lowercased() == "remaster" {
-                                            Text("RE: MASTER")
-                                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                                .foregroundColor(diffColor)
-                                        } else {
-                                            Text(diff.uppercased())
-                                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                                .foregroundColor(diffColor)
-                                        }
-                                }
-                                
-                                Spacer()
-                                
-                                // Score info
-                                if let rate = recognizedRate {
-                                    VStack(alignment: .trailing, spacing: 1) {
-                                        Text(String(format: "%.4f%%", rate))
-                                            .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                            .foregroundColor(.primary)
-                                        Text(RatingUtils.calculateRank(achievement: rate))
-                                            .font(.system(size: 10, weight: .black, design: .rounded))
-                                            .foregroundColor(diffColor)
-                                    }
-                                }
-                                
-                                // Level
-                                if let levelStr = sheet?.internalLevel ?? sheet?.level {
-                                    Text(levelStr)
-                                        .font(.system(size: 28, weight: .black, design: .rounded))
-                                        .foregroundColor(diffColor.opacity(0.85))
-                                        .frame(minWidth: 44)
-                                }
-                                
-                                // Edit chevron
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(.secondary.opacity(0.4))
-                            }
-                            .padding(.leading, 12)
-                            .padding(.trailing, 16)
-                        }
-                        .padding(.vertical, 14)
-                    }
-                    .fixedSize(horizontal: false, vertical: true)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .strokeBorder(diffColor.opacity(0.2), lineWidth: 1)
-                    )
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 40)
-                }
-                .buttonStyle(.plain)
-                .transition(.asymmetric(
-                    insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)),
-                    removal: .opacity.combined(with: .scale(scale: 0.95))
-                ))
-            }
+            ScannerResultCardView(
+                song: song,
+                recognizedClass: recognizedClass,
+                recognizedType: recognizedType,
+                recognizedDifficulty: recognizedDifficulty,
+                recognizedRate: recognizedRate,
+                onScoreEntryTap: { isShowingScoreEntry = true },
+                onResetTap: { resetScanner() }
+            )
+            .equatable()
         }
     }
     
@@ -663,8 +603,8 @@ struct ScannerView: View {
         for id in songIds {
             recognitionBuffer[id, default: 0] += 6
             // Cap the buffer value so it doesn't grow infinitely, allowing fast switching
-            if recognitionBuffer[id]! > 30 {
-                recognitionBuffer[id] = 30
+            if recognitionBuffer[id]! > 18 {
+                recognitionBuffer[id] = 18
             }
         }
         
@@ -823,7 +763,11 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
         let photoOut = AVCapturePhotoOutput()
         if captureSession.canAddOutput(photoOut) {
             captureSession.addOutput(photoOut)
-            photoOut.isHighResolutionCaptureEnabled = true
+            if #available(iOS 16.0, *) {
+                photoOut.maxPhotoDimensions = videoDevice.activeFormat.supportedMaxPhotoDimensions.last ?? CMVideoDimensions(width: 0, height: 0)
+            } else {
+                photoOut.isHighResolutionCaptureEnabled = true
+            }
             self.photoOutput = photoOut
         }
         
@@ -888,6 +832,201 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
     }
 }
 
+struct ScannerDebugOverlayView: View {
+    let showScannerBoundingBox: Bool
+    let debugBoxes: [RecognizedBox]
+    
+    var body: some View {
+        if showScannerBoundingBox {
+            GeometryReader { geo in
+                ZStack(alignment: .topLeading) {
+                    ForEach(debugBoxes.indices, id: \.self) { i in
+                        let box = debugBoxes[i]
+                        let rect = box.rect
+                        
+                        let x = rect.origin.x * geo.size.width
+                        let y = (1 - rect.origin.y - rect.height) * geo.size.height
+                        let w = rect.width * geo.size.width
+                        let h = rect.height * geo.size.height
+                        
+                        Path { path in
+                            path.addRect(CGRect(x: x, y: y, width: w, height: h))
+                        }
+                        .stroke(Color.green, lineWidth: 2)
+                        
+                        Text(box.label)
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 2)
+                            .background(Color.green)
+                            .position(x: x + w / 2, y: max(10, y - 8))
+                    }
+                }
+            }
+            .allowsHitTesting(false)
+            .ignoresSafeArea()
+        }
+    }
+}
+
+struct ScannerResultCardView: View, Equatable {
+    let song: Song
+    let recognizedClass: MaimaiImageType
+    let recognizedType: String?
+    let recognizedDifficulty: String?
+    let recognizedRate: Double?
+    let onScoreEntryTap: () -> Void
+    let onResetTap: () -> Void
+    
+    static func == (lhs: ScannerResultCardView, rhs: ScannerResultCardView) -> Bool {
+        lhs.song.songId == rhs.song.songId &&
+        lhs.recognizedClass == rhs.recognizedClass &&
+        lhs.recognizedType == rhs.recognizedType &&
+        lhs.recognizedDifficulty == rhs.recognizedDifficulty &&
+        lhs.recognizedRate == rhs.recognizedRate
+    }
+    
+    var body: some View {
+        if recognizedClass == .choose {
+            NavigationLink(destination: {
+                SongDetailView(song: song)
+                    .onDisappear { onResetTap() }
+            }) {
+                VStack(spacing: 0) {
+                    HStack(spacing: 12) {
+                        SongJacketView(imageName: song.imageName, size: 40, cornerRadius: 8)
+                            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(song.title)
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                            
+                            Text(song.artist)
+                                .font(.system(size: 11, weight: .regular))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.secondary.opacity(0.4))
+                    }
+                    .padding(.vertical, 14)
+                    .padding(.horizontal, 16)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(Color.primary.opacity(0.1), lineWidth: 1)
+                )
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
+            }
+            .buttonStyle(.plain)
+            .transition(.asymmetric(
+                insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)),
+                removal: .opacity.combined(with: .scale(scale: 0.95))
+            ))
+        } else {
+            Button {
+                onScoreEntryTap()
+            } label: {
+                let chartType = recognizedType ?? "dx"
+                let diff = recognizedDifficulty ?? "master"
+                let diffColor = ThemeUtils.colorForDifficulty(diff, chartType)
+                
+                let sheet = song.sheets.first(where: { $0.difficulty.lowercased() == diff.lowercased() && $0.type.lowercased() == chartType.lowercased() })
+                
+                VStack(spacing: 0) {
+                    HStack(spacing: 0) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(diffColor)
+                            .frame(width: 4)
+                            .padding(.vertical, 4)
+                        
+                        HStack(spacing: 12) {
+                            SongJacketView(imageName: song.imageName, size: 40, cornerRadius: 8)
+                                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                            
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack(spacing: 4) {
+                                    Text(chartType.uppercased() == "STD" ? String(localized: "scanner.chart.std") : chartType.uppercased())
+                                        .font(.system(size: 8, weight: .black))
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1)
+                                        .background(chartType.lowercased() == "dx" ? Color.orange : Color.blue)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(3)
+                                    
+                                    Text(song.title)
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.primary)
+                                        .lineLimit(1)
+                                }
+                                
+                                if diff.lowercased() == "remaster" {
+                                    Text("RE: MASTER")
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .foregroundColor(diffColor)
+                                } else {
+                                    Text(diff.uppercased())
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .foregroundColor(diffColor)
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            if let rate = recognizedRate {
+                                VStack(alignment: .trailing, spacing: 1) {
+                                    Text(String(format: "%.4f%%", rate))
+                                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                        .foregroundColor(.primary)
+                                    Text(RatingUtils.calculateRank(achievement: rate))
+                                        .font(.system(size: 10, weight: .black, design: .rounded))
+                                        .foregroundColor(diffColor)
+                                }
+                            }
+                            
+                            if let levelStr = sheet?.internalLevel ?? sheet?.level {
+                                Text(levelStr)
+                                    .font(.system(size: 28, weight: .black, design: .rounded))
+                                    .foregroundColor(diffColor.opacity(0.85))
+                                    .frame(minWidth: 44)
+                            }
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.secondary.opacity(0.4))
+                        }
+                        .padding(.leading, 12)
+                        .padding(.trailing, 16)
+                    }
+                    .padding(.vertical, 14)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(diffColor.opacity(0.2), lineWidth: 1)
+                )
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
+            }
+            .buttonStyle(.plain)
+            .transition(.asymmetric(
+                insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)),
+                removal: .opacity.combined(with: .scale(scale: 0.95))
+            ))
+        }
+    }
+}
+
 extension CameraViewController: AVCapturePhotoCaptureDelegate {
     @objc private func takePhoto() {
         guard let output = photoOutput else { return }
@@ -896,11 +1035,23 @@ extension CameraViewController: AVCapturePhotoCaptureDelegate {
         let settings = AVCapturePhotoSettings()
         if let videoConnection = output.connection(with: .video) {
             // Apply current screen orientation to the photo output connection
-            videoConnection.videoOrientation = .portrait
+            if #available(iOS 17.0, *) {
+                if videoConnection.isVideoRotationAngleSupported(90) {
+                    videoConnection.videoRotationAngle = 90
+                }
+            } else {
+                if videoConnection.isVideoOrientationSupported {
+                    videoConnection.videoOrientation = .portrait
+                }
+            }
         }
         
         if output.availablePhotoCodecTypes.contains(.jpeg) {
-            settings.isHighResolutionPhotoEnabled = true
+            if #available(iOS 16.0, *) {
+                settings.maxPhotoDimensions = output.maxPhotoDimensions
+            } else {
+                settings.isHighResolutionPhotoEnabled = true
+            }
         }
         
         output.capturePhoto(with: settings, delegate: self)

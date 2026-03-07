@@ -220,13 +220,13 @@ struct B50ExportView: View {
                     Spacer()
                     
                     if stars > 0 {
-                        HStack(spacing: 0.5) {
-                            ForEach(0..<stars, id: \.self) { _ in
-                                Image(systemName: "star.fill")
-                                    .font(.system(size: 8))
-                                    .foregroundColor(.yellow)
-                            }
+                        HStack(spacing: 2) {
+                            Text("\(stars)")
+                                .font(.system(size: 8, weight: .bold))
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 8))
                         }
+                        .foregroundColor(.yellow)
                     }
                 }
                 
@@ -273,7 +273,7 @@ struct B50ExportView: View {
         }
         .padding(6)
         .frame(width: cardWidth)
-        .background(Color.white.opacity(0.05))
+        .background(diffColor.opacity(0.15))
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .overlay(
             RoundedRectangle(cornerRadius: 6)

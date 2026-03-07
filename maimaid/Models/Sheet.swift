@@ -28,6 +28,7 @@ final class Sheet {
     
     var song: Song?
     @Relationship(deleteRule: .cascade) var score: Score?
+    @Relationship(deleteRule: .cascade) var playRecords: [PlayRecord]?
     
     init(songId: String, type: String, difficulty: String, level: String, levelValue: Double? = nil, internalLevel: String? = nil, internalLevelValue: Double? = nil, noteDesigner: String? = nil, tap: Int? = nil, hold: Int? = nil, slide: Int? = nil, touch: Int? = nil, breakCount: Int? = nil, total: Int? = nil) {
         self.songId = songId

@@ -486,6 +486,8 @@ struct SheetCardView: View {
     @State private var isExpanded = false
     @State private var isNotesExpanded = false
     @State private var isRatingExpanded = false
+    @State private var isHistoryExpanded = false
+    @State private var historySortByDate = true
     
     private var diffColor: Color {
         ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
@@ -660,6 +662,11 @@ struct SheetCardView: View {
                 FaultToleranceCalculatorView(sheet: sheet, diffColor: diffColor)
             }
             
+            // Play History Table
+            if let records = sheet.playRecords, !records.isEmpty {
+                playHistoryTable(records: records)
+            }
+            
             // Record button
             Button(action: onRecord) {
                 HStack(spacing: 6) {
@@ -815,6 +822,123 @@ struct SheetCardView: View {
         }
     }
     
+    
+    // MARK: - Play History Table
+    
+    private func playHistoryTable(records: [PlayRecord]) -> some View {
+        let sortedRecords = records.sorted { a, b in
+            if historySortByDate {
+                return a.playDate > b.playDate
+            } else {
+                return a.rate > b.rate
+            }
+        }
+        
+        return VStack(spacing: 0) {
+            // Header
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    isHistoryExpanded.toggle()
+                }
+            } label: {
+                HStack {
+                    Text("song.detail.section.history")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.secondary.opacity(0.4))
+                        .rotationEffect(.degrees(isHistoryExpanded ? 90 : 0))
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, isHistoryExpanded ? 8 : 0)
+            }
+            
+            if isHistoryExpanded {
+                VStack(spacing: 0) {
+                    // Controls
+                    HStack {
+                        Spacer()
+                        Picker("Sort by", selection: $historySortByDate) {
+                            Text(String(localized: "song.detail.sort.time")).tag(true)
+                            Text(String(localized: "song.detail.sort.rate")).tag(false)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 140)
+                        .scaleEffect(0.8)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 4)
+                    
+                    ForEach(Array(sortedRecords.enumerated()), id: \.offset) { index, record in
+                        HStack(spacing: 12) {
+                            // Left: Date
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(record.playDate.formatted(.dateTime.year(.twoDigits).month(.defaultDigits).day(.defaultDigits)))
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.primary)
+                                Text(record.playDate, style: .time)
+                                    .font(.system(size: 9))
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(width: 70, alignment: .leading)
+                            
+                            // Middle: Rate & Rating
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 4) {
+                                    Text(record.rank)
+                                        .font(.system(size: 11, weight: .black, design: .rounded))
+                                        .foregroundColor(RatingUtils.colorForRank(record.rank))
+                                    Text(String(format: "%.4f%%", record.rate))
+                                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                        .foregroundColor(.primary)
+                                }
+                                
+                                if record.dxScore > 0 {
+                                    HStack(spacing: 2) {
+                                        Image(systemName: "star.fill")
+                                            .font(.system(size: 8))
+                                            .foregroundColor(.yellow)
+                                        Text("\(record.dxScore)")
+                                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            // Right: Badges
+                            VStack(alignment: .trailing, spacing: 4) {
+                                if let fc = record.fc, !fc.isEmpty {
+                                    Text(ThemeUtils.normalizeFC(fc))
+                                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1)
+                                        .background(ThemeUtils.fcColor(fc), in: RoundedRectangle(cornerRadius: 3))
+                                }
+                                
+                                if let fs = record.fs, !fs.isEmpty {
+                                    Text(ThemeUtils.normalizeFS(fs))
+                                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1)
+                                        .background(ThemeUtils.fsColor(fs), in: RoundedRectangle(cornerRadius: 3))
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
+                        .background(index % 2 == 0 ? Color.primary.opacity(0.02) : Color.clear)
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
     
     @ViewBuilder
     private var noteBreakdown: some View {

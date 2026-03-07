@@ -138,6 +138,9 @@
 "song.detail.action.record" = "记录成绩";
 "song.detail.section.notes" = "音符统计";
 "song.detail.section.rating" = "完成率 → 得分";
+"song.detail.section.history" = "历史成绩";
+"song.detail.sort.time" = "时间";
+"song.detail.sort.rate" = "达成率";
 "song.detail.table.achievement" = "完成率";
 "song.detail.table.rating" = "得分";
 "song.detail.table.delta" = "差分";
@@ -150,10 +153,11 @@
 "song.detail.label.artist" = "曲师";
 
 // MARK: - Filter
-"filter.title" = "筛选";
+"filter.title" = "筛选选项";
 "filter.quick" = "快速筛选";
+"filter.hideDeleted" = "隐藏删除曲";
 "filter.favorites" = "仅显示收藏";
-"filter.difficulty" = "难度筛选";
+"filter.difficulty" = "难度等级";
 "filter.levelRange" = "定数区间";
 "filter.levelRange.hint" = "必须选择至少一个参考难度。系统将筛选出包含该难度、且该难度定数在下方区间内的歌曲。";
 "filter.category" = "分类";

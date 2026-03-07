@@ -9,6 +9,9 @@ struct FilterSettings: Equatable, Sendable {
     var minLevel: Double = 1.0
     var maxLevel: Double = 15.0
     var showFavoritesOnly: Bool = false
+    
+    // Initialized from UserDefaults, persisted in FilterView
+    var hideDeletedSongs: Bool = UserDefaults.standard.bool(forKey: "filter.hideDeletedSongs")
 }
 
 class FilterUtils {
@@ -59,6 +62,18 @@ class FilterUtils {
                     return level >= settings.minLevel && level <= settings.maxLevel
                 }
                 if !hasMatchingDifficultyInRange { return false }
+            }
+            
+            // 7. Hide Deleted Songs
+            if settings.hideDeletedSongs {
+                // Determine if any sheet has any active region
+                let hasActiveRegion = song.sheets.contains { sheet in
+                    sheet.regionJp || sheet.regionIntl || sheet.regionUsa || sheet.regionCn
+                }
+                
+                if !hasActiveRegion {
+                    return false
+                }
             }
             
             return true
