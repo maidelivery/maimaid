@@ -124,7 +124,7 @@ class PlateService {
     }
     
     func isAchieved(plateType: PlateType, sheet: Sheet) -> Bool {
-        guard let score = sheet.score else { return false }
+        guard let score = sheet.score() else { return false }
         
         switch plateType {
         case .kiwami:

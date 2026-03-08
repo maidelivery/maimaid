@@ -55,8 +55,10 @@ struct LxnsImportView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var songs: [Song]
     @Query private var configs: [SyncConfig]
+    @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     
     private var config: SyncConfig? { configs.first }
+    private var activeProfile: UserProfile? { activeProfiles.first }
     
     // Replace this with your actual LXNS Developer Client ID
     private let clientId = "cfb7ef40-bc0f-4e3a-8258-9e5f52cd7338"
@@ -77,7 +79,7 @@ struct LxnsImportView: View {
     
     var body: some View {
         Form {
-            if let currentConfig = config, !currentConfig.lxnsRefreshToken.isEmpty {
+            if let profile = activeProfile, !profile.lxnsRefreshToken.isEmpty {
                 Section(header: Text("import.lxns.bound.header")) {
                     HStack {
                         Text("import.lxns.status")
@@ -88,7 +90,7 @@ struct LxnsImportView: View {
                     
                     Button {
                         Task {
-                            await startQuickImport(config: currentConfig)
+                            await startQuickImport(profile: profile)
                         }
                     } label: {
                         HStack {
@@ -105,7 +107,7 @@ struct LxnsImportView: View {
                 
                 Section(header: Text("import.lxns.manage.header")) {
                     Button("import.lxns.action.relogin", role: .destructive) {
-                        currentConfig.lxnsRefreshToken = ""
+                        activeProfile?.lxnsRefreshToken = ""
                     }
                 }
             } else {
@@ -251,10 +253,12 @@ struct LxnsImportView: View {
             let refreshToken = tokenResponse.data!.refresh_token
             
             // Persist the refresh token
-            if let currentConfig = configs.first {
-                currentConfig.lxnsRefreshToken = refreshToken
-            } else {
-                let newConfig = SyncConfig(lxnsRefreshToken: refreshToken)
+            if let profile = activeProfile {
+                profile.lxnsRefreshToken = refreshToken
+            }
+            
+            if configs.isEmpty {
+                let newConfig = SyncConfig()
                 modelContext.insert(newConfig)
             }
             
@@ -266,14 +270,14 @@ struct LxnsImportView: View {
     }
     
     @MainActor
-    private func startQuickImport(config: SyncConfig) async {
+    private func startQuickImport(profile: UserProfile) async {
         isImporting = true
         importStatus = ""
         currentStep = String(localized: "import.lxns.status.refreshing")
         progress = 0
         totalRecords = 0
         
-        if let token = await SyncManager.shared.refreshLxnsToken(config: config) {
+        if let token = await SyncManager.shared.refreshLxnsToken(profile: profile) {
             await importData(accessToken: token)
         } else {
             importStatus = String(localized: "import.lxns.status.failed.expired")
@@ -293,9 +297,9 @@ struct LxnsImportView: View {
                 let (pData, _) = try await URLSession.shared.data(for: playerReq)
                 let pRes = try JSONDecoder().decode(LxnsPlayerResponse.self, from: pData)
                 if pRes.success, let p = pRes.data {
-                    if let currentConfig = configs.first {
+                    if let profile = activeProfile {
                         // Only update rating from LXNS as a data reference
-                        currentConfig.playerRating = p.rating
+                        profile.playerRating = p.rating
                     }
                 }
             }
@@ -375,7 +379,7 @@ struct LxnsImportView: View {
                     
                     let newRank = RatingUtils.calculateRank(achievement: record.achievements)
                     
-                    if let existingScore = targetSheet.score {
+                    if let existingScore = targetSheet.score() {
                         // Update if achievement improves OR if metadata is currently missing
                         let shouldUpdateMetadata = existingScore.fc == nil || existingScore.fs == nil || existingScore.dxScore == 0
                         if record.achievements > existingScore.rate || shouldUpdateMetadata {
@@ -394,10 +398,11 @@ struct LxnsImportView: View {
                             dxScore: record.dx_score,
                             fc: record.fc,
                             fs: record.fs,
-                            achievementDate: Date()
+                            achievementDate: Date(),
+                            userProfileId: activeProfile?.id
                         )
                         modelContext.insert(score)
-                        targetSheet.score = score
+                        targetSheet.scores.append(score)
                         importedScores.append((targetSheet, score))
                     }
                     importedCount += 1
@@ -412,9 +417,12 @@ struct LxnsImportView: View {
             try modelContext.save()
             
             // Trigger Auto-Upload for imported scores
-            if let currentConfig = configs.first, currentConfig.isAutoUploadEnabled && !importedScores.isEmpty {
-                Task {
-                    await SyncManager.shared.uploadScoresIfNeeded(scores: importedScores, config: currentConfig)
+            if let profile = activeProfile {
+                profile.lastImportDateLXNS = Date()
+                if let currentConfig = config, currentConfig.isAutoUploadEnabled && !importedScores.isEmpty {
+                    Task {
+                        await SyncManager.shared.uploadScoresIfNeeded(scores: importedScores, config: currentConfig)
+                    }
                 }
             }
             

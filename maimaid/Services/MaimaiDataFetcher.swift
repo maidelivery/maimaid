@@ -419,7 +419,7 @@ class MaimaiDataFetcher {
                         let currentSheetKeys = Set(remoteSong.sheets.map { "\($0.type)_\($0.difficulty)" })
                         for sh in song.sheets {
                             let key = "\(sh.type)_\(sh.difficulty)"
-                            if !currentSheetKeys.contains(key) && sh.score == nil {
+                            if !currentSheetKeys.contains(key) && sh.scores.isEmpty {
                                 modelContext.delete(sh)
                             }
                         }

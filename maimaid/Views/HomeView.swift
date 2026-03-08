@@ -7,12 +7,26 @@ struct HomeView: View {
     @Query private var configs: [SyncConfig]
     @Query private var songs: [Song]
     @Query(sort: \MaimaiIcon.id) private var icons: [MaimaiIcon]
+    @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     
     @State private var showingEditProfile = false
     @State private var computedB50Total: Int = 0
     @State private var standardB50Total: Int = 0
     
     private var config: SyncConfig? { configs.first }
+    private var activeProfile: UserProfile? { activeProfiles.first }
+    
+    private var currentB35Count: Int {
+        activeProfile?.b35Count ?? config?.b35Count ?? 35
+    }
+    
+    private var currentB15Count: Int {
+        activeProfile?.b15Count ?? config?.b15Count ?? 15
+    }
+    
+    private var totalB50Count: Int {
+        currentB35Count + currentB15Count
+    }
     
     let columns = [
         GridItem(.flexible(), spacing: 16),
@@ -34,10 +48,9 @@ struct HomeView: View {
                                 .foregroundColor(.orange)
                             
                             VStack(alignment: .leading, spacing: 2) {
-                                let totalCount = (config?.b35Count ?? 35) + (config?.b15Count ?? 15)
-                                Text("home.bestTable.button.title \(totalCount)")
+                                Text("home.bestTable.button.title \(totalB50Count)")
                                     .font(.system(size: 16, weight: .bold))
-                                Text("home.bestTable.button.subtitle \(config?.b35Count ?? 35) \(config?.b15Count ?? 15)")
+                                Text("home.bestTable.button.subtitle \(currentB35Count) \(currentB15Count)")
                                     .font(.system(size: 11))
                                     .foregroundColor(.secondary)
                             }
@@ -122,25 +135,40 @@ struct HomeView: View {
     }
     
     private func updateStandardB50() async {
-        let input = songs.toCalculationInput()
+        let profileId = activeProfile?.id
+        let server = activeProfile.flatMap { GameServer(rawValue: $0.server) }
+        
+        let scoreMap = RatingUtils.fetchScoreMap(profileId: profileId, context: modelContext)
+        let input = songs.toCalculationInput(userProfileId: profileId, server: server, preloadedScores: scoreMap)
+        let serverVersion = activeServerLatestVersion
         let result = await Task.detached(priority: .userInitiated) {
-            await RatingUtils.calculateB50(input: input, b35Count: 35, b15Count: 15)
+            await RatingUtils.calculateB50(input: input, b35Count: 35, b15Count: 15, latestVersion: serverVersion)
         }.value
         self.standardB50Total = result.total
     }
     
     private func updateB50() async {
-        let input = songs.toCalculationInput()
+        let profileId = activeProfile?.id
+        let server = activeProfile.flatMap { GameServer(rawValue: $0.server) }
         
-        let b35Limit = config?.b35Count ?? 35
-        let b15Limit = config?.b15Count ?? 15
+        let scoreMap = RatingUtils.fetchScoreMap(profileId: profileId, context: modelContext)
+        let input = songs.toCalculationInput(userProfileId: profileId, server: server, preloadedScores: scoreMap)
+        
+        let b35Limit = activeProfile?.b35Count ?? config?.b35Count ?? 35
+        let b15Limit = activeProfile?.b15Count ?? config?.b15Count ?? 15
+        let serverVersion = activeServerLatestVersion
         
         // Background calculation with sendable input
         let result = await Task.detached(priority: .userInitiated) {
-            await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit)
+            await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: serverVersion)
         }.value
         
         self.computedB50Total = result.total
+    }
+    
+    private var activeServerLatestVersion: String? {
+        guard let profile = activeProfile, let server = GameServer(rawValue: profile.server) else { return nil }
+        return ServerVersionService.shared.latestVersion(for: server, songs: songs)
     }
     
 
@@ -152,7 +180,7 @@ struct HomeView: View {
             HStack(spacing: 16) {
                 // Avatar
                 ZStack {
-                    if let data = config?.avatarData, let uiImage = UIImage(data: data) {
+                    if let data = activeProfile?.avatarData ?? config?.avatarData, let uiImage = UIImage(data: data) {
                         Image(uiImage: uiImage)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
@@ -179,7 +207,7 @@ struct HomeView: View {
                         Spacer()
                         HStack {
                             Spacer()
-                            let displayRating = max(standardB50Total, config?.playerRating ?? 0)
+                            let displayRating = max(standardB50Total, activeProfile?.playerRating ?? config?.playerRating ?? 0)
                             Text("\(displayRating)")
                                 .font(.system(size: 10, weight: .black, design: .rounded))
                                 .foregroundColor(.white)
@@ -194,13 +222,23 @@ struct HomeView: View {
                 .frame(width: 60, height: 60)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 4) {
-                        Text(config?.userName ?? String(localized: "home.profile.unbound"))
+                    HStack(spacing: 6) {
+                        Text(activeProfile?.name ?? config?.userName ?? String(localized: "home.profile.unbound"))
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(.primary)
+                        
+                        // Server badge
+                        if let profile = activeProfile, let server = GameServer(rawValue: profile.server) {
+                            Text(server.displayName)
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(serverColor(server), in: RoundedRectangle(cornerRadius: 4))
+                        }
                     }
                     
-                    if let plate = config?.plate {
+                    if let plate = activeProfile?.plate ?? config?.plate {
                         Text(plate)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
@@ -226,6 +264,14 @@ struct HomeView: View {
             .shadow(color: .black.opacity(0.02), radius: 8, x: 0, y: 4)
         }
         .buttonStyle(.plain)
+    }
+    
+    private func serverColor(_ server: GameServer) -> Color {
+        switch server {
+        case .jp:   return .red
+        case .intl: return .blue
+        case .cn:   return .orange
+        }
     }
     
     private func functionCard(icon: String, title: LocalizedStringKey, subtitle: LocalizedStringKey, gradient: [Color]) -> some View {

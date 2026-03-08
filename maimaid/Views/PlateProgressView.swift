@@ -241,7 +241,7 @@ struct PlateProgressView: View {
     
     @ViewBuilder
     private func achievementMarker(sheet: Sheet) -> some View {
-        let score = sheet.score
+        let score = sheet.score()
         
         Group {
             switch selectedPlate {

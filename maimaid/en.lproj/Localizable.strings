@@ -368,3 +368,39 @@
 "data.sync.status.saving" = "Saving data...";
 "data.sync.status.completed" = "Update completed!";
 "data.sync.status.failed %@" = "Error: %@";
+
+// MARK: - Servers
+"server.jp" = "Japan";
+"server.intl" = "International";
+"server.cn" = "China";
+"server.usa" = "USA";
+
+// MARK: - User Profile
+"userProfile.title" = "User Profiles";
+"userProfile.empty.title" = "No Profiles";
+"userProfile.empty.description" = "Create a profile to get started";
+"userProfile.create" = "Create Profile";
+"userProfile.edit" = "Edit";
+"userProfile.delete" = "Delete";
+"userProfile.active" = "Active";
+"userProfile.switchTo" = "Switch";
+"userProfile.unnamed" = "Unnamed";
+"userProfile.defaultName" = "Player";
+"userProfile.createTitle" = "Create Profile";
+"userProfile.editTitle" = "Edit Profile";
+"userProfile.cancel" = "Cancel";
+"userProfile.save" = "Save";
+"userProfile.name" = "Name";
+"userProfile.server" = "Server";
+"userProfile.latestVersion" = "Latest Version";
+"userProfile.section.basic" = "Basic Info";
+"userProfile.section.b50" = "B50 Settings";
+"userProfile.section.credentials" = "Credentials";
+"settings.sync.dfUsername" = "DF Username";
+"settings.sync.dfToken" = "DF Import Token";
+"settings.sync.lxnsToken" = "LXNS Refresh Token";
+
+// MARK: - Settings (User Management)
+"settings.userManagement.header" = "User Management";
+"settings.userManagement.footer" = "Manage multiple user profiles for different servers.";
+"settings.userManagement.title" = "User Profiles";

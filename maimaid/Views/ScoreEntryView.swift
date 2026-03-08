@@ -94,7 +94,7 @@ struct ScoreEntryView: View {
                     photoScanSection
                     
                     // Existing score info
-                    if let existingScore = sheet.score {
+                    if let existingScore = sheet.score() {
                         existingScoreCard(existingScore)
                     }
                     
@@ -115,31 +115,31 @@ struct ScoreEntryView: View {
         .onAppear {
             if let initRate = initialRate {
                 rateText = String(format: "%.4f", initRate)
-            } else if let score = sheet.score {
+            } else if let score = sheet.score() {
                 rateText = String(format: "%.4f", score.rate)
             }
             
             if let initRank = initialRank {
                 selectedRank = initRank
-            } else if let score = sheet.score {
+            } else if let score = sheet.score() {
                 selectedRank = score.rank
             }
             
             if let initDxScore = initialDxScore {
                 dxScoreText = "\(initDxScore)"
-            } else if let score = sheet.score {
+            } else if let score = sheet.score() {
                 dxScoreText = score.dxScore > 0 ? "\(score.dxScore)" : ""
             }
             
             if let initFC = initialFC {
                 selectedFC = initFC
-            } else if let score = sheet.score {
+            } else if let score = sheet.score() {
                 selectedFC = score.fc
             }
             
             if let initFS = initialFS {
                 selectedFS = initFS
-            } else if let score = sheet.score {
+            } else if let score = sheet.score() {
                 selectedFS = score.fs
             }
         }
@@ -511,7 +511,7 @@ struct ScoreEntryView: View {
         sheet.playRecords?.append(newPlayRecord)
         
         // 2. Monotonically update the main Score
-        let existingScore = sheet.score
+        let existingScore = sheet.score()
         
         if let existing = existingScore {
             // Update individual metrics only if they are strictly better
@@ -542,7 +542,7 @@ struct ScoreEntryView: View {
                 fs: selectedFS
             )
             modelContext.insert(newScore)
-            sheet.score = newScore
+            sheet.scores.append(newScore)
             
             // Trigger Auto-Sync for manual entry
             if let config = configs.first {

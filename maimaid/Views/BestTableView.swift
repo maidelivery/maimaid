@@ -2,12 +2,32 @@ import SwiftUI
 import SwiftData
 
 struct BestTableView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query private var songs: [Song]
     @Query private var configs: [SyncConfig]
+    @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
+    
+    private var activeProfile: UserProfile? { activeProfiles.first }
     
     @State private var b50Result: (total: Int, b35: [RatingUtils.RatingEntry], b15: [RatingUtils.RatingEntry]) = (0, [], [])
     @State private var isLoading = true
     @State private var isExporting = false
+    
+    private var b35Sum: Int {
+        b50Result.b35.reduce(0) { $0 + $1.rating }
+    }
+    
+    private var b15Sum: Int {
+        b50Result.b15.reduce(0) { $0 + $1.rating }
+    }
+    
+    private var currentB35Count: Int {
+        activeProfile?.b35Count ?? configs.first?.b35Count ?? 35
+    }
+    
+    private var currentB15Count: Int {
+        activeProfile?.b15Count ?? configs.first?.b15Count ?? 15
+    }
     
     var body: some View {
         List {
@@ -25,8 +45,8 @@ struct BestTableView: View {
                     }
                     Spacer()
                     VStack(alignment: .trailing) {
-                        Text(String(localized: "bestTable.old.count \(b50Result.b35.reduce(0) { $0 + $1.rating })"))
-                        Text(String(localized: "bestTable.new.count \(b50Result.b15.reduce(0) { $0 + $1.rating })"))
+                        Text("bestTable.old.count \(b35Sum)")
+                        Text("bestTable.new.count \(b15Sum)")
                     }
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -37,8 +57,8 @@ struct BestTableView: View {
             Section("bestTable.settings.capacity") {
                 HStack(spacing: 20) {
                     capacityInput(title: "bestTable.settings.old", value: Binding(
-                        get: { configs.first?.b35Count ?? 35 },
-                        set: { configs.first?.b35Count = max(1, $0) }
+                        get: { currentB35Count },
+                        set: { if let p = activeProfile { p.b35Count = max(1, $0) } else { configs.first?.b35Count = max(1, $0) } }
                     ))
                     
                     VStack {
@@ -48,8 +68,8 @@ struct BestTableView: View {
                     }
                     
                     capacityInput(title: "bestTable.settings.new", value: Binding(
-                        get: { configs.first?.b15Count ?? 15 },
-                        set: { configs.first?.b15Count = max(1, $0) }
+                        get: { currentB15Count },
+                        set: { if let p = activeProfile { p.b15Count = max(1, $0) } else { configs.first?.b15Count = max(1, $0) } }
                     ))
                     
                     Divider()
@@ -57,7 +77,7 @@ struct BestTableView: View {
                     
                     VStack(alignment: .center, spacing: 4) {
                         Text("bestTable.settings.total").font(.caption2).foregroundColor(.secondary)
-                        Text("\((configs.first?.b35Count ?? 35) + (configs.first?.b15Count ?? 15))")
+                        Text("\(currentB35Count + currentB15Count)")
                             .font(.system(.body, design: .rounded).bold())
                             .foregroundColor(.orange)
                     }
@@ -68,7 +88,7 @@ struct BestTableView: View {
             
             
             
-            Section(String(localized: "bestTable.section.new \(configs.first?.b15Count ?? 15)")) {
+            Section(String(localized: "bestTable.section.new \(currentB15Count)")) {
                 if isLoading {
                     ProgressView().padding()
                 } else if b50Result.b15.isEmpty {
@@ -87,7 +107,7 @@ struct BestTableView: View {
                 }
             }
             
-            Section(String(localized: "bestTable.section.old \(configs.first?.b35Count ?? 35)")) {
+            Section(String(localized: "bestTable.section.old \(currentB35Count)")) {
                 if isLoading {
                     ProgressView().padding()
                 } else if b50Result.b35.isEmpty {
@@ -145,7 +165,7 @@ struct BestTableView: View {
                     b35: b50Result.b35,
                     b15: b50Result.b15,
                     totalRating: b50Result.total,
-                    userName: configs.first?.userName
+                    userName: activeProfile?.name ?? configs.first?.userName
                 )
             }
             
@@ -209,12 +229,44 @@ struct BestTableView: View {
     private func calculateRating() async {
         isLoading = true
         
-        let input = songs.toCalculationInput()
-        let b35Limit = configs.first?.b35Count ?? 35
-        let b15Limit = configs.first?.b15Count ?? 15
+        let profileId = activeProfile?.id
+        let server = activeProfile.flatMap { GameServer(rawValue: $0.server) }
+        
+        // Fetch scores — avoid #Predicate with optional UUID (SwiftData bug with nil comparison)
+        var allScores: [Score] = []
+        if let uid = profileId {
+            let desc = FetchDescriptor<Score>(predicate: #Predicate { $0.userProfileId == uid })
+            allScores = (try? modelContext.fetch(desc)) ?? []
+        }
+        // Fallback: if filtered query returned nothing (or no profile), fetch ALL scores
+        if allScores.isEmpty {
+            let fallbackDesc = FetchDescriptor<Score>()
+            allScores = (try? modelContext.fetch(fallbackDesc)) ?? []
+            print("BestTableView: Filtered scores empty, fallback fetched \(allScores.count) total scores")
+        }
+        
+        var scoreMap: [String: Score] = [:]
+        for score in allScores {
+            scoreMap[score.sheetId] = score
+        }
+        
+        let input = songs.toCalculationInput(userProfileId: profileId, server: server, preloadedScores: scoreMap)
+        
+        let sheetsWithScores = input.reduce(0) { $0 + $1.sheets.count }
+        print("BestTableView: \(input.count) songs, \(sheetsWithScores) sheets w/ scores, \(allScores.count) direct scores. ProfileId: \(profileId?.uuidString ?? "nil"), Server: \(server?.rawValue ?? "nil")")
+        
+        let b35Limit = activeProfile?.b35Count ?? configs.first?.b35Count ?? 35
+        let b15Limit = activeProfile?.b15Count ?? configs.first?.b15Count ?? 15
+        
+        let serverVersion: String?
+        if let profile = activeProfile, let server = GameServer(rawValue: profile.server) {
+            serverVersion = ServerVersionService.shared.latestVersion(for: server, songs: songs)
+        } else {
+            serverVersion = nil
+        }
         
         let result = await Task.detached(priority: .userInitiated) {
-            await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit)
+            await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: serverVersion)
         }.value
         
         self.b50Result = result

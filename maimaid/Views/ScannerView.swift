@@ -197,7 +197,7 @@ struct ScannerView: View {
                     
                     // If a song has no standard sheets at all, or if all its standard sheets are region disabled
                     let isDeleted = standardSheets.isEmpty || standardSheets.allSatisfy { sheet in
-                        !sheet.regionJp && !sheet.regionIntl && !sheet.regionUsa && !sheet.regionCn
+                        !sheet.regionJp && !sheet.regionIntl && !sheet.regionCn
                     }
                     if isDeleted { return false }
                     
@@ -295,7 +295,7 @@ struct ScannerView: View {
                     let standardSheets = song.sheets.filter { $0.type.lowercased() != "utage" }
                     
                     let isDeleted = standardSheets.isEmpty || standardSheets.allSatisfy { sheet in
-                        !sheet.regionJp && !sheet.regionIntl && !sheet.regionUsa && !sheet.regionCn
+                        !sheet.regionJp && !sheet.regionIntl && !sheet.regionCn
                     }
                     if isDeleted { return false }
                     

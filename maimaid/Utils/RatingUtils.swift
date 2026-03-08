@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import SwiftData
 
 struct RatingUtils {
     static func calculateRating(internalLevel: Double, achievements: Double) -> Int {
@@ -127,6 +128,7 @@ struct RatingUtils {
         let version: String?
         let releaseDate: String?
         let imageName: String?
+        let isRegionActive: Bool // Added to flag if region is explicitly true
         let sheets: [SheetCalculationInput]
     }
     
@@ -155,20 +157,48 @@ struct RatingUtils {
         let level: Double
         let rating: Int
         let isNew: Bool
+        let isRegionActive: Bool // Added to flag if region is explicitly true
         let fc: String? // Added for UI
         let fs: String? // Added for UI
         let dxScore: Int // Added for UI
         let maxDxScore: Int // Added for stars
     }
     
-    static func calculateB50(input: [RatingCalculationInput], b35Count: Int = 35, b15Count: Int = 15) -> (total: Int, b35: [RatingEntry], b15: [RatingEntry]) {
-        let latestVersion = ThemeUtils.latestVersion
+    enum SongB50Category {
+        case b15
+        case b35
+        case excluded
+    }
+    
+    static func determineSongCategory(songVersion: String?, latestServerVersion: String, isRegionActive: Bool) -> SongB50Category {
+        let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
+        let latestVerIndex = sequence.firstIndex(of: latestServerVersion) ?? sequence.count
+        
+        let songVersionStr = songVersion ?? ""
+        let songVerIndex = sequence.firstIndex(of: songVersionStr) ?? 0
+        
+        if songVerIndex >= latestVerIndex {
+            // Current or future versions: must have region explicitly active to be in B15
+            return isRegionActive ? .b15 : .excluded
+        } else {
+            // Older versions default to B35.
+            return .b35
+        }
+    }
+    
+    static func calculateB50(input: [RatingCalculationInput], b35Count: Int = 35, b15Count: Int = 15, latestVersion: String? = nil) -> (total: Int, b35: [RatingEntry], b15: [RatingEntry]) {
+        let version = latestVersion ?? ThemeUtils.latestVersion
         
         var newEntries: [RatingEntry] = []
         var oldEntries: [RatingEntry] = []
         
         for song in input {
-            let isNew = song.version == latestVersion
+            let category = determineSongCategory(songVersion: song.version, latestServerVersion: version, isRegionActive: song.isRegionActive)
+            if category == .excluded {
+                continue
+            }
+            let isNew = (category == .b15)
+            
             for sheet in song.sheets {
                 let level = sheet.internalLevel ?? sheet.level ?? 0.0
                 let rating = calculateRating(internalLevel: level, achievement: sheet.rate, fc: sheet.fc)
@@ -184,6 +214,7 @@ struct RatingUtils {
                     level: level,
                     rating: rating,
                     isNew: isNew,
+                    isRegionActive: song.isRegionActive,
                     fc: sheet.fc,
                     fs: sheet.fs,
                     dxScore: sheet.dxScore,
@@ -206,6 +237,25 @@ struct RatingUtils {
         
         return (total, topOld, topNew)
     }
+    
+    /// Safely fetch scores from the database, avoiding SwiftData's #Predicate optional UUID bug.
+    /// When profileId is nil or filtered query returns empty, falls back to fetching ALL scores.
+    static func fetchScoreMap(profileId: UUID?, context: ModelContext) -> [String: Score] {
+        var scores: [Score] = []
+        if let uid = profileId {
+            let desc = FetchDescriptor<Score>(predicate: #Predicate { $0.userProfileId == uid })
+            scores = (try? context.fetch(desc)) ?? []
+        }
+        if scores.isEmpty {
+            let fallbackDesc = FetchDescriptor<Score>()
+            scores = (try? context.fetch(fallbackDesc)) ?? []
+        }
+        var map: [String: Score] = [:]
+        for score in scores {
+            map[score.sheetId] = score
+        }
+        return map
+    }
 }
 
 // MARK: - Song Array Extension for B50 Calculation
@@ -213,31 +263,72 @@ struct RatingUtils {
 extension Array where Element: Song {
     /// Converts a `[Song]` into the `Sendable` input format required by `RatingUtils.calculateB50`.
     /// Consolidates duplicate `prepareCalculationInput()` logic from HomeView, BestTableView, RecommendationService.
-    func toCalculationInput() -> [RatingUtils.RatingCalculationInput] {
-        map { song in
-            RatingUtils.RatingCalculationInput(
+    func toCalculationInput(userProfileId: UUID? = nil, server: GameServer? = nil, preloadedScores: [String: Score]? = nil) -> [RatingUtils.RatingCalculationInput] {
+        let cutoff = server.map { ServerVersionService.shared.cutoffDate(for: $0) } ?? "9999-12-31"
+        
+        var validCount = 0
+        var scoreFoundCount = 0
+        var unplayableCount = 0
+        
+        let result = compactMap { song -> RatingUtils.RatingCalculationInput? in
+            if !ServerVersionService.shared.isPlayable(song: song, cutoff: cutoff, server: server) {
+                unplayableCount += 1
+                return nil
+            }
+            validCount += 1
+            
+            let sheetsWithScores = song.sheets.compactMap { sheet -> RatingUtils.SheetCalculationInput? in
+                var targetScore: Score? = sheet.score(for: userProfileId)
+                
+                // Fallback to preloaded dictionary if relationship is broken
+                if targetScore == nil, let preloads = preloadedScores {
+                    let key = "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)"
+                    targetScore = preloads[key]
+                }
+                
+                guard let score = targetScore else { return nil }
+                scoreFoundCount += 1
+                return RatingUtils.SheetCalculationInput(
+                    difficulty: sheet.difficulty,
+                    type: sheet.type,
+                    internalLevel: sheet.internalLevelValue,
+                    level: sheet.levelValue,
+                    rate: score.rate,
+                    fc: score.fc,
+                    fs: score.fs,
+                    dxScore: score.dxScore,
+                    maxDxScore: (sheet.total ?? 0) * 3,
+                    songId: sheet.songId
+                )
+            }
+            
+            let isRegionActive: Bool
+            if let targetServer = server {
+                isRegionActive = song.sheets.contains { sheet in
+                    switch targetServer {
+                    case .jp: return sheet.regionJp
+                    case .intl: return sheet.regionIntl
+                    case .cn: return sheet.regionCn
+                    }
+                }
+            } else {
+                isRegionActive = false
+            }
+            
+            return RatingUtils.RatingCalculationInput(
                 songIdentifier: song.songIdentifier,
                 songId: song.songId,
                 title: song.title,
                 version: song.version,
                 releaseDate: song.releaseDate,
                 imageName: song.imageName,
-                sheets: song.sheets.compactMap { sheet in
-                    guard let score = sheet.score else { return nil }
-                    return RatingUtils.SheetCalculationInput(
-                        difficulty: sheet.difficulty,
-                        type: sheet.type,
-                        internalLevel: sheet.internalLevelValue,
-                        level: sheet.levelValue,
-                        rate: score.rate,
-                        fc: score.fc,
-                        fs: score.fs,
-                        dxScore: score.dxScore,
-                        maxDxScore: (sheet.total ?? 0) * 3,
-                        songId: sheet.songId
-                    )
-                }
+                isRegionActive: isRegionActive,
+                sheets: sheetsWithScores
             )
         }
+        
+        print("RatingUtils.toCalculationInput: Total songs: \(self.count), Valid(Playable): \(validCount), Unplayable: \(unplayableCount), Total Sheets w/ Scores Found: \(scoreFoundCount)")
+        return result
     }
 }
+

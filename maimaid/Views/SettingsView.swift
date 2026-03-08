@@ -56,6 +56,15 @@ struct SettingsView: View {
                     
                 }
                 
+                // User Management Section
+                Section(header: Text("settings.userManagement.header"), footer: Text("settings.userManagement.footer")) {
+                    NavigationLink {
+                        UserProfileListView()
+                    } label: {
+                        settingsRowLabel(icon: "person.2.fill", iconColor: .purple, title: "settings.userManagement.title")
+                    }
+                }
+                
                 Section(header: Text("settings.sync.header"), footer: Text("settings.sync.footer")) {
                     NavigationLink {
                         DivingFishImportView()

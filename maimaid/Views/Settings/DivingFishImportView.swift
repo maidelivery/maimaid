@@ -31,6 +31,7 @@ struct DivingFishImportView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var songs: [Song]
     @Query private var configs: [SyncConfig]
+    @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     
     @State private var username: String = ""
     @State private var importToken: String = ""
@@ -40,21 +41,22 @@ struct DivingFishImportView: View {
     @State private var totalRecords: Int = 0
     
     private var config: SyncConfig? { configs.first }
+    private var activeProfile: UserProfile? { activeProfiles.first }
     
     var body: some View {
         Form {
-            if let currentConfig = config, !currentConfig.dfUsername.isEmpty {
+            if let profile = activeProfile, !profile.dfUsername.isEmpty {
                 Section(header: Text("import.df.bound.header")) {
                     HStack {
                         Text("import.df.username")
                         Spacer()
-                        Text(currentConfig.dfUsername)
+                        Text(profile.dfUsername)
                             .foregroundColor(.secondary)
                     }
                     
                     Button {
                         Task {
-                            await importData(userName: currentConfig.dfUsername)
+                            await importData(userName: profile.dfUsername)
                         }
                     } label: {
                         HStack {
@@ -118,21 +120,23 @@ struct DivingFishImportView: View {
         .navigationTitle("import.df.title")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            if let currentConfig = config {
-                username = currentConfig.dfUsername
-                importToken = currentConfig.dfImportToken
+            if let profile = activeProfile {
+                username = profile.dfUsername
+                importToken = profile.dfImportToken
             }
         }
     }
     
     private func updateConfig() {
-        if let currentConfig = configs.first {
-            currentConfig.dfUsername = username
+        if let profile = activeProfile {
+            profile.dfUsername = username
             if !importToken.isEmpty {
-                currentConfig.dfImportToken = importToken
+                profile.dfImportToken = importToken
             }
-        } else {
-            let newConfig = SyncConfig(dfUsername: username, dfImportToken: importToken)
+        }
+        
+        if configs.isEmpty {
+            let newConfig = SyncConfig()
             modelContext.insert(newConfig)
         }
     }
@@ -236,7 +240,7 @@ struct DivingFishImportView: View {
                     let newRate = record.achievements
                     let newRank = getRank(from: newRate)
                     
-                    if let existingScore = targetSheet.score {
+                    if let existingScore = targetSheet.score() {
                         // Update if achievement improves OR if metadata is currently missing
                         let shouldUpdateMetadata = existingScore.fc == nil || existingScore.fs == nil || existingScore.dxScore == 0
                         if newRate > existingScore.rate || shouldUpdateMetadata {
@@ -255,10 +259,11 @@ struct DivingFishImportView: View {
                             dxScore: record.dx_score ?? 0,
                             fc: record.fc,
                             fs: record.fs,
-                            achievementDate: Date()
+                            achievementDate: Date(),
+                            userProfileId: activeProfile?.id
                         )
                         modelContext.insert(score)
-                        targetSheet.score = score
+                        targetSheet.scores.append(score)
                         importedScores.append((targetSheet, score))
                     }
                     importedCount += 1
@@ -273,11 +278,11 @@ struct DivingFishImportView: View {
             try modelContext.save()
             
             // Update last sync date
-            if let currentConfig = configs.first {
-                currentConfig.lastImportDateDF = Date()
+            if let profile = activeProfile {
+                profile.lastImportDateDF = Date()
                 
                 // Trigger Auto-Upload for imported scores
-                if currentConfig.isAutoUploadEnabled && !importedScores.isEmpty {
+                if let currentConfig = config, currentConfig.isAutoUploadEnabled && !importedScores.isEmpty {
                     Task {
                         await SyncManager.shared.uploadScoresIfNeeded(scores: importedScores, config: currentConfig)
                     }

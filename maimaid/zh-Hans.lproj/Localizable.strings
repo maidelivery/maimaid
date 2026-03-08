@@ -363,3 +363,39 @@
 "data.sync.status.saving" = "持久化数据...";
 "data.sync.status.completed" = "更新完成！";
 "data.sync.status.failed %@" = "异常: %@";
+
+// MARK: - Servers
+"server.jp" = "日服";
+"server.intl" = "国际服";
+"server.cn" = "国服";
+"server.usa" = "美服";
+
+// MARK: - User Profile
+"userProfile.title" = "用户档案";
+"userProfile.empty.title" = "暂无档案";
+"userProfile.empty.description" = "创建一个用户档案以开始使用";
+"userProfile.create" = "创建档案";
+"userProfile.edit" = "编辑";
+"userProfile.delete" = "删除";
+"userProfile.active" = "使用中";
+"userProfile.switchTo" = "切换";
+"userProfile.unnamed" = "未命名";
+"userProfile.defaultName" = "玩家";
+"userProfile.createTitle" = "创建档案";
+"userProfile.editTitle" = "编辑档案";
+"userProfile.cancel" = "取消";
+"userProfile.save" = "保存";
+"userProfile.name" = "名字";
+"userProfile.server" = "服务器";
+"userProfile.latestVersion" = "当前最新版本";
+"userProfile.section.basic" = "基本信息";
+"userProfile.section.b50" = "B50 设置";
+"userProfile.section.credentials" = "凭证信息";
+"settings.sync.dfUsername" = "水鱼用户名";
+"settings.sync.dfToken" = "水鱼导入令牌";
+"settings.sync.lxnsToken" = "落雪 Refresh Token";
+
+// MARK: - Settings (User Management)
+"settings.userManagement.header" = "用户管理";
+"settings.userManagement.footer" = "管理多个用户档案，支持不同服务器。";
+"settings.userManagement.title" = "用户档案管理";

@@ -364,7 +364,6 @@ struct SongDetailContent: View {
         // Aggregate: if ANY sheet is available in a region, the song is available there
         let jp = allSheets.contains { $0.regionJp }
         let intl = allSheets.contains { $0.regionIntl }
-        let usa = allSheets.contains { $0.regionUsa }
         let cn = allSheets.contains { $0.regionCn }
         
         return HStack(spacing: 0) {
@@ -372,7 +371,6 @@ struct SongDetailContent: View {
             HStack(spacing: 12) {
                 regionFlag("🇯🇵", label: "song.detail.region.jp", available: jp)
                 regionFlag("🌏", label: "song.detail.region.intl", available: intl)
-                regionFlag("🇺🇸", label: "song.detail.region.usa", available: usa)
                 regionFlag("🇨🇳", label: "song.detail.region.cn", available: cn)
             }
             
@@ -556,7 +554,7 @@ struct SheetCardView: View {
                     Spacer()
                     
                     // Score badge (if exists)
-                    if let score = sheet.score {
+                    if let score = sheet.score() {
                         VStack(alignment: .trailing, spacing: 1) {
                             Text(String(format: "%.4f%%", score.rate))
                                 .font(.system(size: 12, weight: .bold, design: .monospaced))

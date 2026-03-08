@@ -152,7 +152,7 @@ struct DataTransferService {
         for transferScore in transfer.scores {
             // Try to find the matching sheet
             if let sheet = sheetLookup[transferScore.sheetId] {
-                if let existingScore = sheet.score {
+                if let existingScore = sheet.score() {
                     // Update if imported score is better
                     if transferScore.rate > existingScore.rate {
                         existingScore.rate = transferScore.rate
@@ -174,7 +174,7 @@ struct DataTransferService {
                         fs: transferScore.fs,
                         achievementDate: transferScore.achievementDate
                     )
-                    sheet.score = newScore
+                    sheet.scores.append(newScore)
                     context.insert(newScore)
                     scoresImported += 1
                 }

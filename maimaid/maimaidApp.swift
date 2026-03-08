@@ -14,7 +14,7 @@ struct maimaidApp: App {
         WindowGroup {
             MainTabView()
         }
-        .modelContainer(for: [Song.self, Sheet.self, Score.self, SyncConfig.self, MaimaiIcon.self])
+        .modelContainer(for: [Song.self, Sheet.self, Score.self, SyncConfig.self, MaimaiIcon.self, UserProfile.self])
     }
 }
 

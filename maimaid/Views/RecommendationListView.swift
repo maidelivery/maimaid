@@ -102,7 +102,7 @@ struct RecommendationListView: View {
     
     private func loadRecommendations() async {
         isLoading = true
-        response = await RecommendationService.shared.getRecommendations(songs: songs, configs: configs)
+        response = await RecommendationService.shared.getRecommendations(songs: songs, configs: configs, modelContext: modelContext)
         isLoading = false
     }
 }

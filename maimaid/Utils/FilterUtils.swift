@@ -67,11 +67,11 @@ class FilterUtils {
             // 7. Hide Deleted Songs
             if settings.hideDeletedSongs {
                 // Determine if any sheet has any active region
-                let hasActiveRegion = song.sheets.contains { sheet in
-                    sheet.regionJp || sheet.regionIntl || sheet.regionUsa || sheet.regionCn
+                let isPlayable = song.sheets.contains { sheet in
+                    sheet.regionJp || sheet.regionIntl || sheet.regionCn
                 }
                 
-                if !hasActiveRegion {
+                if !isPlayable {
                     return false
                 }
             }

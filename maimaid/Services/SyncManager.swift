@@ -20,18 +20,27 @@ class SyncManager {
         print("SyncManager: Update detected for \"\(sheet.song?.title ?? "Unknown")\". Auto-upload is \(config.isAutoUploadEnabled ? "ENABLED" : "DISABLED").")
         guard config.isAutoUploadEnabled else { return }
         
+        // Find active profile for credentials
+        let descriptor = FetchDescriptor<UserProfile>(predicate: #Predicate<UserProfile> { $0.isActive == true })
+        let profile = (try? config.modelContext?.fetch(descriptor))?.first
+        
+        guard let profile = profile else {
+            print("SyncManager: No active profile found for upload.")
+            return
+        }
+        
         // 1. Upload to Diving Fish
-        if !config.dfUsername.isEmpty && !config.dfImportToken.isEmpty {
-            await uploadToDivingFish(sheet: sheet, score: score, config: config)
+        if !profile.dfUsername.isEmpty && !profile.dfImportToken.isEmpty {
+            await uploadToDivingFish(sheet: sheet, score: score, profile: profile)
         }
         
         // 2. Upload to LXNS
-        if !config.lxnsRefreshToken.isEmpty {
-            await uploadToLxns(sheet: sheet, score: score, config: config)
+        if !profile.lxnsRefreshToken.isEmpty {
+            await uploadToLxns(sheet: sheet, score: score, profile: profile)
         }
     }
     
-    private func uploadToDivingFish(sheet: Sheet, score: Score, config: SyncConfig) async {
+    private func uploadToDivingFish(sheet: Sheet, score: Score, profile: UserProfile) async {
         print("SyncManager: [Diving Fish] Uploading to Diving Fish...")
         // Use the specific player update endpoint
         guard let url = URL(string: "https://www.diving-fish.com/api/maimaidxprober/player/update_records") else { return }
@@ -50,7 +59,7 @@ class SyncManager {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(config.dfImportToken, forHTTPHeaderField: "Import-Token")
+        request.setValue(profile.dfImportToken, forHTTPHeaderField: "Import-Token")
         
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: [record])
@@ -73,11 +82,11 @@ class SyncManager {
         }
     }
     
-    private func uploadToLxns(sheet: Sheet, score: Score, config: SyncConfig) async {
+    private func uploadToLxns(sheet: Sheet, score: Score, profile: UserProfile) async {
         print("SyncManager: [LXNS] Attempting upload...")
         
         // 1. Get Access Token via Refresh Token
-        guard let accessToken = await refreshLxnsToken(config: config) else {
+        guard let accessToken = await refreshLxnsToken(profile: profile) else {
             // Error already logged in refreshLxnsToken
             return 
         }
@@ -123,7 +132,7 @@ class SyncManager {
         }
     }
     
-    func refreshLxnsToken(config: SyncConfig) async -> String? {
+    func refreshLxnsToken(profile: UserProfile) async -> String? {
         guard let url = URL(string: "https://maimai.lxns.net/api/v0/oauth/token") else { return nil }
         
         var request = URLRequest(url: url)
@@ -132,8 +141,8 @@ class SyncManager {
         
         let bodyString = [
             "grant_type": "refresh_token",
-            "client_id": config.lxnsClientId,
-            "refresh_token": config.lxnsRefreshToken
+            "client_id": profile.lxnsClientId,
+            "refresh_token": profile.lxnsRefreshToken
         ].compactMap { key, value in
             let encodedValue = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
             return "\(key)=\(encodedValue)"
@@ -152,8 +161,8 @@ class SyncManager {
                 // If 400 (Invalid Refresh Token), clear the token
                 if http.statusCode == 400 {
                     print("SyncManager: [LXNS] Invalid Refresh Token detected. Clearing credentials...")
-                    config.lxnsRefreshToken = ""
-                    try? config.modelContext?.save()
+                    profile.lxnsRefreshToken = ""
+                    try? profile.modelContext?.save()
                 }
                 return nil
             }
@@ -162,8 +171,8 @@ class SyncManager {
             let tokenResponse = try decoder.decode(LxnsTokenResponse.self, from: data)
             
             if let newData = tokenResponse.data {
-                config.lxnsRefreshToken = newData.refresh_token
-                try? config.modelContext?.save()
+                profile.lxnsRefreshToken = newData.refresh_token
+                try? profile.modelContext?.save()
                 return newData.access_token
             }
         } catch {

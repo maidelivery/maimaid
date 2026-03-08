@@ -98,7 +98,7 @@ struct SongRowView: View {
                     .stroke(color.opacity(0.3), lineWidth: 1)
                     .frame(width: 8, height: 8)
                 
-                if let score = sheet.score, score.rate > 0 {
+                if let score = sheet.score(), score.rate > 0 {
                     let progress = min(1.0, score.rate - 100)
                     Circle()
                         .trim(from: 0, to: progress)

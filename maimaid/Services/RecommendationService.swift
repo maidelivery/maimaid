@@ -105,21 +105,33 @@ class RecommendationService {
     }
     
     /// Generates recommendations considering B15/B35 thresholds and potential gain
-    func getRecommendations(songs: [Song], configs: [SyncConfig]) async -> RecommendationResponse {
+    /// Generates recommendations considering B15/B35 thresholds and potential gain
+    func getRecommendations(songs: [Song], configs: [SyncConfig], activeProfile: UserProfile? = nil, modelContext: ModelContext) async -> RecommendationResponse {
         print("RecommendationService: Generating recommendations for \(songs.count) songs...")
         do {
             let stats = try await fetchStats()
             
-            let latestVersion = ThemeUtils.latestVersion
-            let b35Limit = configs.first?.b35Count ?? 35
-            let b15Limit = configs.first?.b15Count ?? 15
-            let b15RecLimit = configs.first?.b15RecLimit ?? 10
-            let b35RecLimit = configs.first?.b35RecLimit ?? 10
+            let profile = activeProfile ?? ServerVersionService.shared.activeProfile(context: modelContext)
             
-            // 1. Calculate current B50 thresholds
-            let input = songs.toCalculationInput()
+            let serverContext = profile.flatMap { GameServer(rawValue: $0.server) }
+            let latestVersion: String
+            if let server = serverContext {
+                latestVersion = ServerVersionService.shared.latestVersion(for: server, songs: songs)
+            } else {
+                latestVersion = ThemeUtils.latestVersion
+            }
+            let b35Limit = profile?.b35Count ?? configs.first?.b35Count ?? 35
+            let b15Limit = profile?.b15Count ?? configs.first?.b15Count ?? 15
+            let b15RecLimit = profile?.b15RecLimit ?? configs.first?.b15RecLimit ?? 10
+            let b35RecLimit = profile?.b35RecLimit ?? configs.first?.b35RecLimit ?? 10
             
-            let b50 = RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit)
+            // Fetch scores safely (avoids SwiftData optional UUID predicate bug)
+            let profileId = profile?.id
+            let scoreMap = RatingUtils.fetchScoreMap(profileId: profileId, context: modelContext)
+            
+            let input = songs.toCalculationInput(userProfileId: profileId, server: serverContext, preloadedScores: scoreMap)
+            
+            let b50 = RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: latestVersion)
             let b15Threshold = b50.b15.last?.rating ?? 0
             let b35Threshold = b50.b35.last?.rating ?? 0
             
@@ -148,13 +160,30 @@ class RecommendationService {
                     let internalLevelValue = sheet.internalLevelValue ?? sheet.levelValue ?? 0.0
                     guard internalLevelValue > 0 else { continue }
                     
-                    let currentRate = sheet.score?.rate ?? 0.0
+                    let currentRate = sheet.score()?.rate ?? 0.0
                     guard currentRate < 100.5 else { continue }
                     
-                    let isNew = song.version == latestVersion
+                    // Determine isRegionActive dynamically using same logic as RatingUtils.toCalculationInput
+                    let isRegionActive: Bool
+                    if let targetServer = serverContext {
+                        isRegionActive = song.sheets.contains { sh in
+                            switch targetServer {
+                            case .jp: return sh.regionJp
+                            case .intl: return sh.regionIntl
+                            case .cn: return sh.regionCn
+                            }
+                        }
+                    } else {
+                        isRegionActive = false
+                    }
+                    
+                    let category = RatingUtils.determineSongCategory(songVersion: song.version, latestServerVersion: latestVersion, isRegionActive: isRegionActive)
+                    if category == .excluded { continue }
+                    
+                    let isNew = (category == .b15)
                     let threshold = isNew ? b15Threshold : b35Threshold
                     
-                    let currentRating = sheet.score.map { RatingUtils.calculateRating(internalLevel: internalLevelValue, achievement: $0.rate, fc: $0.fc) } ?? 0
+                    let currentRating = sheet.score().map { RatingUtils.calculateRating(internalLevel: internalLevelValue, achievement: $0.rate, fc: $0.fc) } ?? 0
                     let isInB50 = (isNew ? b50.b15 : b50.b35).contains(where: { $0.songId == song.songId && $0.diff == sheet.difficulty.uppercased() && $0.type == sheet.type.uppercased() })
                     
                     // Find the MINIMUM rank that gives a gain
@@ -201,7 +230,7 @@ class RecommendationService {
                             sheet: sheet,
                             fitDiff: fitDiff,
                             diffGap: diffGap,
-                            currentRate: sheet.score?.rate,
+                            currentRate: sheet.score()?.rate,
                             potentialRating: bestPotentialRating,
                             potentialGain: bestGain,
                             targetRank: target.rank,
