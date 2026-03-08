@@ -21,10 +21,10 @@ class MLScoreProcessor: Sendable {
             let config = MLModelConfiguration()
             config.computeUnits = .all
             
-            if let modelURL = Bundle.main.url(forResource: "maimaidv1.31", withExtension: "mlmodelc") {
+            if let modelURL = Bundle.main.url(forResource: "maimaid v1.31n", withExtension: "mlmodelc") {
                 let mlModel = try MLModel(contentsOf: modelURL, configuration: config)
                 self.visionModel = try VNCoreMLModel(for: mlModel)
-                print("MLScoreProcessor: Successfully loaded maimaidv1.31 model from mlmodelc.")
+                print("MLScoreProcessor: Successfully loaded maimaid v1.31n model from mlmodelc.")
             } else if let urls = Bundle.main.urls(forResourcesWithExtension: "mlmodelc", subdirectory: nil), let first = urls.first {
                 print("MLScoreProcessor: Loaded fallback model \(first.lastPathComponent)")
                 let mlModel = try MLModel(contentsOf: first, configuration: config)

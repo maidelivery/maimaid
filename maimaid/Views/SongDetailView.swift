@@ -515,6 +515,8 @@ struct SheetCardView: View {
     @State private var isHistoryExpanded = false
     @State private var historySortByDate = true
     @State private var historyPage = 1
+    @State private var recordToDelete: PlayRecord?
+    @State private var showingDeleteConfirm = false
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     
@@ -624,6 +626,18 @@ struct SheetCardView: View {
                 .strokeBorder(diffColor.opacity(0.15), lineWidth: 1)
         )
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isExpanded)
+        .alert("song.detail.history.delete.title", isPresented: $showingDeleteConfirm) {
+            Button("song.detail.history.delete.confirm", role: .destructive) {
+                if let record = recordToDelete {
+                    deleteRecord(record)
+                }
+            }
+            Button("song.detail.history.delete.cancel", role: .cancel) {
+                recordToDelete = nil
+            }
+        } message: {
+            Text("song.detail.history.delete.message")
+        }
     }
     
     @ViewBuilder
@@ -951,22 +965,34 @@ struct SheetCardView: View {
                             
                             // Right: Badges
                             VStack(alignment: .trailing, spacing: 4) {
-                                if let fc = record.fc, !fc.isEmpty {
-                                    Text(ThemeUtils.normalizeFC(fc))
-                                        .font(.system(size: 8, weight: .bold, design: .rounded))
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 4)
-                                        .padding(.vertical, 1)
-                                        .background(ThemeUtils.fcColor(fc), in: RoundedRectangle(cornerRadius: 3))
-                                }
-                                
-                                if let fs = record.fs, !fs.isEmpty {
-                                    Text(ThemeUtils.normalizeFS(fs))
-                                        .font(.system(size: 8, weight: .bold, design: .rounded))
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 4)
-                                        .padding(.vertical, 1)
-                                        .background(ThemeUtils.fsColor(fs), in: RoundedRectangle(cornerRadius: 3))
+                                HStack(spacing: 4) {
+                                    if let fc = record.fc, !fc.isEmpty {
+                                        Text(ThemeUtils.normalizeFC(fc))
+                                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(ThemeUtils.fcColor(fc), in: RoundedRectangle(cornerRadius: 3))
+                                    }
+                                    
+                                    if let fs = record.fs, !fs.isEmpty {
+                                        Text(ThemeUtils.normalizeFS(fs))
+                                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(ThemeUtils.fsColor(fs), in: RoundedRectangle(cornerRadius: 3))
+                                    }
+                                    
+                                    // Delete button
+                                    Button {
+                                        recordToDelete = record
+                                        showingDeleteConfirm = true
+                                    } label: {
+                                        Image(systemName: "trash")
+                                            .font(.system(size: 10))
+                                            .foregroundColor(.red.opacity(0.6))
+                                    }
                                 }
                             }
                         }
@@ -1018,6 +1044,16 @@ struct SheetCardView: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
+    }
+    
+    private func deleteRecord(_ record: PlayRecord) {
+        // Remove from sheet's playRecords array
+        if let index = sheet.playRecords?.firstIndex(where: { $0.id == record.id }) {
+            sheet.playRecords?.remove(at: index)
+        }
+        // Delete from model context
+        modelContext.delete(record)
+        try? modelContext.save()
     }
     
     @ViewBuilder

@@ -22,10 +22,10 @@ class MLDistinguishProcessor: Sendable {
             config.computeUnits = .all
             
             // Try specific version first
-            if let modelURL = Bundle.main.url(forResource: "maimaidistinguish v1.1", withExtension: "mlmodelc") {
+            if let modelURL = Bundle.main.url(forResource: "maimaidistinguish v1.2n", withExtension: "mlmodelc") {
                 let mlModel = try MLModel(contentsOf: modelURL, configuration: config)
                 self.visionModel = try VNCoreMLModel(for: mlModel)
-                print("MLDistinguishProcessor: Successfully loaded maimaidistinguish v1.1 model.")
+                print("MLDistinguishProcessor: Successfully loaded maimaidistinguish v1.2n model.")
             } else if let urls = Bundle.main.urls(forResourcesWithExtension: "mlmodelc", subdirectory: nil), let first = urls.first(where: { $0.lastPathComponent.contains("maimaidistinguish") }) {
                 print("MLDistinguishProcessor: Loaded fallback model \(first.lastPathComponent)")
                 let mlModel = try MLModel(contentsOf: first, configuration: config)

@@ -188,17 +188,17 @@ struct ScoreEntryView: View {
                         .padding(.vertical, 2)
                         .background(sheet.type.lowercased() == "dx" ? Color.orange : Color.blue, in: RoundedRectangle(cornerRadius: 4))
                     
-                    Text(sheet.difficulty.capitalized)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(diffColor)
+                    if let song = sheet.song {
+                        Text(song.title)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                   
                 }
-                
-                if let song = sheet.song {
-                    Text(song.title)
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
+                Text(sheet.difficulty.capitalized)
+                    .font(.system(size: 12))
+                    .foregroundColor(diffColor)
             }
             
             Spacer()

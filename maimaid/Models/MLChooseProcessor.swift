@@ -22,10 +22,10 @@ class MLChooseProcessor: Sendable {
             config.computeUnits = .all
             
             // Try specific version first
-            if let modelURL = Bundle.main.url(forResource: "maimaidetectorv1.0", withExtension: "mlmodelc") {
+            if let modelURL = Bundle.main.url(forResource: "maimaidetector v1.2n", withExtension: "mlmodelc") {
                 let mlModel = try MLModel(contentsOf: modelURL, configuration: config)
                 self.visionModel = try VNCoreMLModel(for: mlModel)
-                print("MLChooseProcessor: Successfully loaded maimaidetectorv1.0 model.")
+                print("MLChooseProcessor: Successfully loaded maimaidetector v1.2n model.")
             } else if let urls = Bundle.main.urls(forResourcesWithExtension: "mlmodelc", subdirectory: nil), let first = urls.first(where: { $0.lastPathComponent.contains("maimaidetector") }) {
                 print("MLChooseProcessor: Successfully loaded fallback model \(first.lastPathComponent)")
                 let mlModel = try MLModel(contentsOf: first, configuration: config)
