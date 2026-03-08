@@ -7,7 +7,7 @@ struct TransferData: Codable {
     let version: Int
     let exportDate: Date
     let scores: [TransferScore]
-    let favorites: [String] // songId list
+    let favorites: [String]
     let config: TransferConfig?
 }
 
@@ -60,9 +60,9 @@ struct DataTransferService {
     // MARK: - Export
     
     static func exportData(context: ModelContext) throws -> Data {
-        // 1. Gather scores
-        let scoreDescriptor = FetchDescriptor<Score>()
-        let scores = try context.fetch(scoreDescriptor)
+        // 🔴 修复：使用 ScoreService 获取当前用户的成绩
+        let scoreMap = ScoreService.shared.scoreMap(context: context)
+        let scores = Array(scoreMap.values)
         
         let transferScores = scores.map { score in
             TransferScore(
@@ -76,12 +76,10 @@ struct DataTransferService {
             )
         }
         
-        // 2. Gather favorites
         let songDescriptor = FetchDescriptor<Song>()
         let songs = try context.fetch(songDescriptor)
         let favorites = songs.filter { $0.isFavorite }.map { $0.songIdentifier }
         
-        // 3. Gather config
         let configDescriptor = FetchDescriptor<SyncConfig>()
         let configs = try context.fetch(configDescriptor)
         let transferConfig: TransferConfig? = configs.first.map { c in
@@ -102,7 +100,6 @@ struct DataTransferService {
             )
         }
         
-        // 4. Build transfer object
         let transfer = TransferData(
             version: 1,
             exportDate: Date(),
@@ -140,7 +137,9 @@ struct DataTransferService {
             throw DataTransferError.decodingFailed(error.localizedDescription)
         }
         
-        // 1. Import scores – match by sheetId to existing sheets
+        // 🔴 修复：使用 ScoreService 获取当前用户 ID
+        let activeProfileId = ScoreService.shared.currentActiveProfileId(context: context)
+        
         var scoresImported = 0
         let sheetDescriptor = FetchDescriptor<Sheet>()
         let allSheets = try context.fetch(sheetDescriptor)
@@ -150,10 +149,9 @@ struct DataTransferService {
         })
         
         for transferScore in transfer.scores {
-            // Try to find the matching sheet
             if let sheet = sheetLookup[transferScore.sheetId] {
-                if let existingScore = sheet.score() {
-                    // Update if imported score is better
+                // 🔴 修复：使用 ScoreService 获取当前用户的成绩
+                if let existingScore = ScoreService.shared.score(for: sheet, context: context) {
                     if transferScore.rate > existingScore.rate {
                         existingScore.rate = transferScore.rate
                         existingScore.rank = transferScore.rank
@@ -164,7 +162,7 @@ struct DataTransferService {
                         scoresImported += 1
                     }
                 } else {
-                    // Create new score
+                    // 🔴 修复：创建成绩时关联用户
                     let newScore = Score(
                         sheetId: transferScore.sheetId,
                         rate: transferScore.rate,
@@ -172,7 +170,8 @@ struct DataTransferService {
                         dxScore: transferScore.dxScore,
                         fc: transferScore.fc,
                         fs: transferScore.fs,
-                        achievementDate: transferScore.achievementDate
+                        achievementDate: transferScore.achievementDate,
+                        userProfileId: activeProfileId  // 关键：关联当前用户
                     )
                     sheet.scores.append(newScore)
                     context.insert(newScore)
@@ -181,7 +180,6 @@ struct DataTransferService {
             }
         }
         
-        // 2. Restore favorites
         var favoritesRestored = 0
         if !transfer.favorites.isEmpty {
             let songDescriptor = FetchDescriptor<Song>()
@@ -196,7 +194,6 @@ struct DataTransferService {
             }
         }
         
-        // 3. Restore config
         var configRestored = false
         if let tc = transfer.config {
             let configDescriptor = FetchDescriptor<SyncConfig>()
@@ -268,14 +265,13 @@ extension DataTransferService {
         return documentsURL
     }
     
-    /// Save a backup to iCloud Documents
     static func backupToICloud(context: ModelContext) async throws {
         guard isICloudEnabled else { return }
         
         let data = try exportData(context: context)
         
         guard let docsURL = iCloudDocumentsURL() else {
-            throw DataTransferError.noStaticData // iCloud not available
+            throw DataTransferError.noStaticData
         }
         
         let fileURL = docsURL.appendingPathComponent(iCloudBackupFileName)
@@ -286,7 +282,6 @@ extension DataTransferService {
         }
     }
     
-    /// Restore from iCloud Documents backup
     static func restoreFromICloud(context: ModelContext) throws -> ImportSummary? {
         guard let docsURL = iCloudDocumentsURL() else { return nil }
         
@@ -297,14 +292,12 @@ extension DataTransferService {
         return try importData(from: data, context: context)
     }
     
-    /// Check if an iCloud backup file exists
     static func hasICloudBackup() -> Bool {
         guard let docsURL = iCloudDocumentsURL() else { return false }
         let fileURL = docsURL.appendingPathComponent(iCloudBackupFileName)
         return FileManager.default.fileExists(atPath: fileURL.path)
     }
     
-    /// Get the date of the iCloud backup file
     static func iCloudBackupDate() -> Date? {
         guard let docsURL = iCloudDocumentsURL() else { return nil }
         let fileURL = docsURL.appendingPathComponent(iCloudBackupFileName)

@@ -151,7 +151,6 @@ struct DivingFishImportView: View {
         progress = 0
         totalRecords = 0
         
-        // Match sheet types and difficulties
         let difficultyMap = [
             0: "basic",
             1: "advanced",
@@ -159,6 +158,9 @@ struct DivingFishImportView: View {
             3: "master",
             4: "remaster"
         ]
+        
+        // 🔴 获取当前用户 ID，用于成绩关联
+        let profileId = activeProfile?.id
         
         do {
             guard let url = URL(string: "https://www.diving-fish.com/api/maimaidxprober/query/player") else {
@@ -169,7 +171,6 @@ struct DivingFishImportView: View {
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             
-            // Diving Fish API now requires b50 flag to get charts
             let isQQ = Int(targetUser) != nil && targetUser.count > 5
             var bodyDict: [String: Any] = isQQ ? ["qq": targetUser] : ["username": targetUser]
             bodyDict["b50"] = true
@@ -201,7 +202,6 @@ struct DivingFishImportView: View {
                 return
             }
             
-            // Merge dx and sd lists
             var allRecords: [DivingFishRecord] = []
             if let dx = charts.dx { allRecords.append(contentsOf: dx) }
             if let sd = charts.sd { allRecords.append(contentsOf: sd) }
@@ -215,7 +215,6 @@ struct DivingFishImportView: View {
             totalRecords = allRecords.count
             importStatus = "查找到 \(totalRecords) 条成绩，正在处理..."
             
-            // Optimization map
             var titleSheetMap: [String: [(type: String, diff: String, sheet: Sheet)]] = [:]
             for song in songs {
                 var sheetInfos: [(String, String, Sheet)] = []
@@ -232,16 +231,14 @@ struct DivingFishImportView: View {
                 let recType = record.type.lowercased()
                 let recDiff = difficultyMap[record.level_index] ?? ""
                 
-                // Match exact title, type and difficulty
                 if let sheets = titleSheetMap[record.title],
                    let targetSheet = sheets.first(where: { $0.type == recType && $0.diff == recDiff })?.sheet {
                     
-                    // Insert or update score
                     let newRate = record.achievements
-                    let newRank = getRank(from: newRate)
+                    let newRank = RatingUtils.calculateRank(achievement: record.achievements)
                     
-                    if let existingScore = targetSheet.score() {
-                        // Update if achievement improves OR if metadata is currently missing
+                    // 🔴 修复：使用 ScoreService 获取当前用户的成绩
+                    if let existingScore = ScoreService.shared.score(for: targetSheet, context: modelContext) {
                         let shouldUpdateMetadata = existingScore.fc == nil || existingScore.fs == nil || existingScore.dxScore == 0
                         if newRate > existingScore.rate || shouldUpdateMetadata {
                             existingScore.rate = max(existingScore.rate, newRate)
@@ -252,6 +249,7 @@ struct DivingFishImportView: View {
                             existingScore.achievementDate = Date()
                         }
                     } else {
+                        // 🔴 修复：使用 ScoreService 保存成绩（自动关联用户）
                         let score = Score(
                             sheetId: "\(targetSheet.songIdentifier)_\(targetSheet.type)_\(targetSheet.difficulty)",
                             rate: newRate,
@@ -260,7 +258,7 @@ struct DivingFishImportView: View {
                             fc: record.fc,
                             fs: record.fs,
                             achievementDate: Date(),
-                            userProfileId: activeProfile?.id
+                            userProfileId: profileId  // 关键：关联当前用户
                         )
                         modelContext.insert(score)
                         targetSheet.scores.append(score)
@@ -270,18 +268,16 @@ struct DivingFishImportView: View {
                 }
                 progress += 1
                 
-                if Int(progress) % 20 == 0 { // Yield occasionally
+                if Int(progress) % 20 == 0 {
                     await Task.yield()
                 }
             }
             
             try modelContext.save()
             
-            // Update last sync date
             if let profile = activeProfile {
                 profile.lastImportDateDF = Date()
                 
-                // Trigger Auto-Upload for imported scores
                 if let currentConfig = config, currentConfig.isAutoUploadEnabled && !importedScores.isEmpty {
                     Task {
                         await SyncManager.shared.uploadScoresIfNeeded(scores: importedScores, config: currentConfig)
@@ -295,18 +291,5 @@ struct DivingFishImportView: View {
         }
         
         isImporting = false
-    }
-    
-    private func getRank(from rate: Double) -> String {
-        if rate >= 100.5 { return "SSS+" }
-        if rate >= 100.0 { return "SSS" }
-        if rate >= 99.5 { return "SS+" }
-        if rate >= 99.0 { return "SS" }
-        if rate >= 98.0 { return "S+" }
-        if rate >= 97.0 { return "S" }
-        if rate >= 94.0 { return "AAA" }
-        if rate >= 90.0 { return "AA" }
-        if rate >= 80.0 { return "A" }
-        return "B" // Simplification
     }
 }

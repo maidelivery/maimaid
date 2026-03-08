@@ -123,8 +123,8 @@ class PlateService {
         return groups
     }
     
-    func isAchieved(plateType: PlateType, sheet: Sheet) -> Bool {
-        guard let score = sheet.score() else { return false }
+    func isAchieved(plateType: PlateType, sheet: Sheet, context: ModelContext) -> Bool {
+        guard let score = ScoreService.shared.score(for: sheet, context: context) else { return false }
         
         switch plateType {
         case .kiwami:

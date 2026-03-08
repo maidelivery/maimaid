@@ -86,8 +86,6 @@ struct BestTableView: View {
                 .padding(.vertical, 4)
             }
             
-            
-            
             Section(String(localized: "bestTable.section.new \(currentB15Count)")) {
                 if isLoading {
                     ProgressView().padding()
@@ -127,7 +125,6 @@ struct BestTableView: View {
             }
         }
         .navigationTitle("bestTable.title")
-//        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -146,10 +143,10 @@ struct BestTableView: View {
         .task(id: songs) {
             await calculateRating()
         }
-        .task(id: configs.first?.b35Count) { // Re-calculate when counts change
+        .task(id: activeProfile?.b35Count) {
             await calculateRating()
         }
-        .task(id: configs.first?.b15Count) {
+        .task(id: activeProfile?.b15Count) {
             await calculateRating()
         }
     }
@@ -173,7 +170,6 @@ struct BestTableView: View {
             
             guard let image = image else { return }
             
-            // Present share sheet
             if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                let rootVC = scene.windows.first?.rootViewController {
                 
@@ -184,7 +180,6 @@ struct BestTableView: View {
                 
                 let activityVC = UIActivityViewController(activityItems: [image], applicationActivities: nil)
                 
-                // iPad support
                 if let popover = activityVC.popoverPresentationController {
                     popover.sourceView = topVC.view
                     popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: 0, width: 0, height: 0)
@@ -200,16 +195,11 @@ struct BestTableView: View {
         VStack(alignment: .center, spacing: 6) {
             Text(title).font(.caption2).foregroundColor(.secondary)
             
-            // Bridge Int to String to allow clearing the field during editing
             TextField("", text: Binding(
                 get: { String(value.wrappedValue) },
                 set: { newValue in
-                    if let intValue = Int(newValue.filter { $0.isNumber }) {
+                    if let intValue = Int(newValue.filter({ $0.isNumber })) {
                         value.wrappedValue = intValue
-                    } else if newValue.isEmpty {
-                        // Allow empty during typing, but value.wrappedValue remains last valid int
-                        // or we could set it to 0 and handle it as 1 in the model/calculation.
-                        // For now, we update the wrappedValue to 1 (minimum) if they leave it empty.
                     }
                 }
             ))
@@ -232,28 +222,15 @@ struct BestTableView: View {
         let profileId = activeProfile?.id
         let server = activeProfile.flatMap { GameServer(rawValue: $0.server) }
         
-        // Fetch scores — avoid #Predicate with optional UUID (SwiftData bug with nil comparison)
-        var allScores: [Score] = []
-        if let uid = profileId {
-            let desc = FetchDescriptor<Score>(predicate: #Predicate { $0.userProfileId == uid })
-            allScores = (try? modelContext.fetch(desc)) ?? []
-        }
-        // Fallback: if filtered query returned nothing (or no profile), fetch ALL scores
-        if allScores.isEmpty {
-            let fallbackDesc = FetchDescriptor<Score>()
-            allScores = (try? modelContext.fetch(fallbackDesc)) ?? []
-            print("BestTableView: Filtered scores empty, fallback fetched \(allScores.count) total scores")
-        }
+        // 使用 ScoreService 获取当前用户的成绩映射
+        let scoreMap = ScoreService.shared.scoreMap(context: modelContext)
         
-        var scoreMap: [String: Score] = [:]
-        for score in allScores {
-            scoreMap[score.sheetId] = score
-        }
-        
-        let input = songs.toCalculationInput(userProfileId: profileId, server: server, preloadedScores: scoreMap)
-        
-        let sheetsWithScores = input.reduce(0) { $0 + $1.sheets.count }
-        print("BestTableView: \(input.count) songs, \(sheetsWithScores) sheets w/ scores, \(allScores.count) direct scores. ProfileId: \(profileId?.uuidString ?? "nil"), Server: \(server?.rawValue ?? "nil")")
+        // 使用 RatingUtils 的扩展方法
+        let input = songs.toCalculationInput(
+            userProfileId: profileId,
+            server: server,
+            preloadedScores: scoreMap
+        )
         
         let b35Limit = activeProfile?.b35Count ?? configs.first?.b35Count ?? 35
         let b15Limit = activeProfile?.b15Count ?? configs.first?.b15Count ?? 15
@@ -275,7 +252,6 @@ struct BestTableView: View {
     
     private func ratingRow(entry: RatingUtils.RatingEntry) -> some View {
         HStack(spacing: 14) {
-            // Song Jacket
             SongJacketView(
                 imageName: entry.imageName ?? "",
                 size: 56,
@@ -283,10 +259,9 @@ struct BestTableView: View {
             )
             
             VStack(alignment: .leading, spacing: 4) {
-                // Line 1: Song Title
                 MarqueeText(text: entry.songTitle, font: .system(size: 15, weight: .bold), fontWeight: .bold, color: .primary)
                     .frame(height: 20)
-                // Line 2: Rank + Achievement + DX Score
+                
                 HStack(spacing: 6) {
                     let rank = RatingUtils.calculateRank(achievement: entry.achievement)
                     Text(rank)
@@ -309,9 +284,8 @@ struct BestTableView: View {
                     }
                 }
                 
-                // Line 3: Type + Diff + FC + FS (all badges)
                 HStack(spacing: 4) {
-                    BadgeView(text: entry.type, background: entry.type == "DX" ? .orange : .blue)
+                    BadgeView(text: entry.type.uppercased(), background: entry.type.uppercased() == "DX" ? .orange : .blue)
                     BadgeView(text: ThemeUtils.diffShort(entry.diff), background: ThemeUtils.colorForDifficulty(entry.diff, entry.type))
                     
                     if let fc = entry.fc, !fc.isEmpty {
@@ -323,11 +297,10 @@ struct BestTableView: View {
                     }
                 }
             }
-            .frame(minHeight: 56, alignment: .leading) // Consistent row height
+            .frame(minHeight: 56, alignment: .leading)
             
             Spacer()
             
-            // Right side: Rating + Base Level
             VStack(alignment: .trailing, spacing: 2) {
                 Text("\(entry.rating)")
                     .font(.system(size: 18, weight: .black, design: .rounded))
@@ -340,6 +313,4 @@ struct BestTableView: View {
         }
         .padding(.vertical, 6)
     }
-
 }
-

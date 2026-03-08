@@ -60,12 +60,10 @@ struct LxnsImportView: View {
     private var config: SyncConfig? { configs.first }
     private var activeProfile: UserProfile? { activeProfiles.first }
     
-    // Replace this with your actual LXNS Developer Client ID
     private let clientId = "cfb7ef40-bc0f-4e3a-8258-9e5f52cd7338"
     private let redirectUri = "urn:ietf:wg:oauth:2.0:oob"
     private let scope = "read_user_profile+read_player+write_player+read_user_token"
     
-    // Auth State
     @State private var generatedCodeVerifier: String = ""
     @State private var authCode: String = ""
     
@@ -182,10 +180,8 @@ struct LxnsImportView: View {
         let codeVerifier = AuthUtils.generateCodeVerifier()
         let codeChallenge = AuthUtils.generateCodeChallenge(verifier: codeVerifier)
         
-        // Save the verifier to state so we can use it when the user pastes the code back
         self.generatedCodeVerifier = codeVerifier
         
-        // For Out-Of-Band, the redirect_uri must be urn:ietf:wg:oauth:2.0:oob
         var components = URLComponents(string: "https://maimai.lxns.net/oauth/authorize")!
         components.queryItems = [
             URLQueryItem(name: "response_type", value: "code"),
@@ -221,7 +217,6 @@ struct LxnsImportView: View {
             var request = URLRequest(url: tokenURL)
             request.httpMethod = "POST"
             
-            // Standard OAuth application/x-www-form-urlencoded
             let parameters = [
                 "grant_type": "authorization_code",
                 "client_id": clientId,
@@ -252,7 +247,6 @@ struct LxnsImportView: View {
             let accessToken = tokenResponse.data!.access_token
             let refreshToken = tokenResponse.data!.refresh_token
             
-            // Persist the refresh token
             if let profile = activeProfile {
                 profile.lxnsRefreshToken = refreshToken
             }
@@ -289,7 +283,6 @@ struct LxnsImportView: View {
     private func importData(accessToken: String) async {
         currentStep = String(localized: "import.lxns.status.player")
         
-        // 1. Fetch Player Info
         do {
             if let playerUrl = URL(string: "https://maimai.lxns.net/api/v0/user/maimai/player") {
                 var playerReq = URLRequest(url: playerUrl)
@@ -298,7 +291,6 @@ struct LxnsImportView: View {
                 let pRes = try JSONDecoder().decode(LxnsPlayerResponse.self, from: pData)
                 if pRes.success, let p = pRes.data {
                     if let profile = activeProfile {
-                        // Only update rating from LXNS as a data reference
                         profile.playerRating = p.rating
                     }
                 }
@@ -316,6 +308,9 @@ struct LxnsImportView: View {
             3: "master",
             4: "remaster"
         ]
+        
+        // 🔴 获取当前用户 ID
+        let profileId = activeProfile?.id
         
         do {
             guard let url = URL(string: "https://maimai.lxns.net/api/v0/user/maimai/player/scores") else {
@@ -355,14 +350,12 @@ struct LxnsImportView: View {
             totalRecords = records.count
             importStatus = String(localized: "import.status.processing \(totalRecords)")
             
-            // Optimization map using song titles (Local mapping by title)
             var titleSheetMap: [String: [(type: String, diff: String, sheet: Sheet)]] = [:]
             for song in songs {
                 var sheetInfos: [(String, String, Sheet)] = []
                 for sheet in song.sheets {
                     sheetInfos.append((sheet.type.lowercased(), sheet.difficulty.lowercased(), sheet))
                 }
-                // Using localizedCaseInsensitiveContains or exact map
                 titleSheetMap[song.title] = sheetInfos
             }
             
@@ -373,14 +366,13 @@ struct LxnsImportView: View {
                 let recType = record.type == "dx" ? "dx" : "std"
                 let recDiff = difficultyMap[record.level_index] ?? ""
                 
-                // LXNS usually provides song_name exactly matching internal DB titles.
                 if let sheets = titleSheetMap[record.song_name],
                    let targetSheet = sheets.first(where: { $0.type == recType && $0.diff == recDiff })?.sheet {
                     
                     let newRank = RatingUtils.calculateRank(achievement: record.achievements)
                     
-                    if let existingScore = targetSheet.score() {
-                        // Update if achievement improves OR if metadata is currently missing
+                    // 🔴 修复：使用 ScoreService 获取当前用户的成绩
+                    if let existingScore = ScoreService.shared.score(for: targetSheet, context: modelContext) {
                         let shouldUpdateMetadata = existingScore.fc == nil || existingScore.fs == nil || existingScore.dxScore == 0
                         if record.achievements > existingScore.rate || shouldUpdateMetadata {
                             existingScore.rate = max(existingScore.rate, record.achievements)
@@ -391,6 +383,7 @@ struct LxnsImportView: View {
                             existingScore.achievementDate = Date()
                         }
                     } else {
+                        // 🔴 修复：创建成绩时关联用户
                         let score = Score(
                             sheetId: "\(targetSheet.songIdentifier)_\(targetSheet.type)_\(targetSheet.difficulty)",
                             rate: record.achievements,
@@ -399,7 +392,7 @@ struct LxnsImportView: View {
                             fc: record.fc,
                             fs: record.fs,
                             achievementDate: Date(),
-                            userProfileId: activeProfile?.id
+                            userProfileId: profileId  // 关键：关联当前用户
                         )
                         modelContext.insert(score)
                         targetSheet.scores.append(score)
@@ -409,14 +402,13 @@ struct LxnsImportView: View {
                 }
                 progress += 1
                 
-                if Int(progress) % 20 == 0 { // Yield occasionally
+                if Int(progress) % 20 == 0 {
                     await Task.yield()
                 }
             }
             
             try modelContext.save()
             
-            // Trigger Auto-Upload for imported scores
             if let profile = activeProfile {
                 profile.lastImportDateLXNS = Date()
                 if let currentConfig = config, currentConfig.isAutoUploadEnabled && !importedScores.isEmpty {
@@ -433,5 +425,4 @@ struct LxnsImportView: View {
         
         isImporting = false
     }
-    
 }

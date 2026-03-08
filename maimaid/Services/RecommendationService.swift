@@ -105,7 +105,6 @@ class RecommendationService {
     }
     
     /// Generates recommendations considering B15/B35 thresholds and potential gain
-    /// Generates recommendations considering B15/B35 thresholds and potential gain
     func getRecommendations(songs: [Song], configs: [SyncConfig], activeProfile: UserProfile? = nil, modelContext: ModelContext) async -> RecommendationResponse {
         print("RecommendationService: Generating recommendations for \(songs.count) songs...")
         do {
@@ -125,13 +124,13 @@ class RecommendationService {
             let b15RecLimit = profile?.b15RecLimit ?? configs.first?.b15RecLimit ?? 10
             let b35RecLimit = profile?.b35RecLimit ?? configs.first?.b35RecLimit ?? 10
             
-            // Fetch scores safely (avoids SwiftData optional UUID predicate bug)
+            // 🔴 修复：使用 ScoreService 获取成绩（确保用户隔离）
+            let scoreMap = ScoreService.shared.scoreMap(context: modelContext)
             let profileId = profile?.id
-            let scoreMap = RatingUtils.fetchScoreMap(profileId: profileId, context: modelContext)
             
             let input = songs.toCalculationInput(userProfileId: profileId, server: serverContext, preloadedScores: scoreMap)
             
-            let b50 = RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: latestVersion)
+            let b50 = await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: latestVersion)
             let b15Threshold = b50.b15.last?.rating ?? 0
             let b35Threshold = b50.b35.last?.rating ?? 0
             
@@ -160,7 +159,9 @@ class RecommendationService {
                     let internalLevelValue = sheet.internalLevelValue ?? sheet.levelValue ?? 0.0
                     guard internalLevelValue > 0 else { continue }
                     
-                    let currentRate = sheet.score()?.rate ?? 0.0
+                    // 🔴 修复：使用 ScoreService 获取当前用户的成绩
+                    let currentScore = ScoreService.shared.score(for: sheet, context: modelContext)
+                    let currentRate = currentScore?.rate ?? 0.0
                     guard currentRate < 100.5 else { continue }
                     
                     // Determine isRegionActive dynamically using same logic as RatingUtils.toCalculationInput
@@ -183,7 +184,7 @@ class RecommendationService {
                     let isNew = (category == .b15)
                     let threshold = isNew ? b15Threshold : b35Threshold
                     
-                    let currentRating = sheet.score().map { RatingUtils.calculateRating(internalLevel: internalLevelValue, achievement: $0.rate, fc: $0.fc) } ?? 0
+                    let currentRating = currentScore.map { RatingUtils.calculateRating(internalLevel: internalLevelValue, achievement: $0.rate, fc: $0.fc) } ?? 0
                     let isInB50 = (isNew ? b50.b15 : b50.b35).contains(where: { $0.songId == song.songId && $0.diff == sheet.difficulty.uppercased() && $0.type == sheet.type.uppercased() })
                     
                     // Find the MINIMUM rank that gives a gain
@@ -230,7 +231,7 @@ class RecommendationService {
                             sheet: sheet,
                             fitDiff: fitDiff,
                             diffGap: diffGap,
-                            currentRate: sheet.score()?.rate,
+                            currentRate: currentScore?.rate,
                             potentialRating: bestPotentialRating,
                             potentialGain: bestGain,
                             targetRank: target.rank,

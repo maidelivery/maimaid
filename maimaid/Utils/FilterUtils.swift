@@ -14,7 +14,9 @@ struct FilterSettings: Equatable, Sendable {
     var hideDeletedSongs: Bool = UserDefaults.standard.bool(forKey: "filter.hideDeletedSongs")
 }
 
+@MainActor
 class FilterUtils {
+    /// Original filter method - kept for compatibility
     static func filterSongs(_ songs: [Song], settings: FilterSettings, searchText: String = "") -> [Song] {
         songs.filter { song in
             // 1. Search Text
@@ -72,6 +74,82 @@ class FilterUtils {
                 }
                 
                 if !isPlayable {
+                    return false
+                }
+            }
+            
+            return true
+        }
+    }
+    
+    /// Optimized single-pass filter - reduces array iterations
+    static func filterSongsOptimized(_ songs: [Song], settings: FilterSettings, searchText: String = "") -> [Song] {
+        // Pre-process search text
+        let searchLower = searchText.lowercased()
+        let hasSearch = !searchText.isEmpty
+        let hasCategories = !settings.selectedCategories.isEmpty
+        let hasVersions = !settings.selectedVersions.isEmpty
+        let hasTypes = !settings.selectedTypes.isEmpty
+        let hasDifficulties = !settings.selectedDifficulties.isEmpty
+        
+        return songs.filter { song in
+            // 1. Search Text (most selective filter first)
+            if hasSearch {
+                let titleMatch = song.title.localizedCaseInsensitiveContains(searchText)
+                let artistMatch = song.artist.localizedCaseInsensitiveContains(searchText)
+                let keywordMatch = song.searchKeywords?.localizedCaseInsensitiveContains(searchText) ?? false
+                let aliasMatch = song.aliases.contains { $0.localizedCaseInsensitiveContains(searchText) }
+                let designerMatch = song.sheets.contains { $0.noteDesigner?.lowercased().contains(searchLower) ?? false }
+                
+                if !titleMatch && !artistMatch && !keywordMatch && !aliasMatch && !designerMatch {
+                    return false
+                }
+            }
+            
+            // 2. Favorites
+            if settings.showFavoritesOnly && !song.isFavorite {
+                return false
+            }
+            
+            // 3. Categories
+            if hasCategories && !settings.selectedCategories.contains(song.category) {
+                return false
+            }
+            
+            // 4. Versions
+            if hasVersions {
+                guard let version = song.version, settings.selectedVersions.contains(version) else {
+                    return false
+                }
+            }
+            
+            // 5-7: Single-pass sheet checks
+            if hasTypes || hasDifficulties || settings.hideDeletedSongs {
+                var hasMatchingType = !hasTypes
+                var hasMatchingDifficulty = !hasDifficulties
+                var isPlayable = !settings.hideDeletedSongs
+                
+                for sheet in song.sheets {
+                    // Type check
+                    if hasTypes && settings.selectedTypes.contains(sheet.type.lowercased()) {
+                        hasMatchingType = true
+                    }
+                    
+                    // Difficulty check
+                    if hasDifficulties && settings.selectedDifficulties.contains(sheet.difficulty.lowercased()) {
+                        let level = sheet.internalLevelValue ?? sheet.levelValue ?? 0.0
+                        if level >= settings.minLevel && level <= settings.maxLevel {
+                            hasMatchingDifficulty = true
+                        }
+                    }
+                    
+                    // Region check
+                    if settings.hideDeletedSongs && (sheet.regionJp || sheet.regionIntl || sheet.regionCn) {
+                        isPlayable = true
+                    }
+                }
+                
+                if !hasMatchingType || !hasMatchingDifficulty || !isPlayable {
                     return false
                 }
             }

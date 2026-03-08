@@ -213,7 +213,7 @@ struct ThemeUtils {
         if rating >= 4000  { return Color(hex: "#FFD400") } // Yellow
         if rating >= 2000  { return Color(hex: "#46D246") } // Green
         if rating >= 1000  { return Color(hex: "#56A6FF") } // Blue
-        return .white // White
+        return .gray // White
     }
     
     static func ratingGradient(_ rating: Int) -> LinearGradient {

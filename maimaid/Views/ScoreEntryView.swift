@@ -29,8 +29,6 @@ struct ScoreEntryView: View {
     @State private var selectedFC: String? = nil
     @State private var selectedFS: String? = nil
     
-    @State private var selectedRank = "SSS+" // Changed from calculatedRank
-    
     init(sheet: Sheet, initialRate: Double? = nil, initialRank: String? = nil, initialDxScore: Int? = nil, initialFC: String? = nil, initialFS: String? = nil) {
         self.sheet = sheet
         self.initialRate = initialRate
@@ -51,8 +49,6 @@ struct ScoreEntryView: View {
     private var maxDxScore: Int {
         (sheet.total ?? 0) * 3
     }
-    
-    // calculatedRank computed property removed, now using selectedRank @State
     
     private var diffColor: Color {
         ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
@@ -80,6 +76,20 @@ struct ScoreEntryView: View {
         }
     }
     
+    /// 🔴 Rank 由达成率自动计算
+    private var calculatedRank: String {
+        if let rate = parsedRate {
+            return RatingUtils.calculateRank(achievement: rate)
+        }
+        // 无有效输入时的默认值
+        return "D"
+    }
+    
+    /// 🔴 关键修复：使用 ScoreService 获取当前用户的成绩
+    private var currentScore: Score? {
+        ScoreService.shared.score(for: sheet, context: modelContext)
+    }
+    
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -94,7 +104,7 @@ struct ScoreEntryView: View {
                     photoScanSection
                     
                     // Existing score info
-                    if let existingScore = sheet.score() {
+                    if let existingScore = currentScore {
                         existingScoreCard(existingScore)
                     }
                     
@@ -115,31 +125,25 @@ struct ScoreEntryView: View {
         .onAppear {
             if let initRate = initialRate {
                 rateText = String(format: "%.4f", initRate)
-            } else if let score = sheet.score() {
+            } else if let score = currentScore {
                 rateText = String(format: "%.4f", score.rate)
-            }
-            
-            if let initRank = initialRank {
-                selectedRank = initRank
-            } else if let score = sheet.score() {
-                selectedRank = score.rank
             }
             
             if let initDxScore = initialDxScore {
                 dxScoreText = "\(initDxScore)"
-            } else if let score = sheet.score() {
+            } else if let score = currentScore {
                 dxScoreText = score.dxScore > 0 ? "\(score.dxScore)" : ""
             }
             
             if let initFC = initialFC {
                 selectedFC = initFC
-            } else if let score = sheet.score() {
+            } else if let score = currentScore {
                 selectedFC = score.fc
             }
             
             if let initFS = initialFS {
                 selectedFS = initFS
-            } else if let score = sheet.score() {
+            } else if let score = currentScore {
                 selectedFS = score.fs
             }
         }
@@ -238,15 +242,15 @@ struct ScoreEntryView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "trophy.fill")
                             .font(.system(size: 10))
-                            .foregroundColor(RatingUtils.colorForRank(selectedRank))
+                            .foregroundColor(RatingUtils.colorForRank(calculatedRank))
                         
-                        Text(selectedRank) // Changed from calculatedRank
+                        Text(calculatedRank)
                             .font(.system(size: 16, weight: .black, design: .rounded))
-                            .foregroundColor(RatingUtils.colorForRank(selectedRank))
+                            .foregroundColor(RatingUtils.colorForRank(calculatedRank))
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(RatingUtils.colorForRank(selectedRank).opacity(0.1), in: Capsule())
+                    .background(RatingUtils.colorForRank(calculatedRank).opacity(0.1), in: Capsule())
                     
                     // DX Score mini input
                     HStack(spacing: 6) {
@@ -494,60 +498,31 @@ struct ScoreEntryView: View {
     private func saveScore() {
         guard let rate = parsedRate, isValid else { return }
         
-        // 1. Always create a new historical PlayRecord
-        let newPlayRecord = PlayRecord(
-            sheetId: "\(sheet.songIdentifier)-\(sheet.type)-\(sheet.difficulty)",
+        // 🔴 关键修复：使用 ScoreService 记录游玩历史（自动关联用户）
+        _ = ScoreService.shared.recordPlay(
+            sheet: sheet,
             rate: rate,
-            rank: selectedRank,
+            rank: calculatedRank,
             dxScore: parsedDxScore ?? 0,
             fc: selectedFC,
-            fs: selectedFS
+            fs: selectedFS,
+            context: modelContext
         )
-        modelContext.insert(newPlayRecord)
         
-        if sheet.playRecords == nil {
-            sheet.playRecords = []
-        }
-        sheet.playRecords?.append(newPlayRecord)
+        // 🔴 关键修复：使用 ScoreService 保存成绩（自动关联用户）
+        let savedScore = ScoreService.shared.saveScore(
+            sheet: sheet,
+            rate: rate,
+            rank: calculatedRank,
+            dxScore: parsedDxScore ?? 0,
+            fc: selectedFC,
+            fs: selectedFS,
+            context: modelContext
+        )
         
-        // 2. Monotonically update the main Score
-        let existingScore = sheet.score()
-        
-        if let existing = existingScore {
-            // Update individual metrics only if they are strictly better
-            let isNewRateBetter = rate > existing.rate
-            if isNewRateBetter {
-                existing.rate = rate
-                existing.rank = selectedRank
-                existing.achievementDate = Date()
-            }
-            
-            existing.dxScore = max(existing.dxScore, parsedDxScore ?? 0)
-            existing.fc = ThemeUtils.bestFC(existing.fc, selectedFC)
-            existing.fs = ThemeUtils.bestFS(existing.fs, selectedFS)
-            
-            // Trigger Auto-Sync for manual entry with the updated monotonic score
-            if let config = configs.first, isNewRateBetter || (parsedDxScore ?? 0) > existing.dxScore || existing.fc != selectedFC || existing.fs != selectedFS {
-                 Task { await SyncManager.shared.uploadScoreIfNeeded(sheet: sheet, score: existing, config: config) }
-            }
-            
-        } else {
-            // No existing score, create the baseline
-            let newScore = Score(
-                sheetId: "\(sheet.songIdentifier)-\(sheet.type)-\(sheet.difficulty)",
-                rate: rate,
-                rank: selectedRank,
-                dxScore: parsedDxScore ?? 0,
-                fc: selectedFC,
-                fs: selectedFS
-            )
-            modelContext.insert(newScore)
-            sheet.scores.append(newScore)
-            
-            // Trigger Auto-Sync for manual entry
-            if let config = configs.first {
-                Task { await SyncManager.shared.uploadScoreIfNeeded(sheet: sheet, score: newScore, config: config) }
-            }
+        // Trigger Auto-Sync for manual entry
+        if let config = configs.first {
+            Task { await SyncManager.shared.uploadScoreIfNeeded(sheet: sheet, score: savedScore, config: config) }
         }
         
         try? modelContext.save()

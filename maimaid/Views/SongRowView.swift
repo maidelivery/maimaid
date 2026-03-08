@@ -1,7 +1,11 @@
 import SwiftUI
+import SwiftData
 
 struct SongRowView: View {
     let song: Song
+    var scoreCache: [String: Score] = [:]
+    @Environment(\.modelContext) private var modelContext
+    @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     
     private var highestSheet: Sheet? {
         let dxSheets = song.sheets.filter { $0.type.lowercased() == "dx" }
@@ -53,7 +57,7 @@ struct SongRowView: View {
                             )
                     }
                     
-                    // Difficulty dots
+                    // Difficulty dots - use cached scores for better performance
                     HStack(spacing: 3) {
                         let prioritizedSheets: [Sheet] = {
                             let dxSheets = song.sheets.filter { $0.type.lowercased() == "dx" }
@@ -66,7 +70,12 @@ struct SongRowView: View {
                         }()
                         
                         ForEach(prioritizedSheets) { sheet in
-                            ScoreProgressDot(sheet: sheet)
+                            if scoreCache.isEmpty {
+                                // Fallback to direct lookup if cache not provided
+                                ScoreProgressDot(sheet: sheet, context: modelContext)
+                            } else {
+                                ScoreProgressDotOptimized(sheet: sheet, scoreCache: scoreCache)
+                            }
                         }
                     }
                 }
@@ -83,10 +92,11 @@ struct SongRowView: View {
         .padding(.horizontal, 16)
     }
     
-    // MARK: - Progress Dot
+    // MARK: - Progress Dot (original - with context)
     
     struct ScoreProgressDot: View {
         let sheet: Sheet
+        let context: ModelContext
         
         private var color: Color {
             ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
@@ -98,7 +108,7 @@ struct SongRowView: View {
                     .stroke(color.opacity(0.3), lineWidth: 1)
                     .frame(width: 8, height: 8)
                 
-                if let score = sheet.score(), score.rate > 0 {
+                if let score = ScoreService.shared.score(for: sheet, context: context), score.rate > 0 {
                     let progress = min(1.0, score.rate - 100)
                     Circle()
                         .trim(from: 0, to: progress)
@@ -108,7 +118,37 @@ struct SongRowView: View {
                 }
             }
         }
-        
+    }
+}
+
+// MARK: - Optimized Progress Dot (with cache)
+
+struct ScoreProgressDotOptimized: View {
+    let sheet: Sheet
+    let scoreCache: [String: Score]
+    
+    private var color: Color {
+        ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
+    }
+    
+    private var sheetId: String {
+        "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)"
+    }
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(color.opacity(0.3), lineWidth: 1)
+                .frame(width: 8, height: 8)
+            
+            if let score = scoreCache[sheetId], score.rate > 0 {
+                let progress = min(1.0, score.rate - 100)
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(color, style: StrokeStyle(lineWidth: 4, lineCap: .butt))
+                    .frame(width: 4, height: 4)
+                    .rotationEffect(.degrees(-90))
+            }
         }
     }
-
+}

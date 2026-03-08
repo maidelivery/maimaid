@@ -138,12 +138,11 @@ struct HomeView: View {
         let profileId = activeProfile?.id
         let server = activeProfile.flatMap { GameServer(rawValue: $0.server) }
         
-        let scoreMap = RatingUtils.fetchScoreMap(profileId: profileId, context: modelContext)
+        // 🔴 修复：使用新的 fetchScoreMap(context:) 方法
+        let scoreMap = RatingUtils.fetchScoreMap(context: modelContext)
         let input = songs.toCalculationInput(userProfileId: profileId, server: server, preloadedScores: scoreMap)
         let serverVersion = activeServerLatestVersion
-        let result = await Task.detached(priority: .userInitiated) {
-            await RatingUtils.calculateB50(input: input, b35Count: 35, b15Count: 15, latestVersion: serverVersion)
-        }.value
+        let result = await RatingUtils.calculateB50(input: input, b35Count: 35, b15Count: 15, latestVersion: serverVersion)
         self.standardB50Total = result.total
     }
     
@@ -151,7 +150,8 @@ struct HomeView: View {
         let profileId = activeProfile?.id
         let server = activeProfile.flatMap { GameServer(rawValue: $0.server) }
         
-        let scoreMap = RatingUtils.fetchScoreMap(profileId: profileId, context: modelContext)
+        // 🔴 修复：使用新的 fetchScoreMap(context:) 方法
+        let scoreMap = RatingUtils.fetchScoreMap(context: modelContext)
         let input = songs.toCalculationInput(userProfileId: profileId, server: server, preloadedScores: scoreMap)
         
         let b35Limit = activeProfile?.b35Count ?? config?.b35Count ?? 35
@@ -159,9 +159,7 @@ struct HomeView: View {
         let serverVersion = activeServerLatestVersion
         
         // Background calculation with sendable input
-        let result = await Task.detached(priority: .userInitiated) {
-            await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: serverVersion)
-        }.value
+        let result = await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: serverVersion)
         
         self.computedB50Total = result.total
     }
@@ -522,12 +520,8 @@ struct IconPickerView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 20) {
                 ForEach(filteredIcons) { icon in
-                    Button { [config] in
-                        config.avatarUrl = icon.iconUrl
-                        config.avatarData = nil // Clear custom data in config
-                        selectedImageData = nil // Clear custom data in parent sheet state
-                        config.isCustomProfile = true
-                        dismiss()
+                    Button {
+                        selectIcon(icon)
                     } label: {
                         VStack(spacing: 8) {
                             if let localImage = ImageDownloader.shared.loadImage(iconId: icon.id) {
@@ -562,5 +556,13 @@ struct IconPickerView: View {
         }
         .navigationTitle("profile.picker.title")
         .searchable(text: $searchText, prompt: "profile.picker.search")
+    }
+    
+    private func selectIcon(_ icon: MaimaiIcon) {
+        config.avatarUrl = icon.iconUrl
+        config.avatarData = nil // Clear custom data in config
+        selectedImageData = nil // Clear custom data in parent sheet state
+        config.isCustomProfile = true
+        dismiss()
     }
 }

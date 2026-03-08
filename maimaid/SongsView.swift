@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  maimaid
 //
-//  Created by 西 宮缄 on 2/23/26.
+//  Created by 西 宫缄 on 2/23/26.
 //
 
 import SwiftUI
@@ -31,6 +31,10 @@ struct SongsView: View {
     @State private var displayedSongs: [Song] = []
     @State private var isSorting: Bool = false
     
+    // Performance: Cache score map to avoid repeated lookups
+    @State private var scoreCache: [String: Score] = [:]
+    @State private var lastCacheInvalidation: Int = 0
+    
     var allCategories: [String] {
         Array(Set(songs.map { $0.category })).sorted { ThemeUtils.categorySortOrder($0) < ThemeUtils.categorySortOrder($1) }
     }
@@ -42,57 +46,60 @@ struct SongsView: View {
     private func updateDisplayedSongs() {
         isSorting = true
         
-        // Capture dependencies
+        // Capture current values synchronously on MainActor
         let currentSongs = songs
         let currentFilter = filterSettings
         let currentSearch = searchText
         let currentSort = sortOption
         let currentAscending = sortAscending
         
-        // Allow UI to flush (e.g. menu close animations)
-        Task {
+        // Refresh score cache if needed
+        if lastCacheInvalidation != currentSongs.count {
+            scoreCache = ScoreService.shared.scoreMap(context: modelContext)
+            lastCacheInvalidation = currentSongs.count
+        }
+        
+        // Perform filtering and sorting on MainActor
+        Task { @MainActor in
             // Small delay to let UI animations finish
-            try? await Task.sleep(nanoseconds: 100_000_000)
+//            try? await Task.sleep(nanoseconds: 50_000_000)w
             
-            // Execute heavy logic in background
-            let result = await Task.detached { () -> [Song] in
-                let filtered = FilterUtils.filterSongs(currentSongs, settings: currentFilter, searchText: currentSearch)
-                
-                return filtered.sorted { a, b in
-                    switch currentSort {
-                    case .defaultOrder:
-                        return currentAscending ? (a.sortOrder < b.sortOrder) : (a.sortOrder > b.sortOrder)
-                    case .versionAndDate:
-                        let vA = a.version ?? ""
-                        let vB = b.version ?? ""
-                        let orderA = ThemeUtils.versionSortOrder(vA)
-                        let orderB = ThemeUtils.versionSortOrder(vB)
-                        
-                        if orderA != orderB {
-                            return currentAscending ? (orderA < orderB) : (orderA > orderB)
-                        }
-                        
-                        let dA = a.releaseDate ?? "0000-00-00"
-                        let dB = b.releaseDate ?? "0000-00-00"
-                        if dA != dB {
-                            return currentAscending ? (dA < dB) : (dA > dB)
-                        }
-                        return a.sortOrder < b.sortOrder
-                    case .difficulty:
-                        let maxDiffA = a.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
-                        let maxDiffB = b.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
-                        if maxDiffA == maxDiffB {
-                            return a.sortOrder < b.sortOrder
-                        }
-                        return currentAscending ? (maxDiffA < maxDiffB) : (maxDiffA > maxDiffB)
+            // Use optimized single-pass filter
+            let filtered = FilterUtils.filterSongsOptimized(currentSongs, settings: currentFilter, searchText: currentSearch)
+            
+            // Sort songs
+            let result = filtered.sorted { a, b in
+                switch currentSort {
+                case .defaultOrder:
+                    return currentAscending ? (a.sortOrder < b.sortOrder) : (a.sortOrder > b.sortOrder)
+                case .versionAndDate:
+                    let vA = a.version ?? ""
+                    let vB = b.version ?? ""
+                    let orderA = ThemeUtils.versionSortOrder(vA)
+                    let orderB = ThemeUtils.versionSortOrder(vB)
+                    
+                    if orderA != orderB {
+                        return currentAscending ? (orderA < orderB) : (orderA > orderB)
                     }
+                    
+                    let dA = a.releaseDate ?? "0000-00-00"
+                    let dB = b.releaseDate ?? "0000-00-00"
+                    if dA != dB {
+                        return currentAscending ? (dA < dB) : (dA > dB)
+                    }
+                    return a.sortOrder < b.sortOrder
+                case .difficulty:
+                    let maxDiffA = a.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
+                    let maxDiffB = b.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
+                    if maxDiffA == maxDiffB {
+                        return a.sortOrder < b.sortOrder
+                    }
+                    return currentAscending ? (maxDiffA < maxDiffB) : (maxDiffA > maxDiffB)
                 }
-            }.value
-            
-            await MainActor.run {
-                self.displayedSongs = result
-                self.isSorting = false
             }
+            
+            self.displayedSongs = result
+            self.isSorting = false
         }
     }
     
@@ -174,6 +181,9 @@ struct SongsView: View {
         }
         .onAppear {
             if displayedSongs.isEmpty && !songs.isEmpty {
+                // Pre-cache scores on first load
+                scoreCache = ScoreService.shared.scoreMap(context: modelContext)
+                lastCacheInvalidation = songs.count
                 updateDisplayedSongs()
             }
         }
@@ -192,7 +202,7 @@ struct SongsView: View {
                 NavigationLink {
                     SongDetailView(song: song)
                 } label: {
-                    SongRowView(song: song)
+                    SongRowView(song: song, scoreCache: scoreCache)
                 }
                 .buttonStyle(.plain)
             }
@@ -214,7 +224,7 @@ struct SongsView: View {
                 NavigationLink {
                     SongDetailView(song: song)
                 } label: {
-                    SongGridCell(song: song)
+                    SongGridCell(song: song, scoreCache: scoreCache)
                 }
                 .buttonStyle(.plain)
             }
@@ -227,6 +237,8 @@ struct SongsView: View {
 
 private struct SongGridCell: View {
     let song: Song
+    var scoreCache: [String: Score] = [:]
+    @Environment(\.modelContext) private var modelContext
     
     var body: some View {
         VStack(spacing: 8) {
@@ -242,7 +254,7 @@ private struct SongGridCell: View {
                     .multilineTextAlignment(.center)
                     .frame(height: 28)
                 
-                // Difficulty dots
+                // Difficulty dots - use cached scores
                 HStack(spacing: 2) {
                     let prioritizedSheets: [Sheet] = {
                         let dxSheets = song.sheets.filter { $0.type.lowercased() == "dx" }
@@ -255,7 +267,12 @@ private struct SongGridCell: View {
                     }()
                     
                     ForEach(prioritizedSheets) { sheet in
-                        SongRowView.ScoreProgressDot(sheet: sheet)
+                        if scoreCache.isEmpty {
+                            // Fallback to direct lookup if cache not provided
+                            SongRowView.ScoreProgressDot(sheet: sheet, context: modelContext)
+                        } else {
+                            ScoreProgressDotOptimized(sheet: sheet, scoreCache: scoreCache)
+                        }
                     }
                 }
             }

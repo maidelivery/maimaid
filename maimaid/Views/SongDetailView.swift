@@ -43,6 +43,7 @@ struct SongDetailContent: View {
     @Binding var selectedSheet: Sheet?
     @Binding var toastMessage: String?
     @Environment(\.modelContext) private var modelContext
+    @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     @State private var statsService = ChartStatsService.shared
     
     private var filteredSheets: [Sheet] {
@@ -514,6 +515,8 @@ struct SheetCardView: View {
     @State private var isHistoryExpanded = false
     @State private var historySortByDate = true
     @State private var historyPage = 1
+    @Environment(\.modelContext) private var modelContext
+    @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     
     private var diffColor: Color {
         ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
@@ -554,7 +557,7 @@ struct SheetCardView: View {
                     Spacer()
                     
                     // Score badge (if exists)
-                    if let score = sheet.score() {
+                    if let score = ScoreService.shared.score(for: sheet, context: modelContext) {
                         VStack(alignment: .trailing, spacing: 1) {
                             Text(String(format: "%.4f%%", score.rate))
                                 .font(.system(size: 12, weight: .bold, design: .monospaced))

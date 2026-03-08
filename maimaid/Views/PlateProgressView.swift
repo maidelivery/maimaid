@@ -2,7 +2,9 @@ import SwiftUI
 import SwiftData
 
 struct PlateProgressView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query private var songs: [Song]
+    @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     
     // Filters
     @State private var selectedGroup: VersionPlateGroup?
@@ -217,7 +219,7 @@ struct PlateProgressView: View {
     }
     
     private func jacketItem(_ sheet: Sheet) -> some View {
-        let isAchieved = PlateService.shared.isAchieved(plateType: selectedPlate, sheet: sheet)
+        let isAchieved = PlateService.shared.isAchieved(plateType: selectedPlate, sheet: sheet, context: modelContext)
         let color = Color(hex: selectedPlate.color)
         
         return ZStack {
@@ -241,7 +243,7 @@ struct PlateProgressView: View {
     
     @ViewBuilder
     private func achievementMarker(sheet: Sheet) -> some View {
-        let score = sheet.score()
+        let score = ScoreService.shared.score(for: sheet, context: modelContext)
         
         Group {
             switch selectedPlate {
@@ -276,4 +278,3 @@ struct PlateProgressView: View {
             .shadow(color: .black.opacity(0.8), radius: 2)
     }
 }
-
