@@ -21,10 +21,10 @@ class MLScoreProcessor: Sendable {
             let config = MLModelConfiguration()
             config.computeUnits = .all
             
-            if let modelURL = Bundle.main.url(forResource: "maimaid v1.31n", withExtension: "mlmodelc") {
+            if let modelURL = Bundle.main.url(forResource: "maimaid v1.4n", withExtension: "mlmodelc") {
                 let mlModel = try MLModel(contentsOf: modelURL, configuration: config)
                 self.visionModel = try VNCoreMLModel(for: mlModel)
-                print("MLScoreProcessor: Successfully loaded maimaid v1.31n model from mlmodelc.")
+                print("MLScoreProcessor: Successfully loaded maimaid v1.4n model from mlmodelc.")
             } else if let urls = Bundle.main.urls(forResourcesWithExtension: "mlmodelc", subdirectory: nil), let first = urls.first {
                 print("MLScoreProcessor: Loaded fallback model \(first.lastPathComponent)")
                 let mlModel = try MLModel(contentsOf: first, configuration: config)
@@ -65,20 +65,29 @@ class MLScoreProcessor: Sendable {
         
         // Class labels expected from maimaidv1.31:
         // achievement, title, dx, std, utage, difficulty, fc, fcp, ap, app, sync, fs, fsp, fdx, fdxp, dxscore
+        // NEW: lv, maxcombo
         
         var achievementBox: CGRect?
         var titleBox: CGRect?
         var difficultyBox: CGRect?
         var dxscoreBox: CGRect?
+        var lvBox: CGRect?
+        var maxcomboBox: CGRect?
         
         // 1. Parse distinct classifications
+        print("════════════════════════════════════════")
+        print("MLScoreProcessor: Detected \(results.count) objects")
+        
         for obs in results {
             guard let topLabel = obs.labels.first else { continue }
             let label = topLabel.identifier.lowercased()
+            let confidence = topLabel.confidence
             let box = obs.boundingBox // Vision coordinates (0,0 is bottom-left)
             
             // Add box for debugging
             scoreResult.boxes.append(RecognizedBox(label: label, rect: box))
+            
+            print("  [\(label)] confidence: \(String(format: "%.2f", confidence)), box: [x:\(String(format: "%.3f", box.origin.x)), y:\(String(format: "%.3f", box.origin.y)), w:\(String(format: "%.3f", box.width)), h:\(String(format: "%.3f", box.height))]")
             
             switch label {
             case "dx": scoreResult.type = "dx"
@@ -88,6 +97,8 @@ class MLScoreProcessor: Sendable {
             case "title": titleBox = box
             case "difficulty": difficultyBox = box
             case "dxscore": dxscoreBox = box
+            case "lv": lvBox = box
+            case "maxcombo": maxcomboBox = box
                 
             // Status Badges
             case "fc": scoreResult.comboStatus = "fc"
@@ -106,45 +117,111 @@ class MLScoreProcessor: Sendable {
         // 2. Targeted OCR on Specific Regions 
         // We crop the original image using the bounding box from Vision and run VNRecognizeTextRequest.
         
+        print("────────────────────────────────────────")
+        print("MLScoreProcessor: Starting OCR on detected regions...")
+        
         if let box = achievementBox {
             let ocrText = await performOCR(on: cgImage, in: box, pattern: "(\\d{2,3}[.,]\\d{4})")
+            print("  [achievement OCR] raw results: \(ocrText)")
             if let text = ocrText.first {
                 let cleaned = text.replacingOccurrences(of: ",", with: ".")
                                   .replacingOccurrences(of: "%", with: "")
                 if let val = Double(cleaned), val <= 101.0 {
                     scoreResult.rate = val
+                    print("  [achievement] ✓ parsed: \(val)%")
+                } else {
+                    print("  [achievement] ✗ failed to parse: '\(cleaned)'")
                 }
             }
+        } else {
+            print("  [achievement] ✗ no bounding box detected")
         }
         
         if let box = titleBox {
             // Title can be mostly anything, don't use pattern
             let ocrText = await performOCR(on: cgImage, in: box, pattern: nil)
+            print("  [title OCR] raw results: \(ocrText)")
             if let text = ocrText.first {
                 scoreResult.title = text
+                print("  [title] ✓ parsed: '\(text)'")
             }
             scoreResult.titleCandidates = ocrText
+        } else {
+            print("  [title] ✗ no bounding box detected")
         }
         
         if let box = dxscoreBox {
             let ocrText = await performOCR(on: cgImage, in: box, pattern: "(\\d+)")
+            print("  [dxscore OCR] raw results: \(ocrText)")
             if let text = ocrText.first, let val = Int(text) {
                 scoreResult.dxScore = val
+                print("  [dxscore] ✓ parsed: \(val)")
             }
+        } else {
+            print("  [dxscore] ✗ no bounding box detected")
+        }
+        
+        // NEW: OCR for lv (level) - supports both integer and decimal levels like "14" or "14.5"
+        if let box = lvBox {
+            let ocrText = await performOCR(on: cgImage, in: box, pattern: "(\\d+(?:[.,]\\d)?)")
+            print("  [lv OCR] raw results: \(ocrText)")
+            if let text = ocrText.first {
+                let cleaned = text.replacingOccurrences(of: ",", with: ".")
+                if let val = Double(cleaned) {
+                    scoreResult.level = val
+                    print("  [lv] ✓ parsed: \(val)")
+                } else {
+                    print("  [lv] ✗ failed to parse: '\(cleaned)'")
+                }
+            }
+        } else {
+            print("  [lv] ✗ no bounding box detected")
+        }
+        
+        // NEW: OCR for maxcombo (total notes)
+        if let box = maxcomboBox {
+            let ocrText = await performOCR(on: cgImage, in: box, pattern: "(\\d+)")
+            print("  [maxcombo OCR] raw results: \(ocrText)")
+            if let text = ocrText.first, let val = Int(text) {
+                scoreResult.maxCombo = val
+                print("  [maxcombo] ✓ parsed: \(val)")
+            }
+        } else {
+            print("  [maxcombo] ✗ no bounding box detected")
         }
         
         // 3. Difficulty Parsing (OCR for "re", fallback to Color)
         if let box = difficultyBox, let cropped = cropImage(cgImage, to: box) {
             let ocrText = await performOCR(on: cgImage, in: box, pattern: nil) // Check full region for text
             let joinedText = ocrText.joined(separator: " ").lowercased()
+            print("  [difficulty OCR] raw results: \(ocrText)")
             
             if joinedText.contains("re") {
                 scoreResult.difficulty = "remaster"
+                print("  [difficulty] ✓ parsed: remaster (detected 're' in text)")
             } else {
                 // Fallback to average color classification
                 scoreResult.difficulty = classifyDifficultyColor(from: cropped)
+                print("  [difficulty] ✓ parsed: \(scoreResult.difficulty ?? "unknown") (color classification)")
             }
+        } else {
+            print("  [difficulty] ✗ no bounding box detected")
         }
+        
+        // Final summary
+        print("────────────────────────────────────────")
+        print("MLScoreProcessor: Final Result Summary")
+        print("  type: \(scoreResult.type ?? "nil")")
+        print("  title: \(scoreResult.title ?? "nil")")
+        print("  titleCandidates: \(scoreResult.titleCandidates)")
+        print("  rate: \(scoreResult.rate != nil ? String(format: "%.4f%%", scoreResult.rate!) : "nil")")
+        print("  difficulty: \(scoreResult.difficulty ?? "nil")")
+        print("  dxScore: \(scoreResult.dxScore != nil ? "\(scoreResult.dxScore!)" : "nil")")
+        print("  level: \(scoreResult.level != nil ? String(format: "%.1f", scoreResult.level!) : "nil")")
+        print("  maxCombo: \(scoreResult.maxCombo != nil ? "\(scoreResult.maxCombo!)" : "nil")")
+        print("  comboStatus: \(scoreResult.comboStatus ?? "nil")")
+        print("  syncStatus: \(scoreResult.syncStatus ?? "nil")")
+        print("════════════════════════════════════════")
         
         return scoreResult
     }
@@ -251,6 +328,10 @@ struct MLScoreResult: Sendable {
     var dxScore: Int?
     var comboStatus: String?
     var syncStatus: String?
+    
+    // NEW: Level and MaxCombo for song matching verification
+    var level: Double?
+    var maxCombo: Int?
     
     var debugInfo: String = ""
     var boxes: [RecognizedBox] = []

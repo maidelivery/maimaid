@@ -5,6 +5,213 @@ import SwiftData
 import PhotosUI
 import os
 
+// Add this extension near the top of the file, after imports
+
+// MARK: - OCR Error Correction
+
+extension ScannerView {
+    /// Common OCR misrecognition patterns for Japanese game titles
+    private static let ocrSubstitutions: [Character: [Character]] = [
+        // Latin characters commonly confused
+        "O": ["0", "D", "Q"],
+        "0": ["O", "D"],
+        "D": ["O", "0"],
+        "I": ["1", "l", "L"],
+        "1": ["I", "l"],
+        "l": ["I", "1"],
+        "L": ["I", "1"],
+        "S": ["5", "Z"],
+        "5": ["S"],
+        "Z": ["S", "2"],
+        "2": ["Z"],
+        "B": ["8"],
+        "8": ["B"],
+        "G": ["6", "C"],
+        "6": ["G"],
+        "C": ["G"],
+        "Q": ["O", "0"],
+        
+        // Japanese characters commonly confused
+        "職": ["蔵", "藏", "概"],
+        "蔵": ["職", "藏"],
+        "藏": ["職", "蔵"],
+        "黒": ["黑"],
+        "黑": ["黒"],
+        "響": ["郷"],
+        "郷": ["響"],
+        "桜": ["櫻"],
+        "櫻": ["桜"],
+        "竜": ["龍"],
+        "龍": ["竜"],
+        "斬": ["斷"],
+        "國": ["国"],
+        "国": ["國"],
+        "円": ["圓"],
+        "圓": ["円"],
+        "劇": ["劇"],
+        "鍵": ["鍵"],
+        "変": ["變"],
+        "變": ["変"],
+        "戦": ["戰"],
+        "戰": ["戦"],
+        "関": ["關"],
+        "關": ["関"],
+        "広": ["廣"],
+        "廣": ["広"],
+        "駅": ["驛"],
+        "驛": ["駅"],
+        "帯": ["帶"],
+        "帶": ["帯"],
+        "極": ["极"],
+        "极": ["極"],
+        "転": ["轉"],
+        "轉": ["転"],
+        "検": ["檢"],
+        "檢": ["検"],
+        "権": ["權"],
+        "權": ["権"],
+        "譲": ["讓"],
+        "讓": ["譲"],
+        "説": ["說"],
+        "說": ["説"],
+        "読": ["讀"],
+        "讀": ["読"],
+        "弾": ["彈"],
+        "彈": ["弾"],
+        "個": ["箇"],
+        "箇": ["個"],
+        "号": ["號"],
+        "號": ["号"],
+        "声": ["聲"],
+        "聲": ["声"],
+        "栄": ["榮"],
+        "榮": ["栄"],
+        "営": ["營"],
+        "營": ["営"],
+        "様": ["樣"],
+        "樣": ["様"],
+        "測": ["測"],
+        "画": ["畫"],
+        "畫": ["画"],
+    ]
+    
+    /// Generate OCR correction candidates for a string
+    private func generateOCRVariants(_ text: String, maxVariants: Int = 8) -> [String] {
+        var variants = [text]
+        var queue = [text]
+        var seen = Set<String>([text])
+        
+        while !queue.isEmpty && variants.count < maxVariants {
+            let current = queue.removeFirst()
+            
+            for (original, replacements) in Self.ocrSubstitutions {
+                if current.contains(original) {
+                    for replacement in replacements {
+                        let variant = current.replacingOccurrences(of: String(original), with: String(replacement))
+                        if !seen.contains(variant) {
+                            seen.insert(variant)
+                            variants.append(variant)
+                            queue.append(variant)
+                        }
+                    }
+                }
+                
+                // Also check reverse - if OCR produced wrong char, original might be the correct one
+                for replacement in replacements {
+                    if current.contains(replacement) {
+                        let variant = current.replacingOccurrences(of: String(replacement), with: String(original))
+                        if !seen.contains(variant) {
+                            seen.insert(variant)
+                            variants.append(variant)
+                            queue.append(variant)
+                        }
+                    }
+                }
+            }
+        }
+        
+        return variants
+    }
+    
+    /// Check if two strings are similar enough considering common OCR errors
+    private func isSimilarWithOCRErrors(_ s1: String, _ s2: String, threshold: Int? = nil) -> Bool {
+        // First try exact match
+        if s1.localizedCaseInsensitiveCompare(s2) == .orderedSame {
+            return true
+        }
+        
+        // Try with OCR variants
+        let s1Variants = generateOCRVariants(s1)
+        let s2Lower = s2.lowercased()
+        
+        for variant in s1Variants {
+            let variantLower = variant.lowercased()
+            if s2Lower.localizedCaseInsensitiveContains(variantLower) ||
+               variantLower.localizedCaseInsensitiveContains(s2Lower) {
+                return true
+            }
+        }
+        
+        // Try fuzzy match with adaptive threshold
+        let dist = levenshteinDistance(s1, s2)
+        let maxLen = max(s1.count, s2.count)
+        let adaptiveThreshold = threshold ?? max(2, maxLen / 3)
+        
+        return dist <= adaptiveThreshold
+    }
+    
+    /// Strip utage prefix from title (e.g., 【宴】Title -> Title, [祝]Title -> Title)
+    private func stripUtagePrefix(_ title: String) -> String {
+        var result = title
+        
+        // Pattern 1: 【xxx】prefix (full-width brackets with kanji)
+        if let range = result.range(of: "^【[^】]+】", options: .regularExpression) {
+            result.removeSubrange(range)
+        }
+        
+        // Pattern 2: [xxx] prefix (half-width brackets with kanji)
+        if let range = result.range(of: "^\\[[^\\]]+\\]", options: .regularExpression) {
+            result.removeSubrange(range)
+        }
+        
+        // Pattern 3: Full-width brackets with space
+        if let range = result.range(of: "^【[^】]+】\\s*", options: .regularExpression) {
+            result.removeSubrange(range)
+        }
+        
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    /// Match utage sheets for a song, using dxScore to distinguish if multiple exist
+    private func matchUtageSheet(for song: Song, dxScore: Int?) -> Sheet? {
+        let utageSheets = song.sheets.filter { $0.type.lowercased() == "utage" }
+        
+        // If only one utage sheet, return it
+        if utageSheets.count == 1 {
+            return utageSheets.first
+        }
+        
+        // If multiple utage sheets and dxScore available, find matching one
+        if let dx = dxScore, dx > 0 {
+            // Find sheet where total * 3 is closest to dxScore
+            let matchingSheet = utageSheets.min { sheet1, sheet2 in
+                guard let total1 = sheet1.total, let total2 = sheet2.total else {
+                    // Prefer sheets with total info
+                    return sheet1.total != nil
+                }
+                let maxDx1 = total1 * 3
+                let maxDx2 = total2 * 3
+                return abs(maxDx1 - dx) < abs(maxDx2 - dx)
+            }
+            return matchingSheet
+        }
+        
+        // Fallback: return first utage sheet
+        return utageSheets.first
+    }
+}
+
+
 @MainActor
 struct ScannerView: View {
     @Environment(\.modelContext) private var modelContext
@@ -21,6 +228,8 @@ struct ScannerView: View {
     @State private var recognizedDxScore: Int? = nil
     @State private var recognizedFC: String? = nil
     @State private var recognizedFS: String? = nil
+    @State private var recognizedLevel: Double? = nil
+    @State private var recognizedMaxCombo: Int? = nil
     @State private var debugBoxes: [RecognizedBox] = []
     @AppStorage("showScannerBoundingBox") private var showScannerBoundingBox: Bool = false
     @State private var recognizedClass: MaimaiImageType = .unknown
@@ -54,7 +263,6 @@ struct ScannerView: View {
                 
                 debugOverlayView()
                 
-                // Flash Overlay (Top Most layer within ZStack behind overlay items)
                 if showFlashOverlay {
                     Color.white
                         .ignoresSafeArea()
@@ -62,7 +270,6 @@ struct ScannerView: View {
                         .transition(.opacity)
                 }
                 
-                // Overlay
                 VStack {
                     headerView()
                     Spacer()
@@ -81,7 +288,6 @@ struct ScannerView: View {
                         .padding(.bottom, 8)
                     }
                     
-                    // Photo import feedback
                     if let feedback = photoImportFeedback {
                         Text(feedback)
                             .font(.system(size: 12, weight: .semibold))
@@ -96,7 +302,6 @@ struct ScannerView: View {
                 
                 VStack {
                     Spacer()
-                    // Camera Shutter Button (only show when a score is recognized to take photo of)
                     if recognizedClass == .score {
                         Button(action: {
                             triggerPhotoCapture()
@@ -191,11 +396,7 @@ struct ScannerView: View {
             
             for candidate in allCandidates {
                 let matches = songs.filter { song in
-                    // Requirement 1: Filter out songs where all standard (dx/std) sheets are disabled (deleted)
-                    // We ignore 'utage' sheets here because a song might be deleted from regular play but keep its utage chart
                     let standardSheets = song.sheets.filter { $0.type.lowercased() != "utage" }
-                    
-                    // If a song has no standard sheets at all, or if all its standard sheets are region disabled
                     let isDeleted = standardSheets.isEmpty || standardSheets.allSatisfy { sheet in
                         !sheet.regionJp && !sheet.regionIntl && !sheet.regionCn
                     }
@@ -215,46 +416,20 @@ struct ScannerView: View {
                 }
             }
             
-            // Helper for Levenshtein distance directly in the closure
-            func levenshtein(_ a: String, _ b: String) -> Int {
-                let a = Array(a.lowercased())
-                let b = Array(b.lowercased())
-                if a.isEmpty { return b.count }
-                if b.isEmpty { return a.count }
-                var dist = [[Int]](repeating: [Int](repeating: 0, count: b.count + 1), count: a.count + 1)
-                for i in 0...a.count { dist[i][0] = i }
-                for j in 0...b.count { dist[0][j] = j }
-                for i in 1...a.count {
-                    for j in 1...b.count {
-                        if a[i - 1] == b[j - 1] {
-                            dist[i][j] = dist[i - 1][j - 1]
-                        } else {
-                            dist[i][j] = min(dist[i - 1][j] + 1, dist[i][j - 1] + 1, dist[i - 1][j - 1] + 1)
-                        }
-                    }
-                }
-                return dist[a.count][b.count]
-            }
-            
-            // Requirement 2: Enhanced sorting logic
             if let targetCandidate = allCandidates.first {
                 matchedSongs.sort { a, b in
-                    // Exact Title Match takes supreme priority
                     let aIsExact = a.title.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame
                     let bIsExact = b.title.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame
                     if aIsExact != bIsExact { return aIsExact }
                     
-                    // Exact Alias Match takes secondary priority
                     let aAliasExact = a.aliases.contains { $0.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame }
                     let bAliasExact = b.aliases.contains { $0.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame }
                     if aAliasExact != bAliasExact { return aAliasExact }
                     
-                    // Levenshtein distance (smaller is better)
-                    let aDist = levenshtein(a.title, targetCandidate)
-                    let bDist = levenshtein(b.title, targetCandidate)
+                    let aDist = levenshteinDistance(a.title, targetCandidate)
+                    let bDist = levenshteinDistance(b.title, targetCandidate)
                     if aDist != bDist { return aDist < bDist }
                     
-                    // Fallback to title length (shorter is more exact)
                     return a.title.count < b.title.count
                 }
             } else {
@@ -278,91 +453,15 @@ struct ScannerView: View {
         } else {
             let recognition = await MLScoreProcessor.shared.process(image)
             
-            // Match title candidates against song database
-            var matchedSongs: [Song] = []
-            var seenIds = Set<String>()
-            
-            var allCandidates = recognition.titleCandidates
-            if let exactTitle = recognition.title {
-                allCandidates.insert(exactTitle, at: 0)
-            }
-            
-            let inputDifficulty = recognition.difficulty ?? "master"
-            
-            for candidate in allCandidates {
-                let matches = songs.filter { song in
-                    // Requirement 1: Filter out songs where all standard (dx/std) sheets are disabled (deleted)
-                    let standardSheets = song.sheets.filter { $0.type.lowercased() != "utage" }
-                    
-                    let isDeleted = standardSheets.isEmpty || standardSheets.allSatisfy { sheet in
-                        !sheet.regionJp && !sheet.regionIntl && !sheet.regionCn
-                    }
-                    if isDeleted { return false }
-                    
-                    let hasDifficulty = song.sheets.contains { $0.difficulty.lowercased() == inputDifficulty.lowercased() }
-                    if recognition.difficulty != nil && !hasDifficulty { return false }
-                    
-                    return song.title.localizedCaseInsensitiveContains(candidate) ||
-                    candidate.localizedCaseInsensitiveContains(song.title) ||
-                    (song.searchKeywords?.localizedCaseInsensitiveContains(candidate) ?? false) ||
-                    song.aliases.contains(where: { $0.localizedCaseInsensitiveContains(candidate) })
-                }
-                
-                for song in matches {
-                    if !seenIds.contains(song.songIdentifier) {
-                        matchedSongs.append(song)
-                        seenIds.insert(song.songIdentifier)
-                    }
-                }
-            }
-            
-            // Helper for Levenshtein distance directly in the closure
-            func levenshtein(_ a: String, _ b: String) -> Int {
-                let a = Array(a.lowercased())
-                let b = Array(b.lowercased())
-                if a.isEmpty { return b.count }
-                if b.isEmpty { return a.count }
-                var dist = [[Int]](repeating: [Int](repeating: 0, count: b.count + 1), count: a.count + 1)
-                for i in 0...a.count { dist[i][0] = i }
-                for j in 0...b.count { dist[0][j] = j }
-                for i in 1...a.count {
-                    for j in 1...b.count {
-                        if a[i - 1] == b[j - 1] {
-                            dist[i][j] = dist[i - 1][j - 1]
-                        } else {
-                            dist[i][j] = min(dist[i - 1][j] + 1, dist[i][j - 1] + 1, dist[i - 1][j - 1] + 1)
-                        }
-                    }
-                }
-                return dist[a.count][b.count]
-            }
-            
-            // Requirement 2: Enhanced sorting logic
-            if let targetCandidate = allCandidates.first {
-                matchedSongs.sort { a, b in
-                    // Exact Title Match takes supreme priority
-                    let aIsExact = a.title.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame
-                    let bIsExact = b.title.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame
-                    if aIsExact != bIsExact { return aIsExact }
-                    
-                    // Exact Alias Match takes secondary priority
-                    let aAliasExact = a.aliases.contains { $0.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame }
-                    let bAliasExact = b.aliases.contains { $0.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame }
-                    if aAliasExact != bAliasExact { return aAliasExact }
-                    
-                    // Levenshtein distance (smaller is better)
-                    let aDist = levenshtein(a.title, targetCandidate)
-                    let bDist = levenshtein(b.title, targetCandidate)
-                    if aDist != bDist { return aDist < bDist }
-                    
-                    // Fallback to title length (shorter is more exact)
-                    return a.title.count < b.title.count
-                }
-            } else {
-                matchedSongs.sort { a, b in
-                    return a.title.count < b.title.count
-                }
-            }
+            let matchedSongs = matchSongsWithFilters(
+                titleCandidates: recognition.titleCandidates,
+                title: recognition.title,
+                difficulty: recognition.difficulty,
+                level: recognition.level,
+                maxCombo: recognition.maxCombo,
+                dxScore: recognition.dxScore,
+                type: recognition.type
+            )
             
             isProcessingPhoto = false
             
@@ -375,6 +474,8 @@ struct ScannerView: View {
                 self.recognizedDxScore = recognition.dxScore
                 self.recognizedFC = recognition.comboStatus
                 self.recognizedFS = recognition.syncStatus
+                self.recognizedLevel = recognition.level
+                self.recognizedMaxCombo = recognition.maxCombo
                 self.debugBoxes = recognition.boxes
                 self.isLocked = true
                 self.lastSeenDate = Date()
@@ -384,6 +485,411 @@ struct ScannerView: View {
         }
     }
     
+    // MARK: - Song Matching with Filters
+    
+    private func matchSongsWithFilters(
+    titleCandidates: [String],
+    title: String?,
+    difficulty: String?,
+    level: Double?,
+    maxCombo: Int?,
+    dxScore: Int?,
+    type: String?
+) -> [Song] {
+    var allCandidates = titleCandidates
+    if let exactTitle = title {
+        allCandidates.insert(exactTitle, at: 0)
+    }
+    
+    // Check if this is utage type
+    let isUtage = type?.lowercased() == "utage"
+    
+    // For utage, strip prefix from title candidates
+    if isUtage {
+        allCandidates = allCandidates.map { stripUtagePrefix($0) }
+    }
+    
+    // Check which validation conditions are available
+    let hasDifficulty = difficulty != nil && !isUtage // Don't use difficulty for utage
+    let hasLevel = level != nil && level! >= 1 && level! <= 15
+    let hasMaxCombo = maxCombo != nil
+    let hasDxScore = dxScore != nil && dxScore! > 0
+    
+    var filteredSongs = songs.filter { song in
+        let standardSheets = song.sheets.filter { $0.type.lowercased() != "utage" }
+        let isDeleted = standardSheets.isEmpty || standardSheets.allSatisfy { sheet in
+            !sheet.regionJp && !sheet.regionIntl && !sheet.regionCn
+        }
+        if isDeleted { return false }
+        
+        // For utage, check if song has utage sheets
+        if isUtage {
+            let utageSheets = song.sheets.filter { $0.type.lowercased() == "utage" }
+            if utageSheets.isEmpty { return false }
+            
+            // If multiple utage sheets and we have dxScore, check which matches
+            if utageSheets.count > 1 && hasDxScore {
+                return utageSheets.contains { sheet in
+                    guard let total = sheet.total else { return false }
+                    let maxDx = total * 3
+                    return maxDx >= dxScore!
+                }
+            }
+            return true
+        }
+        
+        return song.sheets.contains { sheet in
+            if let diff = difficulty {
+                if sheet.difficulty.lowercased() != diff.lowercased() {
+                    return false
+                }
+            }
+            
+            if let lv = level, lv >= 1, lv <= 15 {
+                let sheetLevel = sheet.internalLevelValue ?? sheet.levelValue ?? 0
+                if sheetLevel > 0 {
+                    if sheetLevel < lv {
+                        return false
+                    }
+                } else {
+                    let levelStr = sheet.level
+                    let intLevel = Int(lv)
+                    if Int(levelStr) != intLevel {
+                        return false
+                    }
+                }
+            }
+            
+            if let combo = maxCombo {
+                if let total = sheet.total, total != combo {
+                    return false
+                }
+            }
+            
+            if let dx = dxScore, dx > 0 {
+                guard let total = sheet.total else {
+                    return false
+                }
+                let maxDxScore = total * 3
+                if maxDxScore < dx {
+                    return false
+                }
+            }
+            
+            return true
+        }
+    }
+    
+    let hasAnyValidation = hasDifficulty || hasLevel || hasMaxCombo || hasDxScore
+    
+    if filteredSongs.isEmpty && !hasAnyValidation {
+        filteredSongs = songs.filter { song in
+            let standardSheets = song.sheets.filter { $0.type.lowercased() != "utage" }
+            let isDeleted = standardSheets.isEmpty || standardSheets.allSatisfy { sheet in
+                !sheet.regionJp && !sheet.regionIntl && !sheet.regionCn
+            }
+            return !isDeleted
+        }
+    }
+    
+    // MARK: - Enhanced Search with OCR Error Correction
+    
+    var matchedSongs: [(song: Song, score: Int)] = []
+    var seenIds = Set<String>()
+    
+    for candidate in allCandidates {
+        let cleaned = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty else { continue }
+        
+        // Generate OCR variants for the candidate
+        let candidates = generateOCRVariants(cleaned, maxVariants: 6)
+        
+        for song in filteredSongs {
+            guard !seenIds.contains(song.songIdentifier) else { continue }
+            
+            var matchScore = 0
+            
+            for searchCandidate in candidates {
+                let searchLower = searchCandidate.lowercased()
+                
+                // Exact title match (highest priority)
+                if song.title.localizedCaseInsensitiveCompare(searchCandidate) == .orderedSame {
+                    matchScore = 100
+                    break
+                }
+                
+                // Exact alias match
+                if song.aliases.contains(where: { $0.localizedCaseInsensitiveCompare(searchCandidate) == .orderedSame }) {
+                    matchScore = max(matchScore, 95)
+                    break
+                }
+                
+                // Title contains candidate
+                if song.title.localizedCaseInsensitiveContains(searchLower) {
+                    matchScore = max(matchScore, 80)
+                    continue
+                }
+                
+                // Candidate contains title
+                if searchLower.localizedCaseInsensitiveContains(song.title.lowercased()) {
+                    matchScore = max(matchScore, 75)
+                    continue
+                }
+                
+                // Alias contains candidate
+                if song.aliases.contains(where: { $0.localizedCaseInsensitiveContains(searchLower) }) {
+                    matchScore = max(matchScore, 70)
+                    continue
+                }
+                
+                // Search keywords match
+                if let keywords = song.searchKeywords, keywords.localizedCaseInsensitiveContains(searchLower) {
+                    matchScore = max(matchScore, 60)
+                    continue
+                }
+                
+                // Fuzzy match with adaptive threshold based on string length
+                let dist = levenshteinDistance(cleaned, song.title)
+                let maxLen = max(cleaned.count, song.title.count)
+                let adaptiveThreshold = max(2, maxLen / 3)
+                
+                if dist <= adaptiveThreshold {
+                    // Score based on similarity (higher score for lower distance)
+                    matchScore = max(matchScore, 50 - dist)
+                    continue
+                }
+                
+                // Also check aliases with fuzzy match
+                for alias in song.aliases {
+                    let aliasDist = levenshteinDistance(cleaned, alias)
+                    let aliasMaxLen = max(cleaned.count, alias.count)
+                    let aliasThreshold = max(2, aliasMaxLen / 3)
+                    
+                    if aliasDist <= aliasThreshold {
+                        matchScore = max(matchScore, 45 - aliasDist)
+                        break
+                    }
+                }
+            }
+            
+            if matchScore > 0 {
+                matchedSongs.append((song: song, score: matchScore))
+                seenIds.insert(song.songIdentifier)
+            }
+        }
+    }
+    
+    // Sort by match score (descending), then by title length
+    matchedSongs.sort { a, b in
+        if a.score != b.score {
+            return a.score > b.score
+        }
+        return a.song.title.count < b.song.title.count
+    }
+    
+    return matchedSongs.map { $0.song }
+}
+    
+    // MARK: - Fast Matching for Camera Frames
+    
+    private func matchSongsForCameraFrame(
+        titleCandidates: [String],
+        title: String?,
+        difficulty: String?,
+        level: Double?,
+        maxCombo: Int?,
+        dxScore: Int?,
+        type: String?
+    ) -> [String] {
+        var allCandidates = titleCandidates
+        if let exactTitle = title {
+            allCandidates.insert(exactTitle, at: 0)
+        }
+        
+        // Check if this is utage type
+        let isUtage = type?.lowercased() == "utage"
+        
+        // For utage, strip prefix from title candidates
+        if isUtage {
+            allCandidates = allCandidates.map { stripUtagePrefix($0) }
+        }
+        
+        // Check which validation conditions are available
+        let hasDifficulty = difficulty != nil && !isUtage // Don't use difficulty for utage
+        let hasLevel = level != nil && level! >= 1 && level! <= 15
+        let hasMaxCombo = maxCombo != nil
+        let hasDxScore = dxScore != nil && dxScore! > 0
+        let hasAnyValidation = hasDifficulty || hasLevel || hasMaxCombo || hasDxScore
+        
+        var frameMatches: [String] = []
+        
+        for candidate in allCandidates {
+            let cleaned = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard cleaned.count >= 2 else { continue }
+            
+            var foundFast = false
+            for song in songs {
+                let hasMatchingSheet = song.sheets.contains { sheet in
+                    // For utage, only match utage sheets
+                    if isUtage {
+                        if sheet.type.lowercased() != "utage" { return false }
+                        
+                        // If multiple utage sheets and we have dxScore, check which matches
+                        let utageSheets = song.sheets.filter { $0.type.lowercased() == "utage" }
+                        if utageSheets.count > 1 && hasDxScore {
+                            guard let total = sheet.total else { return false }
+                            let maxDx = total * 3
+                            return maxDx >= dxScore!
+                        }
+                        return true
+                    }
+                    
+                    if let diff = difficulty {
+                        if sheet.difficulty.lowercased() != diff.lowercased() {
+                            return false
+                        }
+                    }
+                    
+                    // Level filter: internalLevelValue >= recognized level
+                    if let lv = level, lv >= 1, lv <= 15 {
+                        let sheetLevel = sheet.internalLevelValue ?? sheet.levelValue ?? 0
+                        if sheetLevel > 0 {
+                            if sheetLevel < lv {
+                                return false
+                            }
+                        } else {
+                            let levelStr = sheet.level
+                            let intLevel = Int(lv)
+                            if Int(levelStr) != intLevel {
+                                return false
+                            }
+                        }
+                    }
+                    
+                    // MaxCombo filter
+                    if let combo = maxCombo {
+                        if let total = sheet.total, total != combo {
+                            return false
+                        }
+                    }
+                    
+                    // DX Score filter: sheet.total * 3 >= dxScore
+                    if let dx = dxScore, dx > 0 {
+                        guard let total = sheet.total else {
+                            return false
+                        }
+                        let maxDxScore = total * 3
+                        if maxDxScore < dx {
+                            return false
+                        }
+                    }
+                    
+                    return true
+                }
+                
+                if !hasMatchingSheet { continue }
+                
+                if song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title) {
+                    frameMatches.append(song.songIdentifier)
+                    foundFast = true
+                    if frameMatches.count > 3 { break }
+                }
+            }
+            
+            if !foundFast && cleaned.count > 4 {
+                for song in songs {
+                    let hasMatchingSheet = song.sheets.contains { sheet in
+                        // For utage, only match utage sheets
+                        if isUtage {
+                            if sheet.type.lowercased() != "utage" { return false }
+                            
+                            let utageSheets = song.sheets.filter { $0.type.lowercased() == "utage" }
+                            if utageSheets.count > 1 && hasDxScore {
+                                guard let total = sheet.total else { return false }
+                                let maxDx = total * 3
+                                return maxDx >= dxScore!
+                            }
+                            return true
+                        }
+                        
+                        if let diff = difficulty {
+                            if sheet.difficulty.lowercased() != diff.lowercased() { return false }
+                        }
+                        if let lv = level, lv >= 1, lv <= 15 {
+                            let sheetLevel = sheet.internalLevelValue ?? sheet.levelValue ?? 0
+                            if sheetLevel > 0 {
+                                if sheetLevel < lv { return false }
+                            } else {
+                                let levelStr = sheet.level
+                                let intLevel = Int(lv)
+                                if Int(levelStr) != intLevel { return false }
+                            }
+                        }
+                        if let combo = maxCombo {
+                            if let total = sheet.total, total != combo { return false }
+                        }
+                        if let dx = dxScore, dx > 0 {
+                            guard let total = sheet.total else { return false }
+                            let maxDxScore = total * 3
+                            if maxDxScore < dx { return false }
+                        }
+                        return true
+                    }
+                    if !hasMatchingSheet { continue }
+                    
+                    if fuzzyMatch(cleaned, song.title) {
+                        frameMatches.append(song.songIdentifier)
+                        if frameMatches.count > 3 { break }
+                    }
+                }
+            }
+            if !frameMatches.isEmpty { break }
+        }
+        
+        // FIX: Only fallback if NO validation conditions are available
+        if frameMatches.isEmpty && !hasAnyValidation {
+            for candidate in allCandidates {
+                let cleaned = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard cleaned.count >= 2 else { continue }
+                
+                for song in songs {
+                    let standardSheets = song.sheets.filter { $0.type.lowercased() != "utage" }
+                    let isDeleted = standardSheets.isEmpty || standardSheets.allSatisfy { sheet in
+                        !sheet.regionJp && !sheet.regionIntl && !sheet.regionCn
+                    }
+                    if isDeleted { continue }
+                    
+                    if song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title) {
+                        frameMatches.append(song.songIdentifier)
+                        if frameMatches.count > 3 { break }
+                    }
+                }
+                if !frameMatches.isEmpty { break }
+            }
+        }
+        
+        return frameMatches
+    }
+    
+    private func levenshteinDistance(_ s1: String, _ s2: String) -> Int {
+        let a = Array(s1.lowercased())
+        let b = Array(s2.lowercased())
+        if a.isEmpty { return b.count }
+        if b.isEmpty { return a.count }
+        var dist = [[Int]](repeating: [Int](repeating: 0, count: b.count + 1), count: a.count + 1)
+        for i in 0...a.count { dist[i][0] = i }
+        for j in 0...b.count { dist[0][j] = j }
+        for i in 1...a.count {
+            for j in 1...b.count {
+                if a[i - 1] == b[j - 1] {
+                    dist[i][j] = dist[i - 1][j - 1]
+                } else {
+                    dist[i][j] = min(dist[i - 1][j] + 1, dist[i][j - 1] + 1, dist[i - 1][j - 1] + 1)
+                }
+            }
+        }
+        return dist[a.count][b.count]
+    }
     
     private func showFeedback(_ message: String) {
         withAnimation { photoImportFeedback = message }
@@ -400,7 +906,6 @@ struct ScannerView: View {
         HStack(spacing: 16) {
             Spacer()
             
-            // Photo picker button
             PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                 Image(systemName: "photo.on.rectangle.angled")
                     .font(.system(size: 20, weight: .semibold))
@@ -422,7 +927,6 @@ struct ScannerView: View {
         let generator = UIImpactFeedbackGenerator(style: .rigid)
         generator.impactOccurred()
         
-        // Flash effect
         withAnimation(.easeOut(duration: 0.1)) {
             showFlashOverlay = true
         }
@@ -497,16 +1001,15 @@ struct ScannerView: View {
         }
     }
     
-    // MARK: - Disambiguation Sheets
+    // MARK: - Camera Frame Handling
     
-
     private func handleCameraFrame(_ image: UIImage) {
         guard !isShowingScoreEntry else { return }
         Task {
             let imageType = await MLDistinguishProcessor.shared.classify(image)
             
             if imageType == .unknown {
-                updateUIWithResults(songIds: [], rate: nil, diff: nil, type: nil, dxScore: nil, fc: nil, fs: nil, boxes: [], imageClass: .unknown)
+                updateUIWithResults(songIds: [], rate: nil, diff: nil, type: nil, dxScore: nil, fc: nil, fs: nil, boxes: [], imageClass: .unknown, level: nil, maxCombo: nil)
                 return
             }
             
@@ -544,55 +1047,50 @@ struct ScannerView: View {
                     if !frameMatches.isEmpty { break }
                 }
                 
-                updateUIWithResults(songIds: frameMatches, rate: nil, diff: nil, type: nil, dxScore: nil, fc: nil, fs: nil, boxes: recognition.boxes, imageClass: .choose)
+                updateUIWithResults(songIds: frameMatches, rate: nil, diff: nil, type: nil, dxScore: nil, fc: nil, fs: nil, boxes: recognition.boxes, imageClass: .choose, level: nil, maxCombo: nil)
             } else {
                 let recognition = await MLScoreProcessor.shared.process(image)
                 
-                var frameMatches: [String] = []
+                let matchedSongIds = matchSongsForCameraFrame(
+                    titleCandidates: recognition.titleCandidates,
+                    title: recognition.title,
+                    difficulty: recognition.difficulty,
+                    level: recognition.level,
+                    maxCombo: recognition.maxCombo,
+                    dxScore: recognition.dxScore,
+                    type: recognition.type
+                )
                 
-                var allCandidates = recognition.titleCandidates
-                if let exactTitle = recognition.title {
-                    allCandidates.insert(exactTitle, at: 0)
-                }
-                
-                let inputDifficulty = recognition.difficulty ?? "master"
-                
-                for candidate in allCandidates {
-                    let cleaned = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard cleaned.count >= 2 else { continue }
-                    
-                    var foundFast = false
-                    for song in songs {
-                        let hasDifficulty = song.sheets.contains { $0.difficulty.lowercased() == inputDifficulty.lowercased() }
-                        if recognition.difficulty != nil && !hasDifficulty { continue }
-                        
-                        if song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title) {
-                            frameMatches.append(song.songIdentifier)
-                            foundFast = true
-                            if frameMatches.count > 3 { break }
-                        }
-                    }
-                    
-                    if !foundFast && cleaned.count > 4 {
-                        for song in songs {
-                            let hasDifficulty = song.sheets.contains { $0.difficulty.lowercased() == inputDifficulty.lowercased() }
-                            if recognition.difficulty != nil && !hasDifficulty { continue }
-                            
-                            if fuzzyMatch(cleaned, song.title) {
-                                frameMatches.append(song.songIdentifier)
-                                if frameMatches.count > 3 { break }
-                            }
-                        }
-                    }
-                    if !frameMatches.isEmpty { break }
-                }
-                
-                updateUIWithResults(songIds: frameMatches, rate: recognition.rate as Double?, diff: recognition.difficulty, type: recognition.type, dxScore: recognition.dxScore, fc: recognition.comboStatus, fs: recognition.syncStatus, boxes: recognition.boxes, imageClass: .score)
+                updateUIWithResults(
+                    songIds: matchedSongIds,
+                    rate: recognition.rate as Double?,
+                    diff: recognition.difficulty,
+                    type: recognition.type,
+                    dxScore: recognition.dxScore,
+                    fc: recognition.comboStatus,
+                    fs: recognition.syncStatus,
+                    boxes: recognition.boxes,
+                    imageClass: .score,
+                    level: recognition.level,
+                    maxCombo: recognition.maxCombo
+                )
             }
         }
     }
     
-    private func updateUIWithResults(songIds: [String], rate: Double?, diff: String?, type: String?, dxScore: Int?, fc: String?, fs: String?, boxes: [RecognizedBox], imageClass: MaimaiImageType) {
+    private func updateUIWithResults(
+        songIds: [String],
+        rate: Double?,
+        diff: String?,
+        type: String?,
+        dxScore: Int?,
+        fc: String?,
+        fs: String?,
+        boxes: [RecognizedBox],
+        imageClass: MaimaiImageType,
+        level: Double?,
+        maxCombo: Int?
+    ) {
         self.debugBoxes = boxes
         
         for id in recognitionBuffer.keys {
@@ -602,7 +1100,6 @@ struct ScannerView: View {
         
         for id in songIds {
             recognitionBuffer[id, default: 0] += 6
-            // Cap the buffer value so it doesn't grow infinitely, allowing fast switching
             if recognitionBuffer[id]! > 18 {
                 recognitionBuffer[id] = 18
             }
@@ -630,12 +1127,10 @@ struct ScannerView: View {
                 rateBuffer.append(r)
                 if rateBuffer.count > 5 { rateBuffer.removeFirst() }
                 
-                // Find most frequent rate in buffer
                 let counts = rateBuffer.reduce(into: [:]) { counts, value in counts[value, default: 0] += 1 }
                 if let (mostFrequentRate, count) = counts.max(by: { $0.value < $1.value }), count >= stabilizationThreshold {
                     self.recognizedRate = mostFrequentRate
                 } else if rateBuffer.count < stabilizationThreshold {
-                    // Always show the first few reads so the screen isn't completely blank
                     self.recognizedRate = rateBuffer.last
                 }
             }
@@ -656,6 +1151,8 @@ struct ScannerView: View {
             
             if let f = fc { self.recognizedFC = f }
             if let s = fs { self.recognizedFS = s }
+            if let lv = level { self.recognizedLevel = lv }
+            if let mc = maxCombo { self.recognizedMaxCombo = mc }
         }
         
         if isLocked && !isShowingScoreEntry {
@@ -675,6 +1172,8 @@ struct ScannerView: View {
         self.recognizedDxScore = nil
         self.recognizedFC = nil
         self.recognizedFS = nil
+        self.recognizedLevel = nil
+        self.recognizedMaxCombo = nil
         self.recognizedClass = .unknown
         self.recognitionBuffer.removeAll()
         self.rateBuffer.removeAll()
@@ -691,20 +1190,12 @@ struct ScannerView: View {
         return dist <= max(1, t1.count / 4)
     }
     
-    private func levenshteinDistance(_ s1: String, _ s2: String) -> Int {
-        let empty = [Int](repeating: 0, count: s2.count + 1)
-        var last = [Int](0...s2.count)
-        for (i, char1) in s1.enumerated() {
-            var cur = [i + 1] + empty.dropFirst()
-            for (j, char2) in s2.enumerated() {
-                cur[j + 1] = char1 == char2 ? last[j] : min(last[j], last[j + 1], cur[j]) + 1
-            }
-            last = cur
-        }
-        return last.last!
-    }
-    
     private func matchedSheet(for song: Song, diff: String, type: String) -> Sheet? {
+        // For utage, use special matching logic
+        if type.lowercased() == "utage" {
+            return matchUtageSheet(for: song, dxScore: recognizedDxScore)
+        }
+        
         if let sheet = song.sheets.first(where: { $0.difficulty.lowercased() == diff.lowercased() && $0.type.lowercased() == type.lowercased() }) {
             return sheet
         }
@@ -723,7 +1214,6 @@ struct CameraPreviewView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: CameraViewController, context: Context) {}
 }
 
-// CameraViewController runs captureOutput on background queue, so we manage thread-safety explicitly
 class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
     var onImageCaptured: ((UIImage) -> Void)?
     private var captureSession: AVCaptureSession?
@@ -731,10 +1221,8 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
     private var photoOutput: AVCapturePhotoOutput?
     private let processingQueue = DispatchQueue(label: "com.maimaid.camera.queue", qos: .userInteractive)
     
-    // Thread-safe counter using OSAllocatedUnfairLock
     private let frameCounter = OSAllocatedUnfairLock(initialState: 0)
     
-    // CIContext is thread-safe, mark as nonisolated to allow access from background queue
     nonisolated private static let rawContext = CIContext(options: [.useSoftwareRenderer: false])
     
     override func viewDidLoad() {
@@ -790,15 +1278,12 @@ class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBuff
         DispatchQueue.global(qos: .userInitiated).async { captureSession.startRunning() }
     }
     
-    // Explicitly nonisolated since this is called on processingQueue (background thread)
     nonisolated func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        // Thread-safe increment
         let count = frameCounter.withLock { value -> Int in
             value += 1
             return value
         }
         
-        // Process 1 frame per ~10 calls to reduce frequency (approx 3 fps instead of 6 fps)
         guard count % 10 == 0 else { return }
         
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
@@ -1031,10 +1516,8 @@ extension CameraViewController: AVCapturePhotoCaptureDelegate {
     @objc private func takePhoto() {
         guard let output = photoOutput else { return }
         
-        // Settings must be recreated for each capture
         let settings = AVCapturePhotoSettings()
         if let videoConnection = output.connection(with: .video) {
-            // Apply current screen orientation to the photo output connection
             if #available(iOS 17.0, *) {
                 if videoConnection.isVideoRotationAngleSupported(90) {
                     videoConnection.videoRotationAngle = 90
@@ -1061,7 +1544,7 @@ extension CameraViewController: AVCapturePhotoCaptureDelegate {
         guard let data = photo.fileDataRepresentation(), let image = UIImage(data: data) else { return }
         
         DispatchQueue.main.async {
-            NotificationCenter.default.post(name: NSNotification.Name("ScannerPhotoCaptured"), object: image)
+            NotificationCenter.default.post(name: Notification.Name("ScannerPhotoCaptured"), object: image)
         }
     }
 }

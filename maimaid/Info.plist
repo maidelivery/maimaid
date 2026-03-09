@@ -26,11 +26,5 @@
 		<string>fetch</string>
 		<string>processing</string>
 	</array>
-	<key>NSCameraUsageDescription</key>
-	<string>Camera is required for scanning score images</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Needed to save captured score images to your photo gallery</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Allows you to select score images to analyze and save captured results to albums.</string>
 </dict>
 </plist>
