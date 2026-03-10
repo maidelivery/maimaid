@@ -13,6 +13,12 @@ struct HomeView: View {
     @State private var computedB50Total: Int = 0
     @State private var standardB50Total: Int = 0
     
+    // Cache invalidation: track fingerprints to avoid redundant recalculation
+    @State private var lastB50Fingerprint: String = ""
+    @State private var lastStandardB50Fingerprint: String = ""
+    @State private var hasComputedB50 = false
+    @State private var hasComputedStandardB50 = false
+    
     private var config: SyncConfig? { configs.first }
     private var activeProfile: UserProfile? { activeProfiles.first }
     
@@ -26,6 +32,24 @@ struct HomeView: View {
     
     private var totalB50Count: Int {
         currentB35Count + currentB15Count
+    }
+    
+    /// Generates a lightweight fingerprint to detect changes relevant to B50 calculation.
+    private func b50Fingerprint() -> String {
+        let songCount = songs.count
+        let b35 = currentB35Count
+        let b15 = currentB15Count
+        let profileId = activeProfile?.id.uuidString ?? "none"
+        let server = activeProfile?.server ?? "jp"
+        return "\(songCount)_\(b35)_\(b15)_\(profileId)_\(server)"
+    }
+    
+    /// Generates a fingerprint for standard B50 (always uses 35/15).
+    private func standardB50Fingerprint() -> String {
+        let songCount = songs.count
+        let profileId = activeProfile?.id.uuidString ?? "none"
+        let server = activeProfile?.server ?? "jp"
+        return "\(songCount)_\(profileId)_\(server)"
     }
     
     let columns = [
@@ -121,24 +145,65 @@ struct HomeView: View {
                     ProfileEditSheet(config: config)
                 }
             }
-            .task(id: config?.b15Count) {
-                await updateB50()
+            .task {
+                await updateB50IfNeeded()
+                await updateStandardB50IfNeeded()
             }
-            .task(id: config?.b35Count) {
-                await updateB50()
+            .onChange(of: songs.count) { _, _ in
+                Task { await updateB50IfNeeded() }
+                Task { await updateStandardB50IfNeeded() }
             }
-            // Standard B50 for profile badge
-            .task(id: songs) {
-                await updateStandardB50()
+            .onChange(of: activeProfile?.b15Count) { _, _ in
+                Task { await updateB50IfNeeded() }
+            }
+            .onChange(of: activeProfile?.b35Count) { _, _ in
+                Task { await updateB50IfNeeded() }
+            }
+            .onChange(of: config?.b15Count) { _, _ in
+                Task { await updateB50IfNeeded() }
+            }
+            .onChange(of: config?.b35Count) { _, _ in
+                Task { await updateB50IfNeeded() }
             }
         }
+    }
+    
+    private func updateStandardB50IfNeeded() async {
+        let fingerprint = standardB50Fingerprint()
+        guard !hasComputedStandardB50 || fingerprint != lastStandardB50Fingerprint else { return }
+        
+        // Small delay to avoid computing during navigation animations
+        try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+        
+        // Re-check after sleep in case we navigated away
+        let currentFingerprint = standardB50Fingerprint()
+        guard currentFingerprint == fingerprint else { return }
+        
+        await updateStandardB50()
+        lastStandardB50Fingerprint = fingerprint
+        hasComputedStandardB50 = true
+    }
+    
+    private func updateB50IfNeeded() async {
+        let fingerprint = b50Fingerprint()
+        guard !hasComputedB50 || fingerprint != lastB50Fingerprint else { return }
+        
+        // Small delay to avoid computing during navigation animations
+        try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+        
+        // Re-check after sleep in case we navigated away
+        let currentFingerprint = b50Fingerprint()
+        guard currentFingerprint == fingerprint else { return }
+        
+        await updateB50()
+        lastB50Fingerprint = fingerprint
+        hasComputedB50 = true
     }
     
     private func updateStandardB50() async {
         let profileId = activeProfile?.id
         let server = activeProfile.flatMap { GameServer(rawValue: $0.server) }
         
-        // 🔴 修复：使用新的 fetchScoreMap(context:) 方法
         let scoreMap = RatingUtils.fetchScoreMap(context: modelContext)
         let input = songs.toCalculationInput(userProfileId: profileId, server: server, preloadedScores: scoreMap)
         let serverVersion = activeServerLatestVersion
@@ -150,7 +215,6 @@ struct HomeView: View {
         let profileId = activeProfile?.id
         let server = activeProfile.flatMap { GameServer(rawValue: $0.server) }
         
-        // 🔴 修复：使用新的 fetchScoreMap(context:) 方法
         let scoreMap = RatingUtils.fetchScoreMap(context: modelContext)
         let input = songs.toCalculationInput(userProfileId: profileId, server: server, preloadedScores: scoreMap)
         

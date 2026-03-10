@@ -8,6 +8,9 @@ struct UserProfileListView: View {
     @State private var showingCreateProfile = false
     @State private var editingProfile: UserProfile?
     
+    // Cache server versions to avoid recomputing per-row
+    @State private var serverVersionCache: [GameServer: String] = [:]
+    
     var body: some View {
         List {
             if profiles.isEmpty {
@@ -62,6 +65,23 @@ struct UserProfileListView: View {
                 UserProfileEditView(mode: .edit(profile))
             }
         }
+        .task {
+            await buildServerVersionCache()
+        }
+        .onChange(of: songs.count) { _, _ in
+            Task {
+                await buildServerVersionCache()
+            }
+        }
+    }
+    
+    private func buildServerVersionCache() async {
+        // Compute all server versions once, off the rendering path
+        var cache: [GameServer: String] = [:]
+        for server in GameServer.allCases {
+            cache[server] = ServerVersionService.shared.latestVersion(for: server, songs: songs)
+        }
+        serverVersionCache = cache
     }
     
     private func profileRow(_ profile: UserProfile) -> some View {
@@ -95,7 +115,7 @@ struct UserProfileListView: View {
                 }
                 
                 let server = GameServer(rawValue: profile.server) ?? .jp
-                let version = ServerVersionService.shared.latestVersion(for: server, songs: songs)
+                let version = serverVersionCache[server] ?? ThemeUtils.latestVersion
                 
                 HStack(spacing: 6) {
                     Text(server.displayName)

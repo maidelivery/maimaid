@@ -5,15 +5,55 @@ struct RecommendationListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var songs: [Song]
     @Query private var configs: [SyncConfig]
+    @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     @State private var response: RecommendationResponse?
     @State private var isLoading = true
+    
+    // Cache invalidation: track a fingerprint of the user's scores
+    @State private var lastScoreFingerprint: String = ""
+    @State private var lastConfigFingerprint: String = ""
+    @State private var hasLoadedOnce = false
+    
+    private var activeProfile: UserProfile? { activeProfiles.first }
+    
+    /// Generates a lightweight fingerprint from scores to detect changes.
+    /// Uses count + sum of rates, which changes whenever scores are added/updated.
+    private func currentScoreFingerprint() -> String {
+        let scores = ScoreService.shared.allScores(context: modelContext)
+        let count = scores.count
+        // Use a hash of count + total rate to detect any score change
+        let totalRate = scores.reduce(0.0) { $0 + $1.rate }
+        return "\(count)_\(String(format: "%.2f", totalRate))"
+    }
+    
+    /// Generates a fingerprint from config values that affect recommendations
+    private func currentConfigFingerprint() -> String {
+        let b15Rec = activeProfile?.b15RecLimit ?? configs.first?.b15RecLimit ?? 10
+        let b35Rec = activeProfile?.b35RecLimit ?? configs.first?.b35RecLimit ?? 10
+        let b15Count = activeProfile?.b15Count ?? configs.first?.b15Count ?? 15
+        let b35Count = activeProfile?.b35Count ?? configs.first?.b35Count ?? 35
+        let server = activeProfile?.server ?? "jp"
+        return "\(b15Rec)_\(b35Rec)_\(b15Count)_\(b35Count)_\(server)"
+    }
     
     var body: some View {
         ZStack {
             List {
                 if !isLoading {
                     // Capacity Settings Section
-                    if let config = configs.first {
+                    if let profile = activeProfile {
+                        Section("rec.settings.capacity") {
+                            rowStepper(title: "rec.settings.new", value: Binding(
+                                get: { profile.b15RecLimit },
+                                set: { profile.b15RecLimit = $0 }
+                            ), range: 1...50)
+                            
+                            rowStepper(title: "rec.settings.old", value: Binding(
+                                get: { profile.b35RecLimit },
+                                set: { profile.b35RecLimit = $0 }
+                            ), range: 1...50)
+                        }
+                    } else if let config = configs.first {
                         Section("rec.settings.capacity") {
                             rowStepper(title: "rec.settings.new", value: Binding(
                                 get: { config.b15RecLimit },
@@ -51,6 +91,10 @@ struct RecommendationListView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .refreshable {
+                // Pull-to-refresh always forces a reload
+                await loadRecommendations(force: true)
+            }
             
             // Loading Overlay
             if isLoading {
@@ -63,7 +107,6 @@ struct RecommendationListView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(.systemGroupedBackground))
             } else if (response?.b15.isEmpty ?? true) && (response?.b35.isEmpty ?? true) {
-                // Empty State centered
                 ContentUnavailableView(
                     "rec.empty.title",
                     systemImage: "sparkles",
@@ -74,16 +117,15 @@ struct RecommendationListView: View {
             }
         }
         .navigationTitle("rec.title")
-        .task(id: songs) {
-            if !songs.isEmpty {
-                await loadRecommendations()
-            }
+        .task {
+            guard !songs.isEmpty else { return }
+            await loadRecommendationsIfNeeded()
         }
-        .task(id: configs) {
-            // Re-load if limits change
-            if !songs.isEmpty {
-                await loadRecommendations()
-            }
+        .onChange(of: activeProfile?.b15RecLimit) { _, _ in
+            Task { await loadRecommendationsIfNeeded() }
+        }
+        .onChange(of: activeProfile?.b35RecLimit) { _, _ in
+            Task { await loadRecommendationsIfNeeded() }
         }
     }
     
@@ -100,9 +142,39 @@ struct RecommendationListView: View {
         }
     }
     
-    private func loadRecommendations() async {
+    /// Only reloads if scores or config have actually changed
+    private func loadRecommendationsIfNeeded() async {
+        let scoreFingerprint = currentScoreFingerprint()
+        let configFingerprint = currentConfigFingerprint()
+        
+        // If we have cached results and nothing has changed, skip
+        if hasLoadedOnce && scoreFingerprint == lastScoreFingerprint && configFingerprint == lastConfigFingerprint {
+            return
+        }
+        
+        await loadRecommendations(force: false)
+    }
+    
+    private func loadRecommendations(force: Bool = false) async {
+        // Update fingerprints before loading
+        let scoreFingerprint = currentScoreFingerprint()
+        let configFingerprint = currentConfigFingerprint()
+        
+        // Skip if nothing changed (unless forced)
+        if !force && hasLoadedOnce && scoreFingerprint == lastScoreFingerprint && configFingerprint == lastConfigFingerprint {
+            return
+        }
+        
         isLoading = true
-        response = await RecommendationService.shared.getRecommendations(songs: songs, configs: configs, modelContext: modelContext)
+        response = await RecommendationService.shared.getRecommendations(
+            songs: songs,
+            configs: configs,
+            activeProfile: activeProfile,
+            modelContext: modelContext
+        )
+        lastScoreFingerprint = scoreFingerprint
+        lastConfigFingerprint = configFingerprint
+        hasLoadedOnce = true
         isLoading = false
     }
 }

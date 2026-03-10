@@ -261,7 +261,7 @@ struct ScoreEntryView: View {
                         TextField("DX Score", text: $dxScoreText)
                             .font(.system(size: 14, weight: .bold, design: .rounded))
                             .foregroundColor((parsedDxScore ?? 0) > maxDxScore && maxDxScore > 0 ? .red : .primary)
-                            .frame(width: 80)
+                            .frame(width: 70)
                             .keyboardType(.numberPad)
                             .focused($isDxScoreFocused)
                         

@@ -15,6 +15,7 @@ struct StaticDataUpdateView: View {
     @State private var sheetsWithInternalLevel = 0
     @State private var totalCategories = 0
     @State private var totalIcons = 0
+    @State private var isLoadingStats = false
     
     @AppStorage("syncUpdateRemoteData") private var updateRemoteData = true
     @AppStorage("syncUpdateAliases") private var updateAliases = true
@@ -59,7 +60,7 @@ struct StaticDataUpdateView: View {
                                 } catch {
                                     print("Manual sync failed: \(error)")
                                 }
-                                loadStats()
+                                await loadStatsAsync()
                             }
                         } label: {
                             HStack {
@@ -121,28 +122,36 @@ struct StaticDataUpdateView: View {
             }
             
             Section(header: Text("update.debug.header")) {
-                if let lastDate = config?.lastStaticDataUpdateDate {
-                    LabeledContent("update.debug.lastUpdate", value: lastDate.formatted(date: .numeric, time: .standard))
-                    
-                    let interval = Date().timeIntervalSince(lastDate)
-                    let days = Int(interval / 86400)
-                    let hours = Int(interval.truncatingRemainder(dividingBy: 86400) / 3600)
-                    let timeString = days > 0 ? String(localized: "update.debug.timeAgo.days \(days) \(hours)") : String(localized: "update.debug.timeAgo.hours \(hours)")
-                    LabeledContent("update.debug.timeSince", value: timeString)
+                if isLoadingStats {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                        Spacer()
+                    }
                 } else {
-                    LabeledContent("update.debug.lastUpdate", value: String(localized: "update.debug.never"))
-                }
-                
-                LabeledContent("update.debug.totalSongs", value: "\(totalSongs)")
-                LabeledContent("update.debug.totalSheets", value: "\(totalSheets)")
-                LabeledContent("update.debug.totalCategories", value: "\(totalCategories)")
-                LabeledContent("update.debug.utageSongs", value: "\(utageSongs)")
-                LabeledContent("update.debug.songsWithAliases", value: "\(songsWithAliases)")
-                LabeledContent("update.debug.knownInternalLevels", value: "\(sheetsWithInternalLevel)")
-                LabeledContent("update.debug.totalIcons", value: "\(totalIcons)")
-                
-                if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-                    LabeledContent("update.debug.appVersion", value: appVersion)
+                    if let lastDate = config?.lastStaticDataUpdateDate {
+                        LabeledContent("update.debug.lastUpdate", value: lastDate.formatted(date: .numeric, time: .standard))
+                        
+                        let interval = Date().timeIntervalSince(lastDate)
+                        let days = Int(interval / 86400)
+                        let hours = Int(interval.truncatingRemainder(dividingBy: 86400) / 3600)
+                        let timeString = days > 0 ? String(localized: "update.debug.timeAgo.days \(days) \(hours)") : String(localized: "update.debug.timeAgo.hours \(hours)")
+                        LabeledContent("update.debug.timeSince", value: timeString)
+                    } else {
+                        LabeledContent("update.debug.lastUpdate", value: String(localized: "update.debug.never"))
+                    }
+                    
+                    LabeledContent("update.debug.totalSongs", value: "\(totalSongs)")
+                    LabeledContent("update.debug.totalSheets", value: "\(totalSheets)")
+                    LabeledContent("update.debug.totalCategories", value: "\(totalCategories)")
+                    LabeledContent("update.debug.utageSongs", value: "\(utageSongs)")
+                    LabeledContent("update.debug.songsWithAliases", value: "\(songsWithAliases)")
+                    LabeledContent("update.debug.knownInternalLevels", value: "\(sheetsWithInternalLevel)")
+                    LabeledContent("update.debug.totalIcons", value: "\(totalIcons)")
+                    
+                    if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+                        LabeledContent("update.debug.appVersion", value: appVersion)
+                    }
                 }
             }
         }
@@ -150,19 +159,22 @@ struct StaticDataUpdateView: View {
         .navigationBarTitleDisplayMode(.inline)
         .interactiveDismissDisabled(MaimaiDataFetcher.shared.isSyncing)
         .navigationBarBackButtonHidden(MaimaiDataFetcher.shared.isSyncing)
-        .onAppear {
+        .task {
             if !statsLoaded {
-                loadStats()
+                await loadStatsAsync()
                 statsLoaded = true
             }
         }
     }
     
-    private func loadStats() {
+    private func loadStatsAsync() async {
+        isLoadingStats = true
+        
+        // Perform the heavy computation, but since SwiftData ModelContext
+        // is MainActor-bound, we still need to fetch on main actor.
+        // We minimize work by doing a single pass.
         let descriptor = FetchDescriptor<Song>()
         if let songs = try? modelContext.fetch(descriptor) {
-            totalSongs = songs.count
-            
             var sheets = 0
             var utage = 0
             var aliases = 0
@@ -185,6 +197,7 @@ struct StaticDataUpdateView: View {
                 }
             }
             
+            totalSongs = songs.count
             totalSheets = sheets
             utageSongs = utage
             songsWithAliases = aliases
@@ -194,6 +207,8 @@ struct StaticDataUpdateView: View {
         
         let iconDescriptor = FetchDescriptor<MaimaiIcon>()
         totalIcons = (try? modelContext.fetch(iconDescriptor))?.count ?? 0
+        
+        isLoadingStats = false
     }
 }
 
