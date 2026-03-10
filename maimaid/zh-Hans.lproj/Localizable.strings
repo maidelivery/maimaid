@@ -45,7 +45,7 @@
 "scanner.processing" = "正在识别照片...";
 "scanner.error.load" = "无法加载图片";
 "scanner.error.title" = "未能识别到歌曲标题";
-"scanner.chart.std" = "标准";
+"scanner.chart.std" = "STD";
 "scanner.chart.dx" = "DX";
 "scanner.unlock.needed" = "需要解锁";
 "scanner.unlock.notNeeded" = "无需解锁";

@@ -7,18 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		373DA3D72F5DCEE400DC93C0 /* maimaidistinguish v1.2n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3D62F5DCEE400DC93C0 /* maimaidistinguish v1.2n.mlpackage */; };
+		3728607A2F604BC70028E788 /* maimaid v1.41n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 372860792F604BC70028E788 /* maimaid v1.41n.mlpackage */; };
 		373DA3D92F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */; };
 		373DA3DB2F5DCFDD00DC93C0 /* maimaid v1.31n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3DA2F5DCFDD00DC93C0 /* maimaid v1.31n.mlpackage */; };
 		373DA3DD2F5EE38A00DC93C0 /* maimaid v1.4n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3DC2F5EE38A00DC93C0 /* maimaid v1.4n.mlpackage */; };
+		373DA3E52F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */; };
 		37C9CF1B2F4CE4DB002CBF7A /* maimaid.icon in Resources */ = {isa = PBXBuildFile; fileRef = 37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		373DA3D62F5DCEE400DC93C0 /* maimaidistinguish v1.2n.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaidistinguish v1.2n.mlpackage"; sourceTree = "<group>"; };
+		372860792F604BC70028E788 /* maimaid v1.41n.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaid v1.41n.mlpackage"; sourceTree = "<group>"; };
 		373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaidetector v1.2n.mlpackage"; sourceTree = "<group>"; };
 		373DA3DA2F5DCFDD00DC93C0 /* maimaid v1.31n.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaid v1.31n.mlpackage"; sourceTree = "<group>"; };
 		373DA3DC2F5EE38A00DC93C0 /* maimaid v1.4n.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaid v1.4n.mlpackage"; sourceTree = "<group>"; };
+		373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaidistinguish v1.2.mlpackage"; sourceTree = "<group>"; };
 		37C9C3DD2F4CDAAB002CBF7A /* maimaid.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = maimaid.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = maimaid.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -61,10 +63,11 @@
 				375868EB2F4C78EB006316F5 /* maimaid */,
 				37C9C3DD2F4CDAAB002CBF7A /* maimaid.app */,
 				37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */,
+				372860792F604BC70028E788 /* maimaid v1.41n.mlpackage */,
 				373DA3DC2F5EE38A00DC93C0 /* maimaid v1.4n.mlpackage */,
 				373DA3DA2F5DCFDD00DC93C0 /* maimaid v1.31n.mlpackage */,
 				373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */,
-				373DA3D62F5DCEE400DC93C0 /* maimaidistinguish v1.2n.mlpackage */,
+				373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */,
 			);
 			sourceTree = "<group>";
 		};
@@ -148,8 +151,9 @@
 			files = (
 				373DA3DB2F5DCFDD00DC93C0 /* maimaid v1.31n.mlpackage in Sources */,
 				373DA3DD2F5EE38A00DC93C0 /* maimaid v1.4n.mlpackage in Sources */,
+				3728607A2F604BC70028E788 /* maimaid v1.41n.mlpackage in Sources */,
 				373DA3D92F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage in Sources */,
-				373DA3D72F5DCEE400DC93C0 /* maimaidistinguish v1.2n.mlpackage in Sources */,
+				373DA3E52F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

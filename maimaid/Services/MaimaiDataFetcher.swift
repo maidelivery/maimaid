@@ -239,7 +239,9 @@ class MaimaiDataFetcher {
                         do {
                             let providerIds = try JSONDecoder().decode([SongIdItem].self, from: providerIdData)
                             for item in providerIds {
-                                let trimmedName = item.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                                let rawName = item.name
+                                let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+                                let trimmedName = trimmed.isEmpty ? rawName : trimmed
                                 nameToProviderIds[trimmedName, default: []].append(item.id)
                             }
                             log(String(localized: "data.sync.log.fetchedProviderIds \(providerIds.count)"))
@@ -306,7 +308,11 @@ class MaimaiDataFetcher {
                     } else if options.updateRemoteData {
                         song = Song(
                             songIdentifier: remoteSong.songId, category: remoteSong.category ?? "", 
-                            title: (remoteSong.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
+                            title: {
+                                let t = remoteSong.title ?? ""
+                                let trimmed = t.trimmingCharacters(in: .whitespacesAndNewlines)
+                                return trimmed.isEmpty ? t : trimmed
+                            }(),
                             artist: remoteSong.artist ?? "", 
                             imageName: (remoteSong.imageName ?? "").trimmingCharacters(in: .whitespacesAndNewlines),                             version: remoteSong.version ?? "", releaseDate: remoteSong.releaseDate ?? "", sortOrder: 0,
                             bpm: remoteSong.bpm, isNew: remoteSong.isNew ?? false, isLocked: remoteSong.isLocked ?? false,
@@ -318,7 +324,9 @@ class MaimaiDataFetcher {
                     
                     if options.updateRemoteData {
                         song.category = remoteSong.category ?? ""
-                        song.title = (remoteSong.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                        let newTitle = remoteSong.title ?? ""
+                        let trimmedTitle = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                        song.title = trimmedTitle.isEmpty ? newTitle : trimmedTitle
                         song.artist = remoteSong.artist ?? ""
                         song.imageName = (remoteSong.imageName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                         song.bpm = remoteSong.bpm
@@ -335,7 +343,8 @@ class MaimaiDataFetcher {
                         
                         // New: Provider ID matching based on ranges
                         // Std < 10000, 10000 <= DX < 100000, Utage >= 100000
-                        let searchTitle = song.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let trimmedSearch = song.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let searchTitle = trimmedSearch.isEmpty ? song.title : trimmedSearch
                         if let possibleIds = nameToProviderIds[searchTitle] {
                             // Find the most appropriate ID for the song's sheet content
                             let hasUtage = remoteSong.sheets.contains { $0.type.lowercased() == "utage" }
@@ -379,7 +388,8 @@ class MaimaiDataFetcher {
                         }
                         
                         // Assign sheet-specific songId from provider
-                        let searchTitle = song.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let trimmedSearchSheet = song.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let searchTitle = trimmedSearchSheet.isEmpty ? song.title : trimmedSearchSheet
                         if let possibleIds = nameToProviderIds[searchTitle] {
                             let type = remoteSheet.type.lowercased()
                             if type == "utage" {

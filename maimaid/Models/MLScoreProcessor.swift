@@ -21,25 +21,30 @@ class MLScoreProcessor: Sendable {
             let config = MLModelConfiguration()
             config.computeUnits = .all
             
-            if let modelURL = Bundle.main.url(forResource: "maimaid v1.4n", withExtension: "mlmodelc") {
+            if let modelURL = Bundle.main.url(forResource: "maimaid v1.41n", withExtension: "mlmodelc") {
                 let mlModel = try MLModel(contentsOf: modelURL, configuration: config)
                 self.visionModel = try VNCoreMLModel(for: mlModel)
-                print("MLScoreProcessor: Successfully loaded maimaid v1.4n model from mlmodelc.")
-            } else if let urls = Bundle.main.urls(forResourcesWithExtension: "mlmodelc", subdirectory: nil), let first = urls.first {
+                print("MLScoreProcessor: Successfully loaded maimaid v1.41n model from mlmodelc.")
+            } else if let modelURL = Bundle.main.url(forResource: "maimaid v1.4n", withExtension: "mlmodelc") {
+                let mlModel = try MLModel(contentsOf: modelURL, configuration: config)
+                self.visionModel = try VNCoreMLModel(for: mlModel)
+                print("MLScoreProcessor: Loaded fallback maimaid v1.4n model.")
+            } else if let urls = Bundle.main.urls(forResourcesWithExtension: "mlmodelc", subdirectory: nil),
+                      let first = urls.first(where: { $0.lastPathComponent.contains("maimaid") && !$0.lastPathComponent.contains("distinguish") && !$0.lastPathComponent.contains("choose") }) {
                 print("MLScoreProcessor: Loaded fallback model \(first.lastPathComponent)")
                 let mlModel = try MLModel(contentsOf: first, configuration: config)
                 self.visionModel = try VNCoreMLModel(for: mlModel)
             } else {
-                print("MLScoreProcessor: maimaidv1.31.mlmodelc not found in bundle. Check Target Membership.")
+                print("MLScoreProcessor: No maimaid score model found in bundle. Check Target Membership.")
             }
         } catch {
-            print("MLScoreProcessor: Error loading maimaidv1.31 model - \(error)")
+            print("MLScoreProcessor: Error loading model - \(error)")
         }
     }
     
     // MARK: - Processing
     
-    /// Processes an image using `maimaidv1.31` object detection and targeted OCR.
+    /// Processes an image using object detection and targeted OCR.
     func process(_ image: UIImage) async -> MLScoreResult {
         let normalizedImage = image.normalized()
         guard let cgImage = normalizedImage.cgImage, let vnModel = visionModel else {
@@ -60,19 +65,16 @@ class MLScoreProcessor: Sendable {
             return MLScoreResult(debugInfo: "No recognized objects.")
         }
         
-        // MLScoreResult holds our parsed data
         var scoreResult = MLScoreResult()
         
-        // Class labels expected from maimaidv1.31:
-        // achievement, title, dx, std, utage, difficulty, fc, fcp, ap, app, sync, fs, fsp, fdx, fdxp, dxscore
-        // NEW: lv, maxcombo
-        
+        // Bounding boxes for OCR regions
         var achievementBox: CGRect?
         var titleBox: CGRect?
         var difficultyBox: CGRect?
         var dxscoreBox: CGRect?
+        var maxdxscoreBox: CGRect?
         var lvBox: CGRect?
-        var maxcomboBox: CGRect?
+        var kanjiBox: CGRect?
         
         // 1. Parse distinct classifications
         print("════════════════════════════════════════")
@@ -82,9 +84,8 @@ class MLScoreProcessor: Sendable {
             guard let topLabel = obs.labels.first else { continue }
             let label = topLabel.identifier.lowercased()
             let confidence = topLabel.confidence
-            let box = obs.boundingBox // Vision coordinates (0,0 is bottom-left)
+            let box = obs.boundingBox
             
-            // Add box for debugging
             scoreResult.boxes.append(RecognizedBox(label: label, rect: box))
             
             print("  [\(label)] confidence: \(String(format: "%.2f", confidence)), box: [x:\(String(format: "%.3f", box.origin.x)), y:\(String(format: "%.3f", box.origin.y)), w:\(String(format: "%.3f", box.width)), h:\(String(format: "%.3f", box.height))]")
@@ -97,8 +98,9 @@ class MLScoreProcessor: Sendable {
             case "title": titleBox = box
             case "difficulty": difficultyBox = box
             case "dxscore": dxscoreBox = box
+            case "maxdxscore": maxdxscoreBox = box
             case "lv": lvBox = box
-            case "maxcombo": maxcomboBox = box
+            case "kanji": kanjiBox = box
                 
             // Status Badges
             case "fc": scoreResult.comboStatus = "fc"
@@ -114,12 +116,11 @@ class MLScoreProcessor: Sendable {
             }
         }
         
-        // 2. Targeted OCR on Specific Regions 
-        // We crop the original image using the bounding box from Vision and run VNRecognizeTextRequest.
-        
+        // 2. Targeted OCR on Specific Regions
         print("────────────────────────────────────────")
         print("MLScoreProcessor: Starting OCR on detected regions...")
         
+        // Achievement
         if let box = achievementBox {
             let ocrText = await performOCR(on: cgImage, in: box, pattern: "(\\d{2,3}[.,]\\d{4})")
             print("  [achievement OCR] raw results: \(ocrText)")
@@ -137,8 +138,8 @@ class MLScoreProcessor: Sendable {
             print("  [achievement] ✗ no bounding box detected")
         }
         
+        // Title
         if let box = titleBox {
-            // Title can be mostly anything, don't use pattern
             let ocrText = await performOCR(on: cgImage, in: box, pattern: nil)
             print("  [title OCR] raw results: \(ocrText)")
             if let text = ocrText.first {
@@ -150,6 +151,7 @@ class MLScoreProcessor: Sendable {
             print("  [title] ✗ no bounding box detected")
         }
         
+        // DX Score
         if let box = dxscoreBox {
             let ocrText = await performOCR(on: cgImage, in: box, pattern: "(\\d+)")
             print("  [dxscore OCR] raw results: \(ocrText)")
@@ -161,51 +163,79 @@ class MLScoreProcessor: Sendable {
             print("  [dxscore] ✗ no bounding box detected")
         }
         
-        // NEW: OCR for lv (level) - supports both integer and decimal levels like "14" or "14.5"
+        // Max DX Score (NEW in v1.41n)
+        if let box = maxdxscoreBox {
+            let ocrText = await performOCR(on: cgImage, in: box, pattern: "(\\d+)")
+            print("  [maxdxscore OCR] raw results: \(ocrText)")
+            if let text = ocrText.first, let val = Int(text), val > 0 {
+                scoreResult.maxDxScore = val
+                scoreResult.maxCombo = val / 3
+                print("  [maxdxscore] ✓ parsed: \(val) (total notes: \(val / 3))")
+            }
+        } else {
+            print("  [maxdxscore] ✗ no bounding box detected")
+        }
+        
+        // Level (integer only)
         if let box = lvBox {
-            let ocrText = await performOCR(on: cgImage, in: box, pattern: "(\\d+(?:[.,]\\d)?)")
+            let ocrText = await performOCR(on: cgImage, in: box, pattern: "(\\d+)")
             print("  [lv OCR] raw results: \(ocrText)")
-            if let text = ocrText.first {
-                let cleaned = text.replacingOccurrences(of: ",", with: ".")
-                if let val = Double(cleaned) {
-                    scoreResult.level = val
-                    print("  [lv] ✓ parsed: \(val)")
-                } else {
-                    print("  [lv] ✗ failed to parse: '\(cleaned)'")
-                }
+            if let text = ocrText.first, let val = Int(text), val >= 1, val <= 15 {
+                scoreResult.level = Double(val)
+                print("  [lv] ✓ parsed: \(val)")
+            } else {
+                print("  [lv] ✗ failed to parse or out of range")
             }
         } else {
             print("  [lv] ✗ no bounding box detected")
         }
         
-        // NEW: OCR for maxcombo (total notes)
-        if let box = maxcomboBox {
-            let ocrText = await performOCR(on: cgImage, in: box, pattern: "(\\d+)")
-            print("  [maxcombo OCR] raw results: \(ocrText)")
-            if let text = ocrText.first, let val = Int(text) {
-                scoreResult.maxCombo = val
-                print("  [maxcombo] ✓ parsed: \(val)")
+        // Kanji (NEW in v1.41n) - for utage sheet identification
+        if let box = kanjiBox {
+            let ocrText = await performOCR(on: cgImage, in: box, pattern: nil)
+            print("  [kanji OCR] raw results: \(ocrText)")
+            if let text = ocrText.first?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
+                scoreResult.kanji = text
+                print("  [kanji] ✓ parsed: '\(text)'")
             }
         } else {
-            print("  [maxcombo] ✗ no bounding box detected")
+            print("  [kanji] ✗ no bounding box detected")
         }
         
-        // 3. Difficulty Parsing (OCR for "re", fallback to Color)
-        if let box = difficultyBox, let cropped = cropImage(cgImage, to: box) {
-            let ocrText = await performOCR(on: cgImage, in: box, pattern: nil) // Check full region for text
-            let joinedText = ocrText.joined(separator: " ").lowercased()
+        // Difficulty (OCR-based in v1.41n)
+        // OCR result takes absolute priority over color classification,
+        // because color can be affected by ambient lighting conditions.
+        if let box = difficultyBox {
+            let ocrText = await performOCR(on: cgImage, in: box, pattern: nil)
+            let joinedText = ocrText.joined(separator: " ")
             print("  [difficulty OCR] raw results: \(ocrText)")
             
-            if joinedText.contains("re") {
-                scoreResult.difficulty = "remaster"
-                print("  [difficulty] ✓ parsed: remaster (detected 're' in text)")
-            } else {
-                // Fallback to average color classification
-                scoreResult.difficulty = classifyDifficultyColor(from: cropped)
-                print("  [difficulty] ✓ parsed: \(scoreResult.difficulty ?? "unknown") (color classification)")
+            // Try OCR text first — this is the authoritative source
+            if let parsed = parseDifficultyFromOCR(joinedText) {
+                scoreResult.difficulty = parsed
+                print("  [difficulty] ✓ parsed: \(parsed) (from OCR text, authoritative)")
+            } else if let cropped = cropImage(cgImage, to: box) {
+                // Color fallback only when OCR cannot determine difficulty at all
+                let colorResult = classifyDifficultyColor(from: cropped)
+                scoreResult.difficulty = colorResult
+                print("  [difficulty] ⚠ parsed: \(colorResult) (color fallback, OCR inconclusive)")
             }
         } else {
             print("  [difficulty] ✗ no bounding box detected")
+        }
+        
+        // If utage type detected but no difficulty set, mark as utage
+        if scoreResult.type == "utage" && scoreResult.difficulty == nil {
+            scoreResult.difficulty = "utage"
+        }
+        
+        // MARK: - Extract kanji from title as fallback
+        if scoreResult.kanji == nil || scoreResult.kanji!.isEmpty {
+            let extractedKanji = extractKanjiFromTitleCandidates(scoreResult.titleCandidates, fallback: scoreResult.title)
+            if let extracted = extractedKanji {
+                scoreResult.kanji = extracted
+                print("  [kanji] ✓ extracted from title: '\(extracted)'")
+            }
         }
         
         // Final summary
@@ -217,13 +247,118 @@ class MLScoreProcessor: Sendable {
         print("  rate: \(scoreResult.rate != nil ? String(format: "%.4f%%", scoreResult.rate!) : "nil")")
         print("  difficulty: \(scoreResult.difficulty ?? "nil")")
         print("  dxScore: \(scoreResult.dxScore != nil ? "\(scoreResult.dxScore!)" : "nil")")
-        print("  level: \(scoreResult.level != nil ? String(format: "%.1f", scoreResult.level!) : "nil")")
-        print("  maxCombo: \(scoreResult.maxCombo != nil ? "\(scoreResult.maxCombo!)" : "nil")")
+        print("  maxDxScore: \(scoreResult.maxDxScore != nil ? "\(scoreResult.maxDxScore!)" : "nil")")
+        print("  maxCombo (total): \(scoreResult.maxCombo != nil ? "\(scoreResult.maxCombo!)" : "nil")")
+        print("  level: \(scoreResult.level != nil ? String(format: "%.0f", scoreResult.level!) : "nil")")
+        print("  kanji: \(scoreResult.kanji ?? "nil")")
         print("  comboStatus: \(scoreResult.comboStatus ?? "nil")")
         print("  syncStatus: \(scoreResult.syncStatus ?? "nil")")
         print("════════════════════════════════════════")
         
         return scoreResult
+    }
+    
+    // MARK: - Kanji Extraction from Title
+    
+    /// Attempts to extract a utage kanji identifier from title candidates.
+    /// Matches patterns like 【宴】, 【狂】, [覚], [協] etc. at the start of the title.
+    private func extractKanjiFromTitleCandidates(_ candidates: [String], fallback: String?) -> String? {
+        var allTexts = candidates
+        if let fb = fallback { allTexts.insert(fb, at: 0) }
+        
+        for text in allTexts {
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Pattern 1: Full-width brackets 【X】
+            if let match = trimmed.range(of: "^【([^】]+)】", options: .regularExpression) {
+                let inner = trimmed[match]
+                    .dropFirst(1)  // drop 【
+                    .dropLast(1)   // drop 】
+                let kanji = String(inner).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !kanji.isEmpty { return kanji }
+            }
+            
+            // Pattern 2: Half-width brackets [X]
+            if let match = trimmed.range(of: "^\\[([^\\]]+)\\]", options: .regularExpression) {
+                let inner = trimmed[match]
+                    .dropFirst(1)  // drop [
+                    .dropLast(1)   // drop ]
+                let kanji = String(inner).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !kanji.isEmpty { return kanji }
+            }
+        }
+        
+        return nil
+    }
+    
+    // MARK: - Difficulty Parsing
+    
+    /// Parses difficulty from OCR text by matching known keywords.
+    /// This is the authoritative source — color classification is only a fallback
+    /// because ambient lighting can distort perceived colors.
+    private func parseDifficultyFromOCR(_ text: String) -> String? {
+        let lower = text.lowercased()
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: ":", with: "")
+        
+        // Check for utage early — even a single "u" in the difficulty region
+        // strongly indicates utage, since no other difficulty starts with "u".
+        // The score screen shows "UTAGE" but OCR may only capture partial text.
+        if lower.contains("utage") || lower.contains("宴") {
+            return "utage"
+        }
+        
+        // Order matters: "remaster" before "master" to avoid substring match
+        if lower.contains("remaster") || lower.contains("re:master") || lower.contains("reマスター") {
+            return "remaster"
+        }
+        if lower.contains("master") || lower.contains("マスター") {
+            return "master"
+        }
+        if lower.contains("expert") || lower.contains("エキスパート") {
+            return "expert"
+        }
+        if lower.contains("advanced") || lower.contains("アドバンス") {
+            return "advanced"
+        }
+        if lower.contains("basic") || lower.contains("ベーシック") {
+            return "basic"
+        }
+        
+        // Abbreviated matches — must come after full-word checks
+        // to avoid false positives (e.g. "mas" in some title fragment)
+        if lower.contains("re") && (lower.contains("ma") || lower.contains("ster")) {
+            return "remaster"
+        }
+        if lower.contains("mas") {
+            return "master"
+        }
+        if lower.contains("exp") {
+            return "expert"
+        }
+        if lower.contains("adv") {
+            return "advanced"
+        }
+        if lower.contains("bas") {
+            return "basic"
+        }
+        
+        // Single character "u" check — utage is the only difficulty starting with U.
+        // This catches cases where OCR only reads a fragment like "U", "UT", "UTA" etc.
+        // We check this last to avoid false positives with other words containing "u".
+        // Only match if the cleaned text is very short (likely just the difficulty label)
+        // or starts with "u" as the first alphabetic character.
+        let alphaOnly = lower.filter { $0.isLetter }
+        if !alphaOnly.isEmpty && alphaOnly.hasPrefix("u") {
+            // Verify it's not part of a known non-utage word
+            let nonUtageUWords = ["under", "ultra", "up", "union", "unit", "universe"]
+            let isNonUtage = nonUtageUWords.contains { alphaOnly.hasPrefix($0) }
+            if !isNonUtage {
+                return "utage"
+            }
+        }
+        
+        return nil
     }
     
     // MARK: - OCR Helpers
@@ -237,7 +372,7 @@ class MLScoreProcessor: Sendable {
         request.usesLanguageCorrection = false
         if pattern == nil {
             request.recognitionLanguages = ["ja-JP", "en-US", "zh-Hans"]
-            request.usesLanguageCorrection = true // Title needs correction
+            request.usesLanguageCorrection = true
         }
         
         let handler = VNImageRequestHandler(cgImage: cropped, options: [:])
@@ -270,8 +405,6 @@ class MLScoreProcessor: Sendable {
         let width = CGFloat(cgImage.width)
         let height = CGFloat(cgImage.height)
         
-        // Convert normalized bounding box to pixel coordinates
-        // Vision Y axis is inverted from CoreGraphics Y axis
         let rect = CGRect(
             x: boundingBox.origin.x * width,
             y: (1 - boundingBox.origin.y - boundingBox.height) * height,
@@ -282,9 +415,11 @@ class MLScoreProcessor: Sendable {
         return cgImage.cropping(to: rect)
     }
     
-    // MARK: - Color Classification
+    // MARK: - Color Classification (Fallback)
     
     /// Determines the difficulty based on the average Hue of a cropped CoreGraphics image region.
+    /// NOTE: This is only used as a fallback when OCR fails to determine difficulty.
+    /// Color-based detection can be unreliable due to ambient lighting conditions.
     private func classifyDifficultyColor(from cgImage: CGImage) -> String {
         guard let avgColor = cgImage.averageColor() else { return "master" }
         var hue: CGFloat = 0
@@ -292,21 +427,21 @@ class MLScoreProcessor: Sendable {
         var bri: CGFloat = 0
         avgColor.getHue(&hue, saturation: &sat, brightness: &bri, alpha: nil)
         
-        // Hue values (0.0 - 1.0 = 0 - 360 deg)
-        // Red (Expert) is ~0.0 or ~1.0
-        // Orange (Advanced) is ~0.1
-        // Green (Basic) is ~0.33
-        // Purple (Master) is ~0.75
         let h = hue * 360
         
         if h > 320 || h < 20 {
-            return "expert" // Red roughly 340-20
+            return "expert"
         } else if h >= 20 && h < 60 {
-            return "advanced" // Orange roughly 20-60
+            return "advanced"
         } else if h >= 60 && h < 160 {
-            return "basic" // Green roughly 80-140
+            return "basic"
+        } else if h >= 260 && h <= 320 {
+            if bri > 0.75 && sat < 0.5 {
+                return "remaster"
+            }
+            return "master"
         } else {
-            return "master" // Default to Master for Purple/Blue (~260-310)
+            return "master"
         }
     }
 }
@@ -326,12 +461,13 @@ struct MLScoreResult: Sendable {
     var titleCandidates: [String] = []
     
     var dxScore: Int?
+    var maxDxScore: Int? // NEW: max possible DX score from OCR
     var comboStatus: String?
     var syncStatus: String?
     
-    // NEW: Level and MaxCombo for song matching verification
-    var level: Double?
-    var maxCombo: Int?
+    var level: Double? // integer level from OCR (e.g. 14)
+    var maxCombo: Int? // derived from maxDxScore / 3
+    var kanji: String? // NEW: utage kanji identifier (e.g. "宴", "狂", "覚")
     
     var debugInfo: String = ""
     var boxes: [RecognizedBox] = []
