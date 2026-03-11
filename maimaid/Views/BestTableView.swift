@@ -13,6 +13,27 @@ struct BestTableView: View {
     @State private var isLoading = true
     @State private var isExporting = false
     
+    // MARK: - 临时版本覆盖 (退出页面即失效)
+    @State private var overriddenVersion: String?
+    @State private var showVersionPicker = false
+    
+    /// 可选的版本列表
+    private var availableVersions: [String] {
+        let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
+        // 从旧到新排序，用户可以选择任意版本作为"最新版本"
+        return sequence
+    }
+    
+    /// 当前实际使用的版本（覆盖或默认）
+    private var effectiveVersion: String? {
+        overriddenVersion ?? serverVersion
+    }
+    
+    private var serverVersion: String? {
+        guard let profile = activeProfile, let server = GameServer(rawValue: profile.server) else { return nil }
+        return ServerVersionService.shared.latestVersion(for: server, songs: songs)
+    }
+    
     private var b35Sum: Int {
         b50Result.b35.reduce(0) { $0 + $1.rating }
     }
@@ -52,6 +73,44 @@ struct BestTableView: View {
                     .foregroundColor(.secondary)
                 }
                 .padding(.vertical, 8)
+            }
+
+            // MARK: - 版本选择器
+            Section("bestTable.settings.version") {
+                Button {
+                    showVersionPicker = true
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("bestTable.settings.version.current")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(versionDisplayName)
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(overriddenVersion != nil ? .orange : .primary)
+                        }
+                        
+                        Spacer()
+                        
+                        if overriddenVersion != nil {
+                            Button {
+                                overriddenVersion = nil
+                                Task { await calculateRating() }
+                            } label: {
+                                Text("bestTable.settings.version.reset")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .foregroundColor(.primary)
+                
             }
 
             Section("bestTable.settings.capacity") {
@@ -140,6 +199,13 @@ struct BestTableView: View {
                 .disabled(isLoading || isExporting || (b50Result.b35.isEmpty && b50Result.b15.isEmpty))
             }
         }
+        .sheet(isPresented: $showVersionPicker) {
+            VersionPickerSheet(
+                versions: availableVersions,
+                selectedVersion: $overriddenVersion,
+                currentServerVersion: serverVersion
+            )
+        }
         .task(id: songs) {
             await calculateRating()
         }
@@ -149,6 +215,22 @@ struct BestTableView: View {
         .task(id: activeProfile?.b15Count) {
             await calculateRating()
         }
+        .onChange(of: overriddenVersion) { _, _ in
+            Task { await calculateRating() }
+        }
+    }
+    
+    // MARK: - Version Display
+    
+    private var versionDisplayName: String {
+        if let version = effectiveVersion {
+            let abbr = ThemeUtils.versionAbbreviation(version)
+            if overriddenVersion != nil {
+                return String(abbr)
+            }
+            return abbr
+        }
+        return String(localized: "bestTable.settings.version.unknown")
     }
     
     // MARK: - Export
@@ -162,7 +244,8 @@ struct BestTableView: View {
                     b35: b50Result.b35,
                     b15: b50Result.b15,
                     totalRating: b50Result.total,
-                    userName: activeProfile?.name ?? configs.first?.userName
+                    userName: activeProfile?.name ?? configs.first?.userName,
+                    currentVersion: effectiveVersion
                 )
             }
             
@@ -235,15 +318,11 @@ struct BestTableView: View {
         let b35Limit = activeProfile?.b35Count ?? configs.first?.b35Count ?? 35
         let b15Limit = activeProfile?.b15Count ?? configs.first?.b15Count ?? 15
         
-        let serverVersion: String?
-        if let profile = activeProfile, let server = GameServer(rawValue: profile.server) {
-            serverVersion = ServerVersionService.shared.latestVersion(for: server, songs: songs)
-        } else {
-            serverVersion = nil
-        }
+        // 使用覆盖的版本或服务器版本
+        let latestVersion = effectiveVersion
         
         let result = await Task.detached(priority: .userInitiated) {
-            await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: serverVersion)
+            await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: latestVersion)
         }.value
         
         self.b50Result = result
@@ -312,5 +391,85 @@ struct BestTableView: View {
             .fixedSize()
         }
         .padding(.vertical, 6)
+    }
+}
+
+// MARK: - Version Picker Sheet
+
+struct VersionPickerSheet: View {
+    @Environment(\.dismiss) var dismiss
+    let versions: [String]
+    @Binding var selectedVersion: String?
+    let currentServerVersion: String?
+    
+    @State private var tempSelection: String?
+    
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Button {
+                        tempSelection = nil
+                    } label: {
+                        HStack {
+                            Text("bestTable.settings.version.auto")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            if tempSelection == nil {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                } footer: {
+                    if let serverVersion = currentServerVersion {
+                        Text(ThemeUtils.versionAbbreviation(serverVersion))
+                    }
+                }
+                
+                Section("bestTable.settings.version.available") {
+                    ForEach(versions.reversed(), id: \.self) { version in
+                        Button {
+                            tempSelection = version
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(ThemeUtils.versionAbbreviation(version))
+                                        .foregroundColor(.primary)
+                                    Text(version)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                if tempSelection == version {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("bestTable.settings.version.title")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("bestTable.settings.version.cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("bestTable.settings.version.confirm") {
+                        selectedVersion = tempSelection
+                        dismiss()
+                    }
+                    .bold()
+                }
+            }
+            .onAppear {
+                tempSelection = selectedVersion
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }

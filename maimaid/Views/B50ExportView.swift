@@ -8,6 +8,7 @@ struct B50ExportView: View {
     let b15: [RatingUtils.RatingEntry]
     let totalRating: Int
     let userName: String?
+    let currentVersion: String? // 当前设定的最新版本
     
     private let columns = 5
     private let cardWidth: CGFloat = 220
@@ -303,12 +304,25 @@ struct B50ExportView: View {
     // MARK: - Footer
     
     private var footerSection: some View {
-        HStack {
-            Spacer()
-            Text(String(localized: "bestTable.export.watermark"))
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(Color.white.opacity(0.2))
-            Spacer()
+        VStack(spacing: 8) {
+            // Version indicator
+            if let version = currentVersion, !version.isEmpty {
+                HStack(spacing: 4) {
+                    Image(systemName: "gamecontroller.fill")
+                        .font(.system(size: 10))
+                    Text(ThemeUtils.versionAbbreviation(version))
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundColor(Color.white.opacity(0.3))
+            }
+            
+            HStack {
+                Spacer()
+                Text(String(localized: "bestTable.export.watermark"))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Color.white.opacity(0.2))
+                Spacer()
+            }
         }
         .padding(.vertical, 24)
     }
@@ -322,13 +336,15 @@ extension B50ExportView {
         b35: [RatingUtils.RatingEntry],
         b15: [RatingUtils.RatingEntry],
         totalRating: Int,
-        userName: String?
+        userName: String?,
+        currentVersion: String? = nil
     ) -> UIImage? {
         let view = B50ExportView(
             b35: b35,
             b15: b15,
             totalRating: totalRating,
-            userName: userName
+            userName: userName,
+            currentVersion: currentVersion
         )
         
         let renderer = ImageRenderer(content: view)

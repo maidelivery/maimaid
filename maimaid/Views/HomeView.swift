@@ -8,6 +8,7 @@ struct HomeView: View {
     @Query private var songs: [Song]
     @Query(sort: \MaimaiIcon.id) private var icons: [MaimaiIcon]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
+    @Query private var allScores: [Score]
     
     @State private var showingEditProfile = false
     @State private var computedB50Total: Int = 0
@@ -34,6 +35,19 @@ struct HomeView: View {
         currentB35Count + currentB15Count
     }
     
+    private var displayRating: Int {
+        max(standardB50Total, activeProfile?.playerRating ?? config?.playerRating ?? 0)
+    }
+    
+    /// Generates a lightweight fingerprint from scores to detect changes.
+    private var scoreFingerprint: String {
+        let profileId = activeProfile?.id
+        let relevantScores = allScores.filter { $0.userProfileId == profileId }
+        let count = relevantScores.count
+        let totalRate = relevantScores.reduce(0.0) { $0 + $1.rate }
+        return "\(count)_\(String(format: "%.2f", totalRate))"
+    }
+    
     /// Generates a lightweight fingerprint to detect changes relevant to B50 calculation.
     private func b50Fingerprint() -> String {
         let songCount = songs.count
@@ -41,7 +55,7 @@ struct HomeView: View {
         let b15 = currentB15Count
         let profileId = activeProfile?.id.uuidString ?? "none"
         let server = activeProfile?.server ?? "jp"
-        return "\(songCount)_\(b35)_\(b15)_\(profileId)_\(server)"
+        return "\(songCount)_\(b35)_\(b15)_\(profileId)_\(server)_\(scoreFingerprint)"
     }
     
     /// Generates a fingerprint for standard B50 (always uses 35/15).
@@ -49,7 +63,7 @@ struct HomeView: View {
         let songCount = songs.count
         let profileId = activeProfile?.id.uuidString ?? "none"
         let server = activeProfile?.server ?? "jp"
-        return "\(songCount)_\(profileId)_\(server)"
+        return "\(songCount)_\(profileId)_\(server)_\(scoreFingerprint)"
     }
     
     let columns = [
@@ -65,76 +79,10 @@ struct HomeView: View {
                     profileHeader
                     
                     // Main "Best Table" Button
-                    NavigationLink(destination: BestTableView()) {
-                        HStack {
-                            Image(systemName: "trophy.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(.orange)
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("home.bestTable.button.title \(totalB50Count)")
-                                    .font(.system(size: 16, weight: .bold))
-                                Text("home.bestTable.button.subtitle \(currentB35Count) \(currentB15Count)")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Spacer()
-                            
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.secondary.opacity(0.5))
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 14)
-                        .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.orange.opacity(0.2), lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
+                    bestTableButton
                     
-                    LazyVGrid(columns: columns, spacing: 16) {
-                        NavigationLink(destination: RandomSongView()) {
-                            functionCard(
-                                icon: "dice.fill",
-                                title: "home.randomSong.title",
-                                subtitle: "home.randomSong.subtitle",
-                                gradient: [Color.purple, Color.pink]
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        
-                        NavigationLink(destination: RecommendationListView()) {
-                            functionCard(
-                                icon: "sparkles",
-                                title: "home.recommendation.title",
-                                subtitle: "home.recommendation.subtitle",
-                                gradient: [Color.orange, Color.red]
-                            )
-                        }
-                        NavigationLink(destination: PlateProgressView()) {
-                            functionCard(
-                                icon: "chart.bar.xaxis",
-                                title: "home.plateProgress.title",
-                                subtitle: "home.plateProgress.subtitle",
-                                gradient: [Color.green, Color.blue]
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        
-                        NavigationLink(destination: UsefulLinksView()) {
-                            functionCard(
-                                icon: "link",
-                                title: "home.usefulLinks.title",
-                                subtitle: "home.usefulLinks.subtitle",
-                                gradient: [Color.blue, Color.cyan]
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
-
+                    // Function Grid
+                    functionGrid
                 }
                 .padding(16)
             }
@@ -150,6 +98,10 @@ struct HomeView: View {
                 await updateStandardB50IfNeeded()
             }
             .onChange(of: songs.count) { _, _ in
+                Task { await updateB50IfNeeded() }
+                Task { await updateStandardB50IfNeeded() }
+            }
+            .onChange(of: allScores.count) { _, _ in
                 Task { await updateB50IfNeeded() }
                 Task { await updateStandardB50IfNeeded() }
             }
@@ -233,8 +185,123 @@ struct HomeView: View {
         return ServerVersionService.shared.latestVersion(for: server, songs: songs)
     }
     
-
+    // MARK: - Subviews
     
+    private var bestTableButton: some View {
+        NavigationLink(destination: BestTableView()) {
+            HStack {
+                Image(systemName: "trophy.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.orange)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("home.bestTable.button.title \(totalB50Count)")
+                        .font(.system(size: 16, weight: .bold))
+                    Text("home.bestTable.button.subtitle \(currentB35Count) \(currentB15Count)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.secondary.opacity(0.5))
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+            .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.orange.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+    
+    private var functionGrid: some View {
+        LazyVGrid(columns: columns, spacing: 16) {
+            NavigationLink(destination: RandomSongView()) {
+                functionCard(
+                    icon: "dice.fill",
+                    title: "home.randomSong.title",
+                    subtitle: "home.randomSong.subtitle",
+                    gradient: [Color.purple, Color.pink]
+                )
+            }
+            .buttonStyle(.plain)
+            
+            NavigationLink(destination: RecommendationListView()) {
+                functionCard(
+                    icon: "sparkles",
+                    title: "home.recommendation.title",
+                    subtitle: "home.recommendation.subtitle",
+                    gradient: [Color.orange, Color.red]
+                )
+            }
+            
+            NavigationLink(destination: PlateProgressView()) {
+                functionCard(
+                    icon: "chart.bar.xaxis",
+                    title: "home.plateProgress.title",
+                    subtitle: "home.plateProgress.subtitle",
+                    gradient: [Color.green, Color.blue]
+                )
+            }
+            .buttonStyle(.plain)
+            
+            NavigationLink(destination: UsefulLinksView()) {
+                functionCard(
+                    icon: "link",
+                    title: "home.usefulLinks.title",
+                    subtitle: "home.usefulLinks.subtitle",
+                    gradient: [Color.blue, Color.cyan]
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    // MARK: - Rating Badge
+    
+    private var ratingBadge: some View {
+        Text("\(displayRating)")
+            .font(.system(size: 10, weight: .black, design: .rounded))
+            .foregroundColor(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(ThemeUtils.ratingColor(displayRating), in: Capsule())
+            .overlay(Capsule().stroke(Color.white, lineWidth: 1))
+            .offset(x: 4, y: 4)
+    }
+    
+    // MARK: - Avatar View
+    
+    private var avatarImage: some View {
+        Group {
+            if let data = activeProfile?.avatarData ?? config?.avatarData, let uiImage = UIImage(data: data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 60, height: 60)
+                    .clipShape(Circle())
+            } else if let urlString = config?.avatarUrl, let url = URL(string: urlString) {
+                AsyncImage(url: url) { image in
+                    image.resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Color.gray.opacity(0.2)
+                }
+                .frame(width: 60, height: 60)
+                .clipShape(Circle())
+            } else {
+                Image(systemName: "person.circle.fill")
+                    .resizable()
+                    .frame(width: 60, height: 60)
+                    .foregroundColor(.blue.opacity(0.6))
+            }
+        }
+    }
+
     private var profileHeader: some View {
         Button {
             showingEditProfile = true
@@ -242,42 +309,14 @@ struct HomeView: View {
             HStack(spacing: 16) {
                 // Avatar
                 ZStack {
-                    if let data = activeProfile?.avatarData ?? config?.avatarData, let uiImage = UIImage(data: data) {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 60, height: 60)
-                            .clipShape(Circle())
-                    } else if let urlString = config?.avatarUrl, let url = URL(string: urlString) {
-                        AsyncImage(url: url) { image in
-                            image.resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            Color.gray.opacity(0.2)
-                        }
-                        .frame(width: 60, height: 60)
-                        .clipShape(Circle())
-                    } else {
-                        Image(systemName: "person.circle.fill")
-                            .resizable()
-                            .frame(width: 60, height: 60)
-                            .foregroundColor(.blue.opacity(0.6))
-                    }
+                    avatarImage
                     
                     // Rating badge
                     VStack {
                         Spacer()
                         HStack {
                             Spacer()
-                            let displayRating = max(standardB50Total, activeProfile?.playerRating ?? config?.playerRating ?? 0)
-                            Text("\(displayRating)")
-                                .font(.system(size: 10, weight: .black, design: .rounded))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(ThemeUtils.ratingColor(displayRating), in: Capsule())
-                                .overlay(Capsule().stroke(Color.white, lineWidth: 1))
-                                .offset(x: 4, y: 4)
+                            ratingBadge
                         }
                     }
                 }

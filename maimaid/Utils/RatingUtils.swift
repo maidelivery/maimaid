@@ -77,16 +77,94 @@ enum RatingUtils {
         RankThreshold(rank: "SS", threshold: 99.0),
         RankThreshold(rank: "SS+", threshold: 99.5),
         RankThreshold(rank: "SSS", threshold: 100.0),
-        RankThreshold(rank: "SSS+", threshold: 100.5),
-        RankThreshold(rank: "AP+", threshold: 100.5)
+        RankThreshold(rank: "SSS+", threshold: 100.5)
     ]
+    
+    private struct RatingBreakpoint {
+        let achievement: Double
+        let coefficient: Double
+    }
+    
+    private static let ratingCoefficients: [RatingBreakpoint] = [
+        RatingBreakpoint(achievement: 100.5, coefficient: 22.4),
+        RatingBreakpoint(achievement: 100.4999, coefficient: 22.2),
+        RatingBreakpoint(achievement: 100.0, coefficient: 21.6),
+        RatingBreakpoint(achievement: 99.9999, coefficient: 21.4),
+        RatingBreakpoint(achievement: 99.5, coefficient: 21.1),
+        RatingBreakpoint(achievement: 99.0, coefficient: 20.8),
+        RatingBreakpoint(achievement: 98.99, coefficient: 20.6),
+        RatingBreakpoint(achievement: 98.0, coefficient: 20.3),
+        RatingBreakpoint(achievement: 97.0, coefficient: 20.0),
+        RatingBreakpoint(achievement: 96.99, coefficient: 17.6),
+        RatingBreakpoint(achievement: 94.0, coefficient: 16.8),
+        RatingBreakpoint(achievement: 90.0, coefficient: 15.2),
+        RatingBreakpoint(achievement: 80.0, coefficient: 13.6),
+        RatingBreakpoint(achievement: 79.99, coefficient: 12.8),
+        RatingBreakpoint(achievement: 75.0, coefficient: 12.0),
+        RatingBreakpoint(achievement: 70.0, coefficient: 11.2),
+        RatingBreakpoint(achievement: 60.0, coefficient: 9.6),
+        RatingBreakpoint(achievement: 50.0, coefficient: 8.0),
+        RatingBreakpoint(achievement: 40.0, coefficient: 6.4),
+        RatingBreakpoint(achievement: 30.0, coefficient: 4.8),
+        RatingBreakpoint(achievement: 20.0, coefficient: 3.2),
+        RatingBreakpoint(achievement: 10.0, coefficient: 1.6),
+        RatingBreakpoint(achievement: 0.0, coefficient: 0.0)
+    ].sorted { $0.achievement > $1.achievement }
+    
+    static func getRatingCoefficient(for achievement: Double) -> Double {
+        let cappedAchievement = min(achievement, 100.5)
+        
+        for i in 0..<ratingCoefficients.count - 1 {
+            let upper = ratingCoefficients[i]
+            let lower = ratingCoefficients[i+1]
+            
+            if cappedAchievement >= lower.achievement {
+                if cappedAchievement == upper.achievement { return upper.coefficient }
+                if cappedAchievement == lower.achievement { return lower.coefficient }
+                
+                let range = upper.achievement - lower.achievement
+                if range <= 0 { return lower.coefficient }
+                let fraction = (cappedAchievement - lower.achievement) / range
+                return lower.coefficient + fraction * (upper.coefficient - lower.coefficient)
+            }
+        }
+        
+        return 0.0
+    }
     
     // MARK: - Song Category
     
     enum SongCategory: Sendable {
-        case b15  // New songs (current version)
+        case b15  // New songs (current version only)
         case b35  // Old songs
         case excluded
+    }
+    
+    // MARK: - Circle Version Check
+    
+    /// Returns true if the given version is "circle" or later in the version sequence.
+    /// "circle" is identified by a case-insensitive substring match in the version sequence.
+    static func isAfterCircle(version: String?) -> Bool {
+        guard let version = version, !version.isEmpty else { return false }
+        let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
+        guard !sequence.isEmpty else { return false }
+        
+        // Find the index of the "circle" version entry
+        guard let circleIndex = sequence.firstIndex(where: { $0.lowercased().contains("circle") }) else {
+            return false
+        }
+        
+        // Find the index of the given version
+        let versionIndex: Int
+        if let exact = sequence.firstIndex(of: version) {
+            versionIndex = exact
+        } else if let fuzzy = sequence.firstIndex(where: { version.contains($0) || $0.contains(version) }) {
+            versionIndex = fuzzy
+        } else {
+            return false
+        }
+        
+        return versionIndex >= circleIndex
     }
     
     // MARK: - Rank Calculation
@@ -110,60 +188,36 @@ enum RatingUtils {
     
     // MARK: - Rating Calculation
     
-    static func calculateRating(internalLevel: Double, achievement: Double, fc: String? = nil) -> Int {
-        guard internalLevel > 0, achievement > 0 else { return 0 }
-        
-        let baseRating = internalLevel * achievement * 0.01
-        
-        // Apply modifiers based on achievement
-        let modifier: Double
-        switch achievement {
-        case 100.5...:
-            modifier = 0.225
-        case 100.0..<100.5:
-            modifier = 0.215
-        case 99.5..<100.0:
-            modifier = 0.14
-        case 99.0..<99.5:
-            modifier = 0.1275
-        case 98.0..<99.0:
-            modifier = 0.115
-        case 97.0..<98.0:
-            modifier = 0.105
-        case 94.0..<97.0:
-            modifier = 0.10
-        case 90.0..<94.0:
-            modifier = 0.095
-        case 80.0..<90.0:
-            modifier = 0.09
-        case 75.0..<80.0:
-            modifier = 0.085
-        case 70.0..<75.0:
-            modifier = 0.08
-        case 60.0..<70.0:
-            modifier = 0.075
-        case 50.0..<60.0:
-            modifier = 0.07
-        default:
-            modifier = 0.06
-        }
-        
-        let rating = baseRating * modifier
-        
-        // FC bonus
-        var fcBonus: Double = 0
-        if let fc = fc?.lowercased() {
-            if fc.contains("app") { fcBonus = 0.10 }
-            else if fc.contains("ap") { fcBonus = 0.08 }
-            else if fc.contains("fcp") { fcBonus = 0.04 }
-            else if fc.contains("fc") { fcBonus = 0.02 }
-        }
-        
-        return Int(floor((rating + fcBonus) * 100))
+    /// Returns true if the fc value represents an All Perfect (AP or AP+).
+    static func isAP(_ fc: String?) -> Bool {
+        guard let fc = fc?.lowercased() else { return false }
+        return fc == "ap" || fc == "app"
     }
     
+    /// Calculates rating for a sheet.
+    /// - Parameters:
+    ///   - internalLevel: The internal level value of the sheet.
+    ///   - achievement: The achievement percentage.
+    ///   - fc: The Full Combo status string (e.g. "ap", "app", "fc", etc.)
+    ///   - afterCircle: Pass `true` when the current latest server version is "circle" or later.
+    ///                  When `true` and the score is AP (or AP+), +1 is added to the rating.
+    static func calculateRating(internalLevel: Double, achievement: Double, fc: String? = nil, afterCircle: Bool = false) -> Int {
+        guard internalLevel > 0, achievement > 0 else { return 0 }
+        
+        let coefficient = getRatingCoefficient(for: achievement)
+        let rating = internalLevel * (coefficient / 100.0) * min(achievement, 100.5)
+        var result = Int(floor(rating + 0.000001))
+        
+        if afterCircle && isAP(fc) {
+            result += 1
+        }
+        
+        return result
+    }
+    
+    /// Convenience overload without fc (no AP bonus).
     static func calculateRating(internalLevel: Double, achievements: Double) -> Int {
-        return calculateRating(internalLevel: internalLevel, achievement: achievements, fc: nil)
+        return calculateRating(internalLevel: internalLevel, achievement: achievements, fc: nil, afterCircle: false)
     }
     
     // MARK: - Rank Colors
@@ -189,6 +243,9 @@ enum RatingUtils {
     
     // MARK: - Song Category Determination
     
+    /// Determines whether a song belongs to B15 (current version only), B35 (older), or excluded.
+    /// B15 requires an EXACT version match with `latestServerVersion` — songs from versions
+    /// after the latest server version are NOT included in B15.
     static func determineSongCategory(
         songVersion: String?,
         latestServerVersion: String?,
@@ -197,11 +254,9 @@ enum RatingUtils {
         guard isRegionActive else { return .excluded }
         
         guard let latest = latestServerVersion, let songVer = songVersion else {
-            // If version info is unavailable, default to B35 (old)
             return .b35
         }
         
-        // Compare versions - if song version matches latest server version, it's "new"
         let versionSequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
         
         guard let songIndex = versionSequence.firstIndex(where: { songVer.contains($0) || $0.contains(songVer) }),
@@ -209,8 +264,9 @@ enum RatingUtils {
             return .b35
         }
         
-        // If song is from the latest version, it's a "new" song (B15)
-        if songIndex >= latestIndex {
+        // Only exact version match (songIndex == latestIndex) qualifies as B15.
+        // Songs from versions after the selected latest are treated as B35.
+        if songIndex == latestIndex {
             return .b15
         }
         
@@ -265,6 +321,9 @@ enum RatingUtils {
     ) async -> (total: Int, b35: [RatingEntry], b15: [RatingEntry]) {
         var allEntries: [(entry: RatingEntry, isNew: Bool)] = []
         
+        // Determine if the AP+1 bonus applies for the current server version
+        let afterCircle = isAfterCircle(version: latestVersion)
+        
         for songData in input.songs {
             // Skip utage category
             if songData.category.lowercased().contains("utage") || songData.category.contains("宴") {
@@ -305,7 +364,8 @@ enum RatingUtils {
                 let rating = calculateRating(
                     internalLevel: internalLevel,
                     achievement: scoreData.rate,
-                    fc: scoreData.fc
+                    fc: scoreData.fc,
+                    afterCircle: afterCircle
                 )
                 
                 guard rating > 0 else { continue }
@@ -405,8 +465,6 @@ extension RatingUtils {
     /// 🔴 推荐使用：通过 ScoreService 获取成绩映射
     /// 确保成绩获取严格在当前用户作用域下
     static func fetchScoreMap(context: ModelContext) -> [String: Score] {
-        // 使用 ModelContext 作为参数，而不是传入 profileId
-        // 这样 ScoreService 内部会自动获取当前活跃用户
         return ScoreService.shared.scoreMap(context: context)
     }
     
