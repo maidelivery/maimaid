@@ -782,8 +782,7 @@ struct SheetCardView: View {
     private func ratingTable(level: Double) -> some View {
         let ratings = RatingUtils.rankThresholds.filter { $0.rank != "AP+" }.map { item in
             (item.rank, item.threshold, RatingUtils.calculateRating(internalLevel: level, achievements: item.threshold))
-        }
-        
+        }.reversed() // Reverse to SSS+ -> D
         return VStack(spacing: 0) {
             // Header
             Button {
@@ -822,10 +821,12 @@ struct SheetCardView: View {
                     .padding(.vertical, 4)
                     
                     // Table rows
-                    ForEach(Array(ratings.enumerated()), id: \.offset) { index, item in
+                    let ratingArray = Array(ratings)
+                    ForEach(Array(ratingArray.enumerated()), id: \.offset) { index, item in
                         let (rank, ach, rating) = item
-                        let prevRating = index > 0 ? ratings[index - 1].2 : rating
-                        let delta = index > 0 ? prevRating - rating : 0
+                        // Delta compared to the next rank (lower rank) since we're now SSS+ -> D
+                        let nextRating = index < ratingArray.count - 1 ? ratingArray[index + 1].2 : 0
+                        let delta = index < ratingArray.count - 1 ? rating - nextRating : 0
                         
                         HStack {
                             HStack(spacing: 6) {
@@ -1145,7 +1146,7 @@ struct FaultToleranceCalculatorView: View {
             // Target Picker (Rank Based)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(targetRanks) { target in
+                    ForEach(targetRanks.reversed()) { target in
                         Button {
                             targetAchievement = target.threshold
                         } label: {

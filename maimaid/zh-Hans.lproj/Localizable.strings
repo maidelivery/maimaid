@@ -24,6 +24,8 @@
 "home.plateProgress.subtitle" = "查看各版本牌子获取进度";
 "home.usefulLinks.title" = "常用网站";
 "home.usefulLinks.subtitle" = "官方、维基、查分器等";
+"home.scoreQuery.title" = "成绩查询";
+"home.scoreQuery.subtitle" = "浏览全部成绩";
 
 // MARK: - Profile Edit
 "profile.edit.title" = "个人资料";
@@ -419,3 +421,22 @@
 "settings.userManagement.header" = "用户管理";
 "settings.userManagement.footer" = "管理多个用户档案，支持不同服务器。";
 "settings.userManagement.title" = "用户档案管理";
+
+// MARK: - Score Query
+"scoreQuery.title" = "成绩查询";
+"scoreQuery.stats.played" = "总成绩数";
+"scoreQuery.stats.fc" = "FC/FC+";
+"scoreQuery.stats.ap" = "AP/AP+";
+"scoreQuery.stats.fs" = "FS/FS+";
+"scoreQuery.stats.fsd" = "FDX/FDX+";
+"scoreQuery.sort.rating" = "Rating";
+"scoreQuery.sort.achievement" = "达成率";
+"scoreQuery.sort.level" = "定数";
+"scoreQuery.display.grid" = "网格";
+"scoreQuery.display.list" = "列表";
+"scoreQuery.badge.rank" = "评级";
+"scoreQuery.badge.fc" = "FC";
+"scoreQuery.badge.fs" = "FS";
+"scoreQuery.columns" = "列";
+"scoreQuery.empty" = "暂无成绩";
+"scoreQuery.results" = "条结果";

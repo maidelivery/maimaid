@@ -13,7 +13,7 @@ struct MarqueeText: View {
     @State private var contentWidth: CGFloat = 0
     @State private var containerWidth: CGFloat = 0
     @State private var offset: CGFloat = 0
-    @State private var animationTimer: Timer?
+    @State private var marqueeTask: Task<Void, Never>?
     
     private var needsScroll: Bool {
         contentWidth > containerWidth && containerWidth > 0
@@ -78,19 +78,34 @@ struct MarqueeText: View {
         
         guard needsScroll else { return }
         
-        // Pause at the beginning, then start animation
-        DispatchQueue.main.asyncAfter(deadline: .now() + initialDelay) {
-            guard needsScroll else { return }
-            let totalDistance = contentWidth + spacing
-            let duration = totalDistance / speed
-            
-            withAnimation(.linear(duration: duration).repeatForever(autoreverses: false)) {
-                offset = -totalDistance
+        let totalDistance = contentWidth + spacing
+        let duration = totalDistance / speed
+        
+        marqueeTask = Task { @MainActor in
+            while !Task.isCancelled {
+                // Pause at the beginning
+                try? await Task.sleep(nanoseconds: UInt64(initialDelay * 1_000_000_000))
+                if Task.isCancelled { break }
+                
+                withAnimation(.linear(duration: duration)) {
+                    offset = -totalDistance
+                }
+                
+                try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
+                if Task.isCancelled { break }
+                
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    offset = 0
+                }
             }
         }
     }
     
     private func stopMarquee() {
+        marqueeTask?.cancel()
+        marqueeTask = nil
         offset = 0
     }
 }

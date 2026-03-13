@@ -19,6 +19,15 @@ struct B50ExportView: View {
         CGFloat(columns) * cardWidth + CGFloat(columns - 1) * cardSpacing + sectionPadding * 2
     }
     
+    @Environment(\.colorScheme) var colorScheme
+    
+    // Explicit Theme Colors for ImageRenderer
+    private var bgColor: Color { colorScheme == .dark ? Color(hex: "#0F0F13") : Color.white }
+    private var primaryColor: Color { colorScheme == .dark ? .white : .black }
+    private var secondaryColor: Color { colorScheme == .dark ? Color.white.opacity(0.6) : Color.black.opacity(0.6) }
+    private var subtleColor: Color { colorScheme == .dark ? Color.white.opacity(0.3) : Color.black.opacity(0.3) }
+    private var emptyCardColor: Color { colorScheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.05) }
+    
     var body: some View {
         VStack(spacing: 0) {
             // MARK: - Header
@@ -48,7 +57,7 @@ struct B50ExportView: View {
             footerSection
         }
         .frame(width: totalWidth)
-        .background(Color(hex: "#0F0F13"))
+        .background(bgColor)
     }
     
     // MARK: - Header
@@ -60,12 +69,12 @@ struct B50ExportView: View {
                     if let name = userName, !name.isEmpty {
                         Text(name)
                             .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(primaryColor)
                     }
                     
                     Text(String(localized: "bestTable.rating"))
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color.white.opacity(0.5))
+                        .foregroundColor(secondaryColor)
                 }
                 
                 Spacer()
@@ -101,7 +110,7 @@ struct B50ExportView: View {
                 .frame(width: 8, height: 8)
             Text(label)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(Color.white.opacity(0.6))
+                .foregroundColor(secondaryColor)
             Text(value)
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundColor(color)
@@ -119,10 +128,10 @@ struct B50ExportView: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(title)
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(primaryColor)
                 Text(subtitle)
                     .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundColor(accentColor.opacity(0.8))
+                    .foregroundColor(accentColor)
                 Spacer()
             }
             .padding(.horizontal, sectionPadding)
@@ -174,13 +183,13 @@ struct B50ExportView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                 } else {
                     Rectangle()
-                        .fill(Color.white.opacity(0.05))
+                        .fill(emptyCardColor)
                         .frame(width: jacketSize, height: jacketSize)
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                         .overlay(
                             Image(systemName: "music.note")
                                 .font(.system(size: 14))
-                                .foregroundColor(.white.opacity(0.2))
+                                .foregroundColor(subtleColor)
                         )
                 }
                 
@@ -202,7 +211,7 @@ struct B50ExportView: View {
                 // Row 1: Title
                 Text(entry.songTitle)
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(primaryColor)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -215,7 +224,7 @@ struct B50ExportView: View {
                     
                     Text(String(format: "%.4f%%", entry.achievement))
                         .font(.system(size: 9, design: .monospaced))
-                        .foregroundColor(Color.white.opacity(0.6))
+                        .foregroundColor(secondaryColor)
                     
                     Spacer()
                     
@@ -239,11 +248,11 @@ struct B50ExportView: View {
                         
                         Image(systemName: "arrow.right")
                             .font(.system(size: 5))
-                            .foregroundColor(Color.white.opacity(0.2))
+                            .foregroundColor(subtleColor)
                         
                         Text("\(entry.rating)")
                             .font(.system(size: 9, weight: .black, design: .rounded))
-                            .foregroundColor(Color(hex: "#FFD700"))
+                            .foregroundColor(colorScheme == .dark ? Color(hex: "#FFD700") : Color(hex: "#C5A000"))
                     }
                     
                     Spacer()
@@ -251,13 +260,13 @@ struct B50ExportView: View {
                     if entry.maxDxScore > 0 {
                         Text("\(entry.dxScore)/\(entry.maxDxScore)")
                             .font(.system(size: 8, weight: .medium, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.4))
+                            .foregroundColor(secondaryColor)
                     }
                 }
                 
                 // Row 4: Badges
                 HStack(spacing: 3) {
-                    exportBadge(text: entry.type, color: entry.type == "DX" ? .orange : .blue)
+                    exportBadge(text: entry.type.uppercased(), color: entry.type.uppercased() == "DX" ? .orange : .blue)
                     
                     if let fc = entry.fc, !fc.isEmpty {
                         exportBadge(text: ThemeUtils.normalizeFC(fc), color: ThemeUtils.fcColor(fc))
@@ -313,14 +322,14 @@ struct B50ExportView: View {
                     Text(ThemeUtils.versionAbbreviation(version))
                         .font(.system(size: 11, weight: .semibold))
                 }
-                .foregroundColor(Color.white.opacity(0.3))
+                .foregroundColor(secondaryColor)
             }
             
             HStack {
                 Spacer()
                 Text(String(localized: "bestTable.export.watermark"))
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(Color.white.opacity(0.2))
+                    .foregroundColor(subtleColor)
                 Spacer()
             }
         }
@@ -337,7 +346,8 @@ extension B50ExportView {
         b15: [RatingUtils.RatingEntry],
         totalRating: Int,
         userName: String?,
-        currentVersion: String? = nil
+        currentVersion: String? = nil,
+        colorScheme: ColorScheme? = nil
     ) -> UIImage? {
         let view = B50ExportView(
             b35: b35,
@@ -346,6 +356,8 @@ extension B50ExportView {
             userName: userName,
             currentVersion: currentVersion
         )
+        .environment(\.colorScheme, colorScheme ?? .light)
+        .preferredColorScheme(colorScheme)
         
         let renderer = ImageRenderer(content: view)
         renderer.scale = 2.0 // Retina quality

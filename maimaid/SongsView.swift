@@ -25,8 +25,8 @@ struct SongsView: View {
     @State private var filterSettings = FilterSettings()
     @State private var showFilterSheet = false
     @State private var isFetching = false
-    @State private var sortOption: SortOption = .defaultOrder
-    @State private var sortAscending: Bool = true
+    @AppStorage("songs.sortOption") private var sortOption: SortOption = .defaultOrder
+    @AppStorage("songs.sortAscending") private var sortAscending: Bool = true
     @State private var isGridView: Bool = false
     @State private var displayedSongs: [Song] = []
     @State private var isSorting: Bool = false
@@ -151,14 +151,23 @@ struct SongsView: View {
                 
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Picker("sort.title", selection: $sortOption) {
+                        Picker("sort.title", selection: $sortOption.animation(.easeInOut)) {
                             ForEach(SortOption.allCases) { option in
                                 Text(LocalizedStringKey(option.rawValue)).tag(option)
                             }
                         }
                         
-                        Toggle(isOn: $sortAscending) {
-                            Label(sortAscending ? "sort.ascending" : "sort.descending", systemImage: sortAscending ? "arrow.up" : "arrow.down")
+                        Divider()
+                        
+                        Button {
+                            withAnimation(.easeInOut) {
+                                sortAscending.toggle()
+                            }
+                        } label: {
+                            Label(
+                                sortAscending ? "sort.ascending" : "sort.descending",
+                                systemImage: sortAscending ? "arrow.up" : "arrow.down"
+                            )
                         }
                     } label: {
                         Image(systemName: "arrow.up.arrow.down")

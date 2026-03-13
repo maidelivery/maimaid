@@ -3,6 +3,7 @@ import SwiftData
 
 struct BestTableView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
     @Query private var songs: [Song]
     @Query private var configs: [SyncConfig]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
@@ -245,7 +246,8 @@ struct BestTableView: View {
                     b15: b50Result.b15,
                     totalRating: b50Result.total,
                     userName: activeProfile?.name ?? configs.first?.userName,
-                    currentVersion: effectiveVersion
+                    currentVersion: effectiveVersion,
+                    colorScheme: colorScheme
                 )
             }
             

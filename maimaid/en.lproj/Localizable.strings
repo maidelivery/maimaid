@@ -24,6 +24,8 @@
 "home.plateProgress.subtitle" = "Version plate progress";
 "home.usefulLinks.title" = "Useful Links";
 "home.usefulLinks.subtitle" = "Wiki, Parsers, etc.";
+"home.scoreQuery.title" = "Score Query";
+"home.scoreQuery.subtitle" = "Browse all scores";
 
 // MARK: - Profile Edit
 "profile.edit.title" = "Profile";
@@ -420,3 +422,22 @@
 "settings.userManagement.header" = "User Management";
 "settings.userManagement.footer" = "Manage multiple user profiles for different servers.";
 "settings.userManagement.title" = "User Profiles";
+
+// MARK: - Score Query
+"scoreQuery.title" = "Score Query";
+"scoreQuery.stats.played" = "Total Scores";
+"scoreQuery.stats.fc" = "FC/FC+";
+"scoreQuery.stats.ap" = "AP/AP+";
+"scoreQuery.stats.fs" = "FS/FS+";
+"scoreQuery.stats.fsd" = "FDX/FDX+";
+"scoreQuery.sort.rating" = "Rating";
+"scoreQuery.sort.achievement" = "Achievement";
+"scoreQuery.sort.level" = "Level";
+"scoreQuery.display.grid" = "Grid";
+"scoreQuery.display.list" = "List";
+"scoreQuery.badge.rank" = "Rank";
+"scoreQuery.badge.fc" = "FC";
+"scoreQuery.badge.fs" = "FS";
+"scoreQuery.columns" = "Col";
+"scoreQuery.empty" = "No scores yet";
+"scoreQuery.results" = "results";

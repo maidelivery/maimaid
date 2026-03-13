@@ -240,6 +240,16 @@ struct HomeView: View {
                 )
             }
             
+            NavigationLink(destination: ScoreQueryView()) {
+                functionCard(
+                    icon: "list.bullet.rectangle.portrait.fill",
+                    title: "home.scoreQuery.title",
+                    subtitle: "home.scoreQuery.subtitle",
+                    gradient: [Color.indigo, Color.purple]
+                )
+            }
+            .buttonStyle(.plain)
+            
             NavigationLink(destination: PlateProgressView()) {
                 functionCard(
                     icon: "chart.bar.xaxis",
