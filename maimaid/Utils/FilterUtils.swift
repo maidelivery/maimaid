@@ -25,7 +25,8 @@ class FilterUtils {
                                    song.artist.localizedCaseInsensitiveContains(searchText) ||
                                    song.sheets.contains(where: { $0.noteDesigner?.localizedCaseInsensitiveContains(searchText) ?? false }) ||
                                    (song.searchKeywords?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                                   song.aliases.contains(where: { $0.localizedCaseInsensitiveContains(searchText) })
+                                   song.aliases.contains(where: { $0.localizedCaseInsensitiveContains(searchText) }) ||
+                                   String(song.songId) == searchText
                 if !matchesSearch { return false }
             }
             
@@ -86,6 +87,7 @@ class FilterUtils {
     static func filterSongsOptimized(_ songs: [Song], settings: FilterSettings, searchText: String = "") -> [Song] {
         // Pre-process search text
         let searchLower = searchText.lowercased()
+        let searchNormalized = searchLower.replacingOccurrences(of: " ", with: "")
         let hasSearch = !searchText.isEmpty
         let hasCategories = !settings.selectedCategories.isEmpty
         let hasVersions = !settings.selectedVersions.isEmpty
@@ -95,13 +97,14 @@ class FilterUtils {
         return songs.filter { song in
             // 1. Search Text (most selective filter first)
             if hasSearch {
-                let titleMatch = song.title.localizedCaseInsensitiveContains(searchText)
-                let artistMatch = song.artist.localizedCaseInsensitiveContains(searchText)
-                let keywordMatch = song.searchKeywords?.localizedCaseInsensitiveContains(searchText) ?? false
-                let aliasMatch = song.aliases.contains { $0.localizedCaseInsensitiveContains(searchText) }
-                let designerMatch = song.sheets.contains { $0.noteDesigner?.lowercased().contains(searchLower) ?? false }
+                let titleMatch = song.title.localizedCaseInsensitiveContains(searchText) || song.title.replacingOccurrences(of: " ", with: "").localizedCaseInsensitiveContains(searchNormalized)
+                let artistMatch = song.artist.localizedCaseInsensitiveContains(searchText) || song.artist.replacingOccurrences(of: " ", with: "").localizedCaseInsensitiveContains(searchNormalized)
+                let keywordMatch = (song.searchKeywords?.localizedCaseInsensitiveContains(searchText) ?? false) || (song.searchKeywords?.replacingOccurrences(of: " ", with: "").localizedCaseInsensitiveContains(searchNormalized) ?? false)
+                let aliasMatch = song.aliases.contains { $0.localizedCaseInsensitiveContains(searchText) || $0.replacingOccurrences(of: " ", with: "").localizedCaseInsensitiveContains(searchNormalized) }
+                let designerMatch = song.sheets.contains { ($0.noteDesigner?.lowercased().contains(searchLower) ?? false) || ($0.noteDesigner?.replacingOccurrences(of: " ", with: "").lowercased().contains(searchNormalized) ?? false) }
+                let idMatch = String(song.songId) == searchText
                 
-                if !titleMatch && !artistMatch && !keywordMatch && !aliasMatch && !designerMatch {
+                if !titleMatch && !artistMatch && !keywordMatch && !aliasMatch && !designerMatch && !idMatch {
                     return false
                 }
             }

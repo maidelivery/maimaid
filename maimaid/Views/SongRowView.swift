@@ -138,7 +138,7 @@ struct ScoreProgressDotOptimized: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(color.opacity(0.3), lineWidth: 1)
+                .stroke(color.opacity(0.3), lineWidth: 1.2)
                 .frame(width: 8, height: 8)
             
             if let score = scoreCache[sheetId], score.rate > 0 {
