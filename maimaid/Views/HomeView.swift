@@ -36,7 +36,7 @@ struct HomeView: View {
     }
     
     private var displayRating: Int {
-        max(standardB50Total, activeProfile?.playerRating ?? config?.playerRating ?? 0)
+        max(standardB50Total, activeProfile?.playerRating ?? 0)
     }
     
     /// Generates a lightweight fingerprint from scores to detect changes.
@@ -288,13 +288,13 @@ struct HomeView: View {
     
     private var avatarImage: some View {
         Group {
-            if let data = activeProfile?.avatarData ?? config?.avatarData, let uiImage = UIImage(data: data) {
+            if let data = activeProfile?.avatarData, let uiImage = UIImage(data: data) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 60, height: 60)
                     .clipShape(Circle())
-            } else if let urlString = config?.avatarUrl, let url = URL(string: urlString) {
+            } else if let urlString = activeProfile?.avatarUrl, let url = URL(string: urlString) {
                 AsyncImage(url: url) { image in
                     image.resizable()
                         .aspectRatio(contentMode: .fill)
@@ -334,7 +334,7 @@ struct HomeView: View {
                 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
-                        Text(activeProfile?.name ?? config?.userName ?? String(localized: "home.profile.unbound"))
+                        Text(activeProfile?.name ?? String(localized: "home.profile.unbound"))
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(.primary)
                         
@@ -349,7 +349,7 @@ struct HomeView: View {
                         }
                     }
                     
-                    if let plate = activeProfile?.plate ?? config?.plate {
+                    if let plate = activeProfile?.plate, !plate.isEmpty {
                         Text(plate)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
@@ -419,9 +419,11 @@ struct HomeView: View {
 struct ProfileEditSheet: View {
     @Environment(\.dismiss) var dismiss
     @Bindable var config: SyncConfig
+    @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     
     @State private var userName: String = ""
     @State private var plate: String = ""
+    @State private var avatarUrl: String?
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImageData: Data?
     
@@ -435,13 +437,13 @@ struct ProfileEditSheet: View {
                         VStack(spacing: 12) {
                             PhotosPicker(selection: $selectedItem, matching: .images) {
                                 ZStack {
-                                    if let data = selectedImageData ?? config.avatarData, let uiImage = UIImage(data: data) {
+                                    if let data = selectedImageData, let uiImage = UIImage(data: data) {
                                         Image(uiImage: uiImage)
                                             .resizable()
                                             .aspectRatio(contentMode: .fill)
                                             .frame(width: 100, height: 100)
                                             .clipShape(Circle())
-                                    } else if let urlString = config.avatarUrl {
+                                    } else if let urlString = avatarUrl {
                                         // Try to load local version if it's a preset URL
                                         let localImage: UIImage? = {
                                             if let idString = urlString.components(separatedBy: "/").last?.replacingOccurrences(of: ".png", with: ""),
@@ -502,11 +504,10 @@ struct ProfileEditSheet: View {
                                 .shadow(color: .black.opacity(0.05), radius: 5, y: 2)
                             }
                             
-                            if selectedImageData != nil || config.avatarData != nil {
+                            if selectedImageData != nil || avatarUrl != nil {
                                 Button("profile.edit.clearAvatar", role: .destructive) {
                                     selectedImageData = nil
-                                    config.avatarData = nil
-                                    config.avatarUrl = nil
+                                    avatarUrl = nil
                                 }
                                 .font(.subheadline)
                             }
@@ -530,12 +531,12 @@ struct ProfileEditSheet: View {
                 
                 Section("profile.edit.presetIcon") {
                     NavigationLink {
-                        IconPickerView(config: config, selectedImageData: $selectedImageData)
+                        MaimaiIconPicker(avatarUrl: $avatarUrl, selectedImageData: $selectedImageData)
                     } label: {
                         HStack {
                             Text("profile.edit.presetIcon.select")
                             Spacer()
-                            if let avatarUrl = config.avatarUrl, avatarUrl.contains("lxns.net") {
+                            if let avatarUrl = avatarUrl, avatarUrl.contains("lxns.net") {
                                 if let idString = avatarUrl.components(separatedBy: "/").last?.replacingOccurrences(of: ".png", with: ""),
                                    let id = Int(idString),
                                    let localImage = ImageDownloader.shared.loadImage(iconId: id) {
@@ -575,9 +576,17 @@ struct ProfileEditSheet: View {
                 }
             }
             .onAppear {
-                userName = config.userName ?? ""
-                plate = config.plate ?? ""
-                selectedImageData = config.avatarData
+                if let p = activeProfiles.first {
+                    userName = p.name
+                    plate = p.plate ?? ""
+                    selectedImageData = p.avatarData
+                    avatarUrl = p.avatarUrl
+                } else {
+                    userName = config.userName ?? ""
+                    plate = config.plate ?? ""
+                    selectedImageData = config.avatarData
+                    avatarUrl = config.avatarUrl
+                }
             }
             .onChange(of: selectedItem) { _, newItem in
                 Task {
@@ -590,92 +599,12 @@ struct ProfileEditSheet: View {
     }
     
     private func saveChanges() {
-        config.userName = userName.trimmingCharacters(in: .whitespaces)
-        config.plate = plate.trimmingCharacters(in: .whitespaces)
-        if let data = selectedImageData {
-            config.avatarData = data
-            config.avatarUrl = nil // Clear preset if custom image is set
-            config.isCustomProfile = true
-        } else if config.avatarUrl != nil {
-            // Keep the preset URL set by IconPickerView
-            config.avatarData = nil
-            config.isCustomProfile = true
-        } else {
-            // Truly cleared
-            config.avatarData = nil
-            config.avatarUrl = nil
-            config.isCustomProfile = false
+        // Update active profile
+        if let profile = activeProfiles.first {
+            profile.name = userName.trimmingCharacters(in: .whitespaces)
+            profile.plate = plate.trimmingCharacters(in: .whitespaces)
+            profile.avatarData = selectedImageData
+            profile.avatarUrl = avatarUrl
         }
-    }
-}
-
-@MainActor
-struct IconPickerView: View {
-    @Bindable var config: SyncConfig
-    @Binding var selectedImageData: Data?
-    @Query(sort: \MaimaiIcon.id) private var icons: [MaimaiIcon]
-    @Environment(\.dismiss) var dismiss
-    
-    @State private var searchText = ""
-    
-    var filteredIcons: [MaimaiIcon] {
-        if searchText.isEmpty {
-            return icons
-        }
-        return icons.filter { $0.name.localizedCaseInsensitiveContains(searchText) || $0.genre.localizedCaseInsensitiveContains(searchText) }
-    }
-    
-    let columns = [
-        GridItem(.adaptive(minimum: 80, maximum: 100), spacing: 16)
-    ]
-    
-    var body: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 20) {
-                ForEach(filteredIcons) { icon in
-                    Button {
-                        selectIcon(icon)
-                    } label: {
-                        VStack(spacing: 8) {
-                            if let localImage = ImageDownloader.shared.loadImage(iconId: icon.id) {
-                                Image(uiImage: localImage)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 70, height: 70)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary.opacity(0.1), lineWidth: 1))
-                            } else {
-                                AsyncImage(url: URL(string: icon.iconUrl)) { image in
-                                    image.resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                } placeholder: {
-                                    ProgressView()
-                                }
-                                .frame(width: 70, height: 70)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary.opacity(0.1), lineWidth: 1))
-                            }
-                            
-                            Text(icon.name)
-                                .font(.system(size: 10))
-                                .lineLimit(1)
-                                .foregroundColor(.primary)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(16)
-        }
-        .navigationTitle("profile.picker.title")
-        .searchable(text: $searchText, prompt: "profile.picker.search")
-    }
-    
-    private func selectIcon(_ icon: MaimaiIcon) {
-        config.avatarUrl = icon.iconUrl
-        config.avatarData = nil // Clear custom data in config
-        selectedImageData = nil // Clear custom data in parent sheet state
-        config.isCustomProfile = true
-        dismiss()
     }
 }

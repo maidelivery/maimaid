@@ -7,6 +7,7 @@ final class UserProfile {
     var name: String
     var server: String          // "jp", "intl", "cn", "usa"
     var avatarData: Data?
+    var avatarUrl: String?
     var isActive: Bool
     var createdAt: Date
     
@@ -35,6 +36,7 @@ final class UserProfile {
         name: String = "",
         server: String = "jp",
         avatarData: Data? = nil,
+        avatarUrl: String? = nil,
         isActive: Bool = false,
         createdAt: Date = Date(),
         dfUsername: String = "",
@@ -53,6 +55,7 @@ final class UserProfile {
         self.name = name
         self.server = server
         self.avatarData = avatarData
+        self.avatarUrl = avatarUrl
         self.isActive = isActive
         self.createdAt = createdAt
         self.dfUsername = dfUsername

@@ -440,3 +440,30 @@
 "scoreQuery.columns" = "列";
 "scoreQuery.empty" = "暂无成绩";
 "scoreQuery.results" = "条结果";
+
+// MARK: - Cloud Sync
+"settings.cloud.title" = "云端账户";
+"settings.cloud.status.loggedIn" = "已登录";
+"settings.cloud.section.sync" = "数据同步";
+"settings.cloud.backup" = "备份到云端";
+"settings.cloud.restore" = "从云端恢复";
+"settings.cloud.syncing" = "正在同步...";
+"settings.cloud.logout" = "退出登录";
+"settings.cloud.login.title" = "登录云端";
+"settings.cloud.login.subtitle" = "通过电子邮件登录以使用云端同步服务";
+"settings.cloud.login.button" = "登录";
+"settings.cloud.signup.title" = "创建云端账户";
+"settings.cloud.signup.subtitle" = "通过电子邮件注册以使用云端同步服务";
+"settings.cloud.signup.button" = "注册并登录";
+"settings.cloud.mode.login" = "已有账号？去登录";
+"settings.cloud.mode.signup" = "没有账号？去注册";
+"settings.cloud.email" = "电子邮件";
+"settings.cloud.password" = "密码";
+"settings.cloud.forgotPassword" = "忘记密码？";
+"settings.cloud.privacy.hint" = "您的账户信息用于在您登录时启用云端同步，数据将加密存储在 Supabase 云端。";
+"settings.cloud.message.loginSuccess" = "登录成功！";
+"settings.cloud.message.signupSuccess" = "注册成功！正在登录...";
+"settings.cloud.message.backupSuccess" = "备份成功！";
+"settings.cloud.message.backupFailed" = "备份失败";
+"settings.cloud.message.restoreSuccess" = "恢复成功！";
+"settings.cloud.message.restoreFailed" = "恢复失败";

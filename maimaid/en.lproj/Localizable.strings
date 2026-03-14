@@ -441,3 +441,30 @@
 "scoreQuery.columns" = "Col";
 "scoreQuery.empty" = "No scores yet";
 "scoreQuery.results" = "results";
+
+// MARK: - Cloud Sync
+"settings.cloud.title" = "Cloud Account";
+"settings.cloud.status.loggedIn" = "Logged In";
+"settings.cloud.section.sync" = "Data Sync";
+"settings.cloud.backup" = "Backup to Cloud";
+"settings.cloud.restore" = "Restore from Cloud";
+"settings.cloud.syncing" = "Syncing...";
+"settings.cloud.logout" = "Logout";
+"settings.cloud.login.title" = "Cloud Login";
+"settings.cloud.login.subtitle" = "Sign in with your email to enable cloud sync services";
+"settings.cloud.login.button" = "Login";
+"settings.cloud.signup.title" = "Create Cloud Account";
+"settings.cloud.signup.subtitle" = "Sign up with your email to enable cloud sync services";
+"settings.cloud.signup.button" = "Sign Up & Login";
+"settings.cloud.mode.login" = "Have an account? Login";
+"settings.cloud.mode.signup" = "New here? Sign up";
+"settings.cloud.email" = "Email";
+"settings.cloud.password" = "Password";
+"settings.cloud.forgotPassword" = "Forgot Password?";
+"settings.cloud.privacy.hint" = "Your account information is used to enable cloud sync when you sign in. Data is stored securely on Supabase.";
+"settings.cloud.message.loginSuccess" = "Login successful!";
+"settings.cloud.message.signupSuccess" = "Signup successful! Signing in...";
+"settings.cloud.message.backupSuccess" = "Backup successful!";
+"settings.cloud.message.backupFailed" = "Backup failed";
+"settings.cloud.message.restoreSuccess" = "Restore successful!";
+"settings.cloud.message.restoreFailed" = "Restore failed";
