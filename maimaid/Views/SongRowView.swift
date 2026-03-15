@@ -14,7 +14,7 @@ struct SongRowView: View {
     }
     
     private var accentColor: Color {
-        guard let sheet = highestSheet else { return .blue }
+        guard let sheet = highestSheet else { return .pink }
         return ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
     }
     

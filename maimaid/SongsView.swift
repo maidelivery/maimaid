@@ -32,9 +32,21 @@ struct SongsView: View {
     @State private var isGridView: Bool = false
     @State private var displayedSongs: [Song] = []
     @State private var isSorting: Bool = false
+    @State private var searchTask: Task<Void, Never>?
     
     // Performance: Cache score map to avoid repeated lookups
     @State private var scoreCache: [String: Score] = [:]
+    
+    // Grid zoom state
+    @AppStorage("songs.gridColumns") private var committedColumns: Int = 4
+    @State private var isZooming: Bool = false
+    @State private var liveColumnCount: CGFloat = 4.0
+    @State private var pinchStartColumns: CGFloat = 4.0
+    @State private var zoomAnchorSongID: String? = nil
+    @State private var viewportHeight: CGFloat = 0
+    
+    private let minColumns: CGFloat = 3
+    private let maxColumns: CGFloat = 9
     
     private func refreshScoreCache() {
         scoreCache = ScoreService.shared.scoreMap(context: modelContext)
@@ -48,60 +60,156 @@ struct SongsView: View {
         Array(Set(songs.compactMap { $0.version })).sorted { ThemeUtils.versionSortOrder($0) < ThemeUtils.versionSortOrder($1) }
     }
     
-    private func updateDisplayedSongs() {
-        isSorting = true
+    private func updateDisplayedSongsSync() {
+        searchTask?.cancel()
         
-        // Capture current values synchronously on MainActor
         let currentSongs = songs
         let currentFilter = filterSettings
         let currentSearch = searchText
         let currentSort = sortOption
         let currentAscending = sortAscending
         
-        // Refresh score cache if needed (Now handled by refreshScoreCache directly via onChanges)
+        let filtered = FilterUtils.filterSongsOptimized(currentSongs, settings: currentFilter, searchText: currentSearch)
         
-        // Perform filtering and sorting on MainActor
-        Task { @MainActor in
-            // Small delay to let UI animations finish
-//            try? await Task.sleep(nanoseconds: 50_000_000)w
-            
-            // Use optimized single-pass filter
-            let filtered = FilterUtils.filterSongsOptimized(currentSongs, settings: currentFilter, searchText: currentSearch)
-            
-            // Sort songs
-            let result = filtered.sorted { a, b in
-                switch currentSort {
-                case .defaultOrder:
-                    return currentAscending ? (a.sortOrder < b.sortOrder) : (a.sortOrder > b.sortOrder)
-                case .versionAndDate:
-                    let vA = a.version ?? ""
-                    let vB = b.version ?? ""
-                    let orderA = ThemeUtils.versionSortOrder(vA)
-                    let orderB = ThemeUtils.versionSortOrder(vB)
-                    
-                    if orderA != orderB {
-                        return currentAscending ? (orderA < orderB) : (orderA > orderB)
-                    }
-                    
-                    let dA = a.releaseDate ?? "0000-00-00"
-                    let dB = b.releaseDate ?? "0000-00-00"
-                    if dA != dB {
-                        return currentAscending ? (dA < dB) : (dA > dB)
-                    }
+        let result = filtered.sorted { a, b in
+            switch currentSort {
+            case .defaultOrder:
+                return currentAscending ? (a.sortOrder < b.sortOrder) : (a.sortOrder > b.sortOrder)
+            case .versionAndDate:
+                let vA = a.version ?? ""
+                let vB = b.version ?? ""
+                let orderA = ThemeUtils.versionSortOrder(vA)
+                let orderB = ThemeUtils.versionSortOrder(vB)
+                
+                if orderA != orderB {
+                    return currentAscending ? (orderA < orderB) : (orderA > orderB)
+                }
+                
+                let dA = a.releaseDate ?? "0000-00-00"
+                let dB = b.releaseDate ?? "0000-00-00"
+                if dA != dB {
+                    return currentAscending ? (dA < dB) : (dA > dB)
+                }
+                return a.sortOrder < b.sortOrder
+            case .difficulty:
+                let maxDiffA = a.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
+                let maxDiffB = b.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
+                if maxDiffA == maxDiffB {
                     return a.sortOrder < b.sortOrder
-                case .difficulty:
-                    let maxDiffA = a.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
-                    let maxDiffB = b.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
-                    if maxDiffA == maxDiffB {
-                        return a.sortOrder < b.sortOrder
+                }
+                return currentAscending ? (maxDiffA < maxDiffB) : (maxDiffA > maxDiffB)
+            }
+        }
+        
+        self.displayedSongs = result
+        self.isSorting = false
+    }
+    
+    private func updateDisplayedSongsDebounced() {
+        searchTask?.cancel()
+        isSorting = true
+        
+        searchTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            if Task.isCancelled { return }
+            updateDisplayedSongsSync()
+        }
+    }
+    
+    /// Given the pinch magnification, compute the effective continuous column count.
+    private func continuousColumns(for magnification: CGFloat) -> CGFloat {
+        let raw = pinchStartColumns / magnification
+        return min(maxColumns, max(minColumns, raw))
+    }
+    
+    /// Compute cell size and spacing from a column count and available width.
+    private func gridMetrics(intColumns: Int, in width: CGFloat) -> (cellSize: CGFloat, spacing: CGFloat) {
+        let intCols = max(1, intColumns)
+        let spacing: CGFloat
+        switch intCols {
+        case ...3: spacing = 5
+        case 4: spacing = 4
+        case 5: spacing = 3
+        case 6: spacing = 2
+        default: spacing = 1
+        }
+        let totalSpacing = spacing * CGFloat(intCols - 1)
+        let horizontalPadding: CGFloat = spacing + 2
+        let cellSize = (width - totalSpacing - horizontalPadding * 2) / CGFloat(intCols)
+        return (max(1, cellSize), spacing)
+    }
+    
+    /// The corner radius for a given column count
+    private func cornerRadius(for columns: Int) -> CGFloat {
+        switch columns {
+        case ...3: return 10
+        case 4...5: return 6
+        default: return 3
+        }
+    }
+    
+    /// Whether to show score dots at this column count
+    private func showDots(for columns: Int) -> Bool {
+        columns <= 5
+    }
+    
+    /// Estimate which song index is near the center of the pinch gesture.
+    private func estimateCenterSongIndex(pinchY: CGFloat, gridWidth: CGFloat, columns: Int) -> Int {
+        let metrics = gridMetrics(intColumns: columns, in: gridWidth)
+        let cellSize = metrics.cellSize
+        let spacing = metrics.spacing
+        let rowHeight = cellSize + spacing
+        guard rowHeight > 0 else { return 0 }
+        
+        let estimatedRow = Int(max(0, pinchY - 12) / rowHeight)
+        let centerIndexInRow = columns / 2
+        let index = estimatedRow * columns + centerIndexInRow
+        return min(max(0, index), max(0, displayedSongs.count - 1))
+    }
+    
+    private func makePinchGesture(width: CGFloat) -> some Gesture {
+        MagnifyGesture(minimumScaleDelta: 0.02)
+            .onChanged { value in
+                if !isZooming {
+                    isZooming = true
+                    pinchStartColumns = CGFloat(committedColumns)
+                    
+                    let centerIdx = estimateCenterSongIndex(
+                        pinchY: value.startLocation.y,
+                        gridWidth: width,
+                        columns: committedColumns
+                    )
+                    if centerIdx >= 0 && centerIdx < displayedSongs.count {
+                        zoomAnchorSongID = displayedSongs[centerIdx].songIdentifier
                     }
-                    return currentAscending ? (maxDiffA < maxDiffB) : (maxDiffA > maxDiffB)
+                }
+                liveColumnCount = continuousColumns(for: value.magnification)
+            }
+            .onEnded { value in
+                let finalCols = continuousColumns(for: value.magnification)
+                let targetCols = max(Int(minColumns), min(Int(maxColumns), Int(finalCols.rounded())))
+                let changed = targetCols != committedColumns
+                let anchorID = zoomAnchorSongID
+                
+                isZooming = false
+                
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                    committedColumns = targetCols
+                    liveColumnCount = CGFloat(targetCols)
+                }
+                
+                if changed {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                }
+                
+                if let anchorID = anchorID {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            self.zoomAnchorSongID = anchorID
+                        }
+                    }
                 }
             }
-            
-            self.displayedSongs = result
-            self.isSorting = false
-        }
     }
     
     var body: some View {
@@ -114,11 +222,32 @@ struct SongsView: View {
                         Text("songs.unavailable.description")
                     }
                 } else {
-                    ScrollView {
-                        if isGridView {
-                            gridContent
-                        } else {
-                            listContent
+                    GeometryReader { geo in
+                        let width = geo.size.width
+                        
+                        ScrollViewReader { scrollProxy in
+                            ScrollView {
+                                if isGridView {
+                                    gridBody(in: width)
+                                } else {
+                                    listContent
+                                }
+                            }
+                            .scrollDisabled(isZooming)
+                            .if(isGridView) { view in
+                                view.simultaneousGesture(makePinchGesture(width: width))
+                            }
+                            .onChange(of: zoomAnchorSongID) { _, newID in
+                                if let id = newID, !isZooming {
+                                    scrollProxy.scrollTo(id, anchor: .center)
+                                }
+                            }
+                        }
+                        .onAppear {
+                            viewportHeight = geo.size.height
+                        }
+                        .onChange(of: geo.size.height) { _, h in
+                            viewportHeight = h
                         }
                     }
                     .overlay {
@@ -194,16 +323,17 @@ struct SongsView: View {
                 refreshScoreCache()
             }
             if displayedSongs.isEmpty && !songs.isEmpty {
-                updateDisplayedSongs()
+                updateDisplayedSongsSync()
             }
+            liveColumnCount = CGFloat(committedColumns)
         }
         .onChange(of: observedScores) { _, _ in refreshScoreCache() }
         .onChange(of: activeProfiles) { _, _ in refreshScoreCache() }
-        .onChange(of: songs) { _, _ in updateDisplayedSongs() }
-        .onChange(of: searchText) { _, _ in updateDisplayedSongs() }
-        .onChange(of: filterSettings) { _, _ in updateDisplayedSongs() }
-        .onChange(of: sortOption) { _, _ in updateDisplayedSongs() }
-        .onChange(of: sortAscending) { _, _ in updateDisplayedSongs() }
+        .onChange(of: songs) { _, _ in updateDisplayedSongsSync() }
+        .onChange(of: searchText) { _, _ in updateDisplayedSongsDebounced() }
+        .onChange(of: filterSettings) { _, _ in updateDisplayedSongsSync() }
+        .onChange(of: sortOption) { _, _ in updateDisplayedSongsSync() }
+        .onChange(of: sortAscending) { _, _ in updateDisplayedSongsSync() }
     }
     
     // MARK: - List Layout
@@ -224,24 +354,67 @@ struct SongsView: View {
     
     // MARK: - Grid Layout
     
-    private let gridColumns = [
-        GridItem(.flexible(), spacing: 0),
-        GridItem(.flexible(), spacing: 0),
-        GridItem(.flexible(), spacing: 0)
-    ]
-    
-    private var gridContent: some View {
-        LazyVGrid(columns: gridColumns, spacing: 0) {
+    private func gridBody(in width: CGFloat) -> some View {
+        let cols = isZooming ? liveColumnCount : CGFloat(committedColumns)
+        let intCols = max(Int(minColumns), min(Int(maxColumns), Int(cols.rounded())))
+        let metrics = gridMetrics(intColumns: intCols, in: width)
+        let cellSize = metrics.cellSize
+        let spacing = metrics.spacing
+        let horizontalPadding = spacing + 2
+        let cr = cornerRadius(for: intCols)
+        let dots = showDots(for: intCols)
+        
+        return LazyVGrid(
+            columns: Array(repeating: GridItem(.fixed(cellSize), spacing: spacing), count: intCols),
+            spacing: spacing
+        ) {
             ForEach(displayedSongs) { song in
-                NavigationLink {
-                    SongDetailView(song: song)
-                } label: {
-                    SongGridCell(song: song, scoreCache: scoreCache)
-                }
-                .buttonStyle(.plain)
+                gridCellView(song: song, intCols: intCols, cornerRadius: cr, showDots: dots)
+                    .frame(width: cellSize, height: cellSize)
+                    .id(song.songIdentifier)
             }
         }
-        .padding(.horizontal, 1) // Offset for borders
+        .padding(.horizontal, horizontalPadding)
+        .padding(.vertical, 12)
+    }
+    
+    @ViewBuilder
+    private func gridCellView(song: Song, intCols: Int, cornerRadius: CGFloat, showDots: Bool) -> some View {
+        if !isZooming {
+            NavigationLink {
+                SongDetailView(song: song)
+            } label: {
+                SongGridCell(
+                    song: song,
+                    scoreCache: scoreCache,
+                    columnCount: intCols,
+                    cornerRadius: cornerRadius,
+                    showDots: showDots
+                )
+            }
+            .buttonStyle(.plain)
+        } else {
+            SongGridCell(
+                song: song,
+                scoreCache: scoreCache,
+                columnCount: intCols,
+                cornerRadius: cornerRadius,
+                showDots: showDots
+            )
+        }
+    }
+}
+
+// MARK: - Conditional modifier helper
+
+private extension View {
+    @ViewBuilder
+    func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
+        }
     }
 }
 
@@ -250,48 +423,110 @@ struct SongsView: View {
 private struct SongGridCell: View {
     let song: Song
     var scoreCache: [String: Score] = [:]
+    var columnCount: Int = 4
+    var cornerRadius: CGFloat = 6
+    var showDots: Bool = true
     @Environment(\.modelContext) private var modelContext
     
+    private var utageFontSize: CGFloat {
+        switch columnCount {
+        case ...3: return 14
+        case 4: return 8
+        case 5: return 7
+        default: return 6
+        }
+    }
+    
     var body: some View {
-        VStack(spacing: 8) {
-            // Jacket
-            SongJacketView(imageName: song.imageName, size: 80, cornerRadius: 4)
+        ZStack(alignment: .bottomTrailing) {
+            SongJacketImage(imageName: song.imageName, cornerRadius: cornerRadius)
             
-            VStack(spacing: 4) {
-                // Title
-                Text(song.title)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.primary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .frame(height: 28)
+            if showDots {
+                let isUtage = song.songId > 100000
                 
-                // Difficulty dots - use cached scores
                 HStack(spacing: 2) {
-                    let prioritizedSheets: [Sheet] = {
-                        let dxSheets = song.sheets.filter { $0.type.lowercased() == "dx" }
-                        if !dxSheets.isEmpty {
-                            return dxSheets.sorted(by: { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) })
-                        }
-                        return song.sheets
-                            .filter { $0.type.lowercased() == "std" }
-                            .sorted(by: { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) })
-                    }()
-                    
-                    ForEach(prioritizedSheets) { sheet in
-                        if scoreCache.isEmpty {
-                            // Fallback to direct lookup if cache not provided
-                            SongRowView.ScoreProgressDot(sheet: sheet, context: modelContext)
-                        } else {
-                            ScoreProgressDotOptimized(sheet: sheet, scoreCache: scoreCache)
+                    if isUtage {
+                        Text("宴")
+                            .font(.system(size: utageFontSize, weight: .black))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 2)
+                    } else {
+                        let prioritizedSheets: [Sheet] = {
+                            let dxSheets = song.sheets.filter { $0.type.lowercased() == "dx" }
+                            if !dxSheets.isEmpty {
+                                return dxSheets.sorted(by: { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) })
+                            }
+                            return song.sheets
+                                .filter { $0.type.lowercased() == "std" }
+                                .sorted(by: { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) })
+                        }()
+                        
+                        ForEach(prioritizedSheets) { sheet in
+                            if scoreCache.isEmpty {
+                                SongRowView.ScoreProgressDot(sheet: sheet, context: modelContext)
+                            } else {
+                                ScoreProgressDotOptimized(sheet: sheet, scoreCache: scoreCache)
+                            }
                         }
                     }
                 }
+                .padding(.horizontal, columnCount <= 3 ? 6 : 4)
+                .padding(.vertical, columnCount <= 3 ? 3 : 2)
+                .background(song.songId > 100000 ? Color.pink.opacity(0.5) : Color.clear)
+                .background(.ultraThickMaterial)
+                .environment(\.colorScheme, .light)
+                .clipShape(Capsule())
+                .padding(columnCount <= 3 ? 6 : 4)
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .padding(.horizontal, 4)
-        .border(Color.primary.opacity(0.1), width: 0.5)
+    }
+}
+
+/// Lightweight image view that fills its parent frame — no GeometryReader needed.
+private struct SongJacketImage: View {
+    let imageName: String
+    var cornerRadius: CGFloat = 6
+    
+    var body: some View {
+        Group {
+            if let uiImage = loadLocalImage() {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else if let url = URL(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/\(imageName)") {
+                AsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    ZStack {
+                        Color.primary.opacity(0.05)
+                        ProgressView()
+                            .scaleEffect(0.5)
+                    }
+                }
+            } else {
+                ZStack {
+                    Color.primary.opacity(0.05)
+                    Image(systemName: "music.note")
+                        .foregroundColor(.secondary.opacity(0.3))
+                }
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+        )
+    }
+    
+    private func loadLocalImage() -> UIImage? {
+        if let downloaded = ImageDownloader.shared.loadImage(imageName: imageName) {
+            return downloaded
+        }
+        if let assetImage = UIImage(named: imageName) {
+            return assetImage
+        }
+        return nil
     }
 }
