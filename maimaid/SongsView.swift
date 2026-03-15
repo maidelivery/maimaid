@@ -44,6 +44,11 @@ struct SongsView: View {
     @State private var pinchStartColumns: CGFloat = 4.0
     @State private var zoomAnchorSongID: String? = nil
     @State private var viewportHeight: CGFloat = 0
+    /// Brief cooldown after pinch ends to prevent accidental NavigationLink activation
+    @State private var navigationDisabled: Bool = false
+    
+    /// Namespace for matched geometry zoom transition (iOS 18+)
+    @Namespace private var songTransitionNamespace
     
     private let minColumns: CGFloat = 3
     private let maxColumns: CGFloat = 9
@@ -172,6 +177,7 @@ struct SongsView: View {
             .onChanged { value in
                 if !isZooming {
                     isZooming = true
+                    navigationDisabled = true
                     pinchStartColumns = CGFloat(committedColumns)
                     
                     let centerIdx = estimateCenterSongIndex(
@@ -208,6 +214,10 @@ struct SongsView: View {
                             self.zoomAnchorSongID = anchorID
                         }
                     }
+                }
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    navigationDisabled = false
                 }
             }
     }
@@ -343,10 +353,12 @@ struct SongsView: View {
             ForEach(displayedSongs) { song in
                 NavigationLink {
                     SongDetailView(song: song)
+                        .applyZoomTransition(id: song.songIdentifier, ns: songTransitionNamespace)
                 } label: {
                     SongRowView(song: song, scoreCache: scoreCache)
                 }
                 .buttonStyle(.plain)
+                .applyMatchedTransitionSource(id: song.songIdentifier, ns: songTransitionNamespace)
             }
         }
         .padding(.vertical, 12)
@@ -369,7 +381,7 @@ struct SongsView: View {
             spacing: spacing
         ) {
             ForEach(displayedSongs) { song in
-                gridCellView(song: song, intCols: intCols, cornerRadius: cr, showDots: dots)
+                gridCellView(song: song, intCols: intCols, cellSize: cellSize, cornerRadius: cr, showDots: dots)
                     .frame(width: cellSize, height: cellSize)
                     .id(song.songIdentifier)
             }
@@ -379,29 +391,23 @@ struct SongsView: View {
     }
     
     @ViewBuilder
-    private func gridCellView(song: Song, intCols: Int, cornerRadius: CGFloat, showDots: Bool) -> some View {
-        if !isZooming {
-            NavigationLink {
-                SongDetailView(song: song)
-            } label: {
-                SongGridCell(
-                    song: song,
-                    scoreCache: scoreCache,
-                    columnCount: intCols,
-                    cornerRadius: cornerRadius,
-                    showDots: showDots
-                )
-            }
-            .buttonStyle(.plain)
-        } else {
+    private func gridCellView(song: Song, intCols: Int, cellSize: CGFloat, cornerRadius: CGFloat, showDots: Bool) -> some View {
+        NavigationLink {
+            SongDetailView(song: song)
+                .applyZoomTransition(id: song.songIdentifier, ns: songTransitionNamespace)
+        } label: {
             SongGridCell(
                 song: song,
                 scoreCache: scoreCache,
                 columnCount: intCols,
+                cellSize: cellSize,
                 cornerRadius: cornerRadius,
                 showDots: showDots
             )
         }
+        .buttonStyle(.plain)
+        .disabled(navigationDisabled || isZooming)
+        .applyMatchedTransitionSource(id: song.songIdentifier, ns: songTransitionNamespace)
     }
 }
 
@@ -418,12 +424,35 @@ private extension View {
     }
 }
 
+// MARK: - iOS 18 Zoom Transition Helpers
+
+extension View {
+    @ViewBuilder
+    func applyMatchedTransitionSource(id: String, ns: Namespace.ID) -> some View {
+        if #available(iOS 18.0, *) {
+            self.matchedTransitionSource(id: id, in: ns)
+        } else {
+            self
+        }
+    }
+    
+    @ViewBuilder
+    func applyZoomTransition(id: String, ns: Namespace.ID) -> some View {
+        if #available(iOS 18.0, *) {
+            self.navigationTransition(.zoom(sourceID: id, in: ns))
+        } else {
+            self
+        }
+    }
+}
+
 // MARK: - Grid Cell
 
 private struct SongGridCell: View {
     let song: Song
     var scoreCache: [String: Score] = [:]
     var columnCount: Int = 4
+    var cellSize: CGFloat = 60
     var cornerRadius: CGFloat = 6
     var showDots: Bool = true
     @Environment(\.modelContext) private var modelContext
@@ -439,7 +468,12 @@ private struct SongGridCell: View {
     
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            SongJacketImage(imageName: song.imageName, cornerRadius: cornerRadius)
+            SongJacketView(
+                imageName: song.imageName,
+                size: cellSize,
+                cornerRadius: cornerRadius,
+                useThumbnail: true
+            )
             
             if showDots {
                 let isUtage = song.songId > 100000
@@ -479,54 +513,5 @@ private struct SongGridCell: View {
                 .padding(columnCount <= 3 ? 6 : 4)
             }
         }
-    }
-}
-
-/// Lightweight image view that fills its parent frame — no GeometryReader needed.
-private struct SongJacketImage: View {
-    let imageName: String
-    var cornerRadius: CGFloat = 6
-    
-    var body: some View {
-        Group {
-            if let uiImage = loadLocalImage() {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else if let url = URL(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/\(imageName)") {
-                AsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    ZStack {
-                        Color.primary.opacity(0.05)
-                        ProgressView()
-                            .scaleEffect(0.5)
-                    }
-                }
-            } else {
-                ZStack {
-                    Color.primary.opacity(0.05)
-                    Image(systemName: "music.note")
-                        .foregroundColor(.secondary.opacity(0.3))
-                }
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: cornerRadius)
-                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-        )
-    }
-    
-    private func loadLocalImage() -> UIImage? {
-        if let downloaded = ImageDownloader.shared.loadImage(imageName: imageName) {
-            return downloaded
-        }
-        if let assetImage = UIImage(named: imageName) {
-            return assetImage
-        }
-        return nil
     }
 }
