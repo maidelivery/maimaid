@@ -707,8 +707,9 @@ struct SheetCardView: View {
             }
             
             // Play History Table
-            if let records = sheet.playRecords, !records.isEmpty {
-                playHistoryTable(records: records)
+            let records = ScoreService.shared.playHistory(for: sheet, context: modelContext)
+            if !records.isEmpty {
+                playHistoryTable(records: records, diffColor: diffColor)
             }
             
             // Record button
@@ -870,7 +871,7 @@ struct SheetCardView: View {
     
     // MARK: - Play History Table
     
-    private func playHistoryTable(records: [PlayRecord]) -> some View {
+    private func playHistoryTable(records: [PlayRecord], diffColor: Color) -> some View {
         let sortedRecords = records.sorted { a, b in
             if historySortByDate {
                 return a.playDate > b.playDate
@@ -878,6 +879,8 @@ struct SheetCardView: View {
                 return a.rate > b.rate
             }
         }
+        
+        let bestRecordId = records.max(by: { $0.rate < $1.rate })?.id
         
         let itemsPerPage = 5
         let totalPages = max(1, Int(ceil(Double(sortedRecords.count) / Double(itemsPerPage))))
@@ -999,7 +1002,22 @@ struct SheetCardView: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 8)
-                        .background(index % 2 == 0 ? Color.primary.opacity(0.02) : Color.clear)
+                        .background(
+                            Group {
+                                if record.id == bestRecordId {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(diffColor.opacity(0.1))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .strokeBorder(diffColor, lineWidth: 1.5)
+                                        )
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 2)
+                                } else if index % 2 == 0 {
+                                    Color.primary.opacity(0.02)
+                                }
+                            }
+                        )
                     }
                     
                     if totalPages > 1 {
@@ -1048,12 +1066,35 @@ struct SheetCardView: View {
     }
     
     private func deleteRecord(_ record: PlayRecord) {
+        let profileId = record.userProfileId
+        let rate = record.rate
+        let date = record.playDate
+        
         // Remove from sheet's playRecords array
         if let index = sheet.playRecords?.firstIndex(where: { $0.id == record.id }) {
             sheet.playRecords?.remove(at: index)
         }
+        
         // Delete from model context
         modelContext.delete(record)
+        
+        // Handle Score fallback if we deleted the best record
+        let remainingRecords = sheet.playRecords?.filter { $0.userProfileId == profileId && $0.id != record.id } ?? []
+        if let score = ScoreService.shared.score(for: sheet, context: modelContext) {
+            if abs(score.rate - rate) < 0.0001 {
+                if let nextBest = remainingRecords.max(by: { $0.rate < $1.rate }) {
+                    score.rate = nextBest.rate
+                    score.rank = nextBest.rank
+                    score.dxScore = nextBest.dxScore
+                    score.fc = nextBest.fc
+                    score.fs = nextBest.fs
+                    score.achievementDate = nextBest.playDate
+                } else {
+                    ScoreService.shared.deleteScore(for: sheet, context: modelContext)
+                }
+            }
+        }
+        
         try? modelContext.save()
     }
     

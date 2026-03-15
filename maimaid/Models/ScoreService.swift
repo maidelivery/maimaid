@@ -169,6 +169,35 @@ final class ScoreService {
         guard let profileId = currentActiveProfileId(context: context) else {
             return sheet.playRecords?.filter { $0.userProfileId == nil } ?? []
         }
-        return sheet.playRecords?.filter { $0.userProfileId == profileId } ?? []
+        var records = sheet.playRecords?.filter { $0.userProfileId == profileId } ?? []
+        
+        // Auto-repair missing PlayRecord from imported Score
+        if let bestScore = score(for: sheet, context: context) {
+            let hasMatch = records.contains { abs($0.rate - bestScore.rate) < 0.0001 }
+            if !hasMatch && bestScore.rate > 0 {
+                let generatedRecord = PlayRecord(
+                    sheetId: bestScore.sheetId,
+                    rate: bestScore.rate,
+                    rank: bestScore.rank,
+                    dxScore: bestScore.dxScore,
+                    fc: bestScore.fc,
+                    fs: bestScore.fs,
+                    playDate: bestScore.achievementDate,
+                    userProfileId: bestScore.userProfileId
+                )
+                generatedRecord.sheet = sheet
+                context.insert(generatedRecord)
+                
+                if sheet.playRecords == nil {
+                    sheet.playRecords = []
+                }
+                sheet.playRecords?.append(generatedRecord)
+                records.append(generatedRecord)
+                
+                try? context.save()
+            }
+        }
+        
+        return records
     }
 }

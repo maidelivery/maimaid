@@ -19,6 +19,8 @@ enum SortOption: String, CaseIterable, Identifiable {
 struct SongsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Song.sortOrder, order: .forward) private var songs: [Song]
+    @Query private var observedScores: [Score]
+    @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     
     var searchText: String = ""
     
@@ -33,7 +35,10 @@ struct SongsView: View {
     
     // Performance: Cache score map to avoid repeated lookups
     @State private var scoreCache: [String: Score] = [:]
-    @State private var lastCacheInvalidation: Int = 0
+    
+    private func refreshScoreCache() {
+        scoreCache = ScoreService.shared.scoreMap(context: modelContext)
+    }
     
     var allCategories: [String] {
         Array(Set(songs.map { $0.category })).sorted { ThemeUtils.categorySortOrder($0) < ThemeUtils.categorySortOrder($1) }
@@ -53,11 +58,7 @@ struct SongsView: View {
         let currentSort = sortOption
         let currentAscending = sortAscending
         
-        // Refresh score cache if needed
-        if lastCacheInvalidation != currentSongs.count {
-            scoreCache = ScoreService.shared.scoreMap(context: modelContext)
-            lastCacheInvalidation = currentSongs.count
-        }
+        // Refresh score cache if needed (Now handled by refreshScoreCache directly via onChanges)
         
         // Perform filtering and sorting on MainActor
         Task { @MainActor in
@@ -189,13 +190,15 @@ struct SongsView: View {
             FilterView(settings: $filterSettings, allCategories: allCategories, allVersions: allVersions)
         }
         .onAppear {
+            if scoreCache.isEmpty {
+                refreshScoreCache()
+            }
             if displayedSongs.isEmpty && !songs.isEmpty {
-                // Pre-cache scores on first load
-                scoreCache = ScoreService.shared.scoreMap(context: modelContext)
-                lastCacheInvalidation = songs.count
                 updateDisplayedSongs()
             }
         }
+        .onChange(of: observedScores) { _, _ in refreshScoreCache() }
+        .onChange(of: activeProfiles) { _, _ in refreshScoreCache() }
         .onChange(of: songs) { _, _ in updateDisplayedSongs() }
         .onChange(of: searchText) { _, _ in updateDisplayedSongs() }
         .onChange(of: filterSettings) { _, _ in updateDisplayedSongs() }

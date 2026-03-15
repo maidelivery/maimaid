@@ -273,7 +273,9 @@ final class SupabaseManager {
             .value
             
         // Process profiles
+        var restoredProfileIds = Set<UUID>()
         for dto in profileDTOs {
+            restoredProfileIds.insert(dto.id)
             let id = dto.id
             let fetchDes = FetchDescriptor<UserProfile>(predicate: #Predicate { $0.id == id })
             if let existing = try context.fetch(fetchDes).first {
@@ -296,8 +298,6 @@ final class SupabaseManager {
                 existing.dfUsername = dto.df_username ?? ""
                 existing.dfImportToken = dto.df_import_token ?? ""
                 existing.lxnsRefreshToken = dto.lxns_refresh_token ?? ""
-                // existing.lxnsClientId skipped
-                // existing.playerRating skipped
                 existing.plate = dto.plate
                 existing.lastImportDateDF = dto.last_import_date_df
                 existing.lastImportDateLXNS = dto.last_import_date_lxns
@@ -336,7 +336,38 @@ final class SupabaseManager {
             }
         }
         
-        // Fetch records
+        // Delete existing local records and scores for the restored profiles (Complete Overwrite)
+        if !restoredProfileIds.isEmpty {
+            let allLocalRecords = try context.fetch(FetchDescriptor<PlayRecord>())
+            for record in allLocalRecords {
+                if let pid = record.userProfileId, restoredProfileIds.contains(pid) {
+                    context.delete(record)
+                }
+            }
+            
+            let allLocalScores = try context.fetch(FetchDescriptor<Score>())
+            for score in allLocalScores {
+                if let pid = score.userProfileId, restoredProfileIds.contains(pid) {
+                    context.delete(score)
+                }
+            }
+            // Save state after clearing
+            try context.save()
+        }
+        
+        // Pre-fetch and map Sheets to link relationships correctly
+        let allSheets = try context.fetch(FetchDescriptor<Sheet>())
+        var sheetMapScoreId: [String: Sheet] = [:]
+        var sheetMapRecordId: [String: Sheet] = [:]
+        for sheet in allSheets {
+            let scoreId = "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)"
+            sheetMapScoreId[scoreId] = sheet
+            
+            let recordId = "\(sheet.songIdentifier)-\(sheet.type)-\(sheet.difficulty)"
+            sheetMapRecordId[recordId] = sheet
+        }
+        
+        // Fetch and Insert play_records
         let recordDTOs: [PlayRecordDTO] = try await client.from("play_records")
             .select()
             .eq("user_id", value: user.id)
@@ -344,34 +375,29 @@ final class SupabaseManager {
             .value
             
         for dto in recordDTOs {
-            let id = dto.id
-            let fetchDes = FetchDescriptor<PlayRecord>(predicate: #Predicate { $0.id == id })
-            if let existing = try context.fetch(fetchDes).first {
-                existing.sheetId = dto.sheet_id
-                existing.rate = dto.rate
-                existing.rank = dto.rank
-                existing.dxScore = dto.dx_score ?? 0
-                existing.fc = dto.fc
-                existing.fs = dto.fs
-                existing.playDate = dto.play_date ?? Date()
-                existing.userProfileId = dto.profile_id
-            } else {
-                let newRecord = PlayRecord(
-                    id: dto.id,
-                    sheetId: dto.sheet_id,
-                    rate: dto.rate,
-                    rank: dto.rank,
-                    dxScore: dto.dx_score ?? 0,
-                    fc: dto.fc,
-                    fs: dto.fs,
-                    playDate: dto.play_date ?? Date(),
-                    userProfileId: dto.profile_id
-                )
-                context.insert(newRecord)
+            let newRecord = PlayRecord(
+                id: dto.id,
+                sheetId: dto.sheet_id,
+                rate: dto.rate,
+                rank: dto.rank,
+                dxScore: dto.dx_score ?? 0,
+                fc: dto.fc,
+                fs: dto.fs,
+                playDate: dto.play_date ?? Date(),
+                userProfileId: dto.profile_id
+            )
+            context.insert(newRecord)
+            
+            if let sheet = sheetMapRecordId[dto.sheet_id] {
+                newRecord.sheet = sheet
+                if sheet.playRecords == nil {
+                    sheet.playRecords = []
+                }
+                sheet.playRecords?.append(newRecord)
             }
         }
         
-        // Fetch scores
+        // Fetch and Insert scores
         let scoreDTOs: [ScoreDTO] = try await client.from("scores")
             .select()
             .eq("user_id", value: user.id)
@@ -379,47 +405,21 @@ final class SupabaseManager {
             .value
             
         for dto in scoreDTOs {
-            let profileId = dto.profile_id
-            let sheetId = dto.sheet_id
-            // Need to match existing score manually because there's no unique uuid ID we save in SwiftData maybe. Wait, Score DOES NOT have an id UUID!
-            // Wait! `Score` class doesn't have an `id: UUID` in the user's implementation.
-            // Let's check `Score.swift`:
-            // `var sheetId: String`, `var rate: Double`, ...
-            // SwiftData automatically adds an internal ID, but we didn't expose it.
-            // So we'll try to find by sheetId & profileId
+            let newScore = Score(
+                sheetId: dto.sheet_id,
+                rate: dto.rate,
+                rank: dto.rank,
+                dxScore: dto.dx_score ?? 0,
+                fc: dto.fc,
+                fs: dto.fs,
+                achievementDate: dto.achievement_date ?? Date(),
+                userProfileId: dto.profile_id
+            )
+            context.insert(newScore)
             
-            // Note: SwiftData predicate can't do complex multiple optional unwrapping easily. We might have to fetch and filter if profileId is optional.
-            // A simpler approach: Fetch all scores, then filter locally for the exact match.
-            // (For optimal performance, this should be done differently, but for restore it's okay)
-        }
-        
-        // Bulk fetch all local scores to do memory matching
-        let allScoresFetch = FetchDescriptor<Score>()
-        let allLocalScores = try context.fetch(allScoresFetch)
-        
-        for dto in scoreDTOs {
-            if let existing = allLocalScores.first(where: { $0.sheetId == dto.sheet_id && $0.userProfileId == dto.profile_id }) {
-                // Determine if we should update. Usually we keep the highest rate/score. Or just blindly overwrite
-                if existing.achievementDate < (dto.achievement_date ?? .distantPast) || existing.rate < dto.rate {
-                    existing.rate = dto.rate
-                    existing.rank = dto.rank
-                    existing.dxScore = dto.dx_score ?? 0
-                    existing.fc = dto.fc
-                    existing.fs = dto.fs
-                    existing.achievementDate = dto.achievement_date ?? Date()
-                }
-            } else {
-                let newScore = Score(
-                    sheetId: dto.sheet_id,
-                    rate: dto.rate,
-                    rank: dto.rank,
-                    dxScore: dto.dx_score ?? 0,
-                    fc: dto.fc,
-                    fs: dto.fs,
-                    achievementDate: dto.achievement_date ?? Date(),
-                    userProfileId: dto.profile_id
-                )
-                context.insert(newScore)
+            if let sheet = sheetMapScoreId[dto.sheet_id] {
+                newScore.sheet = sheet
+                sheet.scores.append(newScore)
             }
         }
         

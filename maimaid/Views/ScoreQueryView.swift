@@ -9,6 +9,8 @@ struct ScoreQueryView: View {
     // MARK: - State
     
     @State private var scoreMap: [String: Score] = [:]
+    @State private var songMap: [String: Song] = [:]
+    @State private var allEntries: [ScoreEntry] = []
     @State private var filteredEntries: [ScoreEntry] = []
     @State private var isLoading = true
     @State private var searchText = ""
@@ -59,6 +61,8 @@ struct ScoreQueryView: View {
         let songId: Int
         let songIdentifier: String
         let songTitle: String
+        let aliases: [String]
+        let searchKeywords: String?
         let imageName: String
         let difficulty: String
         let type: String
@@ -544,13 +548,12 @@ struct ScoreQueryView: View {
     
     // MARK: - Navigation
     
+    @ViewBuilder
     private func songDetailDestination(entry: ScoreEntry) -> some View {
-        Group {
-            if let song = songs.first(where: { $0.songIdentifier == entry.songIdentifier }) {
-                SongDetailView(song: song)
-            } else {
-                Text("Song not found")
-            }
+        if let song = songMap[entry.songIdentifier] {
+            SongDetailView(song: song)
+        } else {
+            Text("Song not found")
         }
     }
     
@@ -559,6 +562,48 @@ struct ScoreQueryView: View {
     private func loadData() async {
         let map = ScoreService.shared.scoreMap(context: modelContext)
         self.scoreMap = map
+        
+        var sMap: [String: Song] = [:]
+        var rootEntries: [ScoreEntry] = []
+        
+        for song in songs {
+            sMap[song.songIdentifier] = song
+            
+            if song.category.lowercased().contains("utage") || song.category.contains("宴") { continue }
+            
+            for sheet in song.sheets {
+                if sheet.type.lowercased().contains("utage") { continue }
+                
+                let sheetId = "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)"
+                guard let score = map[sheetId], score.rate > 0 else { continue }
+                
+                let rank = RatingUtils.calculateRank(achievement: score.rate)
+                let level = sheet.internalLevelValue ?? sheet.levelValue ?? 0
+                let rating = RatingUtils.calculateRating(internalLevel: level, achievement: score.rate)
+                
+                rootEntries.append(ScoreEntry(
+                    id: sheetId,
+                    songId: song.songId,
+                    songIdentifier: song.songIdentifier,
+                    songTitle: song.title,
+                    aliases: song.aliases,
+                    searchKeywords: song.searchKeywords,
+                    imageName: song.imageName,
+                    difficulty: sheet.difficulty,
+                    type: sheet.type,
+                    level: level,
+                    achievement: score.rate,
+                    rank: rank,
+                    rating: rating,
+                    fc: score.fc,
+                    fs: score.fs,
+                    dxScore: score.dxScore
+                ))
+            }
+        }
+        
+        self.songMap = sMap
+        self.allEntries = rootEntries
         
         computeStats(from: map)
         applyFiltersAndSort()
@@ -618,7 +663,6 @@ struct ScoreQueryView: View {
     }
     
     private func applyFiltersAndSort() {
-        let map = scoreMap
         let searchLower = searchText.lowercased()
         let hasSearch = !searchText.isEmpty
         let diffFilter = selectedDifficulties
@@ -627,75 +671,37 @@ struct ScoreQueryView: View {
         let fsFilter = selectedFS
         let currentSortMode = sortMode
         let ascending = sortAscending
-        let songsList = songs
         
         var entries: [ScoreEntry] = []
         
-        for song in songsList {
-            // Skip utage
-            if song.category.lowercased().contains("utage") || song.category.contains("宴") {
-                continue
-            }
-            
+        for entry in allEntries {
             // Search filter
             if hasSearch {
-                let matches = song.title.localizedCaseInsensitiveContains(searchText) ||
-                              song.artist.localizedCaseInsensitiveContains(searchText) ||
-                              song.aliases.contains(where: { $0.localizedCaseInsensitiveContains(searchText) }) ||
-                              (song.searchKeywords?.localizedCaseInsensitiveContains(searchText) ?? false)
+                let matches = entry.songTitle.localizedCaseInsensitiveContains(searchText) ||
+                              entry.aliases.contains(where: { $0.localizedCaseInsensitiveContains(searchText) }) ||
+                              (entry.searchKeywords?.localizedCaseInsensitiveContains(searchText) ?? false)
                 if !matches { continue }
             }
             
-            for sheet in song.sheets {
-                if sheet.type.lowercased().contains("utage") { continue }
-                
-                // Difficulty filter
-                if !diffFilter.isEmpty && !diffFilter.contains(sheet.difficulty.lowercased()) {
-                    continue
-                }
-                
-                let sheetId = "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)"
-                guard let score = map[sheetId], score.rate > 0 else { continue }
-                
-                let rank = RatingUtils.calculateRank(achievement: score.rate)
-                
-                // Rank filter
-                if !rankFilter.isEmpty && !rankFilter.contains(rank) {
-                    continue
-                }
-                
-                // FC filter
-                if !fcFilter.isEmpty {
-                    let normalizedFC = score.fc.map { ThemeUtils.normalizeFC($0) } ?? ""
-                    if !fcFilter.contains(normalizedFC) { continue }
-                }
-                
-                // FS filter
-                if !fsFilter.isEmpty {
-                    let normalizedFS = score.fs.map { ThemeUtils.normalizeFS($0) } ?? ""
-                    if !fsFilter.contains(normalizedFS) { continue }
-                }
-                
-                let level = sheet.internalLevelValue ?? sheet.levelValue ?? 0
-                let rating = RatingUtils.calculateRating(internalLevel: level, achievement: score.rate)
-                
-                entries.append(ScoreEntry(
-                    id: sheetId,
-                    songId: song.songId,
-                    songIdentifier: song.songIdentifier,
-                    songTitle: song.title,
-                    imageName: song.imageName,
-                    difficulty: sheet.difficulty,
-                    type: sheet.type,
-                    level: level,
-                    achievement: score.rate,
-                    rank: rank,
-                    rating: rating,
-                    fc: score.fc,
-                    fs: score.fs,
-                    dxScore: score.dxScore
-                ))
+            // Difficulty filter
+            if !diffFilter.isEmpty && !diffFilter.contains(entry.difficulty.lowercased()) { continue }
+            
+            // Rank filter
+            if !rankFilter.isEmpty && !rankFilter.contains(entry.rank) { continue }
+            
+            // FC filter
+            if !fcFilter.isEmpty {
+                let normalizedFC = entry.fc.map { ThemeUtils.normalizeFC($0) } ?? ""
+                if !fcFilter.contains(normalizedFC) { continue }
             }
+            
+            // FS filter
+            if !fsFilter.isEmpty {
+                let normalizedFS = entry.fs.map { ThemeUtils.normalizeFS($0) } ?? ""
+                if !fsFilter.contains(normalizedFS) { continue }
+            }
+            
+            entries.append(entry)
         }
         
         // Sort
