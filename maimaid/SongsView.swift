@@ -350,7 +350,6 @@ struct SongsView: View {
                                     Image(systemName: "chevron.left")
                                         .font(.system(size: 18))
                                         .symbolRenderingMode(.hierarchical)
-                                        .foregroundStyle(.secondary)
                                 }
                             }
                         }

@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import CoreData
 
 struct BestTableView: View {
     @Environment(\.modelContext) private var modelContext
@@ -8,10 +9,10 @@ struct BestTableView: View {
     @Query private var configs: [SyncConfig]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     
+    @StateObject private var cache = B50CacheService.shared
+    
     private var activeProfile: UserProfile? { activeProfiles.first }
     
-    @State private var b50Result: (total: Int, b35: [RatingUtils.RatingEntry], b15: [RatingUtils.RatingEntry]) = (0, [], [])
-    @State private var isLoading = true
     @State private var isExporting = false
     
     // MARK: - 临时版本覆盖 (退出页面即失效)
@@ -36,11 +37,11 @@ struct BestTableView: View {
     }
     
     private var b35Sum: Int {
-        b50Result.b35.reduce(0) { $0 + $1.rating }
+        cache.b50Result.b35.reduce(0) { $0 + $1.rating }
     }
     
     private var b15Sum: Int {
-        b50Result.b15.reduce(0) { $0 + $1.rating }
+        cache.b50Result.b15.reduce(0) { $0 + $1.rating }
     }
     
     private var currentB35Count: Int {
@@ -60,10 +61,10 @@ struct BestTableView: View {
                         Text("bestTable.rating")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        Text("\(b50Result.total)")
+                        Text("\(cache.b50Result.total)")
                             .font(.system(size: 34, weight: .black, design: .rounded))
-                            .foregroundStyle(ThemeUtils.ratingGradient(b50Result.total))
-                            .opacity(isLoading ? 0.3 : 1.0)
+                            .foregroundStyle(ThemeUtils.ratingGradient(cache.b50Result.total))
+                            .opacity(cache.isLoading ? 0.3 : 1.0)
                     }
                     Spacer()
                     VStack(alignment: .trailing) {
@@ -96,7 +97,7 @@ struct BestTableView: View {
                         if overriddenVersion != nil {
                             Button {
                                 overriddenVersion = nil
-                                Task { await calculateRating() }
+                                Task { await performCalculation() }
                             } label: {
                                 Text("bestTable.settings.version.reset")
                                     .font(.caption)
@@ -147,14 +148,14 @@ struct BestTableView: View {
             }
             
             Section(String(localized: "bestTable.section.new \(currentB15Count)")) {
-                if isLoading {
+                if cache.isLoading && cache.isFirstLoad {
                     ProgressView().padding()
-                } else if b50Result.b15.isEmpty {
+                } else if cache.b50Result.b15.isEmpty {
                     Text("bestTable.empty")
                         .foregroundColor(.secondary)
                 } else {
-                    ForEach(b50Result.b15) { entry in
-                        if let song = songs.first(where: { $0.songIdentifier == entry.songIdentifier }) {
+                    ForEach(cache.b50Result.b15) { entry in
+                        if let song = cache.getSong(identifier: entry.songIdentifier) {
                             NavigationLink(destination: SongDetailView(song: song)) {
                                 ratingRow(entry: entry)
                             }
@@ -166,14 +167,14 @@ struct BestTableView: View {
             }
             
             Section(String(localized: "bestTable.section.old \(currentB35Count)")) {
-                if isLoading {
+                if cache.isLoading && cache.isFirstLoad {
                     ProgressView().padding()
-                } else if b50Result.b35.isEmpty {
+                } else if cache.b50Result.b35.isEmpty {
                     Text("bestTable.empty")
                         .foregroundColor(.secondary)
                 } else {
-                    ForEach(b50Result.b35) { entry in
-                        if let song = songs.first(where: { $0.songIdentifier == entry.songIdentifier }) {
+                    ForEach(cache.b50Result.b35) { entry in
+                        if let song = cache.getSong(identifier: entry.songIdentifier) {
                             NavigationLink(destination: SongDetailView(song: song)) {
                                 ratingRow(entry: entry)
                             }
@@ -197,7 +198,7 @@ struct BestTableView: View {
                         Label("bestTable.action.export", systemImage: "square.and.arrow.up")
                     }
                 }
-                .disabled(isLoading || isExporting || (b50Result.b35.isEmpty && b50Result.b15.isEmpty))
+                .disabled(cache.isLoading || isExporting || (cache.b50Result.b35.isEmpty && cache.b50Result.b15.isEmpty))
             }
         }
         .sheet(isPresented: $showVersionPicker) {
@@ -207,17 +208,31 @@ struct BestTableView: View {
                 currentServerVersion: serverVersion
             )
         }
-        .task(id: songs) {
-            await calculateRating()
+        .onAppear {
+            cache.updateSongs(songs)
+            Task { await performCalculation() }
         }
-        .task(id: activeProfile?.b35Count) {
-            await calculateRating()
+        .task(id: songs.count) {
+            cache.updateSongs(songs)
+            // Song count changed (Sync added/removed songs)
+            await performCalculation()
         }
-        .task(id: activeProfile?.b15Count) {
-            await calculateRating()
+        .task(id: activeProfile?.id) {
+            await performCalculation()
+        }
+        .task(id: currentB35Count) {
+            await performCalculation()
+        }
+        .task(id: currentB15Count) {
+            await performCalculation()
         }
         .onChange(of: overriddenVersion) { _, _ in
-            Task { await calculateRating() }
+            Task { await performCalculation() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSManagedObjectContextDidSave)) { _ in
+            // Listen for any saves to detect score updates
+            // (Note: This is a bit broad, but B50CacheService has its own internal guard)
+            Task { await performCalculation() }
         }
     }
     
@@ -242,9 +257,9 @@ struct BestTableView: View {
         Task {
             let image = await MainActor.run {
                 B50ExportView.renderImage(
-                    b35: b50Result.b35,
-                    b15: b50Result.b15,
-                    totalRating: b50Result.total,
+                    b35: cache.b50Result.b35,
+                    b15: cache.b50Result.b15,
+                    totalRating: cache.b50Result.total,
                     userName: activeProfile?.name ?? configs.first?.userName,
                     currentVersion: effectiveVersion,
                     colorScheme: colorScheme
@@ -301,35 +316,16 @@ struct BestTableView: View {
         .frame(maxWidth: .infinity)
     }
     
-    private func calculateRating() async {
-        isLoading = true
-        
-        let profileId = activeProfile?.id
-        let server = activeProfile.flatMap { GameServer(rawValue: $0.server) }
-        
-        // 使用 ScoreService 获取当前用户的成绩映射
-        let scoreMap = ScoreService.shared.scoreMap(context: modelContext)
-        
-        // 使用 RatingUtils 的扩展方法
-        let input = songs.toCalculationInput(
-            userProfileId: profileId,
-            server: server,
-            preloadedScores: scoreMap
+    private func performCalculation() async {
+        await cache.calculateIfNeeded(
+            modelContext: modelContext,
+            activeProfile: activeProfile,
+            configs: configs,
+            overriddenVersion: overriddenVersion
         )
-        
-        let b35Limit = activeProfile?.b35Count ?? configs.first?.b35Count ?? 35
-        let b15Limit = activeProfile?.b15Count ?? configs.first?.b15Count ?? 15
-        
-        // 使用覆盖的版本或服务器版本
-        let latestVersion = effectiveVersion
-        
-        let result = await Task.detached(priority: .userInitiated) {
-            await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: latestVersion)
-        }.value
-        
-        self.b50Result = result
-        self.isLoading = false
     }
+    
+    // 🔴 Deleting legacy calculateRating - moved to B50CacheService
     
     private func ratingRow(entry: RatingUtils.RatingEntry) -> some View {
         HStack(spacing: 14) {
