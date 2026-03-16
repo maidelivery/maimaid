@@ -374,23 +374,29 @@ struct LxnsImportView: View {
                     // 🔴 修复：使用 ScoreService 获取当前用户的成绩
                     if let existingScore = ScoreService.shared.score(for: targetSheet, context: modelContext) {
                         let shouldUpdateMetadata = existingScore.fc == nil || existingScore.fs == nil || existingScore.dxScore == 0
+                        let fcValue = (record.fc?.isEmpty ?? true) ? nil : record.fc
+                        let fsValue = (record.fs?.isEmpty ?? true) ? nil : record.fs
+                        
                         if record.achievements > existingScore.rate || shouldUpdateMetadata {
                             existingScore.rate = max(existingScore.rate, record.achievements)
                             existingScore.rank = RatingUtils.calculateRank(achievement: existingScore.rate)
-                            existingScore.fc = record.fc
-                            existingScore.fs = record.fs
+                            existingScore.fc = fcValue
+                            existingScore.fs = fsValue
                             existingScore.dxScore = record.dx_score
                             existingScore.achievementDate = Date()
                         }
                     } else {
+                        let fcValue = (record.fc?.isEmpty ?? true) ? nil : record.fc
+                        let fsValue = (record.fs?.isEmpty ?? true) ? nil : record.fs
+                        
                         // 🔴 修复：创建成绩时关联用户
                         let score = Score(
                             sheetId: "\(targetSheet.songIdentifier)_\(targetSheet.type)_\(targetSheet.difficulty)",
                             rate: record.achievements,
                             rank: newRank,
                             dxScore: record.dx_score,
-                            fc: record.fc,
-                            fs: record.fs,
+                            fc: fcValue,
+                            fs: fsValue,
                             achievementDate: Date(),
                             userProfileId: profileId  // 关键：关联当前用户
                         )

@@ -136,16 +136,20 @@ struct ScoreEntryView: View {
                 dxScoreText = score.dxScore > 0 ? "\(score.dxScore)" : ""
             }
             
-            if let initFC = initialFC {
+            if let initFC = initialFC, !initFC.isEmpty {
                 selectedFC = initFC
-            } else if let score = cachedCurrentScore {
-                selectedFC = score.fc
+            } else if let score = cachedCurrentScore, let fc = score.fc, !fc.isEmpty {
+                selectedFC = fc
+            } else {
+                selectedFC = nil
             }
             
-            if let initFS = initialFS {
+            if let initFS = initialFS, !initFS.isEmpty {
                 selectedFS = initFS
-            } else if let score = cachedCurrentScore {
-                selectedFS = score.fs
+            } else if let score = cachedCurrentScore, let fs = score.fs, !fs.isEmpty {
+                selectedFS = fs
+            } else {
+                selectedFS = nil
             }
         }
         .onChange(of: selectedItem) { _, newItem in
@@ -296,14 +300,14 @@ struct ScoreEntryView: View {
                                 Text("COMBO")
                                     .font(.system(size: 12, weight: .bold))
                                     .opacity(0)
-                                Text(selectedFC?.replacingOccurrences(of: "fcp", with: "fc+").replacingOccurrences(of: "app", with: "ap+").uppercased() ?? "Combo")
+                                Text((selectedFC?.isEmpty ?? true) ? "Combo" : selectedFC!.replacingOccurrences(of: "fcp", with: "fc+").replacingOccurrences(of: "app", with: "ap+").uppercased())
                                     .font(.system(size: 12, weight: .bold))
                             }
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(selectedFC == nil ? Color.gray.opacity(0.1) : Color.green.opacity(0.1), in: Capsule())
-                        .foregroundColor(selectedFC == nil ? .gray : .green)
+                        .background((selectedFC?.isEmpty ?? true) ? Color.gray.opacity(0.1) : Color.green.opacity(0.1), in: Capsule())
+                        .foregroundColor((selectedFC?.isEmpty ?? true) ? .gray : .green)
                     }
                     
                     Menu {
@@ -324,14 +328,14 @@ struct ScoreEntryView: View {
                                 Text("FDX+")
                                     .font(.system(size: 12, weight: .bold))
                                     .opacity(0)
-                                Text(selectedFS?.replacingOccurrences(of: "fsdp", with: "fdx+").replacingOccurrences(of: "fsd", with: "fdx").replacingOccurrences(of: "fsp", with: "fs+").uppercased() ?? "SYNC")
+                                Text((selectedFS?.isEmpty ?? true) ? "SYNC" : selectedFS!.replacingOccurrences(of: "fsdp", with: "fdx+").replacingOccurrences(of: "fsd", with: "fdx").replacingOccurrences(of: "fsp", with: "fs+").uppercased())
                                     .font(.system(size: 12, weight: .bold))
                             }
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(selectedFS == nil ? Color.gray.opacity(0.1) : Color.blue.opacity(0.1), in: Capsule())
-                        .foregroundColor(selectedFS == nil ? .gray : .blue)
+                        .background((selectedFS?.isEmpty ?? true) ? Color.gray.opacity(0.1) : Color.blue.opacity(0.1), in: Capsule())
+                        .foregroundColor((selectedFS?.isEmpty ?? true) ? .gray : .blue)
                     }
                 }
                 .animation(.spring(response: 0.35, dampingFraction: 0.8), value: parsedRate != nil)
