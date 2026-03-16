@@ -663,7 +663,7 @@ struct ScoreQueryView: View {
     }
     
     private func applyFiltersAndSort() {
-        let searchLower = searchText.lowercased()
+//        let searchLower = searchText.lowercased()
         let hasSearch = !searchText.isEmpty
         let diffFilter = selectedDifficulties
         let rankFilter = selectedRanks

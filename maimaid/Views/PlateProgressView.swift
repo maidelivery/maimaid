@@ -4,7 +4,6 @@ import SwiftData
 struct PlateProgressView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var songs: [Song]
-    @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     
     // Filters
     @State private var selectedGroup: VersionPlateGroup?
@@ -20,6 +19,7 @@ struct PlateProgressView: View {
     @State private var scoreCache: [String: Score] = [:]
     @State private var isComputing = false
     @State private var hasAppeared = false
+    @State private var recomputeTask: Task<Void, Never>?
     
     private let difficulties = ["basic", "advanced", "expert", "master", "remaster"]
     
@@ -64,13 +64,18 @@ struct PlateProgressView: View {
             scheduleRecompute()
         }
         .onChange(of: selectedPlate) { _, newValue in
-            if newValue == .sho && selectedGroup?.platePrefix == "真" {
+            if newValue == .sho && selectedGroup?.hasSho == false {
                 selectedPlate = .kiwami
             } else {
                 recomputeAchievements()
             }
         }
+        .onDisappear {
+            recomputeTask?.cancel()
+        }
     }
+    
+    // MARK: - Setup
     
     private func setupData() {
         let allGroups = PlateService.shared.getVersionGroups()
@@ -82,7 +87,7 @@ struct PlateProgressView: View {
     
     // MARK: - Recomputation
     
-    private func sheetKey(_ sheet: Sheet) -> String {
+    private static func sheetKey(_ sheet: Sheet) -> String {
         "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)"
     }
     
@@ -90,10 +95,14 @@ struct PlateProgressView: View {
     private func scheduleRecompute() {
         isComputing = true
         // Clear sections immediately so we show the spinner
-        // but don't do heavy work until next runloop
-        Task { @MainActor in
+        cachedSections = []
+        
+        // Cancel previous task and create new one with debounce
+        recomputeTask?.cancel()
+        recomputeTask = Task { @MainActor in
             // Yield one frame to allow SwiftUI to render the spinner
             await Task.yield()
+            guard !Task.isCancelled else { return }
             recomputeSections()
         }
     }
@@ -111,9 +120,9 @@ struct PlateProgressView: View {
         var sheets: [Sheet] = []
         for song in songs {
             guard let version = song.version, versionSet.contains(version) else { continue }
-            if song.category.lowercased().contains("utage") || song.category.contains("宴") { continue }
+            if isUtageCategory(song.category) { continue }
             for sheet in song.sheets {
-                if sheet.type.lowercased().contains("utage") { continue }
+                if isUtageType(sheet.type) { continue }
                 if !sheet.regionJp { continue }
                 if sheet.difficulty.lowercased() == targetDifficulty {
                     sheets.append(sheet)
@@ -132,59 +141,49 @@ struct PlateProgressView: View {
             .sorted { parseLevel($0.level) > parseLevel($1.level) }
         
         recomputeAchievements()
-        
         isComputing = false
     }
     
     private func recomputeAchievements() {
         let allSheets = cachedSections.flatMap { $0.sheets }
         
-        let allScores = ScoreService.shared.allScores(context: modelContext)
-        var newScoreCache: [String: Score] = [:]
-        for score in allScores {
-            newScoreCache[score.sheetId] = score
-        }
-        scoreCache = newScoreCache
+        // Use scoreMap() for better performance
+        scoreCache = ScoreService.shared.scoreMap(context: modelContext)
         
         var newAchievedCache: [String: Bool] = [:]
+        newAchievedCache.reserveCapacity(allSheets.count)
+        
         for sheet in allSheets {
-            let key = sheetKey(sheet)
-            let score = newScoreCache[key]
-            newAchievedCache[key] = isAchievedFromScore(plateType: selectedPlate, score: score)
+            let key = Self.sheetKey(sheet)
+            newAchievedCache[key] = selectedPlate.isAchieved(score: scoreCache[key])
         }
         achievedCache = newAchievedCache
     }
     
-    private func isAchievedFromScore(plateType: PlateType, score: Score?) -> Bool {
-        guard let score = score else { return false }
-        switch plateType {
-        case .kiwami:
-            if let fc = score.fc?.lowercased(), ["fc", "fcp", "ap", "app"].contains(fc) { return true }
-        case .sho:
-            if score.rate >= 100.0 { return true }
-        case .shin:
-            if let fc = score.fc?.lowercased(), ["ap", "app"].contains(fc) { return true }
-        case .maimai:
-            if let fs = score.fs?.lowercased(), ["fsd", "fsdp"].contains(fs) { return true }
-        }
-        return false
+    // MARK: - Helpers
+    
+    private func isUtageCategory(_ category: String) -> Bool {
+        category.lowercased().contains("utage") || category.contains("宴")
+    }
+    
+    private func isUtageType(_ type: String) -> Bool {
+        type.lowercased().contains("utage")
     }
     
     private func parseLevel(_ level: String) -> Double {
-        if let val = Double(level.replacingOccurrences(of: "+", with: ".7")) {
-            return val
-        }
-        return 0
+        Double(level.replacingOccurrences(of: "+", with: ".7")) ?? 0
     }
     
     private func applyFallbacks(newGroup: VersionPlateGroup?) {
         guard let group = newGroup else { return }
         
+        // 只有舞代支持 REMASTER，其他版本自动退到 MASTER
         if group.name != "舞代" && selectedDifficulty == "remaster" {
             selectedDifficulty = "master"
         }
         
-        if group.platePrefix == "真" && selectedPlate == .sho {
+        // 如果选择的版本组不支持将牌，自动切换到极牌
+        if !group.hasSho && selectedPlate == .sho {
             selectedPlate = .kiwami
         }
     }
@@ -193,27 +192,35 @@ struct PlateProgressView: View {
     
     private var headerView: some View {
         HStack(spacing: 10) {
-            menuButton(title: "plate.menu.version", selection: displayName(for: selectedGroup), options: groups.map { displayName(for: $0) }) { displayName in
+            menuButton(
+                title: "plate.menu.version",
+                selection: displayName(for: selectedGroup),
+                options: groups.map { displayName(for: $0) }
+            ) { displayName in
                 if let found = groups.first(where: { self.displayName(for: $0) == displayName }) {
                     selectedGroup = found
                 }
             }
             
-            menuButton(title: "plate.menu.difficulty", selection: selectedDifficulty.uppercased(), options: difficulties.map { $0.uppercased() }) { name in
+            menuButton(
+                title: "plate.menu.difficulty",
+                selection: selectedDifficulty.uppercased(),
+                options: difficulties.map { $0.uppercased() }
+            ) { name in
                 let diff = name.lowercased()
-                if diff == "remaster" && selectedGroup?.name != "舞代" {
-                    return 
-                }
+                // 只有舞代允许选择 REMASTER
+                guard diff != "remaster" || selectedGroup?.name == "舞代" else { return }
                 selectedDifficulty = diff
             }
             
-            menuButton(title: "plate.menu.plate", selection: selectedPlate.rawValue, options: PlateType.allCases.map { $0.rawValue }) { name in
-                if let plate = PlateType.allCases.first(where: { $0.rawValue == name }) {
-                    if plate == .sho && selectedGroup?.platePrefix == "真" {
-                        return
-                    }
-                    selectedPlate = plate
-                }
+            menuButton(
+                title: "plate.menu.plate",
+                selection: selectedPlate.rawValue,
+                options: PlateType.allCases.map { $0.rawValue }
+            ) { name in
+                guard let plate = PlateType.allCases.first(where: { $0.rawValue == name }) else { return }
+                guard plate != .sho || selectedGroup?.hasSho == true else { return }
+                selectedPlate = plate
             }
         }
         .padding(.horizontal, 16)
@@ -222,18 +229,19 @@ struct PlateProgressView: View {
     
     private func displayName(for group: VersionPlateGroup?) -> String {
         guard let group = group else { return "..." }
-        if group.name == group.platePrefix || group.name == "舞代" {
-            return group.name
-        }
-        return group.platePrefix
+        return (group.name == group.platePrefix || group.name == "舞代") ? group.name : group.platePrefix
     }
     
-    private func menuButton(title: LocalizedStringKey, selection: String, options: [String], onSelect: @escaping (String) -> Void) -> some View {
+    private func menuButton(
+        title: LocalizedStringKey,
+        selection: String,
+        options: [String],
+        onSelect: @escaping (String) -> Void
+    ) -> some View {
         Menu {
             ForEach(options, id: \.self) { option in
-                Button(option) {
-                    onSelect(option)
-                }
+                Button(option) { onSelect(option) }
+                    .disabled(isOptionDisabled(option))
             }
         } label: {
             VStack(spacing: 2) {
@@ -251,6 +259,11 @@ struct PlateProgressView: View {
             .foregroundColor(.blue)
             .cornerRadius(12)
         }
+    }
+    
+    private func isOptionDisabled(_ option: String) -> Bool {
+        (option == PlateType.sho.rawValue && selectedGroup?.hasSho == false) ||
+        (option == "REMASTER" && selectedGroup?.name != "舞代")
     }
     
     // MARK: - Level Section
@@ -283,7 +296,7 @@ struct PlateProgressView: View {
     }
     
     private func jacketItem(_ sheet: Sheet) -> some View {
-        let key = sheetKey(sheet)
+        let key = Self.sheetKey(sheet)
         let isAchieved = achievedCache[key] ?? false
         let color = Color(hex: selectedPlate.color)
         
@@ -292,9 +305,7 @@ struct PlateProgressView: View {
                 .grayscale(isAchieved ? 0 : 1.0)
                 .brightness(isAchieved ? -0.3 : 0)
                 .overlay {
-                    ZStack {
-                        achievementMarker(sheet: sheet)
-                    }
+                    achievementMarker(sheet: sheet)
                 }
                 .cornerRadius(10)
                 .overlay {
@@ -303,35 +314,33 @@ struct PlateProgressView: View {
                 }
         }
         .frame(width: 66, height: 66)
-        .drawingGroup() // Flatten compositing to reduce GPU overdraw during scrolling/transitions
+        .drawingGroup()
     }
     
     @ViewBuilder
     private func achievementMarker(sheet: Sheet) -> some View {
-        let key = sheetKey(sheet)
+        let key = Self.sheetKey(sheet)
         let score = scoreCache[key]
         
-        Group {
-            switch selectedPlate {
-            case .kiwami:
-                if let fc = score?.fc, !fc.isEmpty {
-                    badgeLabel(ThemeUtils.normalizeFC(fc), color: ThemeUtils.fcColor(fc))
+        switch selectedPlate {
+        case .kiwami:
+            if let fc = score?.fc, !fc.isEmpty {
+                badgeLabel(ThemeUtils.normalizeFC(fc), color: ThemeUtils.fcColor(fc))
+            }
+        case .sho:
+            if let score {
+                let rank = RatingUtils.calculateRank(achievement: score.rate)
+                if rank.contains("SSS") {
+                    badgeLabel(rank, color: RatingUtils.colorForRank(rank))
                 }
-            case .sho:
-                if let score = score {
-                    let rank = RatingUtils.calculateRank(achievement: score.rate)
-                    if rank.contains("SSS") {
-                        badgeLabel(rank, color: RatingUtils.colorForRank(rank))
-                    }
-                }
-            case .shin:
-                if let fc = score?.fc, fc.lowercased().contains("ap") {
-                    badgeLabel(ThemeUtils.normalizeFC(fc), color: ThemeUtils.fcColor(fc))
-                }
-            case .maimai:
-                if let fs = score?.fs, fs.lowercased().contains("fsd") {
-                    badgeLabel(ThemeUtils.normalizeFS(fs), color: ThemeUtils.fsColor(fs))
-                }
+            }
+        case .shin:
+            if let fc = score?.fc, fc.lowercased().contains("ap") {
+                badgeLabel(ThemeUtils.normalizeFC(fc), color: ThemeUtils.fcColor(fc))
+            }
+        case .maimai:
+            if let fs = score?.fs, fs.lowercased().contains("fsd") {
+                badgeLabel(ThemeUtils.normalizeFS(fs), color: ThemeUtils.fsColor(fs))
             }
         }
     }

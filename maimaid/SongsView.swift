@@ -19,7 +19,6 @@ enum SortOption: String, CaseIterable, Identifiable {
 struct SongsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Song.sortOrder, order: .forward) private var songs: [Song]
-    @Query private var observedScores: [Score]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     
     var searchText: String = ""
@@ -36,6 +35,7 @@ struct SongsView: View {
     
     // Performance: Cache score map to avoid repeated lookups
     @State private var scoreCache: [String: Score] = [:]
+    @State private var cachedProfileId: UUID? = nil
     
     // Grid zoom state
     @AppStorage("songs.gridColumns") private var committedColumns: Int = 4
@@ -44,17 +44,31 @@ struct SongsView: View {
     @State private var pinchStartColumns: CGFloat = 4.0
     @State private var zoomAnchorSongID: String? = nil
     @State private var viewportHeight: CGFloat = 0
-    /// Brief cooldown after pinch ends to prevent accidental NavigationLink activation
+    /// Brief cooldown after pinch ends to prevent accidental tap activation
     @State private var navigationDisabled: Bool = false
     
     /// Namespace for matched geometry zoom transition (iOS 18+)
     @Namespace private var songTransitionNamespace
     
+    /// The song selected for fullScreenCover detail presentation
+    @State private var selectedSong: Song? = nil
+    
+    /// Task for background score cache refresh
+    @State private var scoreCacheTask: Task<Void, Never>?
+    
     private let minColumns: CGFloat = 3
     private let maxColumns: CGFloat = 9
     
     private func refreshScoreCache() {
-        scoreCache = ScoreService.shared.scoreMap(context: modelContext)
+        scoreCacheTask?.cancel()
+        scoreCacheTask = Task { @MainActor in
+            // Small delay to debounce rapid calls
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            guard !Task.isCancelled else { return }
+            let profileId = activeProfiles.first?.id
+            scoreCache = ScoreService.shared.scoreMap(context: modelContext)
+            cachedProfileId = profileId
+        }
     }
     
     var allCategories: [String] {
@@ -324,12 +338,33 @@ struct SongsView: View {
                     }
                 }
             }
+            // fullScreenCover for song detail — used for zoom transition
+            .fullScreenCover(item: $selectedSong) { song in
+                NavigationStack {
+                    SongDetailView(song: song)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button {
+                                    selectedSong = nil
+                                } label: {
+                                    Image(systemName: "chevron.left")
+                                        .font(.system(size: 18))
+                                        .symbolRenderingMode(.hierarchical)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                }
+                .applyZoomTransition(id: song.songIdentifier, ns: songTransitionNamespace)
+            }
         }
         .sheet(isPresented: $showFilterSheet) {
             FilterView(settings: $filterSettings, allCategories: allCategories, allVersions: allVersions)
         }
         .onAppear {
-            if scoreCache.isEmpty {
+            // Only refresh cache if empty or profile changed
+            let currentProfileId = activeProfiles.first?.id
+            if scoreCache.isEmpty || cachedProfileId != currentProfileId {
                 refreshScoreCache()
             }
             if displayedSongs.isEmpty && !songs.isEmpty {
@@ -337,8 +372,10 @@ struct SongsView: View {
             }
             liveColumnCount = CGFloat(committedColumns)
         }
-        .onChange(of: observedScores) { _, _ in refreshScoreCache() }
-        .onChange(of: activeProfiles) { _, _ in refreshScoreCache() }
+        // Use single onChange for profile changes
+        .onChange(of: activeProfiles.first?.id) { _, _ in
+            refreshScoreCache()
+        }
         .onChange(of: songs) { _, _ in updateDisplayedSongsSync() }
         .onChange(of: searchText) { _, _ in updateDisplayedSongsDebounced() }
         .onChange(of: filterSettings) { _, _ in updateDisplayedSongsSync() }
@@ -351,9 +388,9 @@ struct SongsView: View {
     private var listContent: some View {
         LazyVStack(spacing: 8) {
             ForEach(displayedSongs) { song in
-                NavigationLink {
-                    SongDetailView(song: song)
-                        .applyZoomTransition(id: song.songIdentifier, ns: songTransitionNamespace)
+                Button {
+                    guard !navigationDisabled && !isZooming else { return }
+                    selectedSong = song
                 } label: {
                     SongRowView(song: song, scoreCache: scoreCache)
                 }
@@ -392,9 +429,9 @@ struct SongsView: View {
     
     @ViewBuilder
     private func gridCellView(song: Song, intCols: Int, cellSize: CGFloat, cornerRadius: CGFloat, showDots: Bool) -> some View {
-        NavigationLink {
-            SongDetailView(song: song)
-                .applyZoomTransition(id: song.songIdentifier, ns: songTransitionNamespace)
+        Button {
+            guard !navigationDisabled && !isZooming else { return }
+            selectedSong = song
         } label: {
             SongGridCell(
                 song: song,
@@ -406,7 +443,6 @@ struct SongsView: View {
             )
         }
         .buttonStyle(.plain)
-        .disabled(navigationDisabled || isZooming)
         .applyMatchedTransitionSource(id: song.songIdentifier, ns: songTransitionNamespace)
     }
 }

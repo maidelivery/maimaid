@@ -1068,7 +1068,7 @@ struct SheetCardView: View {
     private func deleteRecord(_ record: PlayRecord) {
         let profileId = record.userProfileId
         let rate = record.rate
-        let date = record.playDate
+//        let date = record.playDate
         
         // Remove from sheet's playRecords array
         if let index = sheet.playRecords?.firstIndex(where: { $0.id == record.id }) {

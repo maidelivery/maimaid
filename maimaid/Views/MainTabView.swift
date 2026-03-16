@@ -156,9 +156,10 @@ struct MainTabView: View {
             if !hasAnyCn {
                 print("MainTabView: No songs with regionCn=true found. Forcing data sync to populate regions...")
                 // We run this detached to not block the main UI if it takes long
-                let context = SwiftData.ModelContext(modelContext.container)
+                let container = modelContext.container
                 Task.detached {
-                    try? await MaimaiDataFetcher.shared.fetchSongs(modelContext: context)
+                    let backgroundContext = SwiftData.ModelContext(container)
+                    try? await MaimaiDataFetcher.shared.fetchSongs(modelContext: backgroundContext)
                 }
             }
         }

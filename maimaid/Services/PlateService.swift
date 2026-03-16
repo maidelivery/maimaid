@@ -26,6 +26,25 @@ enum PlateType: String, CaseIterable, Identifiable {
         case .maimai: return "#a34ee4" // Purple
         }
     }
+    
+    /// 检查给定成绩是否达成该牌类型要求
+    func isAchieved(score: Score?) -> Bool {
+        guard let score = score else { return false }
+        let fc = score.fc?.lowercased()
+        let fs = score.fs?.lowercased()
+        
+        switch self {
+        case .kiwami:
+            if let fc, ["fc", "fcp", "ap", "app"].contains(fc) { return true }
+        case .sho:
+            if score.rate >= 100.0 { return true }
+        case .shin:
+            if let fc, ["ap", "app"].contains(fc) { return true }
+        case .maimai:
+            if let fs, ["fsd", "fsdp"].contains(fs) { return true }
+        }
+        return false
+    }
 }
 
 struct VersionPlateGroup: Identifiable, Hashable {
@@ -51,103 +70,114 @@ struct VersionPlateGroup: Identifiable, Hashable {
 class PlateService {
     static let shared = PlateService()
     
+    private var cachedGroups: [VersionPlateGroup]?
+    
     private init() {}
     
     func getVersionGroups() -> [VersionPlateGroup] {
+        if let cached = cachedGroups { return cached }
+        
         guard let data = UserDefaults.standard.data(forKey: "MaimaiVersionsData"),
               let versionsInfo = try? JSONDecoder().decode([ThemeUtils.AppVersion].self, from: data) else {
             return []
         }
         
+        let groups = buildVersionGroups(from: versionsInfo)
+        cachedGroups = groups
+        return groups
+    }
+    
+    private func buildVersionGroups(from versionsInfo: [ThemeUtils.AppVersion]) -> [VersionPlateGroup] {
         var groups: [VersionPlateGroup] = []
-        var currentAbbr: String? = nil
+        var currentAbbr: String?
         var currentVersions: [String] = []
-        var currentFirstName: String = ""
+        var currentFirstName = ""
         
-        // Find the boundary for Old Frame (anything before "maimai でらっくす")
-        let dxVersionIndex = versionsInfo.firstIndex { $0.version.localizedCaseInsensitiveContains("でらっくす") || $0.version.localizedCaseInsensitiveContains(" DX") } ?? versionsInfo.count
+        let dxVersionIndex = versionsInfo.firstIndex { 
+            $0.version.localizedCaseInsensitiveContains("でらっくす") || $0.version.localizedCaseInsensitiveContains(" DX") 
+        } ?? versionsInfo.count
+        
+        let greenVersionIndex = versionsInfo.firstIndex { 
+            $0.version.localizedCaseInsensitiveContains("GreeN") 
+        } ?? versionsInfo.count
         
         for (_, vInfo) in versionsInfo.enumerated() {
             if vInfo.abbr != currentAbbr {
                 if let abbr = currentAbbr {
-                    let isOld = versionsInfo.firstIndex(where: { $0.version == currentVersions.first }) ?? 0 < dxVersionIndex
-                    groups.append(VersionPlateGroup(
+                    groups.append(makeGroup(
+                        abbr: abbr,
                         name: currentFirstName,
-                        platePrefix: abbr,
                         versions: currentVersions,
-                        isOldFrame: isOld,
-                        hasSho: abbr != "真",
-                        includeReMasterByDefault: false
+                        versionsInfo: versionsInfo,
+                        dxVersionIndex: dxVersionIndex,
+                        greenVersionIndex: greenVersionIndex
                     ))
                 }
                 
                 currentAbbr = vInfo.abbr
                 currentVersions = [vInfo.version]
-                var cleanedName = vInfo.version
+                currentFirstName = vInfo.version
                     .replacingOccurrences(of: "maimai ", with: "", options: .caseInsensitive)
                     .replacingOccurrences(of: "でらっくす", with: "", options: .caseInsensitive)
                     .trimmingCharacters(in: .whitespaces)
-                if cleanedName.isEmpty { cleanedName = "maimai" }
-                currentFirstName = cleanedName
+                if currentFirstName.isEmpty { currentFirstName = "maimai" }
             } else {
                 currentVersions.append(vInfo.version)
             }
         }
         
         if let abbr = currentAbbr {
-            let isOld = versionsInfo.firstIndex(where: { $0.version == currentVersions.first }) ?? 0 < dxVersionIndex
-            groups.append(VersionPlateGroup(
+            groups.append(makeGroup(
+                abbr: abbr,
                 name: currentFirstName,
-                platePrefix: abbr,
                 versions: currentVersions,
-                isOldFrame: isOld,
-                hasSho: abbr != "真",
-                includeReMasterByDefault: false
+                versionsInfo: versionsInfo,
+                dxVersionIndex: dxVersionIndex,
+                greenVersionIndex: greenVersionIndex
             ))
         }
         
         // Add "舞代" special group
         let oldFrameVersions = groups.filter { $0.isOldFrame }.flatMap { $0.versions }
         if !oldFrameVersions.isEmpty {
-            let group = VersionPlateGroup(
+            groups.insert(VersionPlateGroup(
                 name: "舞代",
                 platePrefix: "舞",
                 versions: oldFrameVersions,
                 isOldFrame: true,
                 hasSho: true,
                 includeReMasterByDefault: true
-            )
-            groups.insert(group, at: 0)
+            ), at: 0)
         }
         
         return groups
     }
     
-    func isAchieved(plateType: PlateType, sheet: Sheet, context: ModelContext) -> Bool {
-        guard let score = ScoreService.shared.score(for: sheet, context: context) else { return false }
+    private func makeGroup(
+        abbr: String,
+        name: String,
+        versions: [String],
+        versionsInfo: [ThemeUtils.AppVersion],
+        dxVersionIndex: Int,
+        greenVersionIndex: Int
+    ) -> VersionPlateGroup {
+        let firstVersionIndex = versionsInfo.firstIndex { $0.version == versions.first } ?? 0
+        let isOld = firstVersionIndex < dxVersionIndex
+        let isMaimaiOriginal = firstVersionIndex < greenVersionIndex && isOld
+        let hasShoPlate = abbr != "真" && !isMaimaiOriginal
         
-        switch plateType {
-        case .kiwami:
-            // 极: FC or better
-            if let fc = score.fc?.lowercased(), ["fc", "fcp", "ap", "app"].contains(fc) {
-                return true
-            }
-        case .sho:
-            // 将: SSS or better
-            if score.rate >= 100.0 {
-                return true
-            }
-        case .shin:
-            // 神: AP or better
-            if let fc = score.fc?.lowercased(), ["ap", "app"].contains(fc) {
-                return true
-            }
-        case .maimai:
-            // 舞舞: FDX or better (FSD/FSDP)
-            if let fs = score.fs?.lowercased(), ["fsd", "fsdp"].contains(fs) {
-                return true
-            }
-        }
-        return false
+        return VersionPlateGroup(
+            name: name,
+            platePrefix: abbr,
+            versions: versions,
+            isOldFrame: isOld,
+            hasSho: hasShoPlate,
+            includeReMasterByDefault: false
+        )
+    }
+    
+    func isAchieved(plateType: PlateType, sheet: Sheet, context: ModelContext) -> Bool {
+        let score = ScoreService.shared.score(for: sheet, context: context)
+        return plateType.isAchieved(score: score)
     }
 }

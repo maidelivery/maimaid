@@ -29,6 +29,9 @@ struct ScoreEntryView: View {
     @State private var selectedFC: String? = nil
     @State private var selectedFS: String? = nil
     
+    // Cached score to avoid repeated queries
+    @State private var cachedCurrentScore: Score? = nil
+    
     init(sheet: Sheet, initialRate: Double? = nil, initialRank: String? = nil, initialDxScore: Int? = nil, initialFC: String? = nil, initialFS: String? = nil) {
         self.sheet = sheet
         self.initialRate = initialRate
@@ -85,11 +88,6 @@ struct ScoreEntryView: View {
         return "D"
     }
     
-    /// 🔴 关键修复：使用 ScoreService 获取当前用户的成绩
-    private var currentScore: Score? {
-        ScoreService.shared.score(for: sheet, context: modelContext)
-    }
-    
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -104,7 +102,7 @@ struct ScoreEntryView: View {
                     photoScanSection
                     
                     // Existing score info
-                    if let existingScore = currentScore {
+                    if let existingScore = cachedCurrentScore {
                         existingScoreCard(existingScore)
                     }
                     
@@ -123,27 +121,30 @@ struct ScoreEntryView: View {
             }
         }
         .onAppear {
+            // Cache the score once on appear
+            cachedCurrentScore = ScoreService.shared.score(for: sheet, context: modelContext)
+            
             if let initRate = initialRate {
                 rateText = String(format: "%.4f", initRate)
-            } else if let score = currentScore {
+            } else if let score = cachedCurrentScore {
                 rateText = String(format: "%.4f", score.rate)
             }
             
             if let initDxScore = initialDxScore {
                 dxScoreText = "\(initDxScore)"
-            } else if let score = currentScore {
+            } else if let score = cachedCurrentScore {
                 dxScoreText = score.dxScore > 0 ? "\(score.dxScore)" : ""
             }
             
             if let initFC = initialFC {
                 selectedFC = initFC
-            } else if let score = currentScore {
+            } else if let score = cachedCurrentScore {
                 selectedFC = score.fc
             }
             
             if let initFS = initialFS {
                 selectedFS = initFS
-            } else if let score = currentScore {
+            } else if let score = cachedCurrentScore {
                 selectedFS = score.fs
             }
         }
