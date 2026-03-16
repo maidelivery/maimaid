@@ -18,10 +18,22 @@ struct ScoreQueryView: View {
     
     // Display settings (persisted)
     @AppStorage("scoreQuery.displayMode") private var displayMode: DisplayMode = .grid
-    @AppStorage("scoreQuery.gridColumns") private var gridColumns: Int = 5
+    @AppStorage("scoreQuery.gridColumns") private var committedColumns: Int = 5
     @AppStorage("scoreQuery.badgeMode") private var badgeMode: BadgeMode = .rank
     @AppStorage("scoreQuery.sortMode") private var sortMode: SortMode = .rating
     @AppStorage("scoreQuery.sortAscending") private var sortAscending: Bool = false
+    
+    // Grid zoom state
+    @State private var isZooming: Bool = false
+    @State private var liveColumnCount: CGFloat = 5.0
+    @State private var pinchStartColumns: CGFloat = 5.0
+    @State private var zoomAnchorEntryID: String? = nil
+    @State private var viewportHeight: CGFloat = 0
+    /// Brief cooldown after pinch ends to prevent accidental tap activation
+    @State private var navigationDisabled: Bool = false
+    
+    private let minColumns: CGFloat = 3
+    private let maxColumns: CGFloat = 9
     
     // Filters
     @State private var selectedDifficulties: Set<String> = []
@@ -79,8 +91,102 @@ struct ScoreQueryView: View {
     
     private var activeProfile: UserProfile? { activeProfiles.first }
     
-    private var gridLayout: [GridItem] {
-        Array(repeating: GridItem(.flexible(), spacing: 4), count: gridColumns)
+    // MARK: - Grid Zoom Helpers
+    
+    /// Given the pinch magnification, compute the effective continuous column count.
+    private func continuousColumns(for magnification: CGFloat) -> CGFloat {
+        let raw = pinchStartColumns / magnification
+        return min(maxColumns, max(minColumns, raw))
+    }
+    
+    /// Compute cell size and spacing from a column count and available width.
+    private func gridMetrics(intColumns: Int, in width: CGFloat) -> (cellSize: CGFloat, spacing: CGFloat) {
+        let intCols = max(1, intColumns)
+        let spacing: CGFloat
+        switch intCols {
+        case ...3: spacing = 5
+        case 4: spacing = 4
+        case 5: spacing = 3
+        case 6: spacing = 2
+        default: spacing = 1
+        }
+        let totalSpacing = spacing * CGFloat(intCols - 1)
+        let horizontalPadding: CGFloat = spacing + 2
+        let cellSize = (width - totalSpacing - horizontalPadding * 2) / CGFloat(intCols)
+        return (max(1, cellSize), spacing)
+    }
+    
+    /// The corner radius for a given column count
+    private func cornerRadius(for columns: Int) -> CGFloat {
+        switch columns {
+        case ...3: return 10
+        case 4...5: return 6
+        default: return 3
+        }
+    }
+    
+    /// Estimate which entry index is near the center of the pinch gesture.
+    private func estimateCenterEntryIndex(pinchY: CGFloat, gridWidth: CGFloat, columns: Int) -> Int {
+        let metrics = gridMetrics(intColumns: columns, in: gridWidth)
+        let cellSize = metrics.cellSize
+        let spacing = metrics.spacing
+        let rowHeight = cellSize + spacing
+        guard rowHeight > 0 else { return 0 }
+        
+        let estimatedRow = Int(max(0, pinchY - 12) / rowHeight)
+        let centerIndexInRow = columns / 2
+        let index = estimatedRow * columns + centerIndexInRow
+        return min(max(0, index), max(0, filteredEntries.count - 1))
+    }
+    
+    private func makePinchGesture(width: CGFloat) -> some Gesture {
+        MagnifyGesture(minimumScaleDelta: 0.02)
+            .onChanged { value in
+                if !isZooming {
+                    isZooming = true
+                    navigationDisabled = true
+                    pinchStartColumns = CGFloat(committedColumns)
+                    
+                    let centerIdx = estimateCenterEntryIndex(
+                        pinchY: value.startLocation.y,
+                        gridWidth: width,
+                        columns: committedColumns
+                    )
+                    if centerIdx >= 0 && centerIdx < filteredEntries.count {
+                        zoomAnchorEntryID = filteredEntries[centerIdx].id
+                    }
+                }
+                liveColumnCount = continuousColumns(for: value.magnification)
+            }
+            .onEnded { value in
+                let finalCols = continuousColumns(for: value.magnification)
+                let targetCols = max(Int(minColumns), min(Int(maxColumns), Int(finalCols.rounded())))
+                let changed = targetCols != committedColumns
+                let anchorID = zoomAnchorEntryID
+                
+                isZooming = false
+                
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                    committedColumns = targetCols
+                    liveColumnCount = CGFloat(targetCols)
+                }
+                
+                if changed {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                }
+                
+                if let anchorID = anchorID {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            self.zoomAnchorEntryID = anchorID
+                        }
+                    }
+                }
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    navigationDisabled = false
+                }
+            }
     }
     
     private var allDifficulties: [String] {
@@ -106,43 +212,67 @@ struct ScoreQueryView: View {
     // MARK: - Body
     
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                // Stats Header
-                statsHeader
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                
-                // Controls
-                controlsSection
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                
-                // Filter Chips
-                filterSection
-                    .padding(.top, 12)
-                
-                // Content
-                if isLoading {
-                    ProgressView()
-                        .padding(.top, 60)
-                } else if filteredEntries.isEmpty {
-                    ContentUnavailableView(
-                        "scoreQuery.empty",
-                        systemImage: "music.note.list",
-                        description: Text("")
-                    )
-                    .padding(.top, 40)
-                } else {
-                    contentView
-                        .padding(.top, 8)
+        GeometryReader { geo in
+            let width = geo.size.width
+            
+            ScrollViewReader { scrollProxy in
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        // Stats Header
+                        statsHeader
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                        
+                        // Controls
+                        controlsSection
+                            .padding(.horizontal, 16)
+                            .padding(.top, 12)
+                        
+                        // Filter Chips
+                        filterSection
+                            .padding(.top, 12)
+                        
+                        // Content
+                        if isLoading {
+                            ProgressView()
+                                .padding(.top, 60)
+                        } else if filteredEntries.isEmpty {
+                            ContentUnavailableView(
+                                "scoreQuery.empty",
+                                systemImage: "music.note.list",
+                                description: Text("")
+                            )
+                            .padding(.top, 40)
+                        } else {
+                            contentView(in: width)
+                                .padding(.top, 8)
+                        }
+                    }
                 }
+                .scrollDisabled(isZooming)
+                .if(displayMode == .grid) { view in
+                    view.simultaneousGesture(makePinchGesture(width: width))
+                }
+                .onChange(of: zoomAnchorEntryID) { _, newID in
+                    if let id = newID, !isZooming {
+                        scrollProxy.scrollTo(id, anchor: .center)
+                    }
+                }
+            }
+            .onAppear {
+                viewportHeight = geo.size.height
+            }
+            .onChange(of: geo.size.height) { _, h in
+                viewportHeight = h
             }
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("scoreQuery.title")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $searchText, prompt: "search.placeholder")
+        .onAppear {
+            liveColumnCount = CGFloat(committedColumns)
+        }
         .onChange(of: searchText) { _, _ in
             debounceFilter()
         }
@@ -261,15 +391,6 @@ struct ScoreQueryView: View {
                     .frame(width: 180)
                     
                     Spacer()
-                    
-                    // Column slider
-                    HStack(spacing: 6) {
-                        Text("scoreQuery.columns")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                        Stepper("\(gridColumns)", value: $gridColumns, in: 3...7)
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                    }
                 }
             }
         }
@@ -394,65 +515,75 @@ struct ScoreQueryView: View {
     // MARK: - Content View
     
     @ViewBuilder
-    private var contentView: some View {
+    private func contentView(in width: CGFloat) -> some View {
         switch displayMode {
         case .grid:
-            gridView
+            gridBody(in: width)
         case .list:
             listView
         }
     }
     
-    private var gridView: some View {
-        LazyVGrid(columns: gridLayout, spacing: 4) {
+    private func gridBody(in width: CGFloat) -> some View {
+        let cols = isZooming ? liveColumnCount : CGFloat(committedColumns)
+        let intCols = max(Int(minColumns), min(Int(maxColumns), Int(cols.rounded())))
+        let metrics = gridMetrics(intColumns: intCols, in: width)
+        let cellSize = metrics.cellSize
+        let spacing = metrics.spacing
+        let horizontalPadding = spacing + 2
+        let cr = cornerRadius(for: intCols)
+        
+        return LazyVGrid(
+            columns: Array(repeating: GridItem(.fixed(cellSize), spacing: spacing), count: intCols),
+            spacing: spacing
+        ) {
             ForEach(filteredEntries) { entry in
                 NavigationLink(destination: songDetailDestination(entry: entry)) {
-                    gridCell(entry: entry)
+                    gridCell(entry: entry, cellSize: cellSize, cornerRadius: cr, intCols: intCols)
                 }
+                .disabled(navigationDisabled || isZooming)
                 .buttonStyle(.plain)
+                .frame(width: cellSize, height: cellSize)
+                .id(entry.id)
             }
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, horizontalPadding)
         .padding(.bottom, 20)
     }
     
-    private func gridCell(entry: ScoreEntry) -> some View {
-        GeometryReader { geo in
-            let size = geo.size.width
-            ZStack(alignment: .bottomTrailing) {
-                SongJacketView(
-                    imageName: entry.imageName,
-                    size: size,
-                    cornerRadius: 6
-                )
-                
-                // Difficulty accent (top-left small bar)
-                VStack {
-                    HStack {
-                        RoundedRectangle(cornerRadius: 1)
-                            .fill(ThemeUtils.colorForDifficulty(entry.difficulty, entry.type))
-                            .frame(width: 3, height: 14)
-                            .padding(.leading, 2)
-                            .padding(.top, 2)
-                        Spacer()
-                    }
+    private func gridCell(entry: ScoreEntry, cellSize: CGFloat, cornerRadius: CGFloat, intCols: Int) -> some View {
+        ZStack(alignment: .bottomTrailing) {
+            SongJacketView(
+                imageName: entry.imageName,
+                size: cellSize,
+                cornerRadius: cornerRadius
+            )
+            
+            // Difficulty accent (top-left small bar)
+            VStack {
+                HStack {
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(ThemeUtils.colorForDifficulty(entry.difficulty, entry.type))
+                        .frame(width: 3, height: 14)
+                        .padding(.leading, 2)
+                        .padding(.top, 2)
                     Spacer()
                 }
-                
-                // Badge overlay
-                badgeOverlay(entry: entry)
-                    .padding(2)
+                Spacer()
             }
+            
+            // Badge overlay
+            badgeOverlay(entry: entry, intCols: intCols)
+                .padding(2)
         }
-        .aspectRatio(1, contentMode: .fit)
     }
     
     @ViewBuilder
-    private func badgeOverlay(entry: ScoreEntry) -> some View {
+    private func badgeOverlay(entry: ScoreEntry, intCols: Int) -> some View {
         switch badgeMode {
         case .rank:
             Text(entry.rank)
-                .font(.system(size: gridColumns > 5 ? 7 : 9, weight: .black, design: .rounded))
+                .font(.system(size: intCols > 5 ? 7 : 9, weight: .black, design: .rounded))
                 .foregroundColor(.white)
                 .padding(.horizontal, 3)
                 .padding(.vertical, 1)
@@ -460,7 +591,7 @@ struct ScoreQueryView: View {
         case .fc:
             if let fc = entry.fc, !fc.isEmpty {
                 Text(ThemeUtils.normalizeFC(fc))
-                    .font(.system(size: gridColumns > 5 ? 7 : 9, weight: .black, design: .rounded))
+                    .font(.system(size: intCols > 5 ? 7 : 9, weight: .black, design: .rounded))
                     .foregroundColor(.white)
                     .padding(.horizontal, 3)
                     .padding(.vertical, 1)
@@ -469,7 +600,7 @@ struct ScoreQueryView: View {
         case .fs:
             if let fs = entry.fs, !fs.isEmpty {
                 Text(ThemeUtils.normalizeFS(fs))
-                    .font(.system(size: gridColumns > 5 ? 7 : 9, weight: .black, design: .rounded))
+                    .font(.system(size: intCols > 5 ? 7 : 9, weight: .black, design: .rounded))
                     .foregroundColor(.white)
                     .padding(.horizontal, 3)
                     .padding(.vertical, 1)
