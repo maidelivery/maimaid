@@ -50,7 +50,7 @@ class ChartStatsService {
     private init() {}
     
     private var cache: [String: [ChartStat]] = [:]
-    private var isLoading = false
+    private var fetchTask: Task<Void, Error>?
     private var lastFetchDate: Date? = nil
     
     func fetchStats() async {
@@ -59,10 +59,12 @@ class ChartStatsService {
             return
         }
         
-        guard !isLoading else { return }
-        isLoading = true
+        if let existingTask = fetchTask {
+            _ = try? await existingTask.value
+            return
+        }
         
-        do {
+        let task = Task {
             guard let url = URL(string: "https://www.diving-fish.com/api/maimaidxprober/chart_stats") else { return }
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try JSONDecoder().decode(ChartStatsResponse.self, from: data)
@@ -70,14 +72,18 @@ class ChartStatsService {
             await MainActor.run {
                 self.cache = response.charts
                 self.lastFetchDate = Date()
-                self.isLoading = false
-            }
-        } catch {
-            print("Failed to fetch chart stats: \(error)")
-            await MainActor.run {
-                self.isLoading = false
             }
         }
+        
+        self.fetchTask = task
+        
+        do {
+            _ = try await task.value
+        } catch {
+            print("Failed to fetch chart stats: \(error)")
+        }
+        
+        self.fetchTask = nil
     }
     
     func getStats(for songId: Int) -> [ChartStat]? {

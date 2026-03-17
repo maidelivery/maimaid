@@ -38,6 +38,7 @@ final class B50CacheService: ObservableObject {
         activeProfile: UserProfile?,
         configs: [SyncConfig],
         overriddenVersion: String?,
+        useFitDiff: Bool = false,
         force: Bool = false
     ) async -> Bool {
         let profileId = activeProfile?.id
@@ -65,7 +66,7 @@ final class B50CacheService: ObservableObject {
         let latestScore = (try? modelContext.fetch(latestScoreDescriptor))?.first
         let latestUpdate = latestScore?.achievementDate.timeIntervalSince1970 ?? 0
         
-        let params = "\(profileIdString)_\(b35Limit)_\(b15Limit)_\(version)_\(scoreCount)_\(latestUpdate)"
+        let params = "\(profileIdString)_\(b35Limit)_\(b15Limit)_\(version)_\(scoreCount)_\(latestUpdate)_fitDiff_\(useFitDiff)"
         
         if !force && params == lastCalculationParams && !isFirstLoad {
             return false
@@ -81,7 +82,8 @@ final class B50CacheService: ObservableObject {
         let input = allSongs.toCalculationInput(
             userProfileId: profileIdVal,
             server: server,
-            preloadedScores: scoreMap
+            preloadedScores: scoreMap,
+            useFitDiff: useFitDiff
         )
         
         // Use effective version logic

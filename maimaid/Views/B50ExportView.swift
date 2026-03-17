@@ -9,6 +9,7 @@ struct B50ExportView: View {
     let totalRating: Int
     let userName: String?
     let currentVersion: String? // 当前设定的最新版本
+    let useFitDiff: Bool
     
     private let columns = 5
     private let cardWidth: CGFloat = 220
@@ -79,9 +80,17 @@ struct B50ExportView: View {
                 
                 Spacer()
                 
-                Text("\(totalRating)")
-                    .font(.system(size: 56, weight: .black, design: .rounded))
-                    .foregroundStyle(ThemeUtils.ratingGradient(totalRating))
+                VStack(alignment: .trailing, spacing: 0) {
+                    Text("\(totalRating)")
+                        .font(.system(size: 56, weight: .black, design: .rounded))
+                        .foregroundStyle(ThemeUtils.ratingGradient(totalRating))
+                    
+                    if useFitDiff {
+                        Text(String(localized: "bestTable.export.fitDiff.rating"))
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.orange)
+                    }
+                }
             }
             
             // Summary pills
@@ -196,7 +205,7 @@ struct B50ExportView: View {
                 // Achievement Rank Small Badge (Optional: if we want to show it on image)
                 // ID overlay at bottom
                 if entry.songId > 0 {
-                    Text("#\(entry.songId)")
+                    Text("#\(String(entry.songId))")
                         .font(.system(size: 8, weight: .bold, design: .monospaced))
                         .foregroundColor(.white)
                         .padding(.horizontal, 3)
@@ -321,6 +330,15 @@ struct B50ExportView: View {
                         .font(.system(size: 10))
                     Text(ThemeUtils.versionAbbreviation(version))
                         .font(.system(size: 11, weight: .semibold))
+                    
+                    if useFitDiff {
+                        Text(String(localized: "bestTable.export.fitDiff"))
+                            .font(.system(size: 9, weight: .semibold))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(Color.orange.opacity(0.2), in: RoundedRectangle(cornerRadius: 3))
+                            .foregroundColor(.orange)
+                    }
                 }
                 .foregroundColor(secondaryColor)
             }
@@ -347,6 +365,7 @@ extension B50ExportView {
         totalRating: Int,
         userName: String?,
         currentVersion: String? = nil,
+        useFitDiff: Bool = false,
         colorScheme: ColorScheme? = nil
     ) -> UIImage? {
         let view = B50ExportView(
@@ -354,7 +373,8 @@ extension B50ExportView {
             b15: b15,
             totalRating: totalRating,
             userName: userName,
-            currentVersion: currentVersion
+            currentVersion: currentVersion,
+            useFitDiff: useFitDiff
         )
         .environment(\.colorScheme, colorScheme ?? .light)
         .preferredColorScheme(colorScheme)

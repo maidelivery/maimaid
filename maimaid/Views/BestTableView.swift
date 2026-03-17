@@ -18,6 +18,7 @@ struct BestTableView: View {
     // MARK: - 临时版本覆盖 (退出页面即失效)
     @State private var overriddenVersion: String?
     @State private var showVersionPicker = false
+    @AppStorage("useFitDiff") private var useFitDiff = false
     
     /// 可选的版本列表
     private var availableVersions: [String] {
@@ -145,11 +146,16 @@ struct BestTableView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .padding(.vertical, 4)
+                
+                Toggle("bestTable.settings.useFitDiff", isOn: $useFitDiff)
+                    .tint(.orange)
             }
             
             Section(String(localized: "bestTable.section.new \(currentB15Count)")) {
                 if cache.isLoading && cache.isFirstLoad {
-                    ProgressView().padding()
+                    ForEach(0..<min(5, currentB15Count), id: \.self) { _ in
+                        RatingRowSkeletonView()
+                    }
                 } else if cache.b50Result.b15.isEmpty {
                     Text("bestTable.empty")
                         .foregroundColor(.secondary)
@@ -168,7 +174,9 @@ struct BestTableView: View {
             
             Section(String(localized: "bestTable.section.old \(currentB35Count)")) {
                 if cache.isLoading && cache.isFirstLoad {
-                    ProgressView().padding()
+                    ForEach(0..<min(8, currentB35Count), id: \.self) { _ in
+                        RatingRowSkeletonView()
+                    }
                 } else if cache.b50Result.b35.isEmpty {
                     Text("bestTable.empty")
                         .foregroundColor(.secondary)
@@ -229,6 +237,9 @@ struct BestTableView: View {
         .onChange(of: overriddenVersion) { _, _ in
             Task { await performCalculation() }
         }
+        .onChange(of: useFitDiff) { _, _ in
+            Task { await performCalculation() }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .NSManagedObjectContextDidSave)) { _ in
             // Listen for any saves to detect score updates
             // (Note: This is a bit broad, but B50CacheService has its own internal guard)
@@ -262,6 +273,7 @@ struct BestTableView: View {
                     totalRating: cache.b50Result.total,
                     userName: activeProfile?.name ?? configs.first?.userName,
                     currentVersion: effectiveVersion,
+                    useFitDiff: useFitDiff,
                     colorScheme: colorScheme
                 )
             }
@@ -317,11 +329,15 @@ struct BestTableView: View {
     }
     
     private func performCalculation() async {
+        if useFitDiff {
+            await ChartStatsService.shared.fetchStats()
+        }
         await cache.calculateIfNeeded(
             modelContext: modelContext,
             activeProfile: activeProfile,
             configs: configs,
-            overriddenVersion: overriddenVersion
+            overriddenVersion: overriddenVersion,
+            useFitDiff: useFitDiff
         )
     }
     
@@ -469,5 +485,66 @@ struct VersionPickerSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+}
+
+// MARK: - Skeleton View
+
+struct RatingRowSkeletonView: View {
+    var body: some View {
+        HStack(spacing: 14) {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.gray.opacity(0.15))
+                .frame(width: 56, height: 56)
+                .skeleton()
+            
+            VStack(alignment: .leading, spacing: 8) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.gray.opacity(0.15))
+                    .frame(height: 16)
+                    .frame(maxWidth: 160)
+                    .skeleton()
+                
+                HStack(spacing: 6) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 30, height: 14)
+                        .skeleton()
+                    
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 50, height: 14)
+                        .skeleton()
+                }
+                
+                HStack(spacing: 4) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 24, height: 12)
+                        .skeleton()
+                    
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 36, height: 12)
+                        .skeleton()
+                }
+            }
+            .frame(minHeight: 56, alignment: .leading)
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 6) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.gray.opacity(0.15))
+                    .frame(width: 40, height: 20)
+                    .skeleton()
+                
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.gray.opacity(0.15))
+                    .frame(width: 48, height: 12)
+                    .skeleton()
+            }
+        }
+        .padding(.vertical, 6)
     }
 }

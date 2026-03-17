@@ -299,6 +299,7 @@ enum RatingUtils {
         let type: String
         let difficulty: String
         let internalLevelValue: Double?
+        let fitDiffValue: Double?
         let regionJp: Bool
         let regionIntl: Bool
         let regionCn: Bool
@@ -358,7 +359,7 @@ enum RatingUtils {
                 let sheetId = "\(sheetData.songIdentifier)_\(sheetData.type)_\(sheetData.difficulty)"
                 guard let scoreData = input.scoreMap[sheetId] else { continue }
                 
-                let internalLevel = sheetData.internalLevelValue ?? 0
+                let internalLevel = sheetData.fitDiffValue ?? sheetData.internalLevelValue ?? 0
                 guard internalLevel > 0 else { continue }
                 
                 let rating = calculateRating(
@@ -413,7 +414,8 @@ extension Array where Element == Song {
     func toCalculationInput(
         userProfileId: UUID?,
         server: GameServer?,
-        preloadedScores: [String: Score]
+        preloadedScores: [String: Score],
+        useFitDiff: Bool = false
     ) -> RatingUtils.CalculationInput {
         let songsData = self.map { song in
             RatingUtils.SongCalculationData(
@@ -431,6 +433,7 @@ extension Array where Element == Song {
                         type: sheet.type,
                         difficulty: sheet.difficulty,
                         internalLevelValue: sheet.internalLevelValue ?? sheet.levelValue,
+                        fitDiffValue: useFitDiff ? ChartStatsService.shared.getStat(for: sheet)?.fit_diff : nil,
                         regionJp: sheet.regionJp,
                         regionIntl: sheet.regionIntl,
                         regionCn: sheet.regionCn
