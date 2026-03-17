@@ -29,7 +29,9 @@ struct SupabaseAuthView: View {
                 .ignoresSafeArea()
 
             List {
-                if supabaseManager.isAuthenticated, let user = supabaseManager.currentUser {
+                if !supabaseManager.isConfigured {
+                    configurationContent
+                } else if supabaseManager.isAuthenticated, let user = supabaseManager.currentUser {
                     authenticatedContent(user: user)
                 } else {
                     authenticationContent
@@ -159,6 +161,34 @@ struct SupabaseAuthView: View {
     }
 
     // MARK: - Authentication View
+
+    @ViewBuilder
+    private var configurationContent: some View {
+        Section {
+            accountSummaryCard(
+                icon: "exclamationmark.icloud.fill",
+                title: "Supabase 未配置",
+                subtitle: "请在 `Config/Secrets.xcconfig` 中填写云同步配置。"
+            )
+        }
+        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+        .listRowBackground(Color.clear)
+        .listSectionSeparator(.hidden)
+
+        Section("配置说明") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("1. 复制 `Config/Secrets.example.xcconfig` 为 `Config/Secrets.xcconfig`")
+                Text("2. 填入 `SUPABASE_URL` 与 `SUPABASE_PUBLISHABLE_KEY`")
+                if let description = supabaseManager.configurationErrorDescription {
+                    Text(description)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .font(.subheadline)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.vertical, 4)
+        }
+    }
 
     @ViewBuilder
     private var authenticationContent: some View {
@@ -338,10 +368,14 @@ struct SupabaseAuthView: View {
 
     func signIn() async {
         guard !email.isEmpty, !password.isEmpty else { return }
+        guard let client = supabaseManager.client else {
+            showToast(message: supabaseManager.configurationErrorDescription ?? "Supabase is not configured.", error: true)
+            return
+        }
 
         isLoading = true
         do {
-            let _ = try await supabaseManager.client.auth.signIn(email: email, password: password)
+            let _ = try await client.auth.signIn(email: email, password: password)
             showToast(message: "settings.cloud.message.loginSuccess")
             await supabaseManager.checkSession()
         } catch {
@@ -352,10 +386,14 @@ struct SupabaseAuthView: View {
 
     func signUp() async {
         guard !email.isEmpty, !password.isEmpty else { return }
+        guard let client = supabaseManager.client else {
+            showToast(message: supabaseManager.configurationErrorDescription ?? "Supabase is not configured.", error: true)
+            return
+        }
 
         isLoading = true
         do {
-            let _ = try await supabaseManager.client.auth.signUp(email: email, password: password)
+            let _ = try await client.auth.signUp(email: email, password: password)
             showToast(message: "settings.cloud.message.signupSuccess")
         } catch {
             showToast(message: error.localizedDescription, error: true)
@@ -364,9 +402,11 @@ struct SupabaseAuthView: View {
     }
 
     func logout() async {
+        guard let client = supabaseManager.client else { return }
+
         isLoading = true
         do {
-            try await supabaseManager.client.auth.signOut()
+            try await client.auth.signOut()
         } catch {
             print("Logout error: \(error)")
         }

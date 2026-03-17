@@ -1,0 +1,5 @@
+// Shared build settings for local secrets.
+SUPABASE_URL =
+SUPABASE_PUBLISHABLE_KEY =
+
+#include? "Secrets.xcconfig"

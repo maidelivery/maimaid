@@ -13,6 +13,12 @@ struct SettingsView: View {
     @State private var alertTitle = ""
     @State private var alertMessage = ""
     @State private var showAlert = false
+
+    private var appVersionText: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
+        return "\(version) (\(build))"
+    }
     
     var body: some View {
         NavigationStack {
@@ -98,7 +104,7 @@ struct SettingsView: View {
                 
                 // About Section
                 Section("settings.about.header") {
-                    settingsRow(icon: "info.circle.fill", iconColor: .gray, title: "settings.about.version", value: "1.0.0")
+                    settingsRow(icon: "info.circle.fill", iconColor: .gray, title: "settings.about.version", value: appVersionText)
                 }
             }
             .navigationTitle("settings.title")

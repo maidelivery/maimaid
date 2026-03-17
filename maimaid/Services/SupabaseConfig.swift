@@ -1,14 +1,55 @@
 import Foundation
 
-/// Supabase Configuration Constants
+enum SupabaseConfigError: LocalizedError {
+    case missingURL
+    case missingPublishableKey
+
+    var errorDescription: String? {
+        switch self {
+        case .missingURL:
+            return "Missing `SUPABASE_URL`. Fill `Config/Secrets.xcconfig` or Xcode build settings."
+        case .missingPublishableKey:
+            return "Missing `SUPABASE_PUBLISHABLE_KEY`. Fill `Config/Secrets.xcconfig` or Xcode build settings."
+        }
+    }
+}
+
 struct SupabaseConfig {
-    /// TODO: Replace with your actual Supabase Project URL (e.g., "https://xyzcompany.supabase.co")
-    static let projectURL = URL(string: "https://asfbxeghtuxezvotzgmu.supabase.co")!
-    
-    /// The anon/publishable key provided by you.
-    static let publishableKey = "sb_publishable_58Z-GFaclu9okizkOC-v0A_PYQc8LBh"
-    
-    /// ⚠️ DANGER: Never use the secret key in the client application (app code).
-    /// Keep it safe in your server or Edge Functions.
-    /// Secret key: "sb_secret_Uyo1Sq3LbF2hrQS8fVYvbg_03RQkrei"
+    private static func infoValue(forKey key: String) -> String? {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String else {
+            return nil
+        }
+
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.hasPrefix("$("), !trimmed.hasPrefix("__") else {
+            return nil
+        }
+
+        return trimmed
+    }
+
+    static var projectURL: URL? {
+        guard let value = infoValue(forKey: "SUPABASE_URL") else { return nil }
+        return URL(string: value)
+    }
+
+    static var publishableKey: String? {
+        infoValue(forKey: "SUPABASE_PUBLISHABLE_KEY")
+    }
+
+    static var configurationError: SupabaseConfigError? {
+        if projectURL == nil {
+            return .missingURL
+        }
+
+        if publishableKey == nil {
+            return .missingPublishableKey
+        }
+
+        return nil
+    }
+
+    static var isConfigured: Bool {
+        configurationError == nil
+    }
 }

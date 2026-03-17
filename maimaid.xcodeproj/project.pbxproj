@@ -17,13 +17,16 @@
 		373DA3D92F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */; };
 		373DA3E52F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */; };
 		37438C7F2F697ADB0055D6BD /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = 37438C7E2F697ADB0055D6BD /* Yams */; };
+		37438D122F69C22F0055D6BD /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 37438D112F69C22F0055D6BD /* Secrets.xcconfig */; };
 		37C9CF1B2F4CE4DB002CBF7A /* maimaid.icon in Resources */ = {isa = PBXBuildFile; fileRef = 37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		3703C0013B00000100000001 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		372860792F604BC70028E788 /* maimaid v1.41n.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaid v1.41n.mlpackage"; sourceTree = "<group>"; };
 		373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaidetector v1.2n.mlpackage"; sourceTree = "<group>"; };
 		373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaidistinguish v1.2.mlpackage"; sourceTree = "<group>"; };
+		37438D112F69C22F0055D6BD /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		37C9C3DD2F4CDAAB002CBF7A /* maimaid.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = maimaid.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = maimaid.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -67,6 +70,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		3703C0013B00000100000003 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				37438D112F69C22F0055D6BD /* Secrets.xcconfig */,
+				3703C0013B00000100000001 /* Base.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
 		370E0E492F65C18C0066B825 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -78,6 +90,7 @@
 			isa = PBXGroup;
 			children = (
 				375868EB2F4C78EB006316F5 /* maimaid */,
+				3703C0013B00000100000003 /* Config */,
 				37C9C3DD2F4CDAAB002CBF7A /* maimaid.app */,
 				37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */,
 				372860792F604BC70028E788 /* maimaid v1.41n.mlpackage */,
@@ -163,6 +176,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				37438D122F69C22F0055D6BD /* Secrets.xcconfig in Resources */,
 				37C9CF1B2F4CE4DB002CBF7A /* maimaid.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -185,6 +199,7 @@
 /* Begin XCBuildConfiguration section */
 		375868F82F4C78EC006316F5 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3703C0013B00000100000001 /* Base.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = maimaid;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -204,6 +219,8 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera is required for scanning score images";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Needed to save captured score images to your photo gallery";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Allows you to select score images to analyze and save captured results to albums.";
+				INFOPLIST_KEY_SUPABASE_PUBLISHABLE_KEY = "$(SUPABASE_PUBLISHABLE_KEY)";
+				INFOPLIST_KEY_SUPABASE_URL = "$(SUPABASE_URL)";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -238,6 +255,7 @@
 		};
 		375868F92F4C78EC006316F5 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3703C0013B00000100000001 /* Base.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = maimaid;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -257,6 +275,8 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera is required for scanning score images";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Needed to save captured score images to your photo gallery";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Allows you to select score images to analyze and save captured results to albums.";
+				INFOPLIST_KEY_SUPABASE_PUBLISHABLE_KEY = "$(SUPABASE_PUBLISHABLE_KEY)";
+				INFOPLIST_KEY_SUPABASE_URL = "$(SUPABASE_URL)";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

@@ -91,29 +91,51 @@ extension Data {
 final class SupabaseManager {
     static let shared = SupabaseManager()
     
-    let client: SupabaseClient
+    let client: SupabaseClient?
     
     var currentUser: User?
+
+    var isConfigured: Bool {
+        client != nil
+    }
+
+    var configurationErrorDescription: String? {
+        SupabaseConfig.configurationError?.errorDescription
+    }
     
     var isAuthenticated: Bool {
         return currentUser != nil
     }
     
     private init() {
-        self.client = SupabaseClient(
-            supabaseURL: SupabaseConfig.projectURL,
-            supabaseKey: SupabaseConfig.publishableKey,
-            options: SupabaseClientOptions(
-                auth: SupabaseClientOptions.AuthOptions(emitLocalSessionAsInitialSession: true)
+        if let projectURL = SupabaseConfig.projectURL,
+           let publishableKey = SupabaseConfig.publishableKey {
+            self.client = SupabaseClient(
+                supabaseURL: projectURL,
+                supabaseKey: publishableKey,
+                options: SupabaseClientOptions(
+                    auth: SupabaseClientOptions.AuthOptions(emitLocalSessionAsInitialSession: true)
+                )
             )
-        )
-        
-        Task {
-            await checkSession()
+        } else {
+            self.client = nil
+        }
+
+        if client != nil {
+            Task {
+                await checkSession()
+            }
         }
     }
     
     func checkSession() async {
+        guard let client else {
+            await MainActor.run {
+                self.currentUser = nil
+            }
+            return
+        }
+
         do {
             let session = try await client.auth.session
             await MainActor.run {
@@ -130,6 +152,7 @@ final class SupabaseManager {
     // MARK: - Avatar Storage
     
     private func uploadAvatar(data: Data, profileId: UUID) async throws -> String {
+        let client = try requireClient()
         let fileName = "\(profileId.uuidString).png"
         let path = "\(fileName)"
         
@@ -153,6 +176,8 @@ final class SupabaseManager {
     // MARK: - Data Sync (Backup)
     
     func backupToCloud(context: ModelContext) async throws {
+        let client = try requireClient()
+
         // Find all profiles, records, and scores
         let profileFetch = FetchDescriptor<UserProfile>()
         let profiles = try context.fetch(profileFetch)
@@ -261,6 +286,8 @@ final class SupabaseManager {
     // MARK: - Data Sync (Restore)
     
     func restoreFromCloud(context: ModelContext) async throws {
+        let client = try requireClient()
+
         guard let user = currentUser else {
             throw NSError(domain: "Auth", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
@@ -427,5 +454,12 @@ final class SupabaseManager {
         await MainActor.run {
             ScoreService.shared.invalidateAllCaches()
         }
+    }
+
+    private func requireClient() throws -> SupabaseClient {
+        guard let client else {
+            throw SupabaseConfig.configurationError ?? SupabaseConfigError.missingURL
+        }
+        return client
     }
 }

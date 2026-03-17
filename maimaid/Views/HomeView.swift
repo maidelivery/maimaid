@@ -297,29 +297,14 @@ struct HomeView: View {
     // MARK: - Avatar View
     
     private var avatarImage: some View {
-        Group {
-            if let data = activeProfile?.avatarData, let uiImage = UIImage(data: data) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 60, height: 60)
-                    .clipShape(Circle())
-            } else if let urlString = activeProfile?.avatarUrl, let url = URL(string: urlString) {
-                AsyncImage(url: url) { image in
-                    image.resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Color.gray.opacity(0.2)
-                }
-                .frame(width: 60, height: 60)
-                .clipShape(Circle())
-            } else {
-                Image(systemName: "person.circle.fill")
-                    .resizable()
-                    .frame(width: 60, height: 60)
-                    .foregroundColor(.blue.opacity(0.6))
-            }
-        }
+        AvatarImageView(
+            imageData: activeProfile?.avatarData,
+            avatarURL: activeProfile?.avatarUrl,
+            size: 60,
+            placeholderSystemName: "person.circle.fill",
+            placeholderTint: .blue.opacity(0.6),
+            placeholderBackground: Color.blue.opacity(0.08)
+        )
     }
 
     private var profileHeader: some View {
@@ -440,93 +425,11 @@ struct ProfileEditSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                // Centered Avatar Section
-                Section {
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 12) {
-                            PhotosPicker(selection: $selectedItem, matching: .images) {
-                                ZStack {
-                                    if let data = selectedImageData, let uiImage = UIImage(data: data) {
-                                        Image(uiImage: uiImage)
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fill)
-                                            .frame(width: 100, height: 100)
-                                            .clipShape(Circle())
-                                    } else if let urlString = avatarUrl {
-                                        // Try to load local version if it's a preset URL
-                                        let localImage: UIImage? = {
-                                            if let idString = urlString.components(separatedBy: "/").last?.replacingOccurrences(of: ".png", with: ""),
-                                               let id = Int(idString) {
-                                                return ImageDownloader.shared.loadImage(iconId: id)
-                                            }
-                                            return nil
-                                        }()
-                                        
-                                        if let uiImage = localImage {
-                                            Image(uiImage: uiImage)
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(width: 100, height: 100)
-                                                .clipShape(Circle())
-                                        } else if let url = URL(string: urlString) {
-                                            AsyncImage(url: url) { image in
-                                                image.resizable()
-                                                    .aspectRatio(contentMode: .fill)
-                                            } placeholder: {
-                                                ProgressView()
-                                            }
-                                            .frame(width: 100, height: 100)
-                                            .clipShape(Circle())
-                                        } else {
-                                            Circle()
-                                                .fill(Color.secondary.opacity(0.1))
-                                                .frame(width: 100, height: 100)
-                                            
-                                            Image(systemName: "person.fill")
-                                                .font(.system(size: 40))
-                                                .foregroundColor(.secondary)
-                                        }
-                                    } else {
-                                        Circle()
-                                            .fill(Color.secondary.opacity(0.1))
-                                            .frame(width: 100, height: 100)
-                                        
-                                        Image(systemName: "person.fill")
-                                            .font(.system(size: 40))
-                                            .foregroundColor(.secondary)
-                                    }
-                                    
-                                    // Overlay hint
-                                    VStack {
-                                        Spacer()
-                                        Text("profile.edit.changeAvatar")
-                                            .font(.system(size: 10, weight: .medium))
-                                            .foregroundColor(.white)
-                                            .padding(.vertical, 4)
-                                            .frame(maxWidth: .infinity)
-                                            .background(Color.black.opacity(0.4))
-                                    }
-                                    .clipShape(Circle())
-                                }
-                                .frame(width: 100, height: 100)
-                                .overlay(Circle().stroke(Color.primary.opacity(0.1), lineWidth: 1))
-                                .shadow(color: .black.opacity(0.05), radius: 5, y: 2)
-                            }
-                            
-                            if selectedImageData != nil || avatarUrl != nil {
-                                Button("profile.edit.clearAvatar", role: .destructive) {
-                                    selectedImageData = nil
-                                    avatarUrl = nil
-                                }
-                                .font(.subheadline)
-                            }
-                        }
-                        Spacer()
-                    }
-                    .listRowBackground(Color.clear)
-                    .padding(.vertical, 10)
-                }
+                EditableAvatarSection(
+                    selectedItem: $selectedItem,
+                    selectedImageData: $selectedImageData,
+                    avatarURL: $avatarUrl
+                )
                 
                 Section("profile.edit.basicInfo") {
                     LabeledContent("profile.edit.name") {
@@ -546,25 +449,13 @@ struct ProfileEditSheet: View {
                         HStack {
                             Text("profile.edit.presetIcon.select")
                             Spacer()
-                            if let avatarUrl = avatarUrl, avatarUrl.contains("lxns.net") {
-                                if let idString = avatarUrl.components(separatedBy: "/").last?.replacingOccurrences(of: ".png", with: ""),
-                                   let id = Int(idString),
-                                   let localImage = ImageDownloader.shared.loadImage(iconId: id) {
-                                    Image(uiImage: localImage)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(width: 30, height: 30)
-                                        .clipShape(Circle())
-                                } else {
-                                    AsyncImage(url: URL(string: avatarUrl)) { image in
-                                        image.resizable()
-                                            .aspectRatio(contentMode: .fill)
-                                    } placeholder: {
-                                        Color.gray.opacity(0.1)
-                                    }
-                                    .frame(width: 30, height: 30)
-                                    .clipShape(Circle())
-                                }
+                            if selectedImageData != nil || avatarUrl != nil {
+                                AvatarImageView(
+                                    imageData: selectedImageData,
+                                    avatarURL: avatarUrl,
+                                    size: 30,
+                                    placeholderSystemName: "photo.circle.fill"
+                                )
                             }
                         }
                     }
