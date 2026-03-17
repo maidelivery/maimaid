@@ -26,6 +26,8 @@
 "home.usefulLinks.subtitle" = "官方、维基、查分器等";
 "home.scoreQuery.title" = "成绩查询";
 "home.scoreQuery.subtitle" = "浏览全部成绩";
+"home.dan.title" = "段位认定";
+"home.dan.subtitle" = "查看各版本段位考核曲目";
 
 // MARK: - Profile Edit
 "profile.edit.title" = "个人资料";
@@ -276,10 +278,14 @@
 "update.control.header" = "更新控制";
 "update.action.now" = "立即更新静态数据";
 "update.options.header" = "更新项选择";
-"update.option.basic" = "基础数据";
-"update.option.aliases" = "歌曲别名与歌曲 ID";
-"update.option.covers" = "歌曲封面";
-"update.option.icons" = "预设头像";
+"update.option.remoteData" = "基础歌曲数据";
+"update.option.aliasesAndIds" = "别名与谱面 ID";
+"update.option.coversMissing" = "补全封面图片";
+"update.option.iconsDataAndImages" = "头像数据与图片";
+"update.option.danData" = "段位数据";
+"update.options.footer" = "别名项同时会同步歌曲/谱面 ID；封面和图标仅补全缺失资源，不会强制覆盖已有文件。";
+"update.control.selectAtLeastOne" = "请至少选择一项更新内容。";
+"update.control.error %@" = "同步失败：%@";
 "update.logs.header" = "同步日志";
 "update.auto.header" = "自动更新";
 "update.auto.footer" = "设定后台自动检查更新的频率。";
@@ -303,6 +309,8 @@
 "update.debug.knownInternalLevels" = "已知内部定数谱面";
 "update.debug.totalIcons" = "预设头像数量";
 "update.debug.appVersion" = "App 版本";
+"update.debug.totalDanCategories" = "段位分类数";
+"update.debug.totalDanSections" = "段位关卡数";
 
 // MARK: - Best Table
 "bestTable.title" = "Best 表";
@@ -357,6 +365,7 @@
 "data.sync.stage.fetchingRemoteData" = "［1/7］获取汇总数据 (data.json)...";
 "data.sync.stage.fetchingAliases" = "［2/7］获取歌曲别名与歌曲 ID...";
 "data.sync.stage.fetchingIcons" = "［3/7］获取预设头像...";
+"data.sync.stage.fetchingDanData" = "［3.5/7］获取段位歌曲数据 (gallery.yaml)...";
 "data.sync.stage.processingSongs" = "［4/7］正在合并并分析数据...";
 "data.sync.stage.downloadingImages" = "［5/7］正在并发下载歌曲封面...";
 "data.sync.stage.downloadingIcons" = "［6/7］正在并发下载预设头像...";
@@ -371,8 +380,10 @@
 "data.sync.status.fetchingData" = "下载远程 data.json...";
 "data.sync.log.fetchedData %lld" = "成功下载数据，共 %lld 首歌曲";
 "data.sync.status.fetchingAliases" = "连接 LXNS API 获取别名...";
+"data.sync.status.fetchingDanData" = "下载段位 gallery.yaml...";
 "data.sync.status.fetchingIcons" = "获取预设头像列表...";
 "data.sync.log.fetchedIcons %lld" = "成功获取 %lld 个预设头像";
+"data.sync.log.fetchedDanData %lld" = "成功下载段位数据，共 %lld 个分类";
 "data.sync.status.processing" = "分析整理并入库本地乐曲数据...";
 "data.sync.log.newSong %@" = "新增歌曲: %@";
 "data.sync.status.processingSong %@" = "整理数据: %@";

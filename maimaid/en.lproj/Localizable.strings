@@ -26,6 +26,8 @@
 "home.usefulLinks.subtitle" = "Wiki, Parsers, etc.";
 "home.scoreQuery.title" = "Score Query";
 "home.scoreQuery.subtitle" = "Browse all scores";
+"home.dan.title" = "Dan Certification";
+"home.dan.subtitle" = "View Dan exam songs for each version";
 
 // MARK: - Profile Edit
 "profile.edit.title" = "Profile";
@@ -277,10 +279,14 @@
 "update.control.header" = "Update Control";
 "update.action.now" = "Update Static Data Now";
 "update.options.header" = "Options";
-"update.option.basic" = "Basic Data";
-"update.option.aliases" = "Aliases & IDs";
-"update.option.covers" = "Jacket Covers";
-"update.option.icons" = "Preset Avatars";
+"update.option.remoteData" = "Base song data";
+"update.option.aliasesAndIds" = "Aliases & chart IDs";
+"update.option.coversMissing" = "Download missing covers";
+"update.option.iconsDataAndImages" = "Icon data & images";
+"update.option.danData" = "Dan data";
+"update.options.footer" = "Aliases also sync song/chart IDs. Covers and icons only download missing assets and do not overwrite existing files.";
+"update.control.selectAtLeastOne" = "Select at least one update option.";
+"update.control.error %@" = "Sync failed: %@";
 "update.logs.header" = "Logs";
 "update.auto.header" = "Auto Update";
 "update.auto.footer" = "Background check frequency.";
@@ -303,6 +309,8 @@
 "update.debug.songsWithAliases" = "Songs with Aliases";
 "update.debug.knownInternalLevels" = "Known Constants";
 "update.debug.totalIcons" = "Preset Avatars";
+"update.debug.totalDanCategories" = "Dan Categories";
+"update.debug.totalDanSections" = "Dan Sections";
 "update.debug.appVersion" = "App Version";
 
 // MARK: - Best Table
@@ -358,6 +366,7 @@
 "data.sync.stage.fetchingRemoteData" = "[1/7] Fetching data.json...";
 "data.sync.stage.fetchingAliases" = "[2/7] Fetching aliases...";
 "data.sync.stage.fetchingIcons" = "[3/7] Fetching icons...";
+"data.sync.stage.fetchingDanData" = "[3.5/7] Fetching Dan songs (gallery.yaml)...";
 "data.sync.stage.processingSongs" = "[4/7] Analyzing data...";
 "data.sync.stage.downloadingImages" = "[5/7] Downloading covers...";
 "data.sync.stage.downloadingIcons" = "[6/7] Downloading icons...";
@@ -372,8 +381,10 @@
 "data.sync.status.fetchingData" = "Fetching remote data...";
 "data.sync.log.fetchedData %lld" = "Fetched %lld songs";
 "data.sync.status.fetchingAliases" = "Fetching aliases from LXNS...";
+"data.sync.status.fetchingDanData" = "Downloading gallery.yaml...";
 "data.sync.status.fetchingIcons" = "Fetching icon list...";
 "data.sync.log.fetchedIcons %lld" = "Fetched %lld icons from LXNS";
+"data.sync.log.fetchedDanData %lld" = "Successfully downloaded Dan data, %lld categories";
 "data.sync.log.fetchedProviderIds %lld" = "Fetched %lld IDs from provider";
 "data.sync.log.providerIdError %@" = "Failed to decode provider IDs: %@";
 "data.sync.log.processingCompleted %lld %lld" = "Processing completed. Provider matches: %lld/%lld";

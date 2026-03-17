@@ -137,6 +137,10 @@ struct DivingFishImportView: View {
         
         if configs.isEmpty {
             let newConfig = SyncConfig()
+            newConfig.dfUsername = username
+            if !importToken.isEmpty {
+                newConfig.dfImportToken = importToken
+            }
             modelContext.insert(newConfig)
         }
     }
@@ -159,7 +163,6 @@ struct DivingFishImportView: View {
             4: "remaster"
         ]
         
-        // 🔴 获取当前用户 ID，用于成绩关联
         let profileId = activeProfile?.id
         
         do {
@@ -237,7 +240,6 @@ struct DivingFishImportView: View {
                     let newRate = record.achievements
                     let newRank = RatingUtils.calculateRank(achievement: record.achievements)
                     
-                    // 🔴 修复：使用 ScoreService 获取当前用户的成绩
                     if let existingScore = ScoreService.shared.score(for: targetSheet, context: modelContext) {
                         let shouldUpdateMetadata = existingScore.fc == nil || existingScore.fs == nil || existingScore.dxScore == 0
                         let fcValue = (record.fc?.isEmpty ?? true) ? nil : record.fc
@@ -255,7 +257,6 @@ struct DivingFishImportView: View {
                         let fcValue = (record.fc?.isEmpty ?? true) ? nil : record.fc
                         let fsValue = (record.fs?.isEmpty ?? true) ? nil : record.fs
                         
-                        // 🔴 修复：使用 ScoreService 保存成绩（自动关联用户）
                         let score = Score(
                             sheetId: "\(targetSheet.songIdentifier)_\(targetSheet.type)_\(targetSheet.difficulty)",
                             rate: newRate,
@@ -264,7 +265,7 @@ struct DivingFishImportView: View {
                             fc: fcValue,
                             fs: fsValue,
                             achievementDate: Date(),
-                            userProfileId: profileId  // 关键：关联当前用户
+                            userProfileId: profileId
                         )
                         modelContext.insert(score)
                         targetSheet.scores.append(score)
@@ -280,6 +281,7 @@ struct DivingFishImportView: View {
             }
             
             try modelContext.save()
+            ScoreService.shared.notifyScoresChanged(for: profileId)
             
             if let profile = activeProfile {
                 profile.lastImportDateDF = Date()

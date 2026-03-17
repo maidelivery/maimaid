@@ -153,20 +153,27 @@ struct UserProfileListView: View {
             p.isActive = (p.id == profile.id)
         }
         try? modelContext.save()
+        ScoreService.shared.notifyActiveProfileChanged()
     }
     
     private func deleteProfile(_ profile: UserProfile) {
         guard !profile.isActive else { return }
-        // Delete associated scores
+        
         let profileId = profile.id
+        
+        // Delete associated scores
         let scoreDescriptor = FetchDescriptor<Score>(predicate: #Predicate { $0.userProfileId == profileId })
         if let scores = try? modelContext.fetch(scoreDescriptor) {
             for score in scores {
                 modelContext.delete(score)
             }
         }
+        
         modelContext.delete(profile)
         try? modelContext.save()
+        
+        ScoreService.shared.notifyScoresChanged(for: profileId)
+        ScoreService.shared.notifyActiveProfileChanged()
     }
     
     private func serverColor(_ server: GameServer) -> Color {

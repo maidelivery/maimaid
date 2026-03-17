@@ -424,5 +424,8 @@ final class SupabaseManager {
         }
         
         try context.save()
+        await MainActor.run {
+            ScoreService.shared.invalidateAllCaches()
+        }
     }
 }

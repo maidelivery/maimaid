@@ -20,10 +20,14 @@ struct BestTableView: View {
     @State private var showVersionPicker = false
     @AppStorage("useFitDiff") private var useFitDiff = false
     
+    // MARK: - Performance / Lifecycle
+    @State private var calculationTask: Task<Void, Never>?
+    @State private var hasAppeared = false
+    @State private var isVisible = false
+    
     /// 可选的版本列表
     private var availableVersions: [String] {
         let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
-        // 从旧到新排序，用户可以选择任意版本作为"最新版本"
         return sequence
     }
     
@@ -55,7 +59,6 @@ struct BestTableView: View {
     
     var body: some View {
         List {
-
             Section {
                 HStack {
                     VStack(alignment: .leading) {
@@ -78,7 +81,6 @@ struct BestTableView: View {
                 .padding(.vertical, 8)
             }
 
-            // MARK: - 版本选择器
             Section("bestTable.settings.version") {
                 Button {
                     showVersionPicker = true
@@ -98,7 +100,6 @@ struct BestTableView: View {
                         if overriddenVersion != nil {
                             Button {
                                 overriddenVersion = nil
-                                Task { await performCalculation() }
                             } label: {
                                 Text("bestTable.settings.version.reset")
                                     .font(.caption)
@@ -113,7 +114,6 @@ struct BestTableView: View {
                     }
                 }
                 .foregroundColor(.primary)
-                
             }
 
             Section("bestTable.settings.capacity") {
@@ -155,6 +155,7 @@ struct BestTableView: View {
                 if cache.isLoading && cache.isFirstLoad {
                     ForEach(0..<min(5, currentB15Count), id: \.self) { _ in
                         RatingRowSkeletonView()
+                            .listRowSeparator(.hidden)
                     }
                 } else if cache.b50Result.b15.isEmpty {
                     Text("bestTable.empty")
@@ -176,6 +177,7 @@ struct BestTableView: View {
                 if cache.isLoading && cache.isFirstLoad {
                     ForEach(0..<min(8, currentB35Count), id: \.self) { _ in
                         RatingRowSkeletonView()
+                            .listRowSeparator(.hidden)
                     }
                 } else if cache.b50Result.b35.isEmpty {
                     Text("bestTable.empty")
@@ -217,33 +219,52 @@ struct BestTableView: View {
             )
         }
         .onAppear {
+            isVisible = true
             cache.updateSongs(songs)
-            Task { await performCalculation() }
+            
+            guard !hasAppeared else { return }
+            hasAppeared = true
+            
+            scheduleCalculation(delayNanoseconds: 180_000_000)
         }
-        .task(id: songs.count) {
+        .onDisappear {
+            isVisible = false
+            calculationTask?.cancel()
+            calculationTask = nil
+        }
+        .onChange(of: songs.count) { _, _ in
             cache.updateSongs(songs)
-            // Song count changed (Sync added/removed songs)
-            await performCalculation()
+            scheduleCalculation()
         }
-        .task(id: activeProfile?.id) {
-            await performCalculation()
+        .onChange(of: activeProfile?.id) { _, _ in
+            scheduleCalculation()
         }
-        .task(id: currentB35Count) {
-            await performCalculation()
+        .onChange(of: currentB35Count) { _, _ in
+            scheduleCalculation()
         }
-        .task(id: currentB15Count) {
-            await performCalculation()
+        .onChange(of: currentB15Count) { _, _ in
+            scheduleCalculation()
         }
         .onChange(of: overriddenVersion) { _, _ in
-            Task { await performCalculation() }
+            scheduleCalculation()
         }
         .onChange(of: useFitDiff) { _, _ in
-            Task { await performCalculation() }
+            scheduleCalculation()
         }
         .onReceive(NotificationCenter.default.publisher(for: .NSManagedObjectContextDidSave)) { _ in
-            // Listen for any saves to detect score updates
-            // (Note: This is a bit broad, but B50CacheService has its own internal guard)
-            Task { await performCalculation() }
+            guard isVisible else { return }
+            scheduleCalculation(delayNanoseconds: 180_000_000)
+        }
+    }
+    
+    // MARK: - Scheduling
+    
+    private func scheduleCalculation(delayNanoseconds: UInt64 = 120_000_000) {
+        calculationTask?.cancel()
+        calculationTask = Task {
+            try? await Task.sleep(nanoseconds: delayNanoseconds)
+            guard !Task.isCancelled, isVisible else { return }
+            await performCalculation()
         }
     }
     
@@ -332,7 +353,10 @@ struct BestTableView: View {
         if useFitDiff {
             await ChartStatsService.shared.fetchStats()
         }
-        await cache.calculateIfNeeded(
+        
+        guard isVisible else { return }
+        
+        _ = await cache.calculateIfNeeded(
             modelContext: modelContext,
             activeProfile: activeProfile,
             configs: configs,
@@ -341,14 +365,13 @@ struct BestTableView: View {
         )
     }
     
-    // 🔴 Deleting legacy calculateRating - moved to B50CacheService
-    
     private func ratingRow(entry: RatingUtils.RatingEntry) -> some View {
         HStack(spacing: 14) {
             SongJacketView(
                 imageName: entry.imageName ?? "",
                 size: 56,
-                cornerRadius: 10
+                cornerRadius: 10,
+                useThumbnail: true
             )
             
             VStack(alignment: .leading, spacing: 4) {

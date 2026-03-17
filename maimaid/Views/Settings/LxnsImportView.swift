@@ -309,7 +309,6 @@ struct LxnsImportView: View {
             4: "remaster"
         ]
         
-        // 🔴 获取当前用户 ID
         let profileId = activeProfile?.id
         
         do {
@@ -371,7 +370,6 @@ struct LxnsImportView: View {
                     
                     let newRank = RatingUtils.calculateRank(achievement: record.achievements)
                     
-                    // 🔴 修复：使用 ScoreService 获取当前用户的成绩
                     if let existingScore = ScoreService.shared.score(for: targetSheet, context: modelContext) {
                         let shouldUpdateMetadata = existingScore.fc == nil || existingScore.fs == nil || existingScore.dxScore == 0
                         let fcValue = (record.fc?.isEmpty ?? true) ? nil : record.fc
@@ -389,7 +387,6 @@ struct LxnsImportView: View {
                         let fcValue = (record.fc?.isEmpty ?? true) ? nil : record.fc
                         let fsValue = (record.fs?.isEmpty ?? true) ? nil : record.fs
                         
-                        // 🔴 修复：创建成绩时关联用户
                         let score = Score(
                             sheetId: "\(targetSheet.songIdentifier)_\(targetSheet.type)_\(targetSheet.difficulty)",
                             rate: record.achievements,
@@ -398,7 +395,7 @@ struct LxnsImportView: View {
                             fc: fcValue,
                             fs: fsValue,
                             achievementDate: Date(),
-                            userProfileId: profileId  // 关键：关联当前用户
+                            userProfileId: profileId
                         )
                         modelContext.insert(score)
                         targetSheet.scores.append(score)
@@ -414,6 +411,7 @@ struct LxnsImportView: View {
             }
             
             try modelContext.save()
+            ScoreService.shared.notifyScoresChanged(for: profileId)
             
             if let profile = activeProfile {
                 profile.lastImportDateLXNS = Date()

@@ -16,6 +16,7 @@
 		3728607A2F604BC70028E788 /* maimaid v1.41n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 372860792F604BC70028E788 /* maimaid v1.41n.mlpackage */; };
 		373DA3D92F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */; };
 		373DA3E52F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */; };
+		37438C7F2F697ADB0055D6BD /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = 37438C7E2F697ADB0055D6BD /* Yams */; };
 		37C9CF1B2F4CE4DB002CBF7A /* maimaid.icon in Resources */ = {isa = PBXBuildFile; fileRef = 37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */; };
 /* End PBXBuildFile section */
 
@@ -57,6 +58,7 @@
 				370E0E512F65C3500066B825 /* PostgREST in Frameworks */,
 				370E0E4F2F65C3500066B825 /* Functions in Frameworks */,
 				370E0E4D2F65C3500066B825 /* Auth in Frameworks */,
+				37438C7F2F697ADB0055D6BD /* Yams in Frameworks */,
 				370E0E532F65C3500066B825 /* Realtime in Frameworks */,
 				370E0E4B2F65C18C0066B825 /* Supabase in Frameworks */,
 			);
@@ -111,6 +113,7 @@
 				370E0E502F65C3500066B825 /* PostgREST */,
 				370E0E522F65C3500066B825 /* Realtime */,
 				370E0E542F65C3500066B825 /* Storage */,
+				37438C7E2F697ADB0055D6BD /* Yams */,
 			);
 			productName = maimaid;
 			productReference = 37C9C3DD2F4CDAAB002CBF7A /* maimaid.app */;
@@ -143,6 +146,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				370E0E3E2F65BB320066B825 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				37438C7D2F697ADB0055D6BD /* XCRemoteSwiftPackageReference "Yams" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 375868E02F4C78EB006316F5;
@@ -433,6 +437,14 @@
 				minimumVersion = 2.5.1;
 			};
 		};
+		37438C7D2F697ADB0055D6BD /* XCRemoteSwiftPackageReference "Yams" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jpsim/Yams";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.2.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -465,6 +477,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 370E0E3E2F65BB320066B825 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Storage;
+		};
+		37438C7E2F697ADB0055D6BD /* Yams */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 37438C7D2F697ADB0055D6BD /* XCRemoteSwiftPackageReference "Yams" */;
+			productName = Yams;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

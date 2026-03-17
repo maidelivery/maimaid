@@ -269,6 +269,16 @@ struct HomeView: View {
                 )
             }
             .buttonStyle(.plain)
+            
+            NavigationLink(destination: DanListView()) {
+                functionCard(
+                    icon: "checkmark.seal.fill",
+                    title: "home.dan.title",
+                    subtitle: "home.dan.subtitle",
+                    gradient: [Color.red, Color.orange]
+                )
+            }
+            .buttonStyle(.plain)
         }
     }
     // MARK: - Rating Badge

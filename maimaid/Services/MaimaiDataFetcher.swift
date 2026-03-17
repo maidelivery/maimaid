@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import UIKit
+import Yams
 
 struct AliasListResponse: Decodable {
     let aliases: [AliasItem]
@@ -110,6 +111,7 @@ class MaimaiDataFetcher {
         case processingSongs = "data.sync.stage.processingSongs"
         case downloadingImages = "data.sync.stage.downloadingImages"
         case downloadingIcons = "data.sync.stage.downloadingIcons"
+        case fetchingDanData = "data.sync.stage.fetchingDanData"
         case saving = "data.sync.stage.saving"
         case completed = "data.sync.stage.completed"
         case failed = "data.sync.stage.failed"
@@ -126,6 +128,7 @@ class MaimaiDataFetcher {
         print(message)
         self.syncLogs += "[\(Date().formatted(date: .omitted, time: .standard))] \(message)\n"
     }
+    
     private var syncStartTime: Date? = nil
     
     var formattedETA: String {
@@ -141,7 +144,6 @@ class MaimaiDataFetcher {
         }
     }
     
-    // State references to update from backgrounds
     private func updateProgress(_ subProgress: Double, totalForStage: Double, baseForStage: Double, status: String) {
         self.progress = baseForStage + (subProgress * totalForStage)
         self.statusMessage = status
@@ -165,6 +167,7 @@ class MaimaiDataFetcher {
         var updateAliases = true
         var updateCovers = true
         var updateIcons = true
+        var updateDanData = true
     }
     
     func fetchSongs(modelContext: ModelContext, options: SyncOptions = SyncOptions()) async throws {
@@ -180,7 +183,7 @@ class MaimaiDataFetcher {
             var aliasMap: [String: [String]] = [:]
             var titleToSongId: [String: Int] = [:]
             var lxnsIcons: [LxnsPresetIcon] = []
-            var nameToProviderIds: [String: [Int]] = [:] // Map song name to list of IDs from songid.json
+            var nameToProviderIds: [String: [Int]] = [:]
             
             // --- 阶段 1: 远程 data.json ---
             if options.updateRemoteData {
@@ -193,7 +196,6 @@ class MaimaiDataFetcher {
                 remoteSongs = response.songs
                 log(String(localized: "data.sync.log.fetchedData \(remoteSongs.count)"))
                 
-                // 存一下版本序列用于排序
                 if let encodedVersions = try? JSONEncoder().encode(response.versions) {
                     UserDefaults.standard.set(encodedVersions, forKey: "MaimaiVersionsData")
                 }
@@ -263,28 +265,76 @@ class MaimaiDataFetcher {
                 }
             }
             
+            // --- Stage 3.5: Dan Data ---
+            if options.updateDanData {
+                updateStage(.fetchingDanData, base: 0.50, message: String(localized: "data.sync.status.fetchingDanData"))
+                if let danUrl = URL(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/gallery.yaml") {
+                    let (data, _) = try await URLSession.shared.data(from: danUrl)
+                    if let yamlString = String(data: data, encoding: .utf8) {
+                        do {
+                            let decoder = YAMLDecoder()
+                            let decodedCategories = try decoder.decode([DanCategory].self, from: yamlString)
+                            let cleanedCategories = sanitizeDanCategories(decodedCategories)
+                            
+                            let danJsonData = try JSONEncoder().encode(cleanedCategories)
+                            let fileURL = getDanDataFileURL()
+                            try danJsonData.write(to: fileURL)
+                            log(String(localized: "data.sync.log.fetchedDanData \(cleanedCategories.count)"))
+                        } catch {
+                            log("Failed to parse Dan YAML: \(error)")
+                        }
+                    }
+                }
+            }
+            
             // --- 阶段 4: 合并数据入库 ---
             if options.updateRemoteData || options.updateAliases || options.updateIcons {
                 updateStage(.processingSongs, base: 0.55, message: String(localized: "data.sync.status.processing"))
                 
                 let existingSongsFromDB = try modelContext.fetch(FetchDescriptor<Song>())
                 var existingSongMap: [String: Song] = [:]
-                for s in existingSongsFromDB { existingSongMap[s.songIdentifier] = s }
-
+                for s in existingSongsFromDB {
+                    existingSongMap[s.songIdentifier] = s
+                }
+                
                 var songsToProcess: [RemoteSong] = remoteSongs
                 if !options.updateRemoteData {
                     songsToProcess = existingSongsFromDB.map { s in
                         RemoteSong(
-                            songId: s.songIdentifier, category: s.category, title: s.title, artist: s.artist, bpm: s.bpm,
-                            imageName: s.imageName, version: s.version, releaseDate: s.releaseDate,
-                            isNew: s.isNew, isLocked: s.isLocked, comment: s.comment,
+                            songId: s.songIdentifier,
+                            category: s.category,
+                            title: s.title,
+                            artist: s.artist,
+                            bpm: s.bpm,
+                            imageName: s.imageName,
+                            version: s.version,
+                            releaseDate: s.releaseDate,
+                            isNew: s.isNew,
+                            isLocked: s.isLocked,
+                            comment: s.comment,
                             sheets: s.sheets.map { sh in
                                 RemoteSheet(
-                                    type: sh.type, difficulty: sh.difficulty, level: sh.level, levelValue: sh.levelValue,
-                                    internalLevel: sh.internalLevel, internalLevelValue: sh.internalLevelValue,
+                                    type: sh.type,
+                                    difficulty: sh.difficulty,
+                                    level: sh.level,
+                                    levelValue: sh.levelValue,
+                                    internalLevel: sh.internalLevel,
+                                    internalLevelValue: sh.internalLevelValue,
                                     noteDesigner: sh.noteDesigner,
-                                    noteCounts: RemoteNoteCounts(tap: sh.tap, hold: sh.hold, slide: sh.slide, touch: sh.touch, breakNote: sh.breakCount, total: sh.total),
-                                    regions: ["jp": sh.regionJp, "intl": sh.regionIntl, "usa": sh.regionUsa, "cn": sh.regionCn],
+                                    noteCounts: RemoteNoteCounts(
+                                        tap: sh.tap,
+                                        hold: sh.hold,
+                                        slide: sh.slide,
+                                        touch: sh.touch,
+                                        breakNote: sh.breakCount,
+                                        total: sh.total
+                                    ),
+                                    regions: [
+                                        "jp": sh.regionJp,
+                                        "intl": sh.regionIntl,
+                                        "usa": sh.regionUsa,
+                                        "cn": sh.regionCn
+                                    ],
                                     isSpecial: nil
                                 )
                             }
@@ -301,26 +351,35 @@ class MaimaiDataFetcher {
                 
                 var providerMatchCount = 0
                 var sheetMatchCount = 0
+                
                 for (index, remoteSong) in songsToProcess.enumerated() {
                     let song: Song
                     if let existing = existingSongMap[remoteSong.songId] {
                         song = existing
                     } else if options.updateRemoteData {
                         song = Song(
-                            songIdentifier: remoteSong.songId, category: remoteSong.category ?? "", 
+                            songIdentifier: remoteSong.songId,
+                            category: remoteSong.category ?? "",
                             title: {
                                 let t = remoteSong.title ?? ""
                                 let trimmed = t.trimmingCharacters(in: .whitespacesAndNewlines)
                                 return trimmed.isEmpty ? t : trimmed
                             }(),
-                            artist: remoteSong.artist ?? "", 
-                            imageName: (remoteSong.imageName ?? "").trimmingCharacters(in: .whitespacesAndNewlines),                             version: remoteSong.version ?? "", releaseDate: remoteSong.releaseDate ?? "", sortOrder: 0,
-                            bpm: remoteSong.bpm, isNew: remoteSong.isNew ?? false, isLocked: remoteSong.isLocked ?? false,
+                            artist: remoteSong.artist ?? "",
+                            imageName: (remoteSong.imageName ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
+                            version: remoteSong.version ?? "",
+                            releaseDate: remoteSong.releaseDate ?? "",
+                            sortOrder: 0,
+                            bpm: remoteSong.bpm,
+                            isNew: remoteSong.isNew ?? false,
+                            isLocked: remoteSong.isLocked ?? false,
                             comment: remoteSong.comment
                         )
                         modelContext.insert(song)
                         log(String(localized: "data.sync.log.newSong \(song.title)"))
-                    } else { continue }
+                    } else {
+                        continue
+                    }
                     
                     if options.updateRemoteData {
                         song.category = remoteSong.category ?? ""
@@ -338,15 +397,16 @@ class MaimaiDataFetcher {
                     }
                     
                     if options.updateAliases {
-                        if let officialId = titleToSongId[song.title] { song.songId = officialId }
-                        if let aliases = aliasMap[song.title], !aliases.isEmpty { song.aliases = aliases }
+                        if let officialId = titleToSongId[song.title] {
+                            song.songId = officialId
+                        }
+                        if let aliases = aliasMap[song.title], !aliases.isEmpty {
+                            song.aliases = aliases
+                        }
                         
-                        // New: Provider ID matching based on ranges
-                        // Std < 10000, 10000 <= DX < 100000, Utage >= 100000
                         let trimmedSearch = song.title.trimmingCharacters(in: .whitespacesAndNewlines)
                         let searchTitle = trimmedSearch.isEmpty ? song.title : trimmedSearch
                         if let possibleIds = nameToProviderIds[searchTitle] {
-                            // Find the most appropriate ID for the song's sheet content
                             let hasUtage = remoteSong.sheets.contains { $0.type.lowercased() == "utage" }
                             let hasDX = remoteSong.sheets.contains { $0.type.lowercased() == "dx" }
                             let hasStd = remoteSong.sheets.contains { $0.type.lowercased() == "std" }
@@ -370,7 +430,9 @@ class MaimaiDataFetcher {
                     }
                     
                     var sheetMap: [String: Sheet] = [:]
-                    for sh in song.sheets { sheetMap["\(sh.type)_\(sh.difficulty)"] = sh }
+                    for sh in song.sheets {
+                        sheetMap["\(sh.type)_\(sh.difficulty)"] = sh
+                    }
                     
                     for remoteSheet in remoteSong.sheets {
                         let key = "\(remoteSheet.type)_\(remoteSheet.difficulty)"
@@ -379,15 +441,21 @@ class MaimaiDataFetcher {
                             sheet = existingSheet
                         } else {
                             sheet = Sheet(
-                                songIdentifier: song.songIdentifier, type: remoteSheet.type, difficulty: remoteSheet.difficulty,
-                                level: remoteSheet.level, levelValue: remoteSheet.levelValue ?? 0
+                                songIdentifier: song.songIdentifier,
+                                type: remoteSheet.type,
+                                difficulty: remoteSheet.difficulty,
+                                level: remoteSheet.level,
+                                levelValue: remoteSheet.levelValue ?? 0
                             )
                             sheet.song = song
                             modelContext.insert(sheet)
-                            if song.sheets.isEmpty { song.sheets = [sheet] } else { song.sheets.append(sheet) }
+                            if song.sheets.isEmpty {
+                                song.sheets = [sheet]
+                            } else {
+                                song.sheets.append(sheet)
+                            }
                         }
                         
-                        // Assign sheet-specific songId from provider
                         let trimmedSearchSheet = song.title.trimmingCharacters(in: .whitespacesAndNewlines)
                         let searchTitle = trimmedSearchSheet.isEmpty ? song.title : trimmedSearchSheet
                         if let possibleIds = nameToProviderIds[searchTitle] {
@@ -412,8 +480,12 @@ class MaimaiDataFetcher {
                             sheet.noteDesigner = remoteSheet.noteDesigner
                             
                             if let nc = remoteSheet.noteCounts {
-                                sheet.tap = nc.tap; sheet.hold = nc.hold; sheet.slide = nc.slide; sheet.touch = nc.touch;
-                                sheet.breakCount = nc.breakNote; sheet.total = nc.total
+                                sheet.tap = nc.tap
+                                sheet.hold = nc.hold
+                                sheet.slide = nc.slide
+                                sheet.touch = nc.touch
+                                sheet.breakCount = nc.breakNote
+                                sheet.total = nc.total
                             }
                             
                             if let regions = remoteSheet.regions {
@@ -429,32 +501,43 @@ class MaimaiDataFetcher {
                         let currentSheetKeys = Set(remoteSong.sheets.map { "\($0.type)_\($0.difficulty)" })
                         for sh in song.sheets {
                             let key = "\(sh.type)_\(sh.difficulty)"
-                            if !currentSheetKeys.contains(key) && sh.scores.isEmpty {
+                            let hasPlayRecords = !(sh.playRecords?.isEmpty ?? true)
+                            if !currentSheetKeys.contains(key) && sh.scores.isEmpty && !hasPlayRecords {
                                 modelContext.delete(sh)
                             }
                         }
                     }
                     
                     if index % 100 == 0 {
-                        updateProgress(Double(index) / Double(songsToProcess.count), totalForStage: 0.20, baseForStage: 0.55, status: String(localized: "data.sync.status.processingSong \(song.title)"))
-                        try? modelContext.save()
+                        updateProgress(
+                            Double(index) / Double(max(songsToProcess.count, 1)),
+                            totalForStage: 0.20,
+                            baseForStage: 0.55,
+                            status: String(localized: "data.sync.status.processingSong \(song.title)")
+                        )
+                        do {
+                            try modelContext.save()
+                        } catch {
+                            log("Intermediate save failed while processing songs: \(error.localizedDescription)")
+                        }
                     }
                 }
+                
                 log(String(localized: "data.sync.log.processingCompleted \(providerMatchCount) \(songsToProcess.count)"))
                 log(String(localized: "data.sync.log.syncedSummary \(providerMatchCount) \(sheetMatchCount)"))
                 
-                // Clear temporary song data
                 remoteSongs = []
                 aliasMap = [:]
                 titleToSongId = [:]
                 songsToProcess = []
                 existingSongMap = [:]
                 
-                // 处理 Icons 入库
                 if options.updateIcons && !lxnsIcons.isEmpty {
                     let existingIcons = try modelContext.fetch(FetchDescriptor<MaimaiIcon>())
                     var existingIconMap: [Int: MaimaiIcon] = [:]
-                    for icon in existingIcons { existingIconMap[icon.id] = icon }
+                    for icon in existingIcons {
+                        existingIconMap[icon.id] = icon
+                    }
                     
                     for lxIcon in lxnsIcons {
                         if let existing = existingIconMap[lxIcon.id] {
@@ -474,7 +557,7 @@ class MaimaiDataFetcher {
                     lxnsIcons = []
                 }
             }
-
+            
             // --- 阶段 5: 下载图片资源 ---
             if options.updateCovers {
                 updateStage(.downloadingImages, base: 0.75, message: String(localized: "data.sync.status.scanningCovers"))
@@ -492,10 +575,17 @@ class MaimaiDataFetcher {
                     for chunk in stride(from: 0, to: coverDownloadTasks.count, by: batchSize) {
                         let endIndex = min(chunk + batchSize, coverDownloadTasks.count)
                         let subTasks = coverDownloadTasks[chunk..<endIndex]
-                        updateProgress(Double(chunk) / Double(coverDownloadTasks.count), totalForStage: 0.15, baseForStage: 0.75, status: String(localized: "data.sync.status.downloadingCovers \(chunk) \(coverDownloadTasks.count)"))
+                        updateProgress(
+                            Double(chunk) / Double(max(coverDownloadTasks.count, 1)),
+                            totalForStage: 0.15,
+                            baseForStage: 0.75,
+                            status: String(localized: "data.sync.status.downloadingCovers \(chunk) \(coverDownloadTasks.count)")
+                        )
                         await withTaskGroup(of: Void.self) { group in
                             for task in subTasks {
-                                group.addTask { _ = try? await ImageDownloader.shared.downloadImage(from: task.0, as: task.1) }
+                                group.addTask {
+                                    _ = try? await ImageDownloader.shared.downloadImage(from: task.0, as: task.1)
+                                }
                             }
                         }
                     }
@@ -524,7 +614,6 @@ class MaimaiDataFetcher {
                         let endIndex = min(chunk + batchSize, iconDownloadTasks.count)
                         let subTasks = iconDownloadTasks[chunk..<endIndex]
                         
-                        // Concurrent downloading for this batch
                         await withTaskGroup(of: Void.self) { group in
                             for task in subTasks {
                                 group.addTask {
@@ -539,7 +628,12 @@ class MaimaiDataFetcher {
                             for await _ in group {
                                 completed += 1
                                 if completed % 10 == 0 || completed == iconDownloadTasks.count {
-                                    updateProgress(Double(completed) / total, totalForStage: 0.10, baseForStage: 0.85, status: String(localized: "data.sync.status.downloadingIconsProgress \(completed) \(Int(total))"))
+                                    updateProgress(
+                                        Double(completed) / max(total, 1),
+                                        totalForStage: 0.10,
+                                        baseForStage: 0.85,
+                                        status: String(localized: "data.sync.status.downloadingIconsProgress \(completed) \(Int(total))")
+                                    )
                                 }
                             }
                         }
@@ -558,6 +652,7 @@ class MaimaiDataFetcher {
                 newConfig.lastStaticDataUpdateDate = Date()
                 modelContext.insert(newConfig)
             }
+            
             UserDefaults.standard.set(true, forKey: "didPerformInitialSync")
             updateStage(.completed, base: 1.0, message: String(localized: "data.sync.status.completed"))
             _ = try? await Task.sleep(nanoseconds: 1_000_000_000)
@@ -568,5 +663,105 @@ class MaimaiDataFetcher {
             isSyncing = false
             throw error
         }
+    }
+    
+    func getDanDataFileURL() -> URL {
+        let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+        return paths[0].appendingPathComponent("dan_data.json")
+    }
+    
+    func loadCachedDanData() -> [DanCategory] {
+        let fileURL = getDanDataFileURL()
+        guard let data = try? Data(contentsOf: fileURL),
+              let categories = try? JSONDecoder().decode([DanCategory].self, from: data) else {
+            return []
+        }
+        
+        return sanitizeDanCategories(categories)
+    }
+    
+    // MARK: - Dan Sanitization
+    
+    private func sanitizeDanCategories(_ categories: [DanCategory]) -> [DanCategory] {
+        var result: [DanCategory] = []
+        
+        for category in categories {
+            let categoryTitle = category.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            let lowerTitle = categoryTitle.lowercased()
+            
+            if lowerTitle.contains("test") || lowerTitle.contains("author's choice") {
+                continue
+            }
+            
+            var cleanedSections: [DanSection] = []
+            
+            for section in category.sections {
+                let cleanedRefs = section.sheets.filter { isValidDanRawSheetRef($0) }
+                
+                guard !cleanedRefs.isEmpty else { continue }
+                
+                let cleanedDescriptions: [String]? = {
+                    guard let descriptions = section.sheetDescriptions else { return nil }
+                    let paired = zip(section.sheets, descriptions)
+                        .filter { isValidDanRawSheetRef($0.0) }
+                        .map { $0.1 }
+                    return paired.isEmpty ? nil : paired
+                }()
+                
+                let cleanedTitle: String? = {
+                    let trimmed = section.title?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return (trimmed?.isEmpty == false) ? trimmed : nil
+                }()
+                
+                let cleanedDescription: String? = {
+                    let trimmed = section.description?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return (trimmed?.isEmpty == false) ? trimmed : nil
+                }()
+                
+                cleanedSections.append(
+                    DanSection(
+                        title: cleanedTitle,
+                        description: cleanedDescription,
+                        sheets: cleanedRefs,
+                        sheetDescriptions: cleanedDescriptions
+                    )
+                )
+            }
+            
+            guard !cleanedSections.isEmpty else { continue }
+            
+            result.append(
+                DanCategory(
+                    title: category.title,
+                    id: category.id,
+                    sections: cleanedSections
+                )
+            )
+        }
+        
+        return result
+    }
+    
+    private func isValidDanRawSheetRef(_ raw: String) -> Bool {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        
+        let ref = DanSheetRef(raw: trimmed)
+        guard !ref.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        guard !ref.isPlaceholder else { return false }
+        
+        let type = ref.type.lowercased()
+        let difficulty = ref.difficulty.lowercased()
+        
+        if type.contains("utage") { return false }
+        if difficulty.contains("utage") { return false }
+        
+        let validTypes = Set(["dx", "std"])
+        guard validTypes.contains(type) else { return false }
+        
+        let validDifficulties = Set(["basic", "advanced", "expert", "master", "remaster"])
+        guard validDifficulties.contains(difficulty) else { return false }
+        
+        return true
     }
 }
