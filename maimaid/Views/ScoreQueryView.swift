@@ -684,7 +684,7 @@ struct ScoreQueryView: View {
         if let song = songMap[entry.songIdentifier] {
             SongDetailView(song: song)
         } else {
-            Text("Song not found")
+            Text("scoreQuery.songNotFound")
         }
     }
     

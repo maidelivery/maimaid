@@ -55,7 +55,7 @@ struct DanListView: View {
                                             .font(.system(size: 16, weight: .bold, design: .rounded))
                                             .foregroundColor(.primary)
                                         
-                                        Text("\(category.sections.count) Sections")
+                                        Text(String(localized: "dan.list.sections \(category.sections.count)"))
                                             .font(.system(size: 12))
                                             .foregroundColor(.secondary)
                                     }
@@ -96,7 +96,7 @@ struct DanListView: View {
             return String(prefix)
         }
         
-        return "Unknown"
+        return String(localized: "common.unknown")
     }
     
     private func versionSortKey(_ version: String) -> Int {

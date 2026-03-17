@@ -7,9 +7,9 @@ enum SupabaseConfigError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingURL:
-            return "Missing `SUPABASE_URL`. Fill `Config/Secrets.xcconfig` or Xcode build settings."
+            return String(localized: "supabase.config.error.missingUrl")
         case .missingPublishableKey:
-            return "Missing `SUPABASE_PUBLISHABLE_KEY`. Fill `Config/Secrets.xcconfig` or Xcode build settings."
+            return String(localized: "supabase.config.error.missingPublishableKey")
         }
     }
 }

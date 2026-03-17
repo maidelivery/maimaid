@@ -155,6 +155,12 @@
 "song.detail.share.action" = "分享图片";
 "song.detail.label.title" = "曲名";
 "song.detail.label.artist" = "曲师";
+"song.detail.history.delete.title" = "删除成绩";
+"song.detail.history.delete.confirm" = "删除";
+"song.detail.history.delete.cancel" = "取消";
+"song.detail.history.delete.message" = "这将删除所选成绩记录，且无法撤销。";
+"song.detail.history.pagePicker" = "页码";
+"song.detail.page %lld" = "第 %lld 页";
 
 // MARK: - Filter
 "filter.title" = "筛选选项";
@@ -454,6 +460,7 @@
 "scoreQuery.columns" = "列";
 "scoreQuery.empty" = "暂无成绩";
 "scoreQuery.results" = "条结果";
+"scoreQuery.songNotFound" = "未找到歌曲";
 
 // MARK: - Cloud Sync
 "settings.cloud.title" = "云端账户";
@@ -481,3 +488,15 @@
 "settings.cloud.message.backupFailed" = "备份失败";
 "settings.cloud.message.restoreSuccess" = "恢复成功！";
 "settings.cloud.message.restoreFailed" = "恢复失败";
+"settings.cloud.config.title" = "Supabase 未配置";
+"settings.cloud.config.subtitle" = "请在 `Config/Secrets.xcconfig` 中填写云同步配置。";
+"settings.cloud.config.section" = "配置说明";
+"settings.cloud.config.step.copy" = "1. 复制 `Config/Secrets.example.xcconfig` 为 `Config/Secrets.xcconfig`";
+"settings.cloud.config.step.fill" = "2. 填入 `SUPABASE_URL` 与 `SUPABASE_PUBLISHABLE_KEY`";
+"settings.cloud.config.error.unconfigured" = "Supabase 尚未配置。";
+"supabase.config.error.missingUrl" = "缺少 `SUPABASE_URL`。请在 `Config/Secrets.xcconfig` 或 Xcode Build Settings 中填写。";
+"supabase.config.error.missingPublishableKey" = "缺少 `SUPABASE_PUBLISHABLE_KEY`。请在 `Config/Secrets.xcconfig` 或 Xcode Build Settings 中填写。";
+"common.unknown" = "未知";
+"dan.detail.noRecord" = "暂无记录";
+"dan.detail.missing" = "缺失";
+"dan.list.sections %lld" = "%lld 个段位关卡";

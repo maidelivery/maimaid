@@ -6,6 +6,10 @@ class SyncManager {
     static let shared = SyncManager()
     
     private init() {}
+
+    private func sheetTitle(_ sheet: Sheet) -> String {
+        sheet.song?.title ?? String(localized: "common.unknown")
+    }
     
     /// Syncs multiple scores if auto-upload is enabled
     func uploadScoresIfNeeded(scores: [(Sheet, Score)], config: SyncConfig) async {
@@ -17,7 +21,7 @@ class SyncManager {
     
     /// Syncs a score to both services if auto-upload is enabled
     func uploadScoreIfNeeded(sheet: Sheet, score: Score, config: SyncConfig) async {
-        print("SyncManager: Update detected for \"\(sheet.song?.title ?? "Unknown")\". Auto-upload is \(config.isAutoUploadEnabled ? "ENABLED" : "DISABLED").")
+        print("SyncManager: 检测到「\(sheetTitle(sheet))」成绩更新，自动上传\(config.isAutoUploadEnabled ? "已开启" : "已关闭")。")
         guard config.isAutoUploadEnabled else { return }
         
         // Find active profile for credentials
@@ -25,7 +29,7 @@ class SyncManager {
         let profile = (try? config.modelContext?.fetch(descriptor))?.first
         
         guard let profile = profile else {
-            print("SyncManager: No active profile found for upload.")
+            print("SyncManager: 未找到可用于上传的当前激活档案。")
             return
         }
         
@@ -41,7 +45,7 @@ class SyncManager {
     }
     
     private func uploadToDivingFish(sheet: Sheet, score: Score, profile: UserProfile) async {
-        print("SyncManager: [Diving Fish] Uploading to Diving Fish...")
+        print("SyncManager: [Diving Fish] 开始上传成绩。")
         // Use the specific player update endpoint
         guard let url = URL(string: "https://www.diving-fish.com/api/maimaidxprober/player/update_records") else { return }
         
@@ -64,26 +68,26 @@ class SyncManager {
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: [record])
             if let jsonString = String(data: jsonData, encoding: .utf8) {
-                print("SyncManager: [Diving Fish] Sending payload: \(jsonString)")
+                print("SyncManager: [Diving Fish] 请求载荷：\(jsonString)")
             }
             request.httpBody = jsonData
             
             let (data, response) = try await URLSession.shared.data(for: request)
             if let httpResponse = response as? HTTPURLResponse {
                 if httpResponse.statusCode == 200 {
-                    print("SyncManager: [Diving Fish] Upload SUCCESS for \"\(sheet.song?.title ?? "Unknown")\"")
+                    print("SyncManager: [Diving Fish] 「\(sheetTitle(sheet))」上传成功。")
                 } else {
-                    let responseString = String(data: data, encoding: .utf8) ?? "No response body"
-                    print("SyncManager: [Diving Fish] Upload FAILED with status \(httpResponse.statusCode). Response: \(responseString)")
+                    let responseString = String(data: data, encoding: .utf8) ?? "无响应内容"
+                    print("SyncManager: [Diving Fish] 上传失败，状态码 \(httpResponse.statusCode)，响应：\(responseString)")
                 }
             }
         } catch {
-            print("SyncManager: [Diving Fish] Upload ERROR: \(error.localizedDescription)")
+            print("SyncManager: [Diving Fish] 上传出错：\(error.localizedDescription)")
         }
     }
     
     private func uploadToLxns(sheet: Sheet, score: Score, profile: UserProfile) async {
-        print("SyncManager: [LXNS] Attempting upload...")
+        print("SyncManager: [LXNS] 开始上传成绩。")
         
         // 1. Get Access Token via Refresh Token
         guard let accessToken = await refreshLxnsToken(profile: profile) else {
@@ -114,21 +118,21 @@ class SyncManager {
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: ["scores": [record]])
             if let jsonString = String(data: jsonData, encoding: .utf8) {
-                print("SyncManager: [LXNS] Sending payload: \(jsonString)")
+                print("SyncManager: [LXNS] 请求载荷：\(jsonString)")
             }
             request.httpBody = jsonData
             
             let (data, response) = try await URLSession.shared.data(for: request)
             if let httpResponse = response as? HTTPURLResponse {
                 if (200...299).contains(httpResponse.statusCode) {
-                    print("SyncManager: [LXNS] Upload SUCCESS for \"\(sheet.song?.title ?? "Unknown")\"")
+                    print("SyncManager: [LXNS] 「\(sheetTitle(sheet))」上传成功。")
                 } else {
-                    let responseString = String(data: data, encoding: .utf8) ?? "No response body"
-                    print("SyncManager: [LXNS] Upload FAILED with status \(httpResponse.statusCode). Response: \(responseString)")
+                    let responseString = String(data: data, encoding: .utf8) ?? "无响应内容"
+                    print("SyncManager: [LXNS] 上传失败，状态码 \(httpResponse.statusCode)，响应：\(responseString)")
                 }
             }
         } catch {
-            print("SyncManager: [LXNS] Upload ERROR: \(error.localizedDescription)")
+            print("SyncManager: [LXNS] 上传出错：\(error.localizedDescription)")
         }
     }
     
@@ -155,12 +159,12 @@ class SyncManager {
             let httpResponse = response as? HTTPURLResponse
             
             if let http = httpResponse, http.statusCode != 200 {
-                let errorBody = String(data: data, encoding: .utf8) ?? "No error body"
-                print("SyncManager: [LXNS] Refresh FAILED with status \(http.statusCode). Response: \(errorBody)")
+                let errorBody = String(data: data, encoding: .utf8) ?? "无错误响应内容"
+                print("SyncManager: [LXNS] 刷新令牌失败，状态码 \(http.statusCode)，响应：\(errorBody)")
                 
                 // If 400 (Invalid Refresh Token), clear the token
                 if http.statusCode == 400 {
-                    print("SyncManager: [LXNS] Invalid Refresh Token detected. Clearing credentials...")
+                    print("SyncManager: [LXNS] 检测到无效 Refresh Token，正在清除凭据。")
                     profile.lxnsRefreshToken = ""
                     try? profile.modelContext?.save()
                 }
@@ -176,7 +180,7 @@ class SyncManager {
                 return newData.access_token
             }
         } catch {
-            print("SyncManager: [LXNS] Refresh ERROR: \(error.localizedDescription)")
+            print("SyncManager: [LXNS] 刷新令牌出错：\(error.localizedDescription)")
         }
         return nil
     }

@@ -1033,9 +1033,9 @@ struct SheetCardView: View {
                             .disabled(historyPage <= 1)
                             
                             Menu {
-                                Picker("Page", selection: $historyPage) {
+                                Picker("song.detail.history.pagePicker", selection: $historyPage) {
                                     ForEach(1...totalPages, id: \.self) { page in
-                                        Text("Page \(page)").tag(page)
+                                        Text(String(localized: "song.detail.page \(page)")).tag(page)
                                     }
                                 }
                             } label: {

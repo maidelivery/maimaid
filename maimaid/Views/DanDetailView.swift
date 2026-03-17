@@ -371,7 +371,7 @@ struct DanSongRowEnhanced: View {
                             .padding(.vertical, 5)
                             .background(diffColor.opacity(0.12), in: Capsule())
                     } else {
-                        Text("No Record")
+                        Text("dan.detail.noRecord")
                             .font(.system(size: 9, weight: .medium))
                             .foregroundColor(.secondary)
                     }
@@ -464,7 +464,7 @@ struct DanSongPlaceholder: View {
             
             Spacer()
             
-            Text("Missing")
+            Text("dan.detail.missing")
                 .font(.system(size: 9, weight: .medium))
                 .foregroundColor(.secondary)
         }
@@ -495,4 +495,3 @@ extension Collection {
         indices.contains(index) ? self[index] : nil
     }
 }
-

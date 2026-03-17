@@ -156,6 +156,12 @@
 "song.detail.share.action" = "Share Image";
 "song.detail.label.title" = "Title";
 "song.detail.label.artist" = "Artist";
+"song.detail.history.delete.title" = "Delete Score";
+"song.detail.history.delete.confirm" = "Delete";
+"song.detail.history.delete.cancel" = "Cancel";
+"song.detail.history.delete.message" = "This will remove the selected score record. This action cannot be undone.";
+"song.detail.history.pagePicker" = "Page";
+"song.detail.page %lld" = "Page %lld";
 
 // MARK: - Filter
 "filter.title" = "Filter Options";
@@ -455,6 +461,7 @@
 "scoreQuery.columns" = "Col";
 "scoreQuery.empty" = "No scores yet";
 "scoreQuery.results" = "results";
+"scoreQuery.songNotFound" = "Song not found";
 
 // MARK: - Cloud Sync
 "settings.cloud.title" = "Cloud Account";
@@ -482,3 +489,15 @@
 "settings.cloud.message.backupFailed" = "Backup failed";
 "settings.cloud.message.restoreSuccess" = "Restore successful!";
 "settings.cloud.message.restoreFailed" = "Restore failed";
+"settings.cloud.config.title" = "Supabase Not Configured";
+"settings.cloud.config.subtitle" = "Add cloud sync settings in `Config/Secrets.xcconfig`.";
+"settings.cloud.config.section" = "Configuration";
+"settings.cloud.config.step.copy" = "1. Copy `Config/Secrets.example.xcconfig` to `Config/Secrets.xcconfig`";
+"settings.cloud.config.step.fill" = "2. Fill in `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`";
+"settings.cloud.config.error.unconfigured" = "Supabase is not configured.";
+"supabase.config.error.missingUrl" = "Missing `SUPABASE_URL`. Fill `Config/Secrets.xcconfig` or Xcode build settings.";
+"supabase.config.error.missingPublishableKey" = "Missing `SUPABASE_PUBLISHABLE_KEY`. Fill `Config/Secrets.xcconfig` or Xcode build settings.";
+"common.unknown" = "Unknown";
+"dan.detail.noRecord" = "No Record";
+"dan.detail.missing" = "Missing";
+"dan.list.sections %lld" = "%lld Sections";

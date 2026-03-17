@@ -81,7 +81,7 @@ struct SupabaseAuthView: View {
         Section {
             accountSummaryCard(
                 icon: "person.crop.circle.badge.checkmark",
-                title: user.email ?? "Unknown",
+                title: user.email ?? String(localized: "common.unknown"),
                 subtitle: String(localized: "settings.cloud.status.loggedIn")
             )
         }
@@ -167,18 +167,18 @@ struct SupabaseAuthView: View {
         Section {
             accountSummaryCard(
                 icon: "exclamationmark.icloud.fill",
-                title: "Supabase 未配置",
-                subtitle: "请在 `Config/Secrets.xcconfig` 中填写云同步配置。"
+                title: String(localized: "settings.cloud.config.title"),
+                subtitle: String(localized: "settings.cloud.config.subtitle")
             )
         }
         .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
         .listRowBackground(Color.clear)
         .listSectionSeparator(.hidden)
 
-        Section("配置说明") {
+        Section("settings.cloud.config.section") {
             VStack(alignment: .leading, spacing: 8) {
-                Text("1. 复制 `Config/Secrets.example.xcconfig` 为 `Config/Secrets.xcconfig`")
-                Text("2. 填入 `SUPABASE_URL` 与 `SUPABASE_PUBLISHABLE_KEY`")
+                Text("settings.cloud.config.step.copy")
+                Text("settings.cloud.config.step.fill")
                 if let description = supabaseManager.configurationErrorDescription {
                     Text(description)
                         .foregroundStyle(.secondary)
@@ -369,7 +369,7 @@ struct SupabaseAuthView: View {
     func signIn() async {
         guard !email.isEmpty, !password.isEmpty else { return }
         guard let client = supabaseManager.client else {
-            showToast(message: supabaseManager.configurationErrorDescription ?? "Supabase is not configured.", error: true)
+            showToast(message: supabaseManager.configurationErrorDescription ?? String(localized: "settings.cloud.config.error.unconfigured"), error: true)
             return
         }
 
@@ -387,7 +387,7 @@ struct SupabaseAuthView: View {
     func signUp() async {
         guard !email.isEmpty, !password.isEmpty else { return }
         guard let client = supabaseManager.client else {
-            showToast(message: supabaseManager.configurationErrorDescription ?? "Supabase is not configured.", error: true)
+            showToast(message: supabaseManager.configurationErrorDescription ?? String(localized: "settings.cloud.config.error.unconfigured"), error: true)
             return
         }
 
