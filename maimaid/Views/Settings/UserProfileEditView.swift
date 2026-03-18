@@ -156,13 +156,6 @@ struct UserProfileEditView: View {
                 avatarUrl = p.avatarUrl
             }
         }
-        .onChange(of: selectedItem) { _, newItem in
-            Task {
-                if let data = try? await newItem?.loadTransferable(type: Data.self) {
-                    selectedImageData = data
-                }
-            }
-        }
     }
     
     private func save() {

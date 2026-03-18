@@ -53,6 +53,11 @@
 "scanner.chart.dx" = "DX";
 "scanner.unlock.needed" = "需要解锁";
 "scanner.unlock.notNeeded" = "无需解锁";
+"scanner.capture.button" = "拍摄照片";
+"scanner.capture.saving" = "正在保存照片";
+"scanner.capture.hint" = "将当前识别到的成绩画面保存到 maimai 相册。";
+"scanner.library.button" = "选择照片";
+"scanner.library.hint" = "从相册导入照片进行识别。";
 "scanner.photo.saved" = "已保存至 maimai 相册";
 "scanner.photo.error" = "照片保存失败";
 
@@ -500,3 +505,8 @@
 "dan.detail.noRecord" = "暂无记录";
 "dan.detail.missing" = "缺失";
 "dan.list.sections %lld" = "%lld 个段位关卡";
+"avatar.editor.title" = "调整头像";
+"avatar.editor.hint" = "拖动调整位置，双指缩放或旋转。";
+"avatar.editor.reset" = "重置";
+"avatar.editor.apply" = "应用裁剪";
+"avatar.editor.reedit" = "编辑头像";

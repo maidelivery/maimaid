@@ -1,9 +1,6 @@
 import SwiftUI
-@preconcurrency import AVFoundation
-import Vision
 import SwiftData
 import PhotosUI
-import os
 
 // MARK: - OCR Error Correction
 
@@ -263,6 +260,9 @@ struct ScannerView: View {
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var isProcessingPhoto = false
     @State private var photoImportFeedback: String? = nil
+    @State private var feedbackDismissTask: Task<Void, Never>? = nil
+    @State private var frameAnalysisTask: Task<Void, Never>? = nil
+    @State private var pendingFrameImage: UIImage? = nil
     
     var body: some View {
         NavigationStack {
@@ -314,9 +314,7 @@ struct ScannerView: View {
                 VStack {
                     Spacer()
                     if recognizedClass == .score {
-                        Button(action: {
-                            triggerPhotoCapture()
-                        }) {
+                        Button(action: triggerPhotoCapture) {
                             ZStack {
                                 Circle()
                                     .stroke(.white, lineWidth: 3)
@@ -331,6 +329,9 @@ struct ScannerView: View {
                             }
                         }
                         .disabled(isSavingPhoto)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(Text(isSavingPhoto ? "scanner.capture.saving" : "scanner.capture.button"))
+                        .accessibilityHint(Text("scanner.capture.hint"))
                         .transition(.scale.combined(with: .opacity))
                         .padding(.bottom, 20)
                     }
@@ -346,6 +347,13 @@ struct ScannerView: View {
                 if let item = newItem {
                     Task { await processSelectedPhoto(item) }
                 }
+            }
+            .onDisappear {
+                feedbackDismissTask?.cancel()
+                feedbackDismissTask = nil
+                frameAnalysisTask?.cancel()
+                frameAnalysisTask = nil
+                pendingFrameImage = nil
             }
         }
     }
@@ -643,8 +651,21 @@ struct ScannerView: View {
     }
     
     private func showFeedback(_ message: String) {
+        feedbackDismissTask?.cancel()
         withAnimation { photoImportFeedback = message }
-        Task { @MainActor in try? await Task.sleep(for: .seconds(2.5)); withAnimation { photoImportFeedback = nil } }
+        feedbackDismissTask = Task { @MainActor in
+            do {
+                try await Task.sleep(for: .seconds(2.5))
+            } catch is CancellationError {
+                return
+            } catch {
+                return
+            }
+            
+            guard photoImportFeedback == message else { return }
+            withAnimation { photoImportFeedback = nil }
+            feedbackDismissTask = nil
+        }
     }
     
     private func fuzzyMatch(_ s1: String, _ s2: String) -> Bool {
@@ -666,6 +687,8 @@ struct ScannerView: View {
                     .padding(10)
                     .background(.ultraThinMaterial, in: Circle())
             }
+            .accessibilityLabel(Text("scanner.library.button"))
+            .accessibilityHint(Text("scanner.library.hint"))
         }
         .padding()
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ScannerPhotoCaptured"))) { notification in
@@ -719,37 +742,63 @@ struct ScannerView: View {
     
     private func handleCameraFrame(_ image: UIImage) {
         guard !isShowingScoreEntry else { return }
-        Task {
-            let imageType = await MLDistinguishProcessor.shared.classify(image)
-            if imageType == .unknown {
-                updateUIWithResults(songIds: [], rate: nil, diff: nil, type: nil, dxScore: nil, maxDxScore: nil, fc: nil, fs: nil, boxes: [], imageClass: .unknown, level: nil, maxCombo: nil, kanji: nil)
-                return
+        pendingFrameImage = image
+        
+        guard frameAnalysisTask == nil else { return }
+        
+        frameAnalysisTask = Task { @MainActor in
+            defer {
+                frameAnalysisTask = nil
+                pendingFrameImage = nil
             }
-            if imageType == .choose {
-                let recognition = await MLChooseProcessor.shared.process(image)
-                var frameMatches: [String] = []
-                var allCandidates = recognition.titleCandidates
-                if let exactTitle = recognition.title { allCandidates.insert(exactTitle, at: 0) }
-                for candidate in allCandidates {
-                    let cleaned = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard cleaned.count >= 2 else { continue }
-                    var foundFast = false
-                    for song in songs {
-                        if song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title) {
-                            frameMatches.append(song.songIdentifier); foundFast = true; if frameMatches.count > 3 { break }
-                        }
+            
+            while !Task.isCancelled {
+                guard let nextFrame = pendingFrameImage else { break }
+                pendingFrameImage = nil
+                await analyzeCameraFrame(nextFrame)
+            }
+        }
+    }
+    
+    private func analyzeCameraFrame(_ image: UIImage) async {
+        guard !isShowingScoreEntry else { return }
+        
+        let imageType = await MLDistinguishProcessor.shared.classify(image)
+        guard !Task.isCancelled, !isShowingScoreEntry else { return }
+        
+        if imageType == .unknown {
+            updateUIWithResults(songIds: [], rate: nil, diff: nil, type: nil, dxScore: nil, maxDxScore: nil, fc: nil, fs: nil, boxes: [], imageClass: .unknown, level: nil, maxCombo: nil, kanji: nil)
+            return
+        }
+        
+        if imageType == .choose {
+            let recognition = await MLChooseProcessor.shared.process(image)
+            guard !Task.isCancelled, !isShowingScoreEntry else { return }
+            
+            var frameMatches: [String] = []
+            var allCandidates = recognition.titleCandidates
+            if let exactTitle = recognition.title { allCandidates.insert(exactTitle, at: 0) }
+            for candidate in allCandidates {
+                let cleaned = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard cleaned.count >= 2 else { continue }
+                var foundFast = false
+                for song in songs {
+                    if song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title) {
+                        frameMatches.append(song.songIdentifier); foundFast = true; if frameMatches.count > 3 { break }
                     }
-                    if !foundFast && cleaned.count > 4 {
-                        for song in songs { if fuzzyMatch(cleaned, song.title) { frameMatches.append(song.songIdentifier); if frameMatches.count > 3 { break } } }
-                    }
-                    if !frameMatches.isEmpty { break }
                 }
-                updateUIWithResults(songIds: frameMatches, rate: nil, diff: nil, type: nil, dxScore: nil, maxDxScore: nil, fc: nil, fs: nil, boxes: recognition.boxes, imageClass: .choose, level: nil, maxCombo: nil, kanji: nil)
-            } else {
-                let recognition = await MLScoreProcessor.shared.process(image)
-                let matchedSongIds = matchSongsForCameraFrame(titleCandidates: recognition.titleCandidates, title: recognition.title, difficulty: recognition.difficulty, level: recognition.level, maxCombo: recognition.maxCombo, dxScore: recognition.dxScore, maxDxScore: recognition.maxDxScore, type: recognition.type, kanji: recognition.kanji)
-                updateUIWithResults(songIds: matchedSongIds, rate: recognition.rate, diff: recognition.difficulty, type: recognition.type, dxScore: recognition.dxScore, maxDxScore: recognition.maxDxScore, fc: recognition.comboStatus, fs: recognition.syncStatus, boxes: recognition.boxes, imageClass: .score, level: recognition.level, maxCombo: recognition.maxCombo, kanji: recognition.kanji)
+                if !foundFast && cleaned.count > 4 {
+                    for song in songs { if fuzzyMatch(cleaned, song.title) { frameMatches.append(song.songIdentifier); if frameMatches.count > 3 { break } } }
+                }
+                if !frameMatches.isEmpty { break }
             }
+            updateUIWithResults(songIds: frameMatches, rate: nil, diff: nil, type: nil, dxScore: nil, maxDxScore: nil, fc: nil, fs: nil, boxes: recognition.boxes, imageClass: .choose, level: nil, maxCombo: nil, kanji: nil)
+        } else {
+            let recognition = await MLScoreProcessor.shared.process(image)
+            guard !Task.isCancelled, !isShowingScoreEntry else { return }
+            
+            let matchedSongIds = matchSongsForCameraFrame(titleCandidates: recognition.titleCandidates, title: recognition.title, difficulty: recognition.difficulty, level: recognition.level, maxCombo: recognition.maxCombo, dxScore: recognition.dxScore, maxDxScore: recognition.maxDxScore, type: recognition.type, kanji: recognition.kanji)
+            updateUIWithResults(songIds: matchedSongIds, rate: recognition.rate, diff: recognition.difficulty, type: recognition.type, dxScore: recognition.dxScore, maxDxScore: recognition.maxDxScore, fc: recognition.comboStatus, fs: recognition.syncStatus, boxes: recognition.boxes, imageClass: .score, level: recognition.level, maxCombo: recognition.maxCombo, kanji: recognition.kanji)
         }
     }
     
@@ -809,219 +858,5 @@ struct ScannerView: View {
             if let exact = candidates.first(where: { $0.total == maxDx / 3 }) { return exact }
         }
         return candidates.first ?? song.sheets.first { $0.difficulty.lowercased() == diff.lowercased() }
-    }
-}
-
-// MARK: - Camera
-
-struct CameraPreviewView: UIViewControllerRepresentable {
-    var onImageCaptured: (UIImage) -> Void
-    func makeUIViewController(context: Context) -> CameraViewController { let c = CameraViewController(); c.onImageCaptured = onImageCaptured; return c }
-    func updateUIViewController(_ uiViewController: CameraViewController, context: Context) {}
-}
-
-class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
-    var onImageCaptured: ((UIImage) -> Void)?
-    private var captureSession: AVCaptureSession?
-    private var previewLayer: AVCaptureVideoPreviewLayer?
-    private var photoOutput: AVCapturePhotoOutput?
-    private let processingQueue = DispatchQueue(label: "com.maimaid.camera.queue", qos: .userInteractive)
-    private let frameCounter = OSAllocatedUnfairLock(initialState: 0)
-    nonisolated private static let rawContext = CIContext(options: [.useSoftwareRenderer: false])
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        setupCaptureSession()
-        NotificationCenter.default.addObserver(self, selector: #selector(handleTakePhoto), name: Notification.Name("TakeScannerPhoto"), object: nil)
-    }
-    
-    deinit { NotificationCenter.default.removeObserver(self) }
-    
-    private func setupCaptureSession() {
-        captureSession = AVCaptureSession()
-        guard let captureSession = captureSession else { return }
-        captureSession.sessionPreset = .hd1280x720
-        guard let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-              let videoInput = try? AVCaptureDeviceInput(device: videoDevice) else { return }
-        if captureSession.canAddInput(videoInput) { captureSession.addInput(videoInput) }
-        let videoOutput = AVCaptureVideoDataOutput()
-        videoOutput.alwaysDiscardsLateVideoFrames = true
-        videoOutput.setSampleBufferDelegate(self, queue: processingQueue)
-        if captureSession.canAddOutput(videoOutput) { captureSession.addOutput(videoOutput) }
-        let photoOut = AVCapturePhotoOutput()
-        if captureSession.canAddOutput(photoOut) {
-            captureSession.addOutput(photoOut)
-            if #available(iOS 16.0, *) { photoOut.maxPhotoDimensions = videoDevice.activeFormat.supportedMaxPhotoDimensions.last ?? CMVideoDimensions(width: 0, height: 0) } else { photoOut.isHighResolutionCaptureEnabled = true }
-            self.photoOutput = photoOut
-        }
-        if let connection = videoOutput.connection(with: .video) {
-            if #available(iOS 17.0, *) { if connection.isVideoRotationAngleSupported(90) { connection.videoRotationAngle = 90 } } else { if connection.isVideoOrientationSupported { connection.videoOrientation = .portrait } }
-        }
-        previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-        previewLayer?.frame = view.layer.bounds
-        previewLayer?.videoGravity = .resizeAspectFill
-        if let previewLayer = previewLayer { view.layer.addSublayer(previewLayer) }
-        DispatchQueue.global(qos: .userInitiated).async { captureSession.startRunning() }
-    }
-    
-    nonisolated func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        let count = frameCounter.withLock { value -> Int in value += 1; return value }
-        guard count % 10 == 0 else { return }
-        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
-        guard let cgImage = Self.rawContext.createCGImage(ciImage, from: ciImage.extent) else { return }
-        let uiImage = UIImage(cgImage: cgImage)
-        DispatchQueue.main.async { self.onImageCaptured?(uiImage) }
-    }
-    
-    override func viewDidLayoutSubviews() { super.viewDidLayoutSubviews(); previewLayer?.frame = view.layer.bounds }
-    override func viewWillAppear(_ animated: Bool) { super.viewWillAppear(animated); if let cs = captureSession, !cs.isRunning { DispatchQueue.global(qos: .userInitiated).async { cs.startRunning() } } }
-    override func viewWillDisappear(_ animated: Bool) { super.viewWillDisappear(animated); captureSession?.stopRunning() }
-    
-    @objc private func handleTakePhoto() {
-        guard let output = photoOutput else { return }
-        let settings = AVCapturePhotoSettings()
-        if let vc = output.connection(with: .video) {
-            if #available(iOS 17.0, *) { if vc.isVideoRotationAngleSupported(90) { vc.videoRotationAngle = 90 } } else { if vc.isVideoOrientationSupported { vc.videoOrientation = .portrait } }
-        }
-        if output.availablePhotoCodecTypes.contains(.jpeg) {
-            if #available(iOS 16.0, *) { settings.maxPhotoDimensions = output.maxPhotoDimensions } else { settings.isHighResolutionPhotoEnabled = true }
-        }
-        output.capturePhoto(with: settings, delegate: self)
-    }
-}
-
-extension CameraViewController: AVCapturePhotoCaptureDelegate {
-    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        guard let data = photo.fileDataRepresentation(), let image = UIImage(data: data) else { return }
-        DispatchQueue.main.async { NotificationCenter.default.post(name: Notification.Name("ScannerPhotoCaptured"), object: image) }
-    }
-}
-
-// MARK: - Debug Overlay
-
-struct ScannerDebugOverlayView: View {
-    let showScannerBoundingBox: Bool
-    let debugBoxes: [RecognizedBox]
-    var body: some View {
-        if showScannerBoundingBox {
-            GeometryReader { geo in
-                ZStack(alignment: .topLeading) {
-                    ForEach(debugBoxes.indices, id: \.self) { i in
-                        let box = debugBoxes[i]
-                        let rect = box.rect
-                        let x = rect.origin.x * geo.size.width
-                        let y = (1 - rect.origin.y - rect.height) * geo.size.height
-                        let w = rect.width * geo.size.width
-                        let h = rect.height * geo.size.height
-                        Path { path in path.addRect(CGRect(x: x, y: y, width: w, height: h)) }.stroke(Color.green, lineWidth: 2)
-                        Text(box.label).font(.system(size: 10, weight: .bold)).foregroundColor(.white).padding(.horizontal, 2).background(Color.green).position(x: x + w / 2, y: max(10, y - 8))
-                    }
-                }
-            }
-            .allowsHitTesting(false)
-            .ignoresSafeArea()
-        }
-    }
-}
-
-// MARK: - Result Card
-
-struct ScannerResultCardView: View, Equatable {
-    let song: Song
-    let recognizedClass: MaimaiImageType
-    let recognizedType: String?
-    let recognizedDifficulty: String?
-    let recognizedRate: Double?
-    let onScoreEntryTap: () -> Void
-    let onResetTap: () -> Void
-    
-    static func == (lhs: ScannerResultCardView, rhs: ScannerResultCardView) -> Bool {
-        lhs.song.songIdentifier == rhs.song.songIdentifier &&
-        lhs.recognizedClass == rhs.recognizedClass &&
-        lhs.recognizedType == rhs.recognizedType &&
-        lhs.recognizedDifficulty == rhs.recognizedDifficulty &&
-        lhs.recognizedRate == rhs.recognizedRate
-    }
-    
-    var body: some View {
-        if recognizedClass == .choose {
-            NavigationLink(destination: {
-                SongDetailView(song: song).onDisappear { onResetTap() }
-            }) {
-                VStack(spacing: 0) {
-                    HStack(spacing: 12) {
-                        SongJacketView(imageName: song.imageName, size: 40, cornerRadius: 8)
-                            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(song.title).font(.system(size: 14, weight: .bold)).foregroundColor(.primary).lineLimit(1)
-                            Text(song.artist).font(.system(size: 11, weight: .regular)).foregroundColor(.secondary).lineLimit(1)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold)).foregroundColor(.secondary.opacity(0.4))
-                    }
-                    .padding(.vertical, 14)
-                    .padding(.horizontal, 16)
-                }
-                .fixedSize(horizontal: false, vertical: true)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-                .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.primary.opacity(0.1), lineWidth: 1))
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
-            }
-            .buttonStyle(.plain)
-            .transition(.asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)), removal: .opacity.combined(with: .scale(scale: 0.95))))
-        } else {
-            Button { onScoreEntryTap() } label: {
-                let chartType = recognizedType ?? "dx"
-                let diff = recognizedDifficulty ?? "master"
-                let diffColor = ThemeUtils.colorForDifficulty(diff, chartType)
-                let sheet = song.sheets.first(where: { $0.difficulty.lowercased() == diff.lowercased() && $0.type.lowercased() == chartType.lowercased() })
-                VStack(spacing: 0) {
-                    HStack(spacing: 0) {
-                        RoundedRectangle(cornerRadius: 2).fill(diffColor).frame(width: 4).padding(.vertical, 4)
-                        HStack(spacing: 12) {
-                            SongJacketView(imageName: song.imageName, size: 40, cornerRadius: 8)
-                                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                            VStack(alignment: .leading, spacing: 3) {
-                                HStack(spacing: 4) {
-                                    Text(chartType.uppercased() == "STD" ? String(localized: "scanner.chart.std") : chartType.uppercased())
-                                        .font(.system(size: 8, weight: .black))
-                                        .padding(.horizontal, 4).padding(.vertical, 1)
-                                        .background(chartType.lowercased() == "dx" ? Color.orange : Color.blue)
-                                        .foregroundColor(.white).cornerRadius(3)
-                                    Text(song.title).font(.system(size: 12, weight: .bold)).foregroundColor(.primary).lineLimit(1)
-                                }
-                                if diff.lowercased() == "remaster" {
-                                    Text("RE: MASTER").font(.system(size: 13, weight: .bold, design: .rounded)).foregroundColor(diffColor)
-                                } else {
-                                    Text(diff.uppercased()).font(.system(size: 13, weight: .bold, design: .rounded)).foregroundColor(diffColor)
-                                }
-                            }
-                            Spacer()
-                            if let rate = recognizedRate {
-                                VStack(alignment: .trailing, spacing: 1) {
-                                    Text(String(format: "%.4f%%", rate)).font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundColor(.primary)
-                                    Text(RatingUtils.calculateRank(achievement: rate)).font(.system(size: 10, weight: .black, design: .rounded)).foregroundColor(diffColor)
-                                }
-                            }
-                            if let levelStr = sheet?.internalLevel ?? sheet?.level {
-                                Text(levelStr).font(.system(size: 28, weight: .black, design: .rounded)).foregroundColor(diffColor.opacity(0.85)).frame(minWidth: 44)
-                            }
-                            Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold)).foregroundColor(.secondary.opacity(0.4))
-                        }
-                        .padding(.leading, 12).padding(.trailing, 16)
-                    }
-                    .padding(.vertical, 14)
-                }
-                .fixedSize(horizontal: false, vertical: true)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-                .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(diffColor.opacity(0.2), lineWidth: 1))
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
-            }
-            .buttonStyle(.plain)
-            .transition(.asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)), removal: .opacity.combined(with: .scale(scale: 0.95))))
-        }
     }
 }

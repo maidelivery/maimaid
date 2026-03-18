@@ -54,6 +54,11 @@
 "scanner.reset.hint" = "Unlocked needed"; // For lock status in scanner
 "scanner.unlock.needed" = "Unlock required";
 "scanner.unlock.notNeeded" = "No unlock required";
+"scanner.capture.button" = "Capture photo";
+"scanner.capture.saving" = "Saving photo";
+"scanner.capture.hint" = "Saves the current recognized score screen to your maimai album.";
+"scanner.library.button" = "Choose photo";
+"scanner.library.hint" = "Imports a photo from your library for recognition.";
 "scanner.photo.saved" = "Saved to maimai Album";
 "scanner.photo.error" = "Failed to save photo";
 
@@ -501,3 +506,8 @@
 "dan.detail.noRecord" = "No Record";
 "dan.detail.missing" = "Missing";
 "dan.list.sections %lld" = "%lld Sections";
+"avatar.editor.title" = "Adjust Avatar";
+"avatar.editor.hint" = "Drag to position, pinch to zoom, or rotate with two fingers.";
+"avatar.editor.reset" = "Reset";
+"avatar.editor.apply" = "Apply Crop";
+"avatar.editor.reedit" = "Edit Avatar";

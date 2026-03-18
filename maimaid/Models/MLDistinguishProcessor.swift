@@ -1,22 +1,23 @@
 import Foundation
-import CoreML
-import Vision
-import UIKit
+@preconcurrency import CoreML
+@preconcurrency import Vision
+@preconcurrency import UIKit
 
 /// Processor that encapsulates the logic for classifying Maimai image types using CoreML model.
-class MLDistinguishProcessor: Sendable {
-    static let shared = MLDistinguishProcessor()
+nonisolated final class MLDistinguishProcessor {
+    nonisolated(unsafe) static let shared = MLDistinguishProcessor()
     
     // The compiled CoreML model
-    private var visionModel: VNCoreMLModel?
+    private let visionModel: VNCoreMLModel?
+    private let processingQueue = DispatchQueue(label: "com.shiko.maimaid.ml.distinguish", qos: .userInitiated)
     
-    init() {
-        setupModel()
+    private init() {
+        self.visionModel = Self.loadModel()
     }
     
     // MARK: - Setup
     
-    private func setupModel() {
+    private static func loadModel() -> VNCoreMLModel? {
         do {
             let config = MLModelConfiguration()
             config.computeUnits = .all
@@ -24,17 +25,20 @@ class MLDistinguishProcessor: Sendable {
             // Try specific version first
             if let modelURL = Bundle.main.url(forResource: "maimaidistinguish v1.2", withExtension: "mlmodelc") {
                 let mlModel = try MLModel(contentsOf: modelURL, configuration: config)
-                self.visionModel = try VNCoreMLModel(for: mlModel)
+                let visionModel = try VNCoreMLModel(for: mlModel)
                 print("MLDistinguishProcessor: Successfully loaded maimaidistinguish v1.2 model.")
+                return visionModel
             } else if let urls = Bundle.main.urls(forResourcesWithExtension: "mlmodelc", subdirectory: nil), let first = urls.first(where: { $0.lastPathComponent.contains("maimaidistinguish") }) {
                 print("MLDistinguishProcessor: Loaded fallback model \(first.lastPathComponent)")
                 let mlModel = try MLModel(contentsOf: first, configuration: config)
-                self.visionModel = try VNCoreMLModel(for: mlModel)
+                return try VNCoreMLModel(for: mlModel)
             } else {
                 print("MLDistinguishProcessor: maimaidistinguish model not found in bundle. Check Target Membership.")
+                return nil
             }
         } catch {
             print("MLDistinguishProcessor: Error loading maimaidistinguish model - \(error)")
+            return nil
         }
     }
     
@@ -42,8 +46,18 @@ class MLDistinguishProcessor: Sendable {
     
     /// Classifies an image into .score, .choose, or .unknown
     func classify(_ image: UIImage) async -> MaimaiImageType {
-        let normalizedImage = image.normalized()
-        guard let cgImage = normalizedImage.cgImage, let vnModel = visionModel else {
+        let normalizedImage = await MainActor.run { image.normalized() }
+        let visionModel = self.visionModel
+        
+        return await withCheckedContinuation { continuation in
+            processingQueue.async {
+                continuation.resume(returning: Self.classifySynchronously(normalizedImage, visionModel: visionModel))
+            }
+        }
+    }
+    
+    private static func classifySynchronously(_ image: UIImage, visionModel: VNCoreMLModel?) -> MaimaiImageType {
+        guard let cgImage = image.cgImage, let vnModel = visionModel else {
             return .unknown
         }
         

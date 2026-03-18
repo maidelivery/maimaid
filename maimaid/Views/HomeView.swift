@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import PhotosUI
 
 struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
@@ -89,8 +88,12 @@ struct HomeView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("home.title")
             .sheet(isPresented: $showingEditProfile) {
-                if let config = config {
-                    ProfileEditSheet(config: config)
+                NavigationStack {
+                    if let profile = activeProfile {
+                        UserProfileEditView(mode: .edit(profile))
+                    } else {
+                        UserProfileEditView(mode: .create)
+                    }
                 }
             }
             .task {
@@ -409,105 +412,5 @@ struct HomeView: View {
                 .stroke(Color.primary.opacity(0.05), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.02), radius: 8, x: 0, y: 4)
-    }
-}
-
-@MainActor
-struct ProfileEditSheet: View {
-    @Environment(\.dismiss) var dismiss
-    @Bindable var config: SyncConfig
-    @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
-    
-    @State private var userName: String = ""
-    @State private var plate: String = ""
-    @State private var avatarUrl: String?
-    @State private var selectedItem: PhotosPickerItem?
-    @State private var selectedImageData: Data?
-    
-    var body: some View {
-        NavigationStack {
-            Form {
-                EditableAvatarSection(
-                    selectedItem: $selectedItem,
-                    selectedImageData: $selectedImageData,
-                    avatarURL: $avatarUrl
-                )
-                
-                Section("profile.edit.basicInfo") {
-                    LabeledContent("profile.edit.name") {
-                        TextField("profile.edit.name.placeholder", text: $userName)
-                            .multilineTextAlignment(.trailing)
-                    }
-                    LabeledContent("profile.edit.titleName") {
-                        TextField("profile.edit.titleName.placeholder", text: $plate)
-                            .multilineTextAlignment(.trailing)
-                    }
-                }
-                
-                Section("profile.edit.presetIcon") {
-                    NavigationLink {
-                        MaimaiIconPicker(avatarUrl: $avatarUrl, selectedImageData: $selectedImageData)
-                    } label: {
-                        HStack {
-                            Text("profile.edit.presetIcon.select")
-                            Spacer()
-                            if selectedImageData != nil || avatarUrl != nil {
-                                AvatarImageView(
-                                    imageData: selectedImageData,
-                                    avatarURL: avatarUrl,
-                                    size: 30,
-                                    placeholderSystemName: "photo.circle.fill"
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            .navigationTitle("profile.edit.title")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("profile.edit.cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("profile.edit.save") {
-                        saveChanges()
-                        dismiss()
-                    }
-                    .bold()
-                    .disabled(userName.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
-            }
-            .onAppear {
-                if let p = activeProfiles.first {
-                    userName = p.name
-                    plate = p.plate ?? ""
-                    selectedImageData = p.avatarData
-                    avatarUrl = p.avatarUrl
-                } else {
-                    userName = config.userName ?? ""
-                    plate = config.plate ?? ""
-                    selectedImageData = config.avatarData
-                    avatarUrl = config.avatarUrl
-                }
-            }
-            .onChange(of: selectedItem) { _, newItem in
-                Task {
-                    if let data = try? await newItem?.loadTransferable(type: Data.self) {
-                        selectedImageData = data
-                    }
-                }
-            }
-        }
-    }
-    
-    private func saveChanges() {
-        // Update active profile
-        if let profile = activeProfiles.first {
-            profile.name = userName.trimmingCharacters(in: .whitespaces)
-            profile.plate = plate.trimmingCharacters(in: .whitespaces)
-            profile.avatarData = selectedImageData
-            profile.avatarUrl = avatarUrl
-        }
     }
 }

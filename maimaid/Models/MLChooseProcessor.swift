@@ -1,22 +1,23 @@
 import Foundation
-import CoreML
-import Vision
-import UIKit
+@preconcurrency import CoreML
+@preconcurrency import Vision
+@preconcurrency import UIKit
 
 /// Processor that encapsulates the logic for parsing Maimai song choice screens using CoreML model.
-class MLChooseProcessor: Sendable {
-    static let shared = MLChooseProcessor()
+nonisolated final class MLChooseProcessor {
+    nonisolated(unsafe) static let shared = MLChooseProcessor()
     
     // The compiled CoreML model
-    private var visionModel: VNCoreMLModel?
+    private let visionModel: VNCoreMLModel?
+    private let processingQueue = DispatchQueue(label: "com.shiko.maimaid.ml.choose", qos: .userInitiated)
     
-    init() {
-        setupModel()
+    private init() {
+        self.visionModel = Self.loadModel()
     }
     
     // MARK: - Setup
     
-    private func setupModel() {
+    private static func loadModel() -> VNCoreMLModel? {
         do {
             let config = MLModelConfiguration()
             config.computeUnits = .all
@@ -24,17 +25,20 @@ class MLChooseProcessor: Sendable {
             // Try specific version first
             if let modelURL = Bundle.main.url(forResource: "maimaidetector v1.2n", withExtension: "mlmodelc") {
                 let mlModel = try MLModel(contentsOf: modelURL, configuration: config)
-                self.visionModel = try VNCoreMLModel(for: mlModel)
+                let visionModel = try VNCoreMLModel(for: mlModel)
                 print("MLChooseProcessor: Successfully loaded maimaidetector v1.2n model.")
+                return visionModel
             } else if let urls = Bundle.main.urls(forResourcesWithExtension: "mlmodelc", subdirectory: nil), let first = urls.first(where: { $0.lastPathComponent.contains("maimaidetector") }) {
                 print("MLChooseProcessor: Successfully loaded fallback model \(first.lastPathComponent)")
                 let mlModel = try MLModel(contentsOf: first, configuration: config)
-                self.visionModel = try VNCoreMLModel(for: mlModel)
+                return try VNCoreMLModel(for: mlModel)
             } else {
                 print("MLChooseProcessor: maimaidetector model not found in bundle. Check Target Membership.")
+                return nil
             }
         } catch {
             print("MLChooseProcessor: Error loading maimaidetector model - \(error)")
+            return nil
         }
     }
     
@@ -42,10 +46,20 @@ class MLChooseProcessor: Sendable {
     
     /// Processes an image using `maimaidetector` object detection and targeted OCR.
     func process(_ image: UIImage) async -> MLChooseResult {
+        let normalizedImage = await MainActor.run { image.normalized() }
+        let visionModel = self.visionModel
+        
+        return await withCheckedContinuation { continuation in
+            processingQueue.async {
+                continuation.resume(returning: Self.processSynchronously(normalizedImage, visionModel: visionModel))
+            }
+        }
+    }
+    
+    private static func processSynchronously(_ image: UIImage, visionModel: VNCoreMLModel?) -> MLChooseResult {
         var result = MLChooseResult()
         
-        let normalizedImage = image.normalized()
-        guard let cgImage = normalizedImage.cgImage, let vnModel = visionModel else {
+        guard let cgImage = image.cgImage, let vnModel = visionModel else {
             return result
         }
         
@@ -81,7 +95,7 @@ class MLChooseProcessor: Sendable {
         
         // 2. Targeted OCR on Specific Regions 
         if let box = titleBox {
-            let ocrText = await performOCR(on: cgImage, in: box)
+            let ocrText = performOCR(on: cgImage, in: box)
             if let text = ocrText.first {
                 result.title = text
             }
@@ -94,7 +108,7 @@ class MLChooseProcessor: Sendable {
     // MARK: - OCR Helpers
     
     /// Crops and performs OCR on a specific bounding box of the image
-    private func performOCR(on cgImage: CGImage, in boundingBox: CGRect) async -> [String] {
+    private static func performOCR(on cgImage: CGImage, in boundingBox: CGRect) -> [String] {
         guard let cropped = cropImage(cgImage, to: boundingBox) else { return [] }
         
         let request = VNRecognizeTextRequest()
@@ -119,7 +133,7 @@ class MLChooseProcessor: Sendable {
     }
     
     /// Vision coordinates (0,0 is bottom-left) to Image Coordinates (0,0 is top-left)
-    private func cropImage(_ cgImage: CGImage, to boundingBox: CGRect) -> CGImage? {
+    private static func cropImage(_ cgImage: CGImage, to boundingBox: CGRect) -> CGImage? {
         let width = CGFloat(cgImage.width)
         let height = CGFloat(cgImage.height)
         

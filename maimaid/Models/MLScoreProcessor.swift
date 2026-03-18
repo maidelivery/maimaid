@@ -1,44 +1,49 @@
 import Foundation
-import CoreML
-import Vision
-import UIKit
+@preconcurrency import CoreML
+@preconcurrency import Vision
+@preconcurrency import UIKit
 
 /// Processor that encapsulates the logic for parsing Maimai scores using CoreML model.
-class MLScoreProcessor: Sendable {
-    static let shared = MLScoreProcessor()
+nonisolated final class MLScoreProcessor {
+    nonisolated(unsafe) static let shared = MLScoreProcessor()
     
     // The compiled CoreML model
-    private var visionModel: VNCoreMLModel?
+    private let visionModel: VNCoreMLModel?
+    private let processingQueue = DispatchQueue(label: "com.shiko.maimaid.ml.score", qos: .userInitiated)
     
-    init() {
-        setupModel()
+    private init() {
+        self.visionModel = Self.loadModel()
     }
     
     // MARK: - Setup
     
-    private func setupModel() {
+    private static func loadModel() -> VNCoreMLModel? {
         do {
             let config = MLModelConfiguration()
             config.computeUnits = .all
             
             if let modelURL = Bundle.main.url(forResource: "maimaid v1.41n", withExtension: "mlmodelc") {
                 let mlModel = try MLModel(contentsOf: modelURL, configuration: config)
-                self.visionModel = try VNCoreMLModel(for: mlModel)
+                let visionModel = try VNCoreMLModel(for: mlModel)
                 print("MLScoreProcessor: Successfully loaded maimaid v1.41n model from mlmodelc.")
+                return visionModel
             } else if let modelURL = Bundle.main.url(forResource: "maimaid v1.4n", withExtension: "mlmodelc") {
                 let mlModel = try MLModel(contentsOf: modelURL, configuration: config)
-                self.visionModel = try VNCoreMLModel(for: mlModel)
+                let visionModel = try VNCoreMLModel(for: mlModel)
                 print("MLScoreProcessor: Loaded fallback maimaid v1.4n model.")
+                return visionModel
             } else if let urls = Bundle.main.urls(forResourcesWithExtension: "mlmodelc", subdirectory: nil),
                       let first = urls.first(where: { $0.lastPathComponent.contains("maimaid") && !$0.lastPathComponent.contains("distinguish") && !$0.lastPathComponent.contains("choose") }) {
                 print("MLScoreProcessor: Loaded fallback model \(first.lastPathComponent)")
                 let mlModel = try MLModel(contentsOf: first, configuration: config)
-                self.visionModel = try VNCoreMLModel(for: mlModel)
+                return try VNCoreMLModel(for: mlModel)
             } else {
                 print("MLScoreProcessor: No maimaid score model found in bundle. Check Target Membership.")
+                return nil
             }
         } catch {
             print("MLScoreProcessor: Error loading model - \(error)")
+            return nil
         }
     }
     
@@ -46,8 +51,18 @@ class MLScoreProcessor: Sendable {
     
     /// Processes an image using object detection and targeted OCR.
     func process(_ image: UIImage) async -> MLScoreResult {
-        let normalizedImage = image.normalized()
-        guard let cgImage = normalizedImage.cgImage, let vnModel = visionModel else {
+        let normalizedImage = await MainActor.run { image.normalized() }
+        let visionModel = self.visionModel
+        
+        return await withCheckedContinuation { continuation in
+            processingQueue.async {
+                continuation.resume(returning: Self.processSynchronously(normalizedImage, visionModel: visionModel))
+            }
+        }
+    }
+    
+    private static func processSynchronously(_ image: UIImage, visionModel: VNCoreMLModel?) -> MLScoreResult {
+        guard let cgImage = image.cgImage, let vnModel = visionModel else {
             return MLScoreResult(debugInfo: "Model not loaded or invalid image.")
         }
         
@@ -122,7 +137,7 @@ class MLScoreProcessor: Sendable {
         
         // Achievement
         if let box = achievementBox {
-            let ocrText = await performOCR(on: cgImage, in: box, pattern: "(\\d{2,3}[.,]\\d{4})")
+            let ocrText = performOCR(on: cgImage, in: box, pattern: "(\\d{2,3}[.,]\\d{4})")
             print("  [achievement OCR] raw results: \(ocrText)")
             if let text = ocrText.first {
                 let cleaned = text.replacingOccurrences(of: ",", with: ".")
@@ -140,7 +155,7 @@ class MLScoreProcessor: Sendable {
         
         // Title
         if let box = titleBox {
-            let ocrText = await performOCR(on: cgImage, in: box, pattern: nil)
+            let ocrText = performOCR(on: cgImage, in: box, pattern: nil)
             print("  [title OCR] raw results: \(ocrText)")
             if let text = ocrText.first {
                 scoreResult.title = text
@@ -153,7 +168,7 @@ class MLScoreProcessor: Sendable {
         
         // DX Score
         if let box = dxscoreBox {
-            let ocrText = await performOCR(on: cgImage, in: box, pattern: "(\\d+)")
+            let ocrText = performOCR(on: cgImage, in: box, pattern: "(\\d+)")
             print("  [dxscore OCR] raw results: \(ocrText)")
             if let text = ocrText.first, let val = Int(text) {
                 scoreResult.dxScore = val
@@ -165,7 +180,7 @@ class MLScoreProcessor: Sendable {
         
         // Max DX Score (NEW in v1.41n)
         if let box = maxdxscoreBox {
-            let ocrText = await performOCR(on: cgImage, in: box, pattern: "(\\d+)")
+            let ocrText = performOCR(on: cgImage, in: box, pattern: "(\\d+)")
             print("  [maxdxscore OCR] raw results: \(ocrText)")
             if let text = ocrText.first, let val = Int(text), val > 0 {
                 scoreResult.maxDxScore = val
@@ -178,7 +193,7 @@ class MLScoreProcessor: Sendable {
         
         // Level (integer only)
         if let box = lvBox {
-            let ocrText = await performOCR(on: cgImage, in: box, pattern: "(\\d+)")
+            let ocrText = performOCR(on: cgImage, in: box, pattern: "(\\d+)")
             print("  [lv OCR] raw results: \(ocrText)")
             if let text = ocrText.first, let val = Int(text), val >= 1, val <= 15 {
                 scoreResult.level = Double(val)
@@ -192,7 +207,7 @@ class MLScoreProcessor: Sendable {
         
         // Kanji (NEW in v1.41n) - for utage sheet identification
         if let box = kanjiBox {
-            let ocrText = await performOCR(on: cgImage, in: box, pattern: nil)
+            let ocrText = performOCR(on: cgImage, in: box, pattern: nil)
             print("  [kanji OCR] raw results: \(ocrText)")
             if let text = ocrText.first?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
                 scoreResult.kanji = text
@@ -206,7 +221,7 @@ class MLScoreProcessor: Sendable {
         // OCR result takes absolute priority over color classification,
         // because color can be affected by ambient lighting conditions.
         if let box = difficultyBox {
-            let ocrText = await performOCR(on: cgImage, in: box, pattern: nil)
+            let ocrText = performOCR(on: cgImage, in: box, pattern: nil)
             let joinedText = ocrText.joined(separator: " ")
             print("  [difficulty OCR] raw results: \(ocrText)")
             
@@ -262,7 +277,7 @@ class MLScoreProcessor: Sendable {
     
     /// Attempts to extract a utage kanji identifier from title candidates.
     /// Matches patterns like 【宴】, 【狂】, [覚], [協] etc. at the start of the title.
-    private func extractKanjiFromTitleCandidates(_ candidates: [String], fallback: String?) -> String? {
+    private static func extractKanjiFromTitleCandidates(_ candidates: [String], fallback: String?) -> String? {
         var allTexts = candidates
         if let fb = fallback { allTexts.insert(fb, at: 0) }
         
@@ -296,7 +311,7 @@ class MLScoreProcessor: Sendable {
     /// Parses difficulty from OCR text by matching known keywords.
     /// This is the authoritative source — color classification is only a fallback
     /// because ambient lighting can distort perceived colors.
-    private func parseDifficultyFromOCR(_ text: String) -> String? {
+    private static func parseDifficultyFromOCR(_ text: String) -> String? {
         let lower = text.lowercased()
             .replacingOccurrences(of: " ", with: "")
             .replacingOccurrences(of: ":", with: "")
@@ -364,7 +379,7 @@ class MLScoreProcessor: Sendable {
     // MARK: - OCR Helpers
     
     /// Crops and performs OCR on a specific bounding box of the image
-    private func performOCR(on cgImage: CGImage, in boundingBox: CGRect, pattern: String?) async -> [String] {
+    private static func performOCR(on cgImage: CGImage, in boundingBox: CGRect, pattern: String?) -> [String] {
         guard let cropped = cropImage(cgImage, to: boundingBox) else { return [] }
         
         let request = VNRecognizeTextRequest()
@@ -401,7 +416,7 @@ class MLScoreProcessor: Sendable {
     }
     
     /// Vision coordinates (0,0 is bottom-left) to Image Coordinates (0,0 is top-left)
-    private func cropImage(_ cgImage: CGImage, to boundingBox: CGRect) -> CGImage? {
+    private static func cropImage(_ cgImage: CGImage, to boundingBox: CGRect) -> CGImage? {
         let width = CGFloat(cgImage.width)
         let height = CGFloat(cgImage.height)
         
@@ -420,7 +435,7 @@ class MLScoreProcessor: Sendable {
     /// Determines the difficulty based on the average Hue of a cropped CoreGraphics image region.
     /// NOTE: This is only used as a fallback when OCR fails to determine difficulty.
     /// Color-based detection can be unreliable due to ambient lighting conditions.
-    private func classifyDifficultyColor(from cgImage: CGImage) -> String {
+    private static func classifyDifficultyColor(from cgImage: CGImage) -> String {
         guard let avgColor = cgImage.averageColor() else { return "master" }
         var hue: CGFloat = 0
         var sat: CGFloat = 0
@@ -476,7 +491,7 @@ struct MLScoreResult: Sendable {
 // MARK: - CoreGraphics Extensions
 extension CGImage {
     /// Calculates the average color of the CGImage by drawing it into a 1x1 pixel context.
-    func averageColor() -> UIColor? {
+    nonisolated func averageColor() -> UIColor? {
         let context = CGContext(
             data: nil,
             width: 1,

@@ -1090,7 +1090,7 @@ struct SheetCardView: View {
                     score.fs = nextBest.fs
                     score.achievementDate = nextBest.playDate
                 } else {
-                    ScoreService.shared.deleteScore(for: sheet, context: modelContext)
+                    _ = ScoreService.shared.deleteScore(for: sheet, context: modelContext)
                 }
             }
         }
