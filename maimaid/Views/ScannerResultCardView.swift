@@ -6,6 +6,7 @@ struct ScannerResultCardView: View, Equatable {
     let recognizedType: String?
     let recognizedDifficulty: String?
     let recognizedRate: Double?
+    let resolvedSheet: Sheet?
     let onScoreEntryTap: () -> Void
     let onResetTap: () -> Void
     
@@ -14,7 +15,10 @@ struct ScannerResultCardView: View, Equatable {
         lhs.recognizedClass == rhs.recognizedClass &&
         lhs.recognizedType == rhs.recognizedType &&
         lhs.recognizedDifficulty == rhs.recognizedDifficulty &&
-        lhs.recognizedRate == rhs.recognizedRate
+        lhs.recognizedRate == rhs.recognizedRate &&
+        lhs.resolvedSheet?.difficulty == rhs.resolvedSheet?.difficulty &&
+        lhs.resolvedSheet?.type == rhs.resolvedSheet?.type &&
+        (lhs.resolvedSheet?.internalLevel ?? lhs.resolvedSheet?.level) == (rhs.resolvedSheet?.internalLevel ?? rhs.resolvedSheet?.level)
     }
     
     var body: some View {
@@ -46,10 +50,13 @@ struct ScannerResultCardView: View, Equatable {
             .transition(.asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)), removal: .opacity.combined(with: .scale(scale: 0.95))))
         } else {
             Button { onScoreEntryTap() } label: {
-                let chartType = recognizedType ?? "dx"
-                let diff = recognizedDifficulty ?? "master"
+                let sheet = resolvedSheet ?? song.sheets.first(where: {
+                    $0.difficulty.lowercased() == (recognizedDifficulty ?? "master").lowercased() &&
+                    $0.type.lowercased() == (recognizedType ?? "dx").lowercased()
+                })
+                let chartType = recognizedType ?? sheet?.type ?? "dx"
+                let diff = recognizedDifficulty ?? sheet?.difficulty ?? "master"
                 let diffColor = ThemeUtils.colorForDifficulty(diff, chartType)
-                let sheet = song.sheets.first(where: { $0.difficulty.lowercased() == diff.lowercased() && $0.type.lowercased() == chartType.lowercased() })
                 VStack(spacing: 0) {
                     HStack(spacing: 0) {
                         RoundedRectangle(cornerRadius: 2).fill(diffColor).frame(width: 4).padding(.vertical, 4)

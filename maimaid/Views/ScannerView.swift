@@ -264,6 +264,29 @@ struct ScannerView: View {
     @State private var frameAnalysisTask: Task<Void, Never>? = nil
     @State private var pendingFrameImage: UIImage? = nil
     
+    private var resolvedCurrentScoreSheet: Sheet? {
+        guard let song = recognizedSong else { return nil }
+        return resolvedScoreSheet(
+            for: song,
+            difficulty: recognizedDifficulty,
+            type: recognizedType,
+            kanji: recognizedKanji,
+            maxDxScore: recognizedMaxDxScore,
+            dxScore: recognizedDxScore
+        )
+    }
+    
+    private var canPresentCurrentScoreResult: Bool {
+        guard recognizedClass == .score, recognizedSong != nil else { return false }
+        
+        guard let difficulty = recognizedDifficulty?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !difficulty.isEmpty else {
+            return true
+        }
+        
+        return resolvedCurrentScoreSheet != nil
+    }
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -313,7 +336,7 @@ struct ScannerView: View {
                 
                 VStack {
                     Spacer()
-                    if recognizedClass == .score {
+                    if canPresentCurrentScoreResult {
                         Button(action: triggerPhotoCapture) {
                             ZStack {
                                 Circle()
@@ -360,12 +383,8 @@ struct ScannerView: View {
     
     @ViewBuilder
     private var scoreEntrySheetContent: some View {
-        if let song = recognizedSong {
-            if let sheet = matchedSheet(for: song, diff: recognizedDifficulty ?? "master", type: recognizedType ?? "dx") {
+        if recognizedClass == .score, let sheet = resolvedCurrentScoreSheet {
                 ScoreEntryView(sheet: sheet, initialRate: recognizedRate, initialRank: RatingUtils.calculateRank(achievement: recognizedRate ?? 0), initialDxScore: recognizedDxScore, initialFC: recognizedFC, initialFS: recognizedFS)
-            } else if let fallbackSheet = song.sheets.first {
-                ScoreEntryView(sheet: fallbackSheet, initialRate: recognizedRate, initialRank: RatingUtils.calculateRank(achievement: recognizedRate ?? 0), initialDxScore: recognizedDxScore, initialFC: recognizedFC, initialFS: recognizedFS)
-            }
         }
     }
     
@@ -439,7 +458,16 @@ struct ScannerView: View {
             let matchedSongs = matchSongsWithFilters(titleCandidates: recognition.titleCandidates, title: recognition.title, difficulty: recognition.difficulty, level: recognition.level, maxCombo: recognition.maxCombo, dxScore: recognition.dxScore, maxDxScore: recognition.maxDxScore, type: recognition.type, kanji: recognition.kanji)
             
             isProcessingPhoto = false
-            if let firstMatch = matchedSongs.first {
+            if let firstMatch = matchedSongs.first(where: {
+                canPresentScoreResult(
+                    for: $0,
+                    difficulty: recognition.difficulty,
+                    type: recognition.type,
+                    kanji: recognition.kanji,
+                    maxDxScore: recognition.maxDxScore,
+                    dxScore: recognition.dxScore
+                )
+            }) {
                 self.recognizedSong = firstMatch
                 self.recognizedClass = .score
                 self.recognizedRate = recognition.rate
@@ -733,8 +761,10 @@ struct ScannerView: View {
     @ViewBuilder
     private func resultView() -> some View {
         if let song = recognizedSong {
-            ScannerResultCardView(song: song, recognizedClass: recognizedClass, recognizedType: recognizedType, recognizedDifficulty: recognizedDifficulty, recognizedRate: recognizedRate, onScoreEntryTap: { isShowingScoreEntry = true }, onResetTap: { resetScanner() })
-                .equatable()
+            if recognizedClass != .score || canPresentCurrentScoreResult {
+                ScannerResultCardView(song: song, recognizedClass: recognizedClass, recognizedType: recognizedType, recognizedDifficulty: recognizedDifficulty, recognizedRate: recognizedRate, resolvedSheet: recognizedClass == .score ? resolvedCurrentScoreSheet : nil, onScoreEntryTap: { isShowingScoreEntry = true }, onResetTap: { resetScanner() })
+                    .equatable()
+            }
         }
     }
     
@@ -798,6 +828,17 @@ struct ScannerView: View {
             guard !Task.isCancelled, !isShowingScoreEntry else { return }
             
             let matchedSongIds = matchSongsForCameraFrame(titleCandidates: recognition.titleCandidates, title: recognition.title, difficulty: recognition.difficulty, level: recognition.level, maxCombo: recognition.maxCombo, dxScore: recognition.dxScore, maxDxScore: recognition.maxDxScore, type: recognition.type, kanji: recognition.kanji)
+                .filter { songId in
+                    guard let song = songs.first(where: { $0.songIdentifier == songId }) else { return false }
+                    return canPresentScoreResult(
+                        for: song,
+                        difficulty: recognition.difficulty,
+                        type: recognition.type,
+                        kanji: recognition.kanji,
+                        maxDxScore: recognition.maxDxScore,
+                        dxScore: recognition.dxScore
+                    )
+                }
             updateUIWithResults(songIds: matchedSongIds, rate: recognition.rate, diff: recognition.difficulty, type: recognition.type, dxScore: recognition.dxScore, maxDxScore: recognition.maxDxScore, fc: recognition.comboStatus, fs: recognition.syncStatus, boxes: recognition.boxes, imageClass: .score, level: recognition.level, maxCombo: recognition.maxCombo, kanji: recognition.kanji)
         }
     }
@@ -850,13 +891,76 @@ struct ScannerView: View {
         maxDxScoreBuffer.removeAll(); debugBoxes.removeAll(); isLocked = false
     }
     
-    private func matchedSheet(for song: Song, diff: String, type: String) -> Sheet? {
-        if type.lowercased() == "utage" { return matchUtageSheet(for: song, kanji: recognizedKanji, maxDxScore: recognizedMaxDxScore, dxScore: recognizedDxScore) }
-        let candidates = song.sheets.filter { $0.difficulty.lowercased() == diff.lowercased() && $0.type.lowercased() == type.lowercased() }
-        if candidates.count == 1 { return candidates.first }
-        if candidates.count > 1, let maxDx = recognizedMaxDxScore, maxDx > 0 {
-            if let exact = candidates.first(where: { $0.total == maxDx / 3 }) { return exact }
+    private func canPresentScoreResult(for song: Song, difficulty: String?, type: String?, kanji: String?, maxDxScore: Int?, dxScore: Int?) -> Bool {
+        guard let difficulty = difficulty?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !difficulty.isEmpty else {
+            return true
         }
-        return candidates.first ?? song.sheets.first { $0.difficulty.lowercased() == diff.lowercased() }
+        
+        return resolvedScoreSheet(
+            for: song,
+            difficulty: difficulty,
+            type: type,
+            kanji: kanji,
+            maxDxScore: maxDxScore,
+            dxScore: dxScore
+        ) != nil
+    }
+    
+    private func resolvedScoreSheet(for song: Song, difficulty: String?, type: String?, kanji: String?, maxDxScore: Int?, dxScore: Int?) -> Sheet? {
+        let normalizedDifficulty = difficulty?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedType = type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        
+        if normalizedType == "utage" {
+            return matchUtageSheet(for: song, kanji: kanji, maxDxScore: maxDxScore, dxScore: dxScore)
+        }
+        
+        let filteredCandidates = song.sheets.filter { sheet in
+            let sheetType = sheet.type.lowercased()
+            if sheetType == "utage" { return false }
+            if let normalizedType, !normalizedType.isEmpty, sheetType != normalizedType { return false }
+            if let normalizedDifficulty, !normalizedDifficulty.isEmpty, sheet.difficulty.lowercased() != normalizedDifficulty { return false }
+            return true
+        }
+        
+        guard !filteredCandidates.isEmpty else { return nil }
+        if filteredCandidates.count == 1 { return filteredCandidates.first }
+        
+        if let maxDxScore, maxDxScore > 0 {
+            let targetTotal = maxDxScore / 3
+            if let exact = filteredCandidates.first(where: { $0.total == targetTotal }) {
+                return exact
+            }
+        }
+        
+        if let dxScore, dxScore > 0 {
+            let dxCandidates = filteredCandidates.filter { sheet in
+                guard let total = sheet.total else { return true }
+                return total * 3 >= dxScore
+            }
+            
+            if dxCandidates.count == 1 { return dxCandidates.first }
+            if let best = dxCandidates.min(by: { lhs, rhs in
+                guard let lhsTotal = lhs.total, let rhsTotal = rhs.total else {
+                    return lhs.total != nil
+                }
+                return abs(lhsTotal * 3 - dxScore) < abs(rhsTotal * 3 - dxScore)
+            }) {
+                return best
+            }
+        }
+        
+        return filteredCandidates.first
+    }
+    
+    private func matchedSheet(for song: Song, diff: String, type: String) -> Sheet? {
+        resolvedScoreSheet(
+            for: song,
+            difficulty: diff,
+            type: type,
+            kanji: recognizedKanji,
+            maxDxScore: recognizedMaxDxScore,
+            dxScore: recognizedDxScore
+        )
     }
 }

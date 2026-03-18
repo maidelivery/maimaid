@@ -112,6 +112,7 @@ class MaimaiDataFetcher {
         case downloadingImages = "data.sync.stage.downloadingImages"
         case downloadingIcons = "data.sync.stage.downloadingIcons"
         case fetchingDanData = "data.sync.stage.fetchingDanData"
+        case fetchingChartStats = "data.sync.stage.fetchingChartStats"
         case saving = "data.sync.stage.saving"
         case completed = "data.sync.stage.completed"
         case failed = "data.sync.stage.failed"
@@ -168,6 +169,7 @@ class MaimaiDataFetcher {
         var updateCovers = true
         var updateIcons = true
         var updateDanData = true
+        var updateChartStats = true
     }
     
     func fetchSongs(modelContext: ModelContext, options: SyncOptions = SyncOptions()) async throws {
@@ -285,6 +287,12 @@ class MaimaiDataFetcher {
                         }
                     }
                 }
+            }
+
+            if options.updateChartStats {
+                updateStage(.fetchingChartStats, base: 0.53, message: "正在下载谱面拟合信息…")
+                await ChartStatsService.shared.fetchStats(forceRefresh: true)
+                log("谱面拟合信息已更新并写入本地缓存")
             }
             
             // --- 阶段 4: 合并数据入库 ---

@@ -25,6 +25,7 @@ struct StaticDataUpdateView: View {
     @AppStorage(AppStorageKeys.syncUpdateCovers) private var updateCovers = true
     @AppStorage(AppStorageKeys.syncUpdateIcons) private var updateIcons = true
     @AppStorage(AppStorageKeys.syncUpdateDanData) private var updateDanData = true
+    @AppStorage(AppStorageKeys.syncUpdateChartStats) private var updateChartStats = true
     
     var body: some View {
         Form {
@@ -57,7 +58,8 @@ struct StaticDataUpdateView: View {
                                 updateAliases: updateAliases,
                                 updateCovers: updateCovers,
                                 updateIcons: updateIcons,
-                                updateDanData: updateDanData
+                                updateDanData: updateDanData,
+                                updateChartStats: updateChartStats
                             )
                             Task {
                                 do {
@@ -76,10 +78,10 @@ struct StaticDataUpdateView: View {
                                 Spacer()
                             }
                         }
-                        .disabled(!updateRemoteData && !updateAliases && !updateCovers && !updateIcons && !updateDanData)
+                        .disabled(!updateRemoteData && !updateAliases && !updateCovers && !updateIcons && !updateDanData && !updateChartStats)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         
-                        if !updateRemoteData && !updateAliases && !updateCovers && !updateIcons && !updateDanData {
+                        if !updateRemoteData && !updateAliases && !updateCovers && !updateIcons && !updateDanData && !updateChartStats {
                             Text("update.control.selectAtLeastOne")
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
@@ -101,6 +103,7 @@ struct StaticDataUpdateView: View {
                 Toggle("update.option.coversMissing", isOn: $updateCovers)
                 Toggle("update.option.iconsDataAndImages", isOn: $updateIcons)
                 Toggle("update.option.danData", isOn: $updateDanData)
+                Toggle("update.option.chartStats", isOn: $updateChartStats)
             }
             .disabled(MaimaiDataFetcher.shared.isSyncing)
             

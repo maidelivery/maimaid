@@ -13,6 +13,7 @@ enum AppStorageKeys {
     static let syncUpdateCovers = "syncUpdateCovers"
     static let syncUpdateIcons = "syncUpdateIcons"
     static let syncUpdateDanData = "syncUpdateDanData"
+    static let syncUpdateChartStats = "syncUpdateChartStats"
     static let songsSortOption = "songs.sortOption"
     static let songsSortAscending = "songs.sortAscending"
     static let songsGridColumns = "songs.gridColumns"
@@ -22,6 +23,7 @@ enum UserDefaultsKeys {
     static let maimaiVersionsData = "MaimaiVersionsData"
     static let maimaiVersionSequence = "MaimaiVersionSequence"
     static let maimaiCategorySequence = "MaimaiCategorySequence"
+    static let maimaiChartStatsData = "MaimaiChartStatsData"
     static let didPerformInitialSync = "didPerformInitialSync"
     static let hideDeletedSongs = "filter.hideDeletedSongs"
     static let didFixOrphanedScoresMigration = "migration.fixOrphanedScoresRelationships"
@@ -92,6 +94,17 @@ extension UserDefaults {
     var maimaiCategorySequence: [String] {
         get { stringArray(forKey: UserDefaultsKeys.maimaiCategorySequence) ?? [] }
         set { set(newValue, forKey: UserDefaultsKeys.maimaiCategorySequence) }
+    }
+
+    var maimaiChartStatsData: Data? {
+        get { data(forKey: UserDefaultsKeys.maimaiChartStatsData) }
+        set {
+            if let newValue {
+                set(newValue, forKey: UserDefaultsKeys.maimaiChartStatsData)
+            } else {
+                removeObject(forKey: UserDefaultsKeys.maimaiChartStatsData)
+            }
+        }
     }
 
     var didPerformInitialSync: Bool {

@@ -190,6 +190,19 @@
 "score.entry.manualHint" = "Enter achievement manually";
 "score.entry.selectPhoto" = "Select Screenshot";
 "score.entry.currentBest" = "Best";
+"score.entry.combo" = "Combo";
+"score.entry.sync" = "Sync";
+"score.entry.dxScore" = "DX Score";
+"score.entry.rank" = "Rank";
+"score.entry.rank.pending" = "Pending";
+"score.entry.keyboard.next" = "Next";
+"score.entry.repickPhoto" = "Choose Another Screenshot";
+"score.entry.repickPhoto.hint" = "Run recognition again with a different screenshot.";
+"score.entry.validation.rateFormat" = "Enter a valid achievement value.";
+"score.entry.validation.rateRange" = "Achievement must be between 0 and 101%.";
+"score.entry.validation.dxFormat" = "Enter a valid DX score.";
+"score.entry.validation.dxRange %lld" = "DX Score must not exceed %lld.";
+"score.entry.savedHint" = "Score saved. Review it and tap Done when finished.";
 "score.entry.save" = "Save Score";
 "score.entry.saved" = "Saved";
 
@@ -295,6 +308,7 @@
 "update.option.coversMissing" = "Download missing covers";
 "update.option.iconsDataAndImages" = "Icon data & images";
 "update.option.danData" = "Dan data";
+"update.option.chartStats" = "Chart Stats";
 "update.options.footer" = "Aliases also sync song/chart IDs. Covers and icons only download missing assets and do not overwrite existing files.";
 "update.control.selectAtLeastOne" = "Select at least one update option.";
 "update.control.error %@" = "Sync failed: %@";
@@ -374,14 +388,15 @@
 
 // MARK: - Data Sync
 "data.sync.stage.idle" = "Idle";
-"data.sync.stage.fetchingRemoteData" = "[1/7] Fetching data.json...";
-"data.sync.stage.fetchingAliases" = "[2/7] Fetching aliases...";
-"data.sync.stage.fetchingIcons" = "[3/7] Fetching icons...";
-"data.sync.stage.fetchingDanData" = "[3.5/7] Fetching Dan songs (gallery.yaml)...";
-"data.sync.stage.processingSongs" = "[4/7] Analyzing data...";
-"data.sync.stage.downloadingImages" = "[5/7] Downloading covers...";
-"data.sync.stage.downloadingIcons" = "[6/7] Downloading icons...";
-"data.sync.stage.saving" = "[7/7] Saving database...";
+"data.sync.stage.fetchingRemoteData" = "Fetching data.json...";
+"data.sync.stage.fetchingAliases" = "Fetching aliases...";
+"data.sync.stage.fetchingIcons" = "Fetching icons...";
+"data.sync.stage.fetchingDanData" = "Fetching Dan songs (gallery.yaml)...";
+"data.sync.stage.processingSongs" = "Analyzing data...";
+"data.sync.stage.downloadingImages" = "Downloading covers...";
+"data.sync.stage.downloadingIcons" = "Downloading icons...";
+"data.sync.stage.fetchingChartStats" = "Fetching chart stats...";
+"data.sync.stage.saving" = "Saving database...";
 "data.sync.stage.completed" = "Sync Completed";
 "data.sync.stage.failed" = "Sync Failed";
 

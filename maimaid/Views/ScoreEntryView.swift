@@ -3,12 +3,13 @@ import SwiftData
 import PhotosUI
 
 struct ScoreEntryView: View {
-    @Environment(\.dismiss) var dismiss
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query private var configs: [SyncConfig]
+    
     let sheet: Sheet
     
-    // Optional initial pre-filled values from Scanner
     let initialRate: Double?
     let initialRank: String?
     let initialDxScore: Int?
@@ -28,9 +29,13 @@ struct ScoreEntryView: View {
     
     @State private var selectedFC: String? = nil
     @State private var selectedFS: String? = nil
-    
-    // Cached score to avoid repeated queries
     @State private var cachedCurrentScore: Score? = nil
+    
+    @ScaledMetric(relativeTo: .title3) private var headerAccentHeight = 50
+    @ScaledMetric(relativeTo: .largeTitle) private var achievementFontSize = 48
+    @ScaledMetric(relativeTo: .title3) private var achievementPercentFontSize = 24
+    @ScaledMetric(relativeTo: .body) private var dxScoreFieldMinWidth = 88
+    @ScaledMetric(relativeTo: .body) private var photoThumbnailSize = 60
     
     init(sheet: Sheet, initialRate: Double? = nil, initialRank: String? = nil, initialDxScore: Int? = nil, initialFC: String? = nil, initialFS: String? = nil) {
         self.sheet = sheet
@@ -41,12 +46,20 @@ struct ScoreEntryView: View {
         self.initialFS = initialFS
     }
     
+    private var trimmedRateText: String {
+        rateText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    private var trimmedDxScoreText: String {
+        dxScoreText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
     private var parsedRate: Double? {
-        Double(rateText)
+        Double(trimmedRateText)
     }
     
     private var parsedDxScore: Int? {
-        Int(dxScoreText)
+        Int(trimmedDxScoreText)
     }
     
     private var maxDxScore: Int {
@@ -55,6 +68,110 @@ struct ScoreEntryView: View {
     
     private var diffColor: Color {
         ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
+    }
+    
+    private var chartTypeLabel: String {
+        sheet.type.uppercased() == "STD" ? String(localized: "scanner.chart.std") : sheet.type.uppercased()
+    }
+    
+    private var difficultyLabel: String {
+        sheet.difficulty.lowercased() == "remaster" ? "Re:MASTER" : sheet.difficulty.capitalized
+    }
+    
+    private var levelLabel: String {
+        "Lv.\(sheet.internalLevel ?? sheet.level)"
+    }
+    
+    private var displayedRank: String {
+        if let rate = parsedRate {
+            return RatingUtils.calculateRank(achievement: rate)
+        }
+        if let initialRank, !initialRank.isEmpty {
+            return initialRank
+        }
+        if let cachedCurrentScore {
+            return cachedCurrentScore.rank
+        }
+        return "—"
+    }
+    
+    private var displayedRankColor: Color {
+        displayedRank == "—" ? .secondary : RatingUtils.colorForRank(displayedRank)
+    }
+    
+    private var selectedFCDisplayText: String {
+        guard let selectedFC, !selectedFC.isEmpty else {
+            return String(localized: "score.entry.combo")
+        }
+        
+        switch selectedFC {
+        case "fcp":
+            return "FC+"
+        case "app":
+            return "AP+"
+        default:
+            return selectedFC.uppercased()
+        }
+    }
+    
+    private var selectedFSDisplayText: String {
+        guard let selectedFS, !selectedFS.isEmpty else {
+            return String(localized: "score.entry.sync")
+        }
+        
+        switch selectedFS {
+        case "sync":
+            return "S"
+        case "fs":
+            return "FS"
+        case "fsp":
+            return "FS+"
+        case "fsd":
+            return "FDX"
+        case "fsdp":
+            return "FDX+"
+        default:
+            return selectedFS.uppercased()
+        }
+    }
+    
+    private var rateValidationMessage: String? {
+        guard !trimmedRateText.isEmpty else { return nil }
+        guard let rate = parsedRate else {
+            return String(localized: "score.entry.validation.rateFormat")
+        }
+        guard rate >= 0 && rate <= 101 else {
+            return String(localized: "score.entry.validation.rateRange")
+        }
+        return nil
+    }
+    
+    private var dxScoreValidationMessage: String? {
+        guard !trimmedDxScoreText.isEmpty else { return nil }
+        guard let dxScore = parsedDxScore, dxScore >= 0 else {
+            return String(localized: "score.entry.validation.dxFormat")
+        }
+        guard maxDxScore == 0 || dxScore <= maxDxScore else {
+            return String(format: String(localized: "score.entry.validation.dxRange %lld"), maxDxScore)
+        }
+        return nil
+    }
+    
+    private var validationMessage: (text: String, color: Color, icon: String)? {
+        if let rateValidationMessage {
+            return (rateValidationMessage, .red, "exclamationmark.circle.fill")
+        }
+        if let dxScoreValidationMessage {
+            return (dxScoreValidationMessage, .red, "exclamationmark.circle.fill")
+        }
+        return nil
+    }
+    
+    private var savedMessage: (text: String, color: Color, icon: String)? {
+        if isSaved {
+            return (String(localized: "score.entry.savedHint"), .green, "checkmark.circle.fill")
+        }
+        return nil
     }
     
     private var isValid: Bool {
@@ -79,38 +196,39 @@ struct ScoreEntryView: View {
         }
     }
     
-    /// 🔴 Rank 由达成率自动计算
-    private var calculatedRank: String {
-        if let rate = parsedRate {
-            return RatingUtils.calculateRank(achievement: rate)
-        }
-        // 无有效输入时的默认值
-        return "D"
+    private var feedbackAnimation: Animation {
+        reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.3, dampingFraction: 0.82)
     }
     
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Header card — sheet info
                     headerCard
-                    
-                    // Score input area
                     scoreInputSection
-                    
-                    // Photo scan section
                     photoScanSection
                     
-                    // Existing score info
                     if let existingScore = cachedCurrentScore {
                         existingScoreCard(existingScore)
                     }
                     
-                    // Save button
+                    if let savedMessage {
+                        Label {
+                            Text(savedMessage.text)
+                                .font(.footnote)
+                        } icon: {
+                            Image(systemName: savedMessage.icon)
+                        }
+                        .foregroundStyle(savedMessage.color)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    
                     saveButton
                 }
                 .padding(20)
+                .padding(.bottom, 32)
             }
+            .scrollDismissesKeyboard(.interactively)
             .background(Color(.systemGroupedBackground))
             .navigationTitle("score.entry.title")
             .navigationBarTitleDisplayMode(.inline)
@@ -118,244 +236,250 @@ struct ScoreEntryView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("profile.edit.cancel") { dismiss() }
                 }
+                
+                if isSaved {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("filter.done") { dismiss() }
+                    }
+                }
+                
+                ToolbarItemGroup(placement: .keyboard) {
+                    if isRateFocused {
+                        Button("score.entry.keyboard.next") {
+                            isRateFocused = false
+                            isDxScoreFocused = true
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    Button("filter.done") {
+                        dismissKeyboard()
+                    }
+                }
             }
         }
         .onAppear {
-            // Cache the score once on appear
-            cachedCurrentScore = ScoreService.shared.score(for: sheet, context: modelContext)
-            
-            if let initRate = initialRate {
-                rateText = String(format: "%.4f", initRate)
-            } else if let score = cachedCurrentScore {
-                rateText = String(format: "%.4f", score.rate)
-            }
-            
-            if let initDxScore = initialDxScore {
-                dxScoreText = "\(initDxScore)"
-            } else if let score = cachedCurrentScore {
-                dxScoreText = score.dxScore > 0 ? "\(score.dxScore)" : ""
-            }
-            
-            if let initFC = initialFC, !initFC.isEmpty {
-                selectedFC = initFC
-            } else if let score = cachedCurrentScore, let fc = score.fc, !fc.isEmpty {
-                selectedFC = fc
-            } else {
-                selectedFC = nil
-            }
-            
-            if let initFS = initialFS, !initFS.isEmpty {
-                selectedFS = initFS
-            } else if let score = cachedCurrentScore, let fs = score.fs, !fs.isEmpty {
-                selectedFS = fs
-            } else {
-                selectedFS = nil
-            }
+            loadInitialValues()
+        }
+        .onChange(of: rateText) { _, _ in
+            resetSaveStateIfNeeded()
+        }
+        .onChange(of: dxScoreText) { _, _ in
+            resetSaveStateIfNeeded()
+        }
+        .onChange(of: selectedFC) { _, _ in
+            resetSaveStateIfNeeded()
+        }
+        .onChange(of: selectedFS) { _, _ in
+            resetSaveStateIfNeeded()
         }
         .onChange(of: selectedItem) { _, newItem in
             Task {
-                guard let item = newItem else { return }
-                if let data = try? await item.loadTransferable(type: Data.self),
-                   let image = UIImage(data: data) {
-                    selectedImage = image
-                    isProcessingPhoto = true
-                    
-                    let result = await MLScoreProcessor.shared.process(image)
-                    if let rate = result.rate {
-                        self.recognizedRate = rate
-                        withAnimation(.spring(response: 0.3)) {
-                            rateText = String(format: "%.4f", rate)
-                        }
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    }
-                    
-                    isProcessingPhoto = false
-                }
+                await processSelectedItem(newItem)
             }
         }
     }
-    
-    // MARK: - Header Card
     
     private var headerCard: some View {
-        HStack(spacing: 14) {
-            // Difficulty accent
+        HStack(spacing: 16) {
             RoundedRectangle(cornerRadius: 3)
                 .fill(diffColor)
-                .frame(width: 5, height: 50)
+                .frame(width: 5, height: headerAccentHeight)
             
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(sheet.type.uppercased())
-                        .font(.system(size: 10, weight: .black))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(sheet.type.lowercased() == "dx" ? Color.orange : Color.blue, in: RoundedRectangle(cornerRadius: 4))
-                    
-                    if let song = sheet.song {
-                        Text(song.title)
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
-                   
+                if let song = sheet.song {
+                    Text(song.title)
+                        .font(.headline.bold())
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
                 }
-                Text(sheet.difficulty.capitalized)
-                    .font(.system(size: 12))
-                    .foregroundColor(diffColor)
+                
+                HStack(spacing: 4) {
+                    Text(chartTypeLabel)
+                        .font(.caption.bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(sheet.type.lowercased() == "dx" ? Color.orange : Color.blue, in: Capsule())
+                    
+                    Text(difficultyLabel)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(diffColor)
+                }
             }
             
-            Spacer()
+            Spacer(minLength: 12)
             
-            Text("Lv.\(sheet.level)")
-                .font(.system(size: 24, weight: .black, design: .rounded))
-                .foregroundColor(diffColor.opacity(0.8))
+            Text(levelLabel)
+                .font(.title2.bold())
+                .fontDesign(.rounded)
+                .foregroundStyle(diffColor)
+                .multilineTextAlignment(.trailing)
         }
+        .fontDesign(.rounded)
         .padding(16)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .accessibilityElement(children: .combine)
     }
     
-    // MARK: - Score Input Section
-    
     private var scoreInputSection: some View {
-        VStack(spacing: 16) {
-            // Big rate display / input
-            VStack(spacing: 8) {
-                Text("Achievement")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.secondary)
+        VStack(spacing: 20) {
+            VStack(spacing: 12) {
+                Text("song.detail.table.achievement")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                 
-                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
                     TextField("0.0000", text: $rateText)
-                        .font(.system(size: 48, weight: .black, design: .rounded))
-                        .foregroundColor(.primary)
+                        .font(.system(size: achievementFontSize, weight: .black, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.primary)
                         .multilineTextAlignment(.center)
                         .keyboardType(.decimalPad)
+                        .submitLabel(.next)
                         .focused($isRateFocused)
+                        .accessibilityLabel(Text("song.detail.table.achievement"))
                     
                     Text("%")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundColor(.secondary)
+                        .font(.system(size: achievementPercentFontSize, weight: .bold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
                 }
                 .frame(maxWidth: .infinity)
             }
             
-            // Auto-calculated rank
-            if parsedRate != nil {
-                HStack(spacing: 12) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "trophy.fill")
-                            .font(.system(size: 10))
-                            .foregroundColor(RatingUtils.colorForRank(calculatedRank))
-                        
-                        Text(calculatedRank)
-                            .font(.system(size: 16, weight: .black, design: .rounded))
-                            .foregroundColor(RatingUtils.colorForRank(calculatedRank))
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(RatingUtils.colorForRank(calculatedRank).opacity(0.1), in: Capsule())
+            HStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "trophy.fill")
+                        .foregroundStyle(displayedRankColor)
+                        .accessibilityHidden(true)
                     
-                    // DX Score mini input
-                    HStack(spacing: 6) {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 10))
-                            .foregroundColor(dxScoreText.isEmpty ? .gray : .yellow)
-                        
-                        TextField("DX Score", text: $dxScoreText)
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundColor((parsedDxScore ?? 0) > maxDxScore && maxDxScore > 0 ? .red : .primary)
-                            .frame(width: 70)
-                            .keyboardType(.numberPad)
-                            .focused($isDxScoreFocused)
-                        
-                        if maxDxScore > 0 {
-                            Text("/ \(maxDxScore)")
-                                .font(.system(size: 10, weight: .medium, design: .rounded))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(dxScoreText.isEmpty ? Color.gray.opacity(0.1) : Color.yellow.opacity(0.1), in: Capsule())
+                    Text(displayedRank)
+                        .font(.title3.bold())
+                        .fontDesign(.rounded)
+                        .foregroundStyle(displayedRankColor)
+                        .monospacedDigit()
                 }
-                .transition(.scale.combined(with: .opacity))
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 44)
+                .padding(.horizontal, 12)
+                .background(displayedRank == "—" ? Color.secondary.opacity(0.08) : displayedRankColor.opacity(0.12), in: Capsule())
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(Text("score.entry.rank"))
+                .accessibilityValue(Text(displayedRank == "—" ? String(localized: "score.entry.rank.pending") : displayedRank))
                 
-                // FC / FS Selectors
-                HStack(spacing: 12) {
-                    Menu {
-                        Picker("Combo", selection: $selectedFC) {
-                            Text("None").tag(String?.none)
-                            Text("FC").tag(String?("fc"))
-                            Text("FC+").tag(String?("fcp"))
-                            Text("AP").tag(String?("ap"))
-                            Text("AP+").tag(String?("app"))
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "target")
-                                .font(.system(size: 10))
-                            ZStack {
-                                Text("COMBO")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .opacity(0)
-                                Text((selectedFC?.isEmpty ?? true) ? "Combo" : selectedFC!.replacingOccurrences(of: "fcp", with: "fc+").replacingOccurrences(of: "app", with: "ap+").uppercased())
-                                    .font(.system(size: 12, weight: .bold))
-                            }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background((selectedFC?.isEmpty ?? true) ? Color.gray.opacity(0.1) : Color.green.opacity(0.1), in: Capsule())
-                        .foregroundColor((selectedFC?.isEmpty ?? true) ? .gray : .green)
-                    }
+                HStack(spacing: 8) {
+                    Image(systemName: "star.fill")
+                        .foregroundStyle(dxScoreText.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.yellow))
+                        .accessibilityHidden(true)
                     
-                    Menu {
-                        Picker("Sync", selection: $selectedFS) {
-                            Text("None").tag(String?.none)
-                            Text("S").tag(String?("sync"))
-                            Text("FS").tag(String?("fs"))
-                            Text("FS+").tag(String?("fsp"))
-                            Text("FDX").tag(String?("fsd"))
-                            Text("FDX+").tag(String?("fsdp"))
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "person.2.fill")
-                                .font(.system(size: 10))
-                            
-                            ZStack {
-                                Text("FDX+")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .opacity(0)
-                                Text((selectedFS?.isEmpty ?? true) ? "SYNC" : selectedFS!.replacingOccurrences(of: "fsdp", with: "fdx+").replacingOccurrences(of: "fsd", with: "fdx").replacingOccurrences(of: "fsp", with: "fs+").uppercased())
-                                    .font(.system(size: 12, weight: .bold))
-                            }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background((selectedFS?.isEmpty ?? true) ? Color.gray.opacity(0.1) : Color.blue.opacity(0.1), in: Capsule())
-                        .foregroundColor((selectedFS?.isEmpty ?? true) ? .gray : .blue)
+                    TextField(String(localized: "score.entry.dxScore"), text: $dxScoreText)
+                        .font(.body.bold())
+                        .fontDesign(.rounded)
+                        .monospacedDigit()
+                        .foregroundStyle((parsedDxScore ?? 0) > maxDxScore && maxDxScore > 0 ? .red : .primary)
+                        .frame(minWidth: dxScoreFieldMinWidth)
+                        .keyboardType(.numberPad)
+                        .submitLabel(.done)
+                        .focused($isDxScoreFocused)
+                        .accessibilityLabel(Text("score.entry.dxScore"))
+                    
+                    if maxDxScore > 0 {
+                        Text("/ \(maxDxScore)")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                            .accessibilityHidden(true)
                     }
                 }
-                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: parsedRate != nil)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 44)
+                .padding(.horizontal, 12)
+                .background(dxScoreText.isEmpty ? Color.secondary.opacity(0.08) : Color.yellow.opacity(0.12), in: Capsule())
             }
+            
+            if let validationMessage {
+                Label {
+                    Text(validationMessage.text)
+                        .font(.footnote)
+                } icon: {
+                    Image(systemName: validationMessage.icon)
+                }
+                .foregroundStyle(validationMessage.color)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .transition(.opacity)
+            }
+            
+            HStack(spacing: 12) {
+                Menu {
+                    Picker(String(localized: "score.entry.combo"), selection: $selectedFC) {
+                        Text("None").tag(String?.none)
+                        Text("FC").tag(String?("fc"))
+                        Text("FC+").tag(String?("fcp"))
+                        Text("AP").tag(String?("ap"))
+                        Text("AP+").tag(String?("app"))
+                    }
+                } label: {
+                    Label {
+                        Text(selectedFCDisplayText)
+                            .font(.subheadline.bold())
+                            .lineLimit(1)
+                    } icon: {
+                        Image(systemName: "target")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: 44)
+                    .padding(.horizontal, 12)
+                    .background((selectedFC?.isEmpty ?? true) ? Color.secondary.opacity(0.08) : Color.green.opacity(0.12), in: Capsule())
+                    .foregroundStyle((selectedFC?.isEmpty ?? true) ? AnyShapeStyle(.secondary) : AnyShapeStyle(.green))
+                }
+                .accessibilityLabel(Text("score.entry.combo"))
+                .accessibilityValue(Text(selectedFCDisplayText))
+                
+                Menu {
+                    Picker(String(localized: "score.entry.sync"), selection: $selectedFS) {
+                        Text("None").tag(String?.none)
+                        Text("S").tag(String?("sync"))
+                        Text("FS").tag(String?("fs"))
+                        Text("FS+").tag(String?("fsp"))
+                        Text("FDX").tag(String?("fsd"))
+                        Text("FDX+").tag(String?("fsdp"))
+                    }
+                } label: {
+                    Label {
+                        Text(selectedFSDisplayText)
+                            .font(.subheadline.bold())
+                            .lineLimit(1)
+                    } icon: {
+                        Image(systemName: "person.2.fill")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: 44)
+                    .padding(.horizontal, 12)
+                    .background((selectedFS?.isEmpty ?? true) ? Color.secondary.opacity(0.08) : Color.blue.opacity(0.12), in: Capsule())
+                    .foregroundStyle((selectedFS?.isEmpty ?? true) ? AnyShapeStyle(.secondary) : AnyShapeStyle(.blue))
+                }
+                .accessibilityLabel(Text("score.entry.sync"))
+                .accessibilityValue(Text(selectedFSDisplayText))
+            }
+            .animation(feedbackAnimation, value: selectedFC)
+            .animation(feedbackAnimation, value: selectedFS)
         }
         .padding(24)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
     }
     
-    // MARK: - Photo Scan Section
-    
     private var photoScanSection: some View {
         VStack(spacing: 12) {
             HStack {
                 Image(systemName: "camera.viewfinder")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.blue)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.blue)
+                    .accessibilityHidden(true)
                 Text("score.entry.selectPhoto")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
                 Spacer()
             }
             
@@ -363,76 +487,65 @@ struct ScoreEntryView: View {
                 HStack(spacing: 10) {
                     ProgressView()
                     Text("score.entry.recognizing")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)
             } else if let image = selectedImage {
-                // Show recognized image thumbnail
                 HStack(spacing: 12) {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
-                        .frame(width: 60, height: 60)
+                        .frame(width: photoThumbnailSize, height: photoThumbnailSize)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .accessibilityHidden(true)
                     
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 6) {
                         if let rate = recognizedRate {
-                            HStack(spacing: 4) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                    .font(.system(size: 12))
-                                Text("score.entry.success")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundColor(.green)
-                            }
+                            Label("score.entry.success", systemImage: "checkmark.circle.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.green)
+                            
                             Text("\(String(format: "%.4f", rate))%")
-                                .font(.system(size: 14, weight: .bold, design: .monospaced))
-                                .foregroundColor(.primary)
+                                .font(.headline.bold())
+                                .monospacedDigit()
+                                .foregroundStyle(.primary)
                         } else {
-                            HStack(spacing: 4) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.orange)
-                                    .font(.system(size: 12))
-                                Text("score.entry.failed")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundColor(.orange)
-                            }
+                            Label("score.entry.failed", systemImage: "exclamationmark.triangle.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.orange)
+                            
                             Text("score.entry.manualHint")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     
                     Spacer()
                     
-                    // Re-pick button
                     PhotosPicker(selection: $selectedItem, matching: .images) {
                         Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.blue)
-                            .padding(8)
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.blue)
+                            .frame(width: 44, height: 44)
                             .background(Color.blue.opacity(0.1), in: Circle())
                     }
+                    .accessibilityLabel(Text("score.entry.repickPhoto"))
+                    .accessibilityHint(Text("score.entry.repickPhoto.hint"))
                 }
             } else {
-                // Initial pick state
                 PhotosPicker(selection: $selectedItem, matching: .images) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "photo")
-                            .font(.system(size: 16))
-                        Text("score.entry.selectPhoto")
-                            .font(.system(size: 14, weight: .medium))
-                    }
-                    .foregroundColor(.blue)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(Color.blue.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
-                    )
+                    Label("score.entry.selectPhoto", systemImage: "photo")
+                        .font(.headline)
+                        .foregroundStyle(.blue)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: 52)
+                        .background(Color.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(Color.blue.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
+                        )
                 }
             }
         }
@@ -440,106 +553,164 @@ struct ScoreEntryView: View {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
     
-    // MARK: - Existing Score Card
-    
     private func existingScoreCard(_ score: Score) -> some View {
         HStack(spacing: 12) {
             Image(systemName: "clock.arrow.circlepath")
-                .font(.system(size: 14))
-                .foregroundColor(.secondary)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text("score.entry.currentBest")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                
                 Text("\(String(format: "%.4f", score.rate))% · \(score.rank)")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                    .foregroundColor(.primary)
+                    .font(.headline.bold())
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
             }
             
             Spacer()
             
             Text(score.achievementDate, style: .date)
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
         .padding(14)
         .background(Color.primary.opacity(0.03), in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityElement(children: .combine)
     }
-    
-    // MARK: - Save Button
     
     private var saveButton: some View {
         Button {
-            saveScore()
-        } label: {
-            HStack(spacing: 8) {
-                if isSaved {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text("score.entry.saved")
-                        .font(.system(size: 16, weight: .bold))
-                } else {
-                    Image(systemName: "square.and.arrow.down")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text("score.entry.save")
-                        .font(.system(size: 16, weight: .bold))
-                }
+            if isSaved {
+                dismiss()
+            } else {
+                dismissKeyboard()
+                saveScore()
             }
-            .foregroundColor(.white)
+        } label: {
+            Label {
+                Text(isSaved ? String(localized: "filter.done") : String(localized: "score.entry.save"))
+                    .font(.headline.bold())
+            } icon: {
+                Image(systemName: isSaved ? "checkmark.circle.fill" : "square.and.arrow.down")
+                    .font(.body.weight(.semibold))
+            }
+            .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                saveButtonBackground,
-                in: RoundedRectangle(cornerRadius: 16)
-            )
+            .frame(minHeight: 52)
+            .background(saveButtonBackground, in: RoundedRectangle(cornerRadius: 16))
         }
-        .disabled(!isValid || isSaved)
-        .animation(.spring(response: 0.3), value: isSaved)
+        .disabled(!isSaved && !isValid)
+        .animation(feedbackAnimation, value: isSaved)
     }
     
-    // MARK: - Save Logic
+    private func loadInitialValues() {
+        cachedCurrentScore = ScoreService.shared.score(for: sheet, context: modelContext)
+        
+        if let initialRate {
+            rateText = String(format: "%.4f", initialRate)
+        } else if let cachedCurrentScore {
+            rateText = String(format: "%.4f", cachedCurrentScore.rate)
+        }
+        
+        if let initialDxScore {
+            dxScoreText = "\(initialDxScore)"
+        } else if let cachedCurrentScore {
+            dxScoreText = cachedCurrentScore.dxScore > 0 ? "\(cachedCurrentScore.dxScore)" : ""
+        }
+        
+        if let initialFC, !initialFC.isEmpty {
+            selectedFC = initialFC
+        } else if let cachedCurrentScore, let fc = cachedCurrentScore.fc, !fc.isEmpty {
+            selectedFC = fc
+        }
+        
+        if let initialFS, !initialFS.isEmpty {
+            selectedFS = initialFS
+        } else if let cachedCurrentScore, let fs = cachedCurrentScore.fs, !fs.isEmpty {
+            selectedFS = fs
+        }
+    }
+    
+    private func processSelectedItem(_ item: PhotosPickerItem?) async {
+        guard let item else { return }
+        
+        recognizedRate = nil
+        isProcessingPhoto = true
+        defer { isProcessingPhoto = false }
+        
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let image = UIImage(data: data) else {
+            selectedImage = nil
+            return
+        }
+        
+        selectedImage = image
+        let result = await MLScoreProcessor.shared.process(image)
+        
+        guard let rate = result.rate else {
+            recognizedRate = nil
+            return
+        }
+        
+        recognizedRate = rate
+        withAnimation(feedbackAnimation) {
+            rateText = String(format: "%.4f", rate)
+        }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+    
+    private func dismissKeyboard() {
+        isRateFocused = false
+        isDxScoreFocused = false
+    }
+    
+    private func resetSaveStateIfNeeded() {
+        guard isSaved else { return }
+        
+        withAnimation(feedbackAnimation) {
+            isSaved = false
+        }
+    }
     
     private func saveScore() {
         guard let rate = parsedRate, isValid else { return }
         
-        // 🔴 关键修复：使用 ScoreService 记录游玩历史（自动关联用户）
         _ = ScoreService.shared.recordPlay(
             sheet: sheet,
             rate: rate,
-            rank: calculatedRank,
+            rank: displayedRank,
             dxScore: parsedDxScore ?? 0,
             fc: selectedFC,
             fs: selectedFS,
             context: modelContext
         )
         
-        // 🔴 关键修复：使用 ScoreService 保存成绩（自动关联用户）
         let savedScore = ScoreService.shared.saveScore(
             sheet: sheet,
             rate: rate,
-            rank: calculatedRank,
+            rank: displayedRank,
             dxScore: parsedDxScore ?? 0,
             fc: selectedFC,
             fs: selectedFS,
             context: modelContext
         )
         
-        // Trigger Auto-Sync for manual entry
         if let config = configs.first {
-            Task { await SyncManager.shared.uploadScoreIfNeeded(sheet: sheet, score: savedScore, config: config) }
+            Task {
+                await SyncManager.shared.uploadScoreIfNeeded(sheet: sheet, score: savedScore, config: config)
+            }
         }
         
         try? modelContext.save()
+        cachedCurrentScore = savedScore
         
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        
-        withAnimation(.spring(response: 0.3)) {
+        withAnimation(feedbackAnimation) {
             isSaved = true
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            dismiss()
         }
     }
 }

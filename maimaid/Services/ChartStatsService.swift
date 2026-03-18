@@ -47,15 +47,22 @@ struct ChartStatsResponse: Codable {
 class ChartStatsService {
     static let shared = ChartStatsService()
     
-    private init() {}
+    private init() {
+        loadCachedStats()
+    }
     
     private var cache: [String: [ChartStat]] = [:]
     private var fetchTask: Task<Void, Error>?
     private var lastFetchDate: Date? = nil
     
-    func fetchStats() async {
+    func fetchStats(forceRefresh: Bool = false) async {
+        ensureCacheLoaded()
+
         // Only fetch once per session or if cache is empty
-        if !cache.isEmpty && lastFetchDate != nil && Date().timeIntervalSince(lastFetchDate!) < 3600 {
+        if !forceRefresh,
+           !cache.isEmpty,
+           let lastFetchDate,
+           Date().timeIntervalSince(lastFetchDate) < 3600 {
             return
         }
         
@@ -72,6 +79,7 @@ class ChartStatsService {
             await MainActor.run {
                 self.cache = response.charts
                 self.lastFetchDate = Date()
+                self.saveCachedStats()
             }
         }
         
@@ -87,10 +95,13 @@ class ChartStatsService {
     }
     
     func getStats(for songId: Int) -> [ChartStat]? {
+        ensureCacheLoaded()
         return cache["\(songId)"]
     }
     
     func getStat(for sheet: Sheet) -> ChartStat? {
+        ensureCacheLoaded()
+
         // Diving Fish uses the level string (e.g. "14", "14+") as the 'diff' field in chart_stats
         // unless it's a specific internal ID mapping. 
         // Based on the 'charts' response seen in logs:
@@ -116,5 +127,29 @@ class ChartStatsService {
         }
         
         return nil
+    }
+
+    private func ensureCacheLoaded() {
+        if cache.isEmpty {
+            loadCachedStats()
+        }
+    }
+
+    private func loadCachedStats() {
+        guard cache.isEmpty,
+              let data = UserDefaults.app.maimaiChartStatsData,
+              let response = try? JSONDecoder().decode(ChartStatsResponse.self, from: data) else {
+            return
+        }
+
+        cache = response.charts
+    }
+
+    private func saveCachedStats() {
+        guard let data = try? JSONEncoder().encode(ChartStatsResponse(charts: cache)) else {
+            return
+        }
+
+        UserDefaults.app.maimaiChartStatsData = data
     }
 }

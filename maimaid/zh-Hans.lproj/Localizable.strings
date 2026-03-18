@@ -5,7 +5,7 @@
 
 // MARK: - Main Tab View
 "tab.home" = "主页";
-"tab.scan" = "扫码";
+"tab.scan" = "扫描";
 "tab.settings" = "设置";
 "tab.search" = "搜索";
 "search.placeholder" = "歌曲、艺术家、别名...";
@@ -146,11 +146,11 @@
 "song.detail.lock.notRequired" = "无需解锁";
 "song.detail.action.record" = "记录成绩";
 "song.detail.section.notes" = "音符统计";
-"song.detail.section.rating" = "完成率 → 得分";
+"song.detail.section.rating" = "达成率 → 得分";
 "song.detail.section.history" = "历史成绩";
 "song.detail.sort.time" = "时间";
 "song.detail.sort.rate" = "达成率";
-"song.detail.table.achievement" = "完成率";
+"song.detail.table.achievement" = "达成率";
 "song.detail.table.rating" = "得分";
 "song.detail.table.delta" = "差分";
 "song.detail.calculator.title" = "容错计算器";
@@ -189,6 +189,19 @@
 "score.entry.manualHint" = "请手动输入达成率";
 "score.entry.selectPhoto" = "选择结算截图";
 "score.entry.currentBest" = "当前最佳";
+"score.entry.combo" = "COMBO";
+"score.entry.sync" = "同步";
+"score.entry.dxScore" = "DX 分数";
+"score.entry.rank" = "评级";
+"score.entry.rank.pending" = "待计算";
+"score.entry.keyboard.next" = "下一项";
+"score.entry.repickPhoto" = "重新选择截图";
+"score.entry.repickPhoto.hint" = "换一张结算图重新识别。";
+"score.entry.validation.rateFormat" = "请输入有效的达成率。";
+"score.entry.validation.rateRange" = "达成率需在 0 到 101% 之间。";
+"score.entry.validation.dxFormat" = "请输入有效的 DX 分数。";
+"score.entry.validation.dxRange %lld" = "DX 分数不能超过 %lld。";
+"score.entry.savedHint" = "成绩已保存，确认无误后点击完成。";
 "score.entry.save" = "保存成绩";
 "score.entry.saved" = "已保存";
 
@@ -294,6 +307,7 @@
 "update.option.coversMissing" = "补全封面图片";
 "update.option.iconsDataAndImages" = "头像数据与图片";
 "update.option.danData" = "段位数据";
+"update.option.chartStats" = "谱面拟合信息";
 "update.options.footer" = "别名项同时会同步歌曲/谱面 ID；封面和图标仅补全缺失资源，不会强制覆盖已有文件。";
 "update.control.selectAtLeastOne" = "请至少选择一项更新内容。";
 "update.control.error %@" = "同步失败：%@";
@@ -373,14 +387,15 @@
 
 // MARK: - Data Sync
 "data.sync.stage.idle" = "等待中";
-"data.sync.stage.fetchingRemoteData" = "［1/7］获取汇总数据 (data.json)...";
-"data.sync.stage.fetchingAliases" = "［2/7］获取歌曲别名与歌曲 ID...";
-"data.sync.stage.fetchingIcons" = "［3/7］获取预设头像...";
-"data.sync.stage.fetchingDanData" = "［3.5/7］获取段位歌曲数据 (gallery.yaml)...";
-"data.sync.stage.processingSongs" = "［4/7］正在合并并分析数据...";
-"data.sync.stage.downloadingImages" = "［5/7］正在并发下载歌曲封面...";
-"data.sync.stage.downloadingIcons" = "［6/7］正在并发下载预设头像...";
-"data.sync.stage.saving" = "［7/7］正在保存到本地数据库...";
+"data.sync.stage.fetchingRemoteData" = "获取汇总数据 (data.json)...";
+"data.sync.stage.fetchingAliases" = "获取歌曲别名与歌曲 ID...";
+"data.sync.stage.fetchingIcons" = "获取预设头像...";
+"data.sync.stage.fetchingDanData" = "获取段位歌曲数据 (gallery.yaml)...";
+"data.sync.stage.processingSongs" = "正在合并并分析数据...";
+"data.sync.stage.downloadingImages" = "正在并发下载歌曲封面...";
+"data.sync.stage.downloadingIcons" = "正在并发下载预设头像...";
+"data.sync.stage.saving" = "正在保存到本地数据库...";
+"data.sync.stage.fetchingChartStats" = "获取谱面拟合信息...";
 "data.sync.stage.completed" = "同步完成";
 "data.sync.stage.failed" = "同步失败";
 
