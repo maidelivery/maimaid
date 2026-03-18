@@ -11,7 +11,7 @@ struct FilterSettings: Equatable, Sendable {
     var showFavoritesOnly: Bool = false
     
     // Initialized from UserDefaults, persisted in FilterView
-    var hideDeletedSongs: Bool = UserDefaults.standard.bool(forKey: "filter.hideDeletedSongs")
+    var hideDeletedSongs: Bool = UserDefaults.app.hideDeletedSongs
 }
 
 @MainActor

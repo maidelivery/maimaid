@@ -85,7 +85,7 @@ struct DanListView: View {
     private func versionName(for category: DanCategory) -> String {
         let title = category.title.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
+        let sequence = UserDefaults.app.maimaiVersionSequence
         if let matched = sequence
             .sorted(by: { $0.count > $1.count })
             .first(where: { title.localizedCaseInsensitiveContains($0) || category.id.localizedCaseInsensitiveContains($0) }) {

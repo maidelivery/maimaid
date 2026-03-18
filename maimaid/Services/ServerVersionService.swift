@@ -91,7 +91,7 @@ class ServerVersionService {
     func latestVersion(for server: GameServer, songs: [Song]) -> String {
         let cutoff = cutoffDate(for: server)
         
-        let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
+        let sequence = UserDefaults.app.maimaiVersionSequence
         let orderedVersions: [String]
         if sequence.isEmpty {
             let uniqueVersions = Array(Set(songs.compactMap { $0.version }))

@@ -17,11 +17,11 @@ struct ScoreQueryView: View {
     @State private var searchTask: Task<Void, Never>?
     
     // Display settings (persisted)
-    @AppStorage("scoreQuery.displayMode") private var displayMode: DisplayMode = .grid
-    @AppStorage("scoreQuery.gridColumns") private var committedColumns: Int = 5
-    @AppStorage("scoreQuery.badgeMode") private var badgeMode: BadgeMode = .rank
-    @AppStorage("scoreQuery.sortMode") private var sortMode: SortMode = .rating
-    @AppStorage("scoreQuery.sortAscending") private var sortAscending: Bool = false
+    @AppStorage(AppStorageKeys.scoreQueryDisplayMode) private var displayMode: DisplayMode = .grid
+    @AppStorage(AppStorageKeys.scoreQueryGridColumns) private var committedColumns: Int = 5
+    @AppStorage(AppStorageKeys.scoreQueryBadgeMode) private var badgeMode: BadgeMode = .rank
+    @AppStorage(AppStorageKeys.scoreQuerySortMode) private var sortMode: SortMode = .rating
+    @AppStorage(AppStorageKeys.scoreQuerySortAscending) private var sortAscending: Bool = false
     
     // Grid zoom state
     @State private var isZooming: Bool = false

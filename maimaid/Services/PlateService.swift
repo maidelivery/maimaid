@@ -77,7 +77,7 @@ class PlateService {
     func getVersionGroups() -> [VersionPlateGroup] {
         if let cached = cachedGroups { return cached }
         
-        guard let data = UserDefaults.standard.data(forKey: "MaimaiVersionsData"),
+        guard let data = UserDefaults.app.maimaiVersionsData,
               let versionsInfo = try? JSONDecoder().decode([ThemeUtils.AppVersion].self, from: data) else {
             return []
         }

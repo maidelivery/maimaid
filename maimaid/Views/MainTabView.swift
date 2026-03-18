@@ -107,7 +107,7 @@ struct MainTabView: View {
     }
     
     private func fixOrphanedScores() {
-        if UserDefaults.standard.bool(forKey: "didFixOrphanedScores_v4") { return }
+        if UserDefaults.app.didFixOrphanedScoresMigration { return }
         
         let scoreDescriptor = FetchDescriptor<Score>()
         guard let scores = try? modelContext.fetch(scoreDescriptor) else { return }
@@ -141,11 +141,11 @@ struct MainTabView: View {
             try? modelContext.save()
             print("MainTabView: Re-attached \(fixedCount) orphaned scores to their sheets.")
         }
-        UserDefaults.standard.set(true, forKey: "didFixOrphanedScores_v4")
+        UserDefaults.app.didFixOrphanedScoresMigration = true
     }
     
     private func checkAndForceDataSync() async {
-        if UserDefaults.standard.bool(forKey: "didForceDataSync_v3") { return }
+        if UserDefaults.app.didForceRegionSyncMigration { return }
         
         // If the database has sheets but none have regionCn set to true, it means they are using
         // the default unmigrated values. We need to force a sync to populate the actual regions.
@@ -163,6 +163,6 @@ struct MainTabView: View {
                 }
             }
         }
-        UserDefaults.standard.set(true, forKey: "didForceDataSync_v3")
+        UserDefaults.app.didForceRegionSyncMigration = true
     }
 }

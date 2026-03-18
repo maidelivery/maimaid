@@ -26,8 +26,8 @@ struct SongsView: View {
     @State private var filterSettings = FilterSettings()
     @State private var showFilterSheet = false
     @State private var isFetching = false
-    @AppStorage("songs.sortOption") private var sortOption: SortOption = .defaultOrder
-    @AppStorage("songs.sortAscending") private var sortAscending: Bool = true
+    @AppStorage(AppStorageKeys.songsSortOption) private var sortOption: SortOption = .defaultOrder
+    @AppStorage(AppStorageKeys.songsSortAscending) private var sortAscending: Bool = true
     @State private var isGridView: Bool = false
     @State private var displayedSongs: [Song] = []
     @State private var isSorting: Bool = false
@@ -38,7 +38,7 @@ struct SongsView: View {
     @State private var cachedProfileId: UUID? = nil
     
     // Grid zoom state
-    @AppStorage("songs.gridColumns") private var committedColumns: Int = 4
+    @AppStorage(AppStorageKeys.songsGridColumns) private var committedColumns: Int = 4
     @State private var isZooming: Bool = false
     @State private var liveColumnCount: CGFloat = 4.0
     @State private var pinchStartColumns: CGFloat = 4.0

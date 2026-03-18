@@ -245,7 +245,7 @@ struct ScannerView: View {
     @State private var recognizedMaxCombo: Int? = nil
     @State private var recognizedKanji: String? = nil
     @State private var debugBoxes: [RecognizedBox] = []
-    @AppStorage("showScannerBoundingBox") private var showScannerBoundingBox: Bool = false
+    @AppStorage(AppStorageKeys.showScannerBoundingBox) private var showScannerBoundingBox: Bool = false
     @State private var recognizedClass: MaimaiImageType = .unknown
     
     @State private var showFlashOverlay = false

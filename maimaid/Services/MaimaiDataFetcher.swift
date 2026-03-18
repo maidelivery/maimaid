@@ -197,13 +197,13 @@ class MaimaiDataFetcher {
                 log(String(localized: "data.sync.log.fetchedData \(remoteSongs.count)"))
                 
                 if let encodedVersions = try? JSONEncoder().encode(response.versions) {
-                    UserDefaults.standard.set(encodedVersions, forKey: "MaimaiVersionsData")
+                    UserDefaults.app.maimaiVersionsData = encodedVersions
                 }
                 let sequence = response.versions.map { $0.version }
-                UserDefaults.standard.set(sequence, forKey: "MaimaiVersionSequence")
+                UserDefaults.app.maimaiVersionSequence = sequence
                 
                 let catSequence = response.categories.map { $0.category }
-                UserDefaults.standard.set(catSequence, forKey: "MaimaiCategorySequence")
+                UserDefaults.app.maimaiCategorySequence = catSequence
             }
             
             // --- 阶段 2: Aliases & IDs ---
@@ -653,7 +653,7 @@ class MaimaiDataFetcher {
                 modelContext.insert(newConfig)
             }
             
-            UserDefaults.standard.set(true, forKey: "didPerformInitialSync")
+            UserDefaults.app.didPerformInitialSync = true
             updateStage(.completed, base: 1.0, message: String(localized: "data.sync.status.completed"))
             _ = try? await Task.sleep(nanoseconds: 1_000_000_000)
             isSyncing = false

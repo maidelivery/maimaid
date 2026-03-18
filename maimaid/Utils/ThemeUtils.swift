@@ -1,5 +1,120 @@
 import SwiftUI
 
+enum AppStorageKeys {
+    static let useFitDiff = "useFitDiff"
+    static let showScannerBoundingBox = "showScannerBoundingBox"
+    static let scoreQueryDisplayMode = "scoreQuery.displayMode"
+    static let scoreQueryGridColumns = "scoreQuery.gridColumns"
+    static let scoreQueryBadgeMode = "scoreQuery.badgeMode"
+    static let scoreQuerySortMode = "scoreQuery.sortMode"
+    static let scoreQuerySortAscending = "scoreQuery.sortAscending"
+    static let syncUpdateRemoteData = "syncUpdateRemoteData"
+    static let syncUpdateAliases = "syncUpdateAliases"
+    static let syncUpdateCovers = "syncUpdateCovers"
+    static let syncUpdateIcons = "syncUpdateIcons"
+    static let syncUpdateDanData = "syncUpdateDanData"
+    static let songsSortOption = "songs.sortOption"
+    static let songsSortAscending = "songs.sortAscending"
+    static let songsGridColumns = "songs.gridColumns"
+}
+
+enum UserDefaultsKeys {
+    static let maimaiVersionsData = "MaimaiVersionsData"
+    static let maimaiVersionSequence = "MaimaiVersionSequence"
+    static let maimaiCategorySequence = "MaimaiCategorySequence"
+    static let didPerformInitialSync = "didPerformInitialSync"
+    static let hideDeletedSongs = "filter.hideDeletedSongs"
+    static let didFixOrphanedScoresMigration = "migration.fixOrphanedScoresRelationships"
+    static let didForceRegionSyncMigration = "migration.forceRegionBackfillSync"
+}
+
+enum BundleInfoKeys {
+    static let shortVersion = "CFBundleShortVersionString"
+    static let buildNumber = "CFBundleVersion"
+    static let supabaseURL = "SUPABASE_URL"
+    static let supabasePublishableKey = "SUPABASE_PUBLISHABLE_KEY"
+}
+
+enum AppInfo {
+    private static func stringValue(for key: String, allowsUnresolvedPlaceholders: Bool = true) -> String? {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String else {
+            return nil
+        }
+
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return nil
+        }
+
+        guard allowsUnresolvedPlaceholders || (!trimmed.hasPrefix("$(") && !trimmed.hasPrefix("__")) else {
+            return nil
+        }
+
+        return trimmed
+    }
+
+    static var shortVersion: String? {
+        stringValue(for: BundleInfoKeys.shortVersion)
+    }
+
+    static var buildNumber: String? {
+        stringValue(for: BundleInfoKeys.buildNumber)
+    }
+
+    static var versionDisplayString: String {
+        "\(shortVersion ?? "—") (\(buildNumber ?? "—"))"
+    }
+
+    static func configuredString(for key: String) -> String? {
+        stringValue(for: key, allowsUnresolvedPlaceholders: false)
+    }
+}
+
+extension UserDefaults {
+    static let app = UserDefaults.standard
+
+    var maimaiVersionsData: Data? {
+        get { data(forKey: UserDefaultsKeys.maimaiVersionsData) }
+        set {
+            if let newValue {
+                set(newValue, forKey: UserDefaultsKeys.maimaiVersionsData)
+            } else {
+                removeObject(forKey: UserDefaultsKeys.maimaiVersionsData)
+            }
+        }
+    }
+
+    var maimaiVersionSequence: [String] {
+        get { stringArray(forKey: UserDefaultsKeys.maimaiVersionSequence) ?? [] }
+        set { set(newValue, forKey: UserDefaultsKeys.maimaiVersionSequence) }
+    }
+
+    var maimaiCategorySequence: [String] {
+        get { stringArray(forKey: UserDefaultsKeys.maimaiCategorySequence) ?? [] }
+        set { set(newValue, forKey: UserDefaultsKeys.maimaiCategorySequence) }
+    }
+
+    var didPerformInitialSync: Bool {
+        get { bool(forKey: UserDefaultsKeys.didPerformInitialSync) }
+        set { set(newValue, forKey: UserDefaultsKeys.didPerformInitialSync) }
+    }
+
+    var hideDeletedSongs: Bool {
+        get { bool(forKey: UserDefaultsKeys.hideDeletedSongs) }
+        set { set(newValue, forKey: UserDefaultsKeys.hideDeletedSongs) }
+    }
+
+    var didFixOrphanedScoresMigration: Bool {
+        get { bool(forKey: UserDefaultsKeys.didFixOrphanedScoresMigration) }
+        set { set(newValue, forKey: UserDefaultsKeys.didFixOrphanedScoresMigration) }
+    }
+
+    var didForceRegionSyncMigration: Bool {
+        get { bool(forKey: UserDefaultsKeys.didForceRegionSyncMigration) }
+        set { set(newValue, forKey: UserDefaultsKeys.didForceRegionSyncMigration) }
+    }
+}
+
 struct ThemeUtils {
     static func colorForDifficulty(_ difficulty: String, _ type: String?) -> Color {
         let low = difficulty.lowercased()
@@ -33,7 +148,7 @@ struct ThemeUtils {
     }
     
     static func versionSortOrder(_ version: String) -> Int {
-        let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
+        let sequence = UserDefaults.app.maimaiVersionSequence
         
         // 1. Exact match preferred
         if let index = sequence.firstIndex(of: version) {
@@ -54,12 +169,12 @@ struct ThemeUtils {
     }
     
     static var latestVersion: String {
-        let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
+        let sequence = UserDefaults.app.maimaiVersionSequence
         return sequence.last ?? ""
     }
     
     static func versionAbbreviation(_ version: String) -> String {
-        guard let data = UserDefaults.standard.data(forKey: "MaimaiVersionsData"),
+        guard let data = UserDefaults.app.maimaiVersionsData,
               let versions = try? JSONDecoder().decode([AppVersion].self, from: data) else {
             return version
         }
@@ -78,7 +193,7 @@ struct ThemeUtils {
     }
     
     static func categorySortOrder(_ category: String) -> Int {
-        let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiCategorySequence") ?? []
+        let sequence = UserDefaults.app.maimaiCategorySequence
         if let index = sequence.firstIndex(of: category) {
             return index
         }

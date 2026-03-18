@@ -146,7 +146,7 @@ enum RatingUtils {
     /// "circle" is identified by a case-insensitive substring match in the version sequence.
     static func isAfterCircle(version: String?) -> Bool {
         guard let version = version, !version.isEmpty else { return false }
-        let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
+        let sequence = UserDefaults.app.maimaiVersionSequence
         guard !sequence.isEmpty else { return false }
         
         // Find the index of the "circle" version entry
@@ -257,7 +257,7 @@ enum RatingUtils {
             return .b35
         }
         
-        let versionSequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
+        let versionSequence = UserDefaults.app.maimaiVersionSequence
         
         guard let songIndex = versionSequence.firstIndex(where: { songVer.contains($0) || $0.contains(songVer) }),
               let latestIndex = versionSequence.firstIndex(where: { latest.contains($0) || $0.contains(latest) }) else {

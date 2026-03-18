@@ -18,7 +18,7 @@ struct BestTableView: View {
     // MARK: - 临时版本覆盖 (退出页面即失效)
     @State private var overriddenVersion: String?
     @State private var showVersionPicker = false
-    @AppStorage("useFitDiff") private var useFitDiff = false
+    @AppStorage(AppStorageKeys.useFitDiff) private var useFitDiff = false
     
     // MARK: - Performance / Lifecycle
     @State private var calculationTask: Task<Void, Never>?
@@ -27,7 +27,7 @@ struct BestTableView: View {
     
     /// 可选的版本列表
     private var availableVersions: [String] {
-        let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
+        let sequence = UserDefaults.app.maimaiVersionSequence
         return sequence
     }
     

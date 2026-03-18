@@ -143,7 +143,7 @@ struct FilterView: View {
                 }
             }
             .onChange(of: settings.hideDeletedSongs) { _, newValue in
-                UserDefaults.standard.set(newValue, forKey: "filter.hideDeletedSongs")
+                UserDefaults.app.hideDeletedSongs = newValue
             }
         }
     }

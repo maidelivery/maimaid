@@ -8,16 +8,14 @@ struct SettingsView: View {
     
     private var config: SyncConfig? { configs.first }
     @State private var selectedTheme = 0
-    @AppStorage("showScannerBoundingBox") private var showScannerBoundingBox: Bool = false
+    @AppStorage(AppStorageKeys.showScannerBoundingBox) private var showScannerBoundingBox: Bool = false
     
     @State private var alertTitle = ""
     @State private var alertMessage = ""
     @State private var showAlert = false
 
     private var appVersionText: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
-        return "\(version) (\(build))"
+        AppInfo.versionDisplayString
     }
     
     var body: some View {

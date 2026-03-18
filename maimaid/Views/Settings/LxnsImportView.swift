@@ -75,99 +75,171 @@ struct LxnsImportView: View {
     
     @Environment(\.openURL) var openURL
     
+    private var hasBoundAccount: Bool { !(activeProfile?.lxnsRefreshToken.isEmpty ?? true) }
+    
+    private var statusTint: Color {
+        let failedText = String(localized: "import.status.failed")
+        let errorText = String(localized: "import.status.error")
+        return importStatus.contains(failedText) || importStatus.contains(errorText) ? .red : .cyan
+    }
+    
     var body: some View {
-        Form {
-            if let profile = activeProfile, !profile.lxnsRefreshToken.isEmpty {
-                Section(header: Text("import.lxns.bound.header")) {
-                    HStack {
-                        Text("import.lxns.status")
-                        Spacer()
-                        Text("import.lxns.status.connected")
-                            .foregroundColor(.green)
-                    }
-                    
-                    Button {
-                        Task {
-                            await startQuickImport(profile: profile)
-                        }
-                    } label: {
-                        HStack {
-                            if isImporting {
-                                ProgressView()
-                                    .padding(.trailing, 8)
-                            }
-                            Text(isImporting ? "import.status.syncing" : "import.lxns.action.quickSync")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .disabled(isImporting)
-                }
-                
-                Section(header: Text("import.lxns.manage.header")) {
-                    Button("import.lxns.action.relogin", role: .destructive) {
-                        activeProfile?.lxnsRefreshToken = ""
-                    }
-                }
-            } else {
-                Section(header: Text("import.lxns.step1.header"), footer: Text("import.lxns.step1.footer")) {
-                    Button {
-                        openAuthPage()
-                    } label: {
-                        HStack {
-                            Image(systemName: "safari")
-                            Text("import.lxns.action.openBrowser")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                }
-                
-                Section(header: Text("import.lxns.step2.header"), footer: Text("import.lxns.step2.footer")) {
-                    TextField("import.lxns.code.placeholder", text: $authCode)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                    
-                    Button {
-                        Task {
-                            await exchangeCodeAndImport()
-                        }
-                    } label: {
-                        HStack {
-                            if isImporting {
-                                ProgressView()
-                                    .padding(.trailing, 8)
-                            }
-                            Text(isImporting ? "import.status.importing" : "import.lxns.action.startImport")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .disabled(authCode.isEmpty || isImporting)
-                }
-            }
+        ZStack(alignment: .bottom) {
+            Color(uiColor: .systemGroupedBackground)
+                .ignoresSafeArea()
             
-            if isImporting || !importStatus.isEmpty {
-                Section(header: Text("import.status.header")) {
-                    if isImporting {
-                        HStack {
-                            ProgressView()
-                                .padding(.trailing, 8)
-                            Text(currentStep)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    
-                    if !importStatus.isEmpty {
-                        Text(importStatus)
-                            .foregroundColor(importStatus.contains(String(localized: "import.status.failed")) || importStatus.contains(String(localized: "import.status.error")) ? .red : .primary)
-                    }
-                    
-                    if totalRecords > 0 {
-                        ProgressView(value: progress, total: Double(totalRecords))
-                    }
+            List {
+                summarySection
+                contentSection
+                
+                if isImporting || !importStatus.isEmpty {
+                    statusSection
                 }
             }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .scrollDismissesKeyboard(.interactively)
         }
         .navigationTitle("import.lxns.title")
         .navigationBarTitleDisplayMode(.inline)
+    }
+    
+    @ViewBuilder
+    private var summarySection: some View {
+        Section {
+            accountSummaryCard(
+                icon: hasBoundAccount ? "snowflake.circle.fill" : "link.badge.plus",
+                iconTint: hasBoundAccount ? .cyan : .indigo,
+                title: String(localized: hasBoundAccount ? "import.lxns.bound.header" : "import.lxns.step1.header"),
+                subtitle: hasBoundAccount
+                    ? String(localized: "import.lxns.status.connected")
+                    : String(localized: "import.lxns.step1.footer")
+            )
+        }
+        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+        .listRowBackground(Color.clear)
+        .listSectionSeparator(.hidden)
+    }
+    
+    @ViewBuilder
+    private var contentSection: some View {
+        if let profile = activeProfile, !profile.lxnsRefreshToken.isEmpty {
+            Section("import.lxns.bound.header") {
+                HStack(spacing: 12) {
+                    settingsIcon(icon: "checkmark.shield.fill", color: .green)
+                    Text("import.lxns.status")
+                    Spacer()
+                    Text("import.lxns.status.connected")
+                        .foregroundStyle(.green)
+                }
+                
+                actionRow(
+                    title: isImporting ? "import.status.syncing" : "import.lxns.action.quickSync",
+                    icon: "arrow.triangle.2.circlepath.circle.fill",
+                    tint: .cyan
+                ) {
+                    Task {
+                        await startQuickImport(profile: profile)
+                    }
+                }
+                .disabled(isImporting)
+                .opacity(isImporting ? 0.6 : 1.0)
+            }
+            
+            Section("import.lxns.manage.header") {
+                Button("import.lxns.action.relogin", role: .destructive) {
+                    activeProfile?.lxnsRefreshToken = ""
+                }
+            }
+        } else {
+            Section {
+                actionRow(
+                    title: "import.lxns.action.openBrowser",
+                    icon: "safari.fill",
+                    tint: .indigo
+                ) {
+                    openAuthPage()
+                }
+                .disabled(isImporting)
+                .opacity(isImporting ? 0.6 : 1.0)
+            } header: {
+                Text("import.lxns.step1.header")
+            } footer: {
+                Text("import.lxns.step1.footer")
+            }
+            
+            Section {
+                credentialField(
+                    title: "import.lxns.code.placeholder",
+                    text: $authCode,
+                    icon: "key.fill"
+                )
+                
+                Button {
+                    Task {
+                        await exchangeCodeAndImport()
+                    }
+                } label: {
+                    HStack {
+                        Spacer()
+                        if isImporting {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Text("import.lxns.action.startImport")
+                                .fontWeight(.semibold)
+                        }
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(authCode.isEmpty || isImporting)
+                .listRowBackground(Color.clear)
+            } header: {
+                Text("import.lxns.step2.header")
+            } footer: {
+                Text("import.lxns.step2.footer")
+            }
+            .listSectionSeparator(.hidden)
+        }
+    }
+    
+    @ViewBuilder
+    private var statusSection: some View {
+        Section("import.status.header") {
+            VStack(alignment: .leading, spacing: 14) {
+                if isImporting && !currentStep.isEmpty {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text(currentStep)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                
+                if !importStatus.isEmpty {
+                    Label {
+                        Text(importStatus)
+                            .foregroundStyle(statusTint)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: statusTint == .red ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
+                            .foregroundStyle(statusTint)
+                    }
+                }
+                
+                if totalRecords > 0 {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ProgressView(value: progress, total: Double(totalRecords))
+                            .tint(statusTint)
+                        Text("\(Int(progress)) / \(totalRecords)")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+        }
     }
     
     @MainActor
@@ -298,7 +370,7 @@ struct LxnsImportView: View {
         } catch {
             print("Failed to fetch player info: \(error)")
         }
-
+        
         currentStep = String(localized: "import.lxns.status.fetching")
         
         let difficultyMap = [
@@ -428,5 +500,74 @@ struct LxnsImportView: View {
         }
         
         isImporting = false
+    }
+}
+
+private extension LxnsImportView {
+    func settingsIcon(icon: String, color: Color) -> some View {
+        Image(systemName: icon)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: 32, height: 32)
+            .background(color.gradient, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+    
+    func accountSummaryCard(icon: String, iconTint: Color, title: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 14) {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(iconTint.gradient)
+                    .frame(width: 72, height: 72)
+                    .overlay {
+                        Image(systemName: icon)
+                            .font(.system(size: 30, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                
+                Spacer(minLength: 0)
+            }
+            
+            Divider()
+            
+            Label("settings.sync.footer", systemImage: "lock.shield.fill")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .padding(20)
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+    }
+    
+    func actionRow(title: String, icon: String, tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                settingsIcon(icon: icon, color: tint)
+                Text(LocalizedStringKey(title))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Image(systemName: "arrow.up.forward.app")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(tint)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+    
+    func credentialField(title: String, text: Binding<String>, icon: String) -> some View {
+        HStack(spacing: 12) {
+            settingsIcon(icon: icon, color: .gray)
+            TextField(LocalizedStringKey(title), text: text)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+        }
+        .padding(.vertical, 2)
     }
 }

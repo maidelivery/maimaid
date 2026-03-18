@@ -20,11 +20,11 @@ struct StaticDataUpdateView: View {
     @State private var isLoadingStats = false
     @State private var syncErrorMessage: String?
     
-    @AppStorage("syncUpdateRemoteData") private var updateRemoteData = true
-    @AppStorage("syncUpdateAliases") private var updateAliases = true
-    @AppStorage("syncUpdateCovers") private var updateCovers = true
-    @AppStorage("syncUpdateIcons") private var updateIcons = true
-    @AppStorage("syncUpdateDanData") private var updateDanData = true
+    @AppStorage(AppStorageKeys.syncUpdateRemoteData) private var updateRemoteData = true
+    @AppStorage(AppStorageKeys.syncUpdateAliases) private var updateAliases = true
+    @AppStorage(AppStorageKeys.syncUpdateCovers) private var updateCovers = true
+    @AppStorage(AppStorageKeys.syncUpdateIcons) private var updateIcons = true
+    @AppStorage(AppStorageKeys.syncUpdateDanData) private var updateDanData = true
     
     var body: some View {
         Form {
@@ -173,7 +173,7 @@ struct StaticDataUpdateView: View {
                     LabeledContent("update.debug.totalDanCategories", value: "\(totalDanCategories)")
                     LabeledContent("update.debug.totalDanSections", value: "\(totalDanSections)")
                     
-                    if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+                    if let appVersion = AppInfo.shortVersion {
                         LabeledContent("update.debug.appVersion", value: appVersion)
                     }
                 }
