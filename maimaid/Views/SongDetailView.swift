@@ -1211,7 +1211,7 @@ struct FaultToleranceCalculatorView: View {
             HStack(spacing: 12) {
                 toleranceInfoBox(title: "GREAT", value: results.great, color: .pink)
                 toleranceInfoBox(title: "GOOD", value: results.good, color: .green)
-                toleranceInfoBox(title: "MISS", value: results.miss, color: .red)
+                toleranceInfoBox(title: "MISS", value: results.miss, color: .gray)
             }
             .padding(.horizontal, 20)
 
