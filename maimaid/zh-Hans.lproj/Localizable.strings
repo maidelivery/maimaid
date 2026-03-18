@@ -277,6 +277,7 @@
 "import.lxns.bound.header" = "已绑定 LXNS";
 "import.lxns.status" = "授权状态";
 "import.lxns.status.connected" = "已连接";
+"import.lxns.status.checking" = "检查中";
 "import.lxns.action.quickSync" = "一键快速同步成绩";
 "import.lxns.manage.header" = "账号管理";
 "import.lxns.action.relogin" = "取消绑定 / 重新登录";
@@ -312,9 +313,9 @@
 "update.control.selectAtLeastOne" = "请至少选择一项更新内容。";
 "update.control.error %@" = "同步失败：%@";
 "update.logs.header" = "同步日志";
-"update.auto.header" = "自动更新";
-"update.auto.footer" = "设定后台自动检查更新的频率。";
-"update.auto.interval" = "更新间隔";
+"update.auto.header" = "定期检查更新";
+"update.auto.footer" = "iOS 只会在条件允许时择机于后台运行检查，也可能在你下次打开应用时才执行；无法保证精确按设定时间触发。";
+"update.auto.interval" = "检查间隔";
 "update.interval.disabled" = "禁用";
 "update.interval.days.1" = "1 天";
 "update.interval.days.7" = "7 天";
@@ -453,6 +454,8 @@
 "userProfile.section.basic" = "基本信息";
 "userProfile.section.b50" = "B50 设置";
 "userProfile.section.credentials" = "凭证信息";
+"userProfile.section.metadata" = "标识信息";
+"userProfile.profileId" = "Profile ID";
 "settings.sync.dfUsername" = "水鱼用户名";
 "settings.sync.dfToken" = "水鱼导入令牌";
 "settings.sync.lxnsToken" = "落雪 Refresh Token";
@@ -460,7 +463,7 @@
 // MARK: - Settings (User Management)
 "settings.userManagement.header" = "用户管理";
 "settings.userManagement.footer" = "管理多个用户档案，支持不同服务器。";
-"settings.userManagement.title" = "用户档案管理";
+"settings.userManagement.title" = "用户档案";
 
 // MARK: - Score Query
 "scoreQuery.title" = "成绩查询";
@@ -486,6 +489,7 @@
 "settings.cloud.title" = "云端账户";
 "settings.cloud.status.loggedIn" = "已登录";
 "settings.cloud.section.sync" = "数据同步";
+"settings.cloud.section.autoBackup" = "自动备份";
 "settings.cloud.backup" = "备份到云端";
 "settings.cloud.restore" = "从云端恢复";
 "settings.cloud.syncing" = "正在同步...";
@@ -496,8 +500,8 @@
 "settings.cloud.signup.title" = "创建云端账户";
 "settings.cloud.signup.subtitle" = "通过电子邮件注册以使用云端同步服务";
 "settings.cloud.signup.button" = "注册并登录";
-"settings.cloud.mode.login" = "已有账号？去登录";
-"settings.cloud.mode.signup" = "没有账号？去注册";
+"settings.cloud.mode.login" = "登录";
+"settings.cloud.mode.signup" = "注册";
 "settings.cloud.email" = "电子邮件";
 "settings.cloud.password" = "密码";
 "settings.cloud.forgotPassword" = "忘记密码？";
@@ -508,6 +512,10 @@
 "settings.cloud.message.backupFailed" = "备份失败";
 "settings.cloud.message.restoreSuccess" = "恢复成功！";
 "settings.cloud.message.restoreFailed" = "恢复失败";
+"settings.cloud.autoBackup.footer" = "iOS 只会在条件允许时择机于后台运行备份，也可能在你下次打开应用时才执行；无法保证精确按设定时间触发。";
+"settings.cloud.autoBackup.interval" = "备份间隔";
+"settings.cloud.autoBackup.lastBackup" = "上次备份";
+"settings.cloud.autoBackup.never" = "从未";
 "settings.cloud.config.title" = "Supabase 未配置";
 "settings.cloud.config.subtitle" = "请在 `Config/Secrets.xcconfig` 中填写云同步配置。";
 "settings.cloud.config.section" = "配置说明";

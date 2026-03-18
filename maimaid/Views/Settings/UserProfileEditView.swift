@@ -105,6 +105,17 @@ struct UserProfileEditView: View {
                     SecureField("settings.sync.dfToken", text: $dfImportToken)
                     SecureField("settings.sync.lxnsToken", text: $lxnsRefreshToken)
                 }
+                
+                if let existingProfile {
+                    Section("userProfile.section.metadata") {
+                        LabeledContent("userProfile.profileId") {
+                            Text(existingProfile.id.uuidString)
+                                .font(.footnote.monospaced())
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                        }
+                    }
+                }
             }
             
             Section("profile.edit.presetIcon") {

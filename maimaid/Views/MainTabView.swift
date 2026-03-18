@@ -39,6 +39,7 @@ struct MainTabView: View {
         .task {
             // Migrate legacy SyncConfig data to UserProfile (one-time)
             migrateToUserProfileIfNeeded()
+            ensureActiveProfileAndRepairScopedData()
             
             // Reconnect orphaned scores due to Model relationship changes
             fixOrphanedScores()
@@ -46,16 +47,6 @@ struct MainTabView: View {
             // Force a data sync if regions are missing (e.g. regionCn is false for all)
             await checkAndForceDataSync()
             
-            // Background Sync Check
-            if let config = configs.first, config.backgroundSyncInterval > 0 {
-                let lastSync = config.lastStaticDataUpdateDate ?? .distantPast
-                let intervalSeconds = Double(config.backgroundSyncInterval * 3600)
-                
-                if Date().timeIntervalSince(lastSync) > intervalSeconds {
-                    print("MainTabView: Background static data sync triggered (interval: \(config.backgroundSyncInterval)h)")
-                    try? await MaimaiDataFetcher.shared.fetchSongs(modelContext: modelContext)
-                }
-            }
         }
         
     }
@@ -104,6 +95,51 @@ struct MainTabView: View {
         try? modelContext.save()
         
         print("MainTabView: Migrated legacy config to default UserProfile (id: \(profile.id))")
+    }
+    
+    private func ensureActiveProfileAndRepairScopedData() {
+        let profileDescriptor = FetchDescriptor<UserProfile>()
+        let allProfiles = (try? modelContext.fetch(profileDescriptor)) ?? []
+        
+        let activeProfile: UserProfile
+        if let existingActive = allProfiles.first(where: { $0.isActive }) {
+            activeProfile = existingActive
+        } else if let firstProfile = allProfiles.sorted(by: { $0.createdAt < $1.createdAt }).first {
+            firstProfile.isActive = true
+            activeProfile = firstProfile
+        } else {
+            let defaultProfile = UserProfile(
+                name: String(localized: "userProfile.defaultName"),
+                server: "jp",
+                isActive: true
+            )
+            modelContext.insert(defaultProfile)
+            activeProfile = defaultProfile
+        }
+        
+        var didChange = false
+        
+        let scoreDescriptor = FetchDescriptor<Score>(predicate: #Predicate { $0.userProfileId == nil })
+        if let orphanedScores = try? modelContext.fetch(scoreDescriptor), !orphanedScores.isEmpty {
+            for score in orphanedScores {
+                score.userProfileId = activeProfile.id
+            }
+            didChange = true
+        }
+        
+        let recordDescriptor = FetchDescriptor<PlayRecord>(predicate: #Predicate { $0.userProfileId == nil })
+        if let orphanedRecords = try? modelContext.fetch(recordDescriptor), !orphanedRecords.isEmpty {
+            for record in orphanedRecords {
+                record.userProfileId = activeProfile.id
+            }
+            didChange = true
+        }
+        
+        if didChange || allProfiles.isEmpty || !allProfiles.contains(where: { $0.isActive }) {
+            try? modelContext.save()
+            ScoreService.shared.notifyActiveProfileChanged()
+            ScoreService.shared.notifyScoresChanged(for: activeProfile.id)
+        }
     }
     
     private func fixOrphanedScores() {

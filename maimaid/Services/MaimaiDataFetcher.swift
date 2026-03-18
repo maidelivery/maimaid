@@ -660,6 +660,7 @@ class MaimaiDataFetcher {
                 newConfig.lastStaticDataUpdateDate = Date()
                 modelContext.insert(newConfig)
             }
+            try modelContext.save()
             
             UserDefaults.app.didPerformInitialSync = true
             updateStage(.completed, base: 1.0, message: String(localized: "data.sync.status.completed"))

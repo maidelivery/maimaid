@@ -1,8 +1,10 @@
 import SwiftUI
 import Supabase
+import SwiftData
 
 struct SupabaseAuthView: View {
     @Environment(\.modelContext) private var modelContext
+    @Query private var configs: [SyncConfig]
 
     @State private var supabaseManager = SupabaseManager.shared
     @State private var email = ""
@@ -22,6 +24,8 @@ struct SupabaseAuthView: View {
     private var isBusy: Bool {
         isLoading || isSyncing
     }
+    
+    private var config: SyncConfig? { configs.first }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -115,6 +119,36 @@ struct SupabaseAuthView: View {
             }
         } header: {
             Text("settings.cloud.section.sync")
+        }
+        
+        Section(header: Text("settings.cloud.section.autoBackup"), footer: Text("settings.cloud.autoBackup.footer")) {
+            let currentInterval = config?.supabaseBackupInterval ?? 0
+            
+            Picker("settings.cloud.autoBackup.interval", selection: Binding(
+                get: { currentInterval },
+                set: { newValue in
+                    if let config {
+                        config.supabaseBackupInterval = newValue
+                    } else {
+                        let newConfig = SyncConfig(supabaseBackupInterval: newValue)
+                        modelContext.insert(newConfig)
+                    }
+                    
+                    try? modelContext.save()
+                    Task {
+                        await SupabaseAutoBackup.scheduleNextBackup(container: modelContext.container)
+                    }
+                }
+            )) {
+                Text("update.interval.disabled").tag(0)
+                Text(String(localized: "update.interval.days.1")).tag(24)
+                Text(String(localized: "update.interval.days.7")).tag(168)
+                Text(String(localized: "update.interval.days.14")).tag(336)
+                Text(String(localized: "update.interval.days.30")).tag(720)
+            }
+            .pickerStyle(.menu)
+            
+            LabeledContent("settings.cloud.autoBackup.lastBackup", value: lastBackupDisplayText)
         }
 
         Section {
@@ -365,6 +399,13 @@ struct SupabaseAuthView: View {
     }
 
     // MARK: - Actions
+    
+    private var lastBackupDisplayText: String {
+        guard let lastBackup = config?.lastSupabaseBackupDate else {
+            return String(localized: "settings.cloud.autoBackup.never")
+        }
+        return lastBackup.formatted(date: .numeric, time: .shortened)
+    }
 
     func signIn() async {
         guard !email.isEmpty, !password.isEmpty else { return }
@@ -378,6 +419,7 @@ struct SupabaseAuthView: View {
             let _ = try await client.auth.signIn(email: email, password: password)
             showToast(message: "settings.cloud.message.loginSuccess")
             await supabaseManager.checkSession()
+            await SupabaseAutoBackup.scheduleNextBackup(container: modelContext.container)
         } catch {
             showToast(message: error.localizedDescription, error: true)
         }
@@ -412,6 +454,7 @@ struct SupabaseAuthView: View {
         }
         isLoading = false
         await supabaseManager.checkSession()
+        SupabaseAutoBackup.cancelScheduledBackup()
     }
 
     func performBackup() async {
@@ -421,6 +464,7 @@ struct SupabaseAuthView: View {
         do {
             try await supabaseManager.backupToCloud(context: modelContext)
             showToast(message: "settings.cloud.message.backupSuccess")
+            await SupabaseAutoBackup.scheduleNextBackup(container: modelContext.container)
         } catch {
             showToast(message: "settings.cloud.message.backupFailed", error: true)
         }

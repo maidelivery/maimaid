@@ -70,6 +70,7 @@ struct StaticDataUpdateView: View {
                                     syncErrorMessage = error.localizedDescription
                                 }
                                 await loadStatsAsync()
+                                await StaticDataAutoUpdate.scheduleNextRefresh(container: modelContext.container)
                             }
                         } label: {
                             HStack {
@@ -131,6 +132,11 @@ struct StaticDataUpdateView: View {
                                 let newConfig = SyncConfig()
                                 newConfig.backgroundSyncInterval = newValue
                                 modelContext.insert(newConfig)
+                            }
+                            
+                            try? modelContext.save()
+                            Task {
+                                await StaticDataAutoUpdate.scheduleNextRefresh(container: modelContext.container)
                             }
                         }
                     )) {

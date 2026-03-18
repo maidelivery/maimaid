@@ -33,6 +33,36 @@ final class ScoreService {
         cachedSnapshotsByProfileKey.removeValue(forKey: profileKey(profileId))
     }
     
+    private func ensureActiveProfile(context: ModelContext) -> UserProfile {
+        let activeDescriptor = FetchDescriptor<UserProfile>(predicate: #Predicate { $0.isActive })
+        if let activeProfile = (try? context.fetch(activeDescriptor))?.first {
+            cachedActiveProfileId = activeProfile.id
+            didResolveActiveProfile = true
+            return activeProfile
+        }
+        
+        let descriptor = FetchDescriptor<UserProfile>()
+        if let existingProfile = (try? context.fetch(descriptor))?.sorted(by: { $0.createdAt < $1.createdAt }).first {
+            existingProfile.isActive = true
+            try? context.save()
+            cachedActiveProfileId = existingProfile.id
+            didResolveActiveProfile = true
+            return existingProfile
+        }
+        
+        let defaultProfile = UserProfile(
+            name: String(localized: "userProfile.defaultName"),
+            server: "jp",
+            isActive: true
+        )
+        context.insert(defaultProfile)
+        try? context.save()
+        
+        cachedActiveProfileId = defaultProfile.id
+        didResolveActiveProfile = true
+        return defaultProfile
+    }
+    
     func invalidateAllCaches() {
         invalidateActiveProfileCache()
         cachedSnapshotsByProfileKey.removeAll()
@@ -45,25 +75,12 @@ final class ScoreService {
         if didResolveActiveProfile {
             return cachedActiveProfileId
         }
-        
-        let descriptor = FetchDescriptor<UserProfile>(predicate: #Predicate { $0.isActive })
-        let profileId = (try? context.fetch(descriptor))?.first?.id
-        
-        cachedActiveProfileId = profileId
-        didResolveActiveProfile = true
-        
-        return profileId
+        return ensureActiveProfile(context: context).id
     }
     
     /// 获取当前活跃用户
     func currentActiveProfile(context: ModelContext) -> UserProfile? {
-        let descriptor = FetchDescriptor<UserProfile>(predicate: #Predicate { $0.isActive })
-        let profile = (try? context.fetch(descriptor))?.first
-        
-        cachedActiveProfileId = profile?.id
-        didResolveActiveProfile = true
-        
-        return profile
+        ensureActiveProfile(context: context)
     }
     
     // MARK: - 成绩读取（严格用户隔离）
@@ -103,10 +120,44 @@ final class ScoreService {
         return loadSnapshot(context: context, profileId: profileId)
     }
     
+    private func candidateScoreSheetIds(for sheet: Sheet) -> [String] {
+        let rawIdentifiers: [String?] = [
+            sheet.songIdentifier,
+            String(sheet.songId),
+            sheet.song?.songIdentifier,
+            sheet.song.map { String($0.songId) },
+        ]
+        
+        var songIdentifiers: [String] = []
+        for rawIdentifier in rawIdentifiers {
+            guard let rawIdentifier, !rawIdentifier.isEmpty, rawIdentifier != "0" else { continue }
+            songIdentifiers.append(rawIdentifier)
+        }
+        
+        var seen = Set<String>()
+        var result: [String] = []
+        
+        for songIdentifier in songIdentifiers {
+            for separator in ["_", "-"] {
+                let sheetId = "\(songIdentifier)\(separator)\(sheet.type)\(separator)\(sheet.difficulty)"
+                if seen.insert(sheetId).inserted {
+                    result.append(sheetId)
+                }
+            }
+        }
+        
+        return result
+    }
+    
     /// 获取指定谱面对当前用户的成绩
     func score(for sheet: Sheet, context: ModelContext) -> Score? {
-        let sheetId = "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)"
-        return currentSnapshot(context: context).scoreMap[sheetId]
+        let snapshot = currentSnapshot(context: context)
+        for sheetId in candidateScoreSheetIds(for: sheet) {
+            if let score = snapshot.scoreMap[sheetId] {
+                return score
+            }
+        }
+        return nil
     }
     
     /// 获取当前用户的所有成绩
@@ -248,6 +299,7 @@ final class ScoreService {
     func playHistory(for sheet: Sheet, context: ModelContext) -> [PlayRecord] {
         guard let profileId = currentActiveProfileId(context: context) else {
             var records = sheet.playRecords?.filter { $0.userProfileId == nil } ?? []
+            records = repairDetachedRecords(records, for: sheet, profileId: nil, context: context)
             
             if let bestScore = score(for: sheet, context: context) {
                 let hasMatch = records.contains { abs($0.rate - bestScore.rate) < 0.0001 }
@@ -279,6 +331,7 @@ final class ScoreService {
         }
         
         var records = sheet.playRecords?.filter { $0.userProfileId == profileId } ?? []
+        records = repairDetachedRecords(records, for: sheet, profileId: profileId, context: context)
         
         // Auto-repair missing PlayRecord from imported Score
         if let bestScore = score(for: sheet, context: context) {
@@ -308,5 +361,60 @@ final class ScoreService {
         }
         
         return records
+    }
+    
+    private func repairDetachedRecords(
+        _ existingRecords: [PlayRecord],
+        for sheet: Sheet,
+        profileId: UUID?,
+        context: ModelContext
+    ) -> [PlayRecord] {
+        let descriptor: FetchDescriptor<PlayRecord>
+        if let profileId {
+            descriptor = FetchDescriptor<PlayRecord>(
+                predicate: #Predicate<PlayRecord> { $0.userProfileId == profileId }
+            )
+        } else {
+            descriptor = FetchDescriptor<PlayRecord>(
+                predicate: #Predicate<PlayRecord> { $0.userProfileId == nil }
+            )
+        }
+        
+        let allRecords = (try? context.fetch(descriptor)) ?? []
+        let candidateIds = Set(candidateScoreSheetIds(for: sheet))
+        
+        var recordsById = Dictionary(uniqueKeysWithValues: existingRecords.map { ($0.id, $0) })
+        var didRepair = false
+        let canonicalSheetId = "\(sheet.songIdentifier)-\(sheet.type)-\(sheet.difficulty)"
+        
+        for record in allRecords where candidateIds.contains(record.sheetId) {
+            if record.sheetId != canonicalSheetId {
+                record.sheetId = canonicalSheetId
+                didRepair = true
+            }
+            
+            if record.sheet == nil {
+                record.sheet = sheet
+                if sheet.playRecords == nil {
+                    sheet.playRecords = []
+                }
+                if !(sheet.playRecords?.contains(where: { $0.id == record.id }) ?? false) {
+                    sheet.playRecords?.append(record)
+                }
+                didRepair = true
+            }
+            
+            if recordsById[record.id] == nil {
+                recordsById[record.id] = record
+            }
+        }
+        
+        let repairedRecords = recordsById.values.sorted { $0.playDate > $1.playDate }
+        
+        if didRepair {
+            try? context.save()
+        }
+        
+        return repairedRecords
     }
 }

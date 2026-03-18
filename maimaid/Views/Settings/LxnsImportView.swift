@@ -72,15 +72,39 @@ struct LxnsImportView: View {
     @State private var progress: Double = 0
     @State private var totalRecords: Int = 0
     @State private var currentStep: String = ""
+    @State private var hasValidatedSessionOnEntry = false
+    @State private var isValidatingSession = false
+    @State private var validatedAccessToken: String?
+    @State private var validatedAccessTokenDate: Date?
     
     @Environment(\.openURL) var openURL
     
     private var hasBoundAccount: Bool { !(activeProfile?.lxnsRefreshToken.isEmpty ?? true) }
     
-    private var statusTint: Color {
+    private var importStatusStyle: (tint: Color, icon: String) {
         let failedText = String(localized: "import.status.failed")
         let errorText = String(localized: "import.status.error")
-        return importStatus.contains(failedText) || importStatus.contains(errorText) ? .red : .cyan
+        let expiredText = String(localized: "import.lxns.status.failed.expired")
+        let isFailure = importStatus.contains(failedText) || importStatus.contains(errorText) || importStatus.contains(expiredText)
+        return (isFailure ? .red : .cyan, isFailure ? "xmark.circle.fill" : "checkmark.circle.fill")
+    }
+    
+    private var sessionStatusTint: Color {
+        if isValidatingSession { return .orange }
+        return .green
+    }
+    
+    private var sessionStatusText: LocalizedStringKey {
+        if isValidatingSession {
+            return "import.lxns.status.checking"
+        }
+        return "import.lxns.status.connected"
+    }
+    
+    private var hasUsableValidatedAccessToken: Bool {
+        guard let validatedAccessToken,
+              let validatedAccessTokenDate else { return false }
+        return !validatedAccessToken.isEmpty && Date().timeIntervalSince(validatedAccessTokenDate) < 300
     }
     
     var body: some View {
@@ -102,6 +126,9 @@ struct LxnsImportView: View {
         }
         .navigationTitle("import.lxns.title")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await validateSessionOnEntryIfNeeded()
+        }
     }
     
     @ViewBuilder
@@ -126,11 +153,11 @@ struct LxnsImportView: View {
         if let profile = activeProfile, !profile.lxnsRefreshToken.isEmpty {
             Section("import.lxns.bound.header") {
                 HStack(spacing: 12) {
-                    settingsIcon(icon: "checkmark.shield.fill", color: .green)
+                    settingsIcon(icon: isValidatingSession ? "clock.badge.checkmark.fill" : "checkmark.shield.fill", color: sessionStatusTint)
                     Text("import.lxns.status")
                     Spacer()
-                    Text("import.lxns.status.connected")
-                        .foregroundStyle(.green)
+                    Text(sessionStatusText)
+                        .foregroundStyle(sessionStatusTint)
                 }
                 
                 actionRow(
@@ -142,13 +169,16 @@ struct LxnsImportView: View {
                         await startQuickImport(profile: profile)
                     }
                 }
-                .disabled(isImporting)
-                .opacity(isImporting ? 0.6 : 1.0)
+                .disabled(isImporting || isValidatingSession)
+                .opacity(isImporting || isValidatingSession ? 0.6 : 1.0)
             }
             
             Section("import.lxns.manage.header") {
                 Button("import.lxns.action.relogin", role: .destructive) {
                     activeProfile?.lxnsRefreshToken = ""
+                    validatedAccessToken = nil
+                    validatedAccessTokenDate = nil
+                    hasValidatedSessionOnEntry = false
                 }
             }
         } else {
@@ -169,33 +199,36 @@ struct LxnsImportView: View {
             }
             
             Section {
-                credentialField(
-                    title: "import.lxns.code.placeholder",
-                    text: $authCode,
-                    icon: "key.fill"
-                )
-                
-                Button {
-                    Task {
-                        await exchangeCodeAndImport()
-                    }
-                } label: {
-                    HStack {
-                        Spacer()
-                        if isImporting {
-                            ProgressView()
-                                .tint(.white)
-                        } else {
-                            Text("import.lxns.action.startImport")
-                                .fontWeight(.semibold)
+                VStack(spacing: 14) {
+                    credentialField(
+                        title: "import.lxns.code.placeholder",
+                        text: $authCode,
+                        icon: "key.fill"
+                    )
+                    
+                    Button {
+                        Task {
+                            await exchangeCodeAndImport()
                         }
-                        Spacer()
+                    } label: {
+                        HStack {
+                            Spacer()
+                            if isImporting {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Text("import.lxns.action.startImport")
+                                    .bold()
+                            }
+                            Spacer()
+                        }
                     }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(authCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isImporting)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(authCode.isEmpty || isImporting)
-                .listRowBackground(Color.clear)
+                .padding(.vertical, 4)
+                .listRowSeparator(.hidden)
             } header: {
                 Text("import.lxns.step2.header")
             } footer: {
@@ -220,18 +253,18 @@ struct LxnsImportView: View {
                 if !importStatus.isEmpty {
                     Label {
                         Text(importStatus)
-                            .foregroundStyle(statusTint)
+                            .foregroundStyle(importStatusStyle.tint)
                             .fixedSize(horizontal: false, vertical: true)
                     } icon: {
-                        Image(systemName: statusTint == .red ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
-                            .foregroundStyle(statusTint)
+                        Image(systemName: importStatusStyle.icon)
+                            .foregroundStyle(importStatusStyle.tint)
                     }
                 }
                 
                 if totalRecords > 0 {
                     VStack(alignment: .leading, spacing: 8) {
                         ProgressView(value: progress, total: Double(totalRecords))
-                            .tint(statusTint)
+                            .tint(importStatusStyle.tint)
                         Text("\(Int(progress)) / \(totalRecords)")
                             .font(.caption.monospacedDigit())
                             .foregroundStyle(.secondary)
@@ -318,6 +351,8 @@ struct LxnsImportView: View {
             
             let accessToken = tokenResponse.data!.access_token
             let refreshToken = tokenResponse.data!.refresh_token
+            validatedAccessToken = accessToken
+            validatedAccessTokenDate = Date()
             
             if let profile = activeProfile {
                 profile.lxnsRefreshToken = refreshToken
@@ -339,14 +374,29 @@ struct LxnsImportView: View {
     private func startQuickImport(profile: UserProfile) async {
         isImporting = true
         importStatus = ""
-        currentStep = String(localized: "import.lxns.status.refreshing")
         progress = 0
         totalRecords = 0
         
-        if let token = await SyncManager.shared.refreshLxnsToken(profile: profile) {
+        if hasUsableValidatedAccessToken, let validatedAccessToken {
+            currentStep = String(localized: "import.lxns.status.fetching")
+            await importData(accessToken: validatedAccessToken)
+            return
+        }
+        
+        currentStep = String(localized: "import.lxns.status.refreshing")
+        
+        switch await SyncManager.shared.refreshLxnsTokenResult(profile: profile) {
+        case .success(let token):
+            validatedAccessToken = token
+            validatedAccessTokenDate = Date()
             await importData(accessToken: token)
-        } else {
+        case .expired:
+            validatedAccessToken = nil
+            validatedAccessTokenDate = nil
             importStatus = String(localized: "import.lxns.status.failed.expired")
+            isImporting = false
+        case .failed:
+            importStatus = String(localized: "import.status.failed.network")
             isImporting = false
         }
     }
@@ -569,5 +619,31 @@ private extension LxnsImportView {
                 .autocorrectionDisabled()
         }
         .padding(.vertical, 2)
+    }
+    
+    @MainActor
+    func validateSessionOnEntryIfNeeded() async {
+        guard !hasValidatedSessionOnEntry else { return }
+        hasValidatedSessionOnEntry = true
+        
+        guard let profile = activeProfile, !profile.lxnsRefreshToken.isEmpty else { return }
+        
+        isValidatingSession = true
+        defer { isValidatingSession = false }
+        
+        switch await SyncManager.shared.refreshLxnsTokenResult(profile: profile) {
+        case .success(let accessToken):
+            validatedAccessToken = accessToken
+            validatedAccessTokenDate = Date()
+            if importStatus == String(localized: "import.lxns.status.failed.expired") {
+                importStatus = ""
+            }
+        case .expired:
+            validatedAccessToken = nil
+            validatedAccessTokenDate = nil
+            importStatus = String(localized: "import.lxns.status.failed.expired")
+        case .failed:
+            break
+        }
     }
 }

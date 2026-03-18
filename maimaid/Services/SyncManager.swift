@@ -1,6 +1,12 @@
 import Foundation
 import SwiftData
 
+enum LxnsTokenRefreshResult {
+    case success(String)
+    case expired
+    case failed
+}
+
 @MainActor
 class SyncManager {
     static let shared = SyncManager()
@@ -137,7 +143,16 @@ class SyncManager {
     }
     
     func refreshLxnsToken(profile: UserProfile) async -> String? {
-        guard let url = URL(string: "https://maimai.lxns.net/api/v0/oauth/token") else { return nil }
+        switch await refreshLxnsTokenResult(profile: profile) {
+        case .success(let accessToken):
+            return accessToken
+        case .expired, .failed:
+            return nil
+        }
+    }
+
+    func refreshLxnsTokenResult(profile: UserProfile) async -> LxnsTokenRefreshResult {
+        guard let url = URL(string: "https://maimai.lxns.net/api/v0/oauth/token") else { return .failed }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -167,8 +182,9 @@ class SyncManager {
                     print("SyncManager: [LXNS] 检测到无效 Refresh Token，正在清除凭据。")
                     profile.lxnsRefreshToken = ""
                     try? profile.modelContext?.save()
+                    return .expired
                 }
-                return nil
+                return .failed
             }
             
             let decoder = JSONDecoder()
@@ -177,12 +193,12 @@ class SyncManager {
             if let newData = tokenResponse.data {
                 profile.lxnsRefreshToken = newData.refresh_token
                 try? profile.modelContext?.save()
-                return newData.access_token
+                return .success(newData.access_token)
             }
         } catch {
             print("SyncManager: [LXNS] 刷新令牌出错：\(error.localizedDescription)")
         }
-        return nil
+        return .failed
     }
     
 

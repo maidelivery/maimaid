@@ -278,6 +278,7 @@
 "import.lxns.bound.header" = "Bound LXNS";
 "import.lxns.status" = "Auth Status";
 "import.lxns.status.connected" = "Connected";
+"import.lxns.status.checking" = "Checking";
 "import.lxns.action.quickSync" = "Quick Sync Scores";
 "import.lxns.manage.header" = "Account Management";
 "import.lxns.action.relogin" = "Unbind / Relogin";
@@ -313,8 +314,8 @@
 "update.control.selectAtLeastOne" = "Select at least one update option.";
 "update.control.error %@" = "Sync failed: %@";
 "update.logs.header" = "Logs";
-"update.auto.header" = "Auto Update";
-"update.auto.footer" = "Background check frequency.";
+"update.auto.header" = "Scheduled Update Check";
+"update.auto.footer" = "iOS runs checks opportunistically in the background, or the app may wait until the next launch. Exact timing is not guaranteed.";
 "update.auto.interval" = "Check Interval";
 "update.interval.disabled" = "Disabled";
 "update.interval.days.1" = "1 Day";
@@ -454,6 +455,8 @@
 "userProfile.section.basic" = "Basic Info";
 "userProfile.section.b50" = "B50 Settings";
 "userProfile.section.credentials" = "Credentials";
+"userProfile.section.metadata" = "Metadata";
+"userProfile.profileId" = "Profile ID";
 "settings.sync.dfUsername" = "DF Username";
 "settings.sync.dfToken" = "DF Import Token";
 "settings.sync.lxnsToken" = "LXNS Refresh Token";
@@ -487,6 +490,7 @@
 "settings.cloud.title" = "Cloud Account";
 "settings.cloud.status.loggedIn" = "Logged In";
 "settings.cloud.section.sync" = "Data Sync";
+"settings.cloud.section.autoBackup" = "Auto Backup";
 "settings.cloud.backup" = "Backup to Cloud";
 "settings.cloud.restore" = "Restore from Cloud";
 "settings.cloud.syncing" = "Syncing...";
@@ -497,8 +501,8 @@
 "settings.cloud.signup.title" = "Create Cloud Account";
 "settings.cloud.signup.subtitle" = "Sign up with your email to enable cloud sync services";
 "settings.cloud.signup.button" = "Sign Up & Login";
-"settings.cloud.mode.login" = "Have an account? Login";
-"settings.cloud.mode.signup" = "New here? Sign up";
+"settings.cloud.mode.login" = "Login";
+"settings.cloud.mode.signup" = "Sign up";
 "settings.cloud.email" = "Email";
 "settings.cloud.password" = "Password";
 "settings.cloud.forgotPassword" = "Forgot Password?";
@@ -509,6 +513,10 @@
 "settings.cloud.message.backupFailed" = "Backup failed";
 "settings.cloud.message.restoreSuccess" = "Restore successful!";
 "settings.cloud.message.restoreFailed" = "Restore failed";
+"settings.cloud.autoBackup.footer" = "iOS runs backups opportunistically in the background, or the app may wait until the next launch. Exact timing is not guaranteed.";
+"settings.cloud.autoBackup.interval" = "Backup Interval";
+"settings.cloud.autoBackup.lastBackup" = "Last Backup";
+"settings.cloud.autoBackup.never" = "Never";
 "settings.cloud.config.title" = "Supabase Not Configured";
 "settings.cloud.config.subtitle" = "Add cloud sync settings in `Config/Secrets.xcconfig`.";
 "settings.cloud.config.section" = "Configuration";

@@ -177,6 +177,10 @@ final class SupabaseManager {
     
     func backupToCloud(context: ModelContext) async throws {
         let client = try requireClient()
+        
+        if currentUser == nil {
+            await checkSession()
+        }
 
         // Find all profiles, records, and scores
         let profileFetch = FetchDescriptor<UserProfile>()
@@ -187,6 +191,26 @@ final class SupabaseManager {
         
         let scoreFetch = FetchDescriptor<Score>()
         let scores = try context.fetch(scoreFetch)
+        
+        let activeProfileId = ScoreService.shared.currentActiveProfileId(context: context)
+        if let activeProfileId {
+            var didBackfillProfileId = false
+            
+            for record in records where record.userProfileId == nil {
+                record.userProfileId = activeProfileId
+                didBackfillProfileId = true
+            }
+            
+            for score in scores where score.userProfileId == nil {
+                score.userProfileId = activeProfileId
+                didBackfillProfileId = true
+            }
+            
+            if didBackfillProfileId {
+                try? context.save()
+                ScoreService.shared.notifyScoresChanged(for: activeProfileId)
+            }
+        }
         
         guard let user = currentUser else {
             throw NSError(domain: "Auth", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
@@ -281,8 +305,147 @@ final class SupabaseManager {
             // Supabase upsert on custom unique constraints (profile_id, sheet_id) might need specific onConflict params
             try await client.from("scores").upsert(scoreDTOs, onConflict: "profile_id,sheet_id").execute()
         }
+        
+        if let config = try? context.fetch(FetchDescriptor<SyncConfig>()).first {
+            config.lastSupabaseBackupDate = Date()
+        } else {
+            let newConfig = SyncConfig()
+            newConfig.lastSupabaseBackupDate = Date()
+            context.insert(newConfig)
+        }
+        
+        try? context.save()
     }
     
+    private func restoreScopeFilter(
+        userId: UUID,
+        scopedIds: Set<UUID>,
+        ownershipColumn: String = "profile_id"
+    ) -> String {
+        var filters = ["user_id.eq.\(userId.uuidString)"]
+        
+        let sortedScopedIds = scopedIds
+            .map(\.uuidString)
+            .sorted()
+        
+        if !sortedScopedIds.isEmpty {
+            filters.append("\(ownershipColumn).in.(\(sortedScopedIds.joined(separator: ",")))")
+        }
+        
+        return filters.joined(separator: ",")
+    }
+    
+    private func fetchRestoreRows<DTO: Decodable>(
+        from table: String,
+        as type: DTO.Type,
+        client: SupabaseClient,
+        userId: UUID,
+        scopedIds: Set<UUID>,
+        ownershipColumn: String = "profile_id"
+    ) async throws -> [DTO] {
+        let query = client.from(table).select()
+        
+        if scopedIds.isEmpty {
+            return try await query
+                .eq("user_id", value: userId)
+                .execute()
+                .value
+        }
+        
+        return try await query
+            .or(restoreScopeFilter(userId: userId, scopedIds: scopedIds, ownershipColumn: ownershipColumn))
+            .execute()
+            .value
+    }
+    
+    private func canonicalScoreSheetId(for sheet: Sheet) -> String {
+        "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)"
+    }
+    
+    private func canonicalRecordSheetId(for sheet: Sheet) -> String {
+        "\(sheet.songIdentifier)-\(sheet.type)-\(sheet.difficulty)"
+    }
+    
+    private func sheetIdentifiers(for sheet: Sheet, separators: [String]) -> Set<String> {
+        let identifiers = candidateSongIdentifiers(for: sheet)
+        return Set(
+            identifiers.flatMap { songIdentifier in
+                separators.map { separator in
+                    "\(songIdentifier)\(separator)\(sheet.type)\(separator)\(sheet.difficulty)"
+                }
+            }
+        )
+    }
+    
+    private func candidateSongIdentifiers(for sheet: Sheet) -> Set<String> {
+        var identifiers = Set<String>()
+        
+        if !sheet.songIdentifier.isEmpty {
+            identifiers.insert(sheet.songIdentifier)
+        }
+        
+        if sheet.songId > 0 {
+            identifiers.insert(String(sheet.songId))
+        }
+        
+        if let song = sheet.song {
+            if !song.songIdentifier.isEmpty {
+                identifiers.insert(song.songIdentifier)
+            }
+            if song.songId > 0 {
+                identifiers.insert(String(song.songId))
+            }
+        }
+        
+        return identifiers
+    }
+    
+    private func scoreSheetIdentifiers(for sheet: Sheet) -> Set<String> {
+        sheetIdentifiers(for: sheet, separators: ["_", "-"])
+    }
+    
+    private func playRecordSheetIdentifiers(for sheet: Sheet) -> Set<String> {
+        sheetIdentifiers(for: sheet, separators: ["-", "_"])
+    }
+    
+    private func canonicalize(_ dto: ScoreDTO, using sheetMap: [String: Sheet]) -> ScoreDTO {
+        guard let sheet = sheetMap[dto.sheet_id] else { return dto }
+        
+        return ScoreDTO(
+            user_id: dto.user_id,
+            profile_id: dto.profile_id,
+            sheet_id: canonicalScoreSheetId(for: sheet),
+            rate: dto.rate,
+            rank: dto.rank,
+            dx_score: dto.dx_score,
+            fc: dto.fc,
+            fs: dto.fs,
+            achievement_date: dto.achievement_date
+        )
+    }
+    
+    private func mergedScoreDTO(_ lhs: ScoreDTO, _ rhs: ScoreDTO) -> ScoreDTO {
+        var merged = lhs
+        
+        if rhs.rate > merged.rate {
+            merged.rate = rhs.rate
+            merged.rank = rhs.rank
+            merged.achievement_date = rhs.achievement_date
+        } else if rhs.rate == merged.rate {
+            let mergedDate = merged.achievement_date ?? .distantPast
+            let rhsDate = rhs.achievement_date ?? .distantPast
+            if rhsDate > mergedDate {
+                merged.rank = rhs.rank
+                merged.achievement_date = rhs.achievement_date
+            }
+        }
+        
+        merged.dx_score = max(merged.dx_score ?? 0, rhs.dx_score ?? 0)
+        merged.fc = ThemeUtils.bestFC(merged.fc, rhs.fc)
+        merged.fs = ThemeUtils.bestFS(merged.fs, rhs.fs)
+        return merged
+    }
+
     // MARK: - Data Sync (Restore)
     
     func restoreFromCloud(context: ModelContext) async throws {
@@ -292,17 +455,59 @@ final class SupabaseManager {
             throw NSError(domain: "Auth", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
         
-        // Fetch profiles
-        let profileDTOs: [ProfileDTO] = try await client.from("profiles")
-            .select()
-            .eq("user_id", value: user.id)
-            .execute()
-            .value
+        let existingLocalProfileIds = Set(
+            try context.fetch(FetchDescriptor<UserProfile>()).map(\.id)
+        )
+        
+        let profileDTOs: [ProfileDTO] = try await fetchRestoreRows(
+            from: "profiles",
+            as: ProfileDTO.self,
+            client: client,
+            userId: user.id,
+            scopedIds: existingLocalProfileIds,
+            ownershipColumn: "id"
+        )
+        
+        let restoredProfileIds = Set(profileDTOs.map(\.id))
+        var restoreScopeProfileIds = existingLocalProfileIds
+        restoreScopeProfileIds.formUnion(restoredProfileIds)
+        
+        // Pre-fetch and map Sheets to link relationships correctly
+        let allSheets = try context.fetch(FetchDescriptor<Sheet>())
+        var sheetMapScoreId: [String: Sheet] = [:]
+        var sheetMapRecordId: [String: Sheet] = [:]
+        for sheet in allSheets {
+            for scoreId in scoreSheetIdentifiers(for: sheet) {
+                sheetMapScoreId[scoreId] = sheet
+            }
+            
+            for recordId in playRecordSheetIdentifiers(for: sheet) {
+                sheetMapRecordId[recordId] = sheet
+            }
+        }
+        
+        let recordDTOs: [PlayRecordDTO] = try await fetchRestoreRows(
+            from: "play_records",
+            as: PlayRecordDTO.self,
+            client: client,
+            userId: user.id,
+            scopedIds: restoreScopeProfileIds
+        )
+        
+        let rawScoreDTOs: [ScoreDTO] = try await fetchRestoreRows(
+            from: "scores",
+            as: ScoreDTO.self,
+            client: client,
+            userId: user.id,
+            scopedIds: restoreScopeProfileIds
+        )
+        
+        var fetchedProfileIds = restoredProfileIds
+        fetchedProfileIds.formUnion(recordDTOs.compactMap(\.profile_id))
+        fetchedProfileIds.formUnion(rawScoreDTOs.compactMap(\.profile_id))
             
         // Process profiles
-        var restoredProfileIds = Set<UUID>()
         for dto in profileDTOs {
-            restoredProfileIds.insert(dto.id)
             let id = dto.id
             let fetchDes = FetchDescriptor<UserProfile>(predicate: #Predicate { $0.id == id })
             if let existing = try context.fetch(fetchDes).first {
@@ -364,47 +569,29 @@ final class SupabaseManager {
         }
         
         // Delete existing local records and scores for the restored profiles (Complete Overwrite)
-        if !restoredProfileIds.isEmpty {
+        if !fetchedProfileIds.isEmpty {
             let allLocalRecords = try context.fetch(FetchDescriptor<PlayRecord>())
             for record in allLocalRecords {
-                if let pid = record.userProfileId, restoredProfileIds.contains(pid) {
+                if let pid = record.userProfileId, fetchedProfileIds.contains(pid) {
                     context.delete(record)
                 }
             }
             
             let allLocalScores = try context.fetch(FetchDescriptor<Score>())
             for score in allLocalScores {
-                if let pid = score.userProfileId, restoredProfileIds.contains(pid) {
+                if let pid = score.userProfileId, fetchedProfileIds.contains(pid) {
                     context.delete(score)
                 }
             }
             // Save state after clearing
             try context.save()
         }
-        
-        // Pre-fetch and map Sheets to link relationships correctly
-        let allSheets = try context.fetch(FetchDescriptor<Sheet>())
-        var sheetMapScoreId: [String: Sheet] = [:]
-        var sheetMapRecordId: [String: Sheet] = [:]
-        for sheet in allSheets {
-            let scoreId = "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)"
-            sheetMapScoreId[scoreId] = sheet
-            
-            let recordId = "\(sheet.songIdentifier)-\(sheet.type)-\(sheet.difficulty)"
-            sheetMapRecordId[recordId] = sheet
-        }
-        
-        // Fetch and Insert play_records
-        let recordDTOs: [PlayRecordDTO] = try await client.from("play_records")
-            .select()
-            .eq("user_id", value: user.id)
-            .execute()
-            .value
             
         for dto in recordDTOs {
+            let resolvedSheet = sheetMapRecordId[dto.sheet_id]
             let newRecord = PlayRecord(
                 id: dto.id,
-                sheetId: dto.sheet_id,
+                sheetId: resolvedSheet.map(canonicalRecordSheetId(for:)) ?? dto.sheet_id,
                 rate: dto.rate,
                 rank: dto.rank,
                 dxScore: dto.dx_score ?? 0,
@@ -415,7 +602,7 @@ final class SupabaseManager {
             )
             context.insert(newRecord)
             
-            if let sheet = sheetMapRecordId[dto.sheet_id] {
+            if let sheet = resolvedSheet {
                 newRecord.sheet = sheet
                 if sheet.playRecords == nil {
                     sheet.playRecords = []
@@ -424,14 +611,20 @@ final class SupabaseManager {
             }
         }
         
-        // Fetch and Insert scores
-        let scoreDTOs: [ScoreDTO] = try await client.from("scores")
-            .select()
-            .eq("user_id", value: user.id)
-            .execute()
-            .value
+        var dedupedScoreDTOs: [String: ScoreDTO] = [:]
+        for dto in rawScoreDTOs {
+            let canonicalDTO = canonicalize(dto, using: sheetMapScoreId)
+            let profileKey = canonicalDTO.profile_id?.uuidString ?? "nil"
+            let dedupeKey = "\(profileKey)|\(canonicalDTO.sheet_id)"
             
-        for dto in scoreDTOs {
+            if let existing = dedupedScoreDTOs[dedupeKey] {
+                dedupedScoreDTOs[dedupeKey] = mergedScoreDTO(existing, canonicalDTO)
+            } else {
+                dedupedScoreDTOs[dedupeKey] = canonicalDTO
+            }
+        }
+            
+        for dto in dedupedScoreDTOs.values {
             let newScore = Score(
                 sheetId: dto.sheet_id,
                 rate: dto.rate,

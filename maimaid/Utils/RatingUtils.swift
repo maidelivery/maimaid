@@ -243,9 +243,10 @@ enum RatingUtils {
     
     // MARK: - Song Category Determination
     
-    /// Determines whether a song belongs to B15 (current version only), B35 (older), or excluded.
-    /// B15 requires an EXACT version match with `latestServerVersion` — songs from versions
-    /// after the latest server version are NOT included in B15.
+    /// Determines whether a song belongs to B15 (current or newer playable version),
+    /// B35 (older), or excluded.
+    /// If a song is available in the selected server region and its version is the current
+    /// server version or any newer playable version, it counts toward B15.
     static func determineSongCategory(
         songVersion: String?,
         latestServerVersion: String?,
@@ -264,9 +265,8 @@ enum RatingUtils {
             return .b35
         }
         
-        // Only exact version match (songIndex == latestIndex) qualifies as B15.
-        // Songs from versions after the selected latest are treated as B35.
-        if songIndex == latestIndex {
+        // The current server version and any newer region-active versions count as B15.
+        if songIndex >= latestIndex {
             return .b15
         }
         

@@ -20,6 +20,11 @@
 			</array>
 		</dict>
 	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>in.shikoch.maimaid.static-data-refresh</string>
+		<string>in.shikoch.maimaid.supabase-backup</string>
+	</array>
 	<key>SUPABASE_PUBLISHABLE_KEY</key>
 	<string>$(SUPABASE_PUBLISHABLE_KEY)</string>
 	<key>SUPABASE_URL</key>
