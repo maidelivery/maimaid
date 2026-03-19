@@ -462,13 +462,13 @@ nonisolated final class MLScoreProcessor {
 }
 
 /// Bounding box debug info
-struct RecognizedBox: Sendable {
+nonisolated struct RecognizedBox: Sendable {
     let label: String
     let rect: CGRect
 }
 
 /// Data structure representing the output of the `MLScoreProcessor`.
-struct MLScoreResult: Sendable {
+nonisolated struct MLScoreResult: Sendable {
     var rate: Double?
     var difficulty: String?
     var type: String? // dx, std, utage

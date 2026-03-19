@@ -3,6 +3,7 @@ import SwiftData
 
 struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
+    @State private var didScheduleSongsPreload = false
     
     @State private var searchText = ""
     @Query private var configs: [SyncConfig]
@@ -46,6 +47,8 @@ struct MainTabView: View {
             
             // Force a data sync if regions are missing (e.g. regionCn is false for all)
             await checkAndForceDataSync()
+
+            scheduleSongsPreloadIfNeeded()
             
         }
         
@@ -200,5 +203,33 @@ struct MainTabView: View {
             }
         }
         UserDefaults.app.didForceRegionSyncMigration = true
+    }
+
+    private func scheduleSongsPreloadIfNeeded() {
+        guard !didScheduleSongsPreload else { return }
+        didScheduleSongsPreload = true
+
+        let container = modelContext.container
+        Task.detached(priority: .utility) {
+            let backgroundContext = SwiftData.ModelContext(container)
+            var descriptor = FetchDescriptor<Song>(sortBy: [SortDescriptor(\Song.sortOrder, order: .forward)])
+            descriptor.relationshipKeyPathsForPrefetching = [\Song.sheets]
+
+            do {
+                let songs = try backgroundContext.fetch(descriptor)
+                var sheetCount = 0
+
+                for song in songs {
+                    _ = song.songIdentifier
+                    _ = song.title
+                    _ = song.category
+                    sheetCount += song.sheets.count
+                }
+
+                print("MainTabView: Preloaded \(songs.count) songs and \(sheetCount) sheets for SongsView.")
+            } catch {
+                print("MainTabView: Failed to preload SongsView data: \(error)")
+            }
+        }
     }
 }

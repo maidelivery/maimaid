@@ -149,7 +149,7 @@ nonisolated final class MLChooseProcessor {
 }
 
 /// Data structure representing the output of the `MLChooseProcessor`.
-struct MLChooseResult: Sendable {
+nonisolated struct MLChooseResult: Sendable {
     var title: String?
     var titleCandidates: [String] = []
     var boxes: [RecognizedBox] = []

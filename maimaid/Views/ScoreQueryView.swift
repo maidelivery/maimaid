@@ -1,8 +1,10 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct ScoreQueryView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
     @Query private var songs: [Song]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     
@@ -11,10 +13,15 @@ struct ScoreQueryView: View {
     @State private var scoreMap: [String: Score] = [:]
     @State private var songMap: [String: Song] = [:]
     @State private var allEntries: [ScoreEntry] = []
+    @State private var allChartEntries: [ConstantTableEntry] = []
     @State private var filteredEntries: [ScoreEntry] = []
     @State private var isLoading = true
     @State private var searchText = ""
     @State private var searchTask: Task<Void, Never>?
+    @State private var selectedExportBaseLevel: Int = 14
+    @State private var constantExportMode: ConstantExportMode = .constantsOnly
+    @State private var isExporting = false
+    @State private var exportSharePayload: ExportSharePayload?
     
     // Display settings (persisted)
     @AppStorage(AppStorageKeys.scoreQueryDisplayMode) private var displayMode: DisplayMode = .grid
@@ -58,6 +65,11 @@ struct ScoreQueryView: View {
         case rating, achievement, level
     }
     
+    enum ConstantExportMode: String, CaseIterable {
+        case constantsOnly
+        case withScores
+    }
+    
     struct PlayerStats {
         var totalPlayed: Int = 0
         var sssPlus: Int = 0
@@ -87,9 +99,60 @@ struct ScoreQueryView: View {
         let dxScore: Int
     }
     
+    struct ConstantTableEntry: Identifiable, Sendable {
+        let id: String
+        let songIdentifier: String
+        let songTitle: String
+        let imageName: String
+        let difficulty: String
+        let type: String
+        let level: Double
+        let achievement: Double?
+        let rank: String?
+        let fc: String?
+        let fs: String?
+    }
+    
+    struct ConstantExportSection: Identifiable, Sendable {
+        let levelLabel: String
+        let entries: [ConstantTableEntry]
+        
+        var id: String { levelLabel }
+    }
+    
+    struct ExportSharePayload: Identifiable {
+        let id = UUID()
+        let image: UIImage
+    }
+    
     // MARK: - Computed
     
     private var activeProfile: UserProfile? { activeProfiles.first }
+    
+    private var availableExportBaseLevels: [Int] {
+        Array(Set(allChartEntries.map { exportBucketBaseLevel(for: $0.level) }))
+            .sorted(by: >)
+    }
+    
+    private var exportEntries: [ConstantTableEntry] {
+        allChartEntries
+            .filter { exportBucketBaseLevel(for: $0.level) == selectedExportBaseLevel }
+            .sorted(by: exportEntryComparator)
+    }
+    
+    private var exportSections: [ConstantExportSection] {
+        let grouped = Dictionary(grouping: exportEntries) { constantKey(for: $0.level) }
+        
+        return grouped
+            .map { levelKey, entries in
+                ConstantExportSection(levelLabel: levelKey, entries: entries.sorted(by: exportEntryComparator))
+            }
+            .sorted { lhs, rhs in
+                (Double(lhs.levelLabel) ?? 0) > (Double(rhs.levelLabel) ?? 0)
+            }
+    }
+    
+    private var exportSectionCount: Int { exportSections.count }
     
     // MARK: - Grid Zoom Helpers
     
@@ -270,6 +333,9 @@ struct ScoreQueryView: View {
         .navigationTitle("scoreQuery.title")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $searchText, prompt: "search.placeholder")
+        .sheet(item: $exportSharePayload) { payload in
+            ShareSheetView(items: [payload.image])
+        }
         .onAppear {
             liveColumnCount = CGFloat(committedColumns)
         }
@@ -334,64 +400,154 @@ struct ScoreQueryView: View {
     
     private var controlsSection: some View {
         VStack(spacing: 12) {
-            // Sort + Display Toggle
-            HStack(spacing: 12) {
-                // Sort picker
-                Menu {
-                    Picker("", selection: $sortMode) {
-                        Label("scoreQuery.sort.rating", systemImage: "star.fill").tag(SortMode.rating)
-                        Label("scoreQuery.sort.achievement", systemImage: "percent").tag(SortMode.achievement)
-                        Label("scoreQuery.sort.level", systemImage: "chart.bar.fill").tag(SortMode.level)
-                    }
-                    
-                    Divider()
-                    
-                    Button {
-                        sortAscending.toggle()
-                    } label: {
-                        Label(
-                            sortAscending ? String(localized: "sort.ascending") : String(localized: "sort.descending"),
-                            systemImage: sortAscending ? "arrow.up" : "arrow.down"
-                        )
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.up.arrow.down")
-                        Text(sortModeLabel)
-                            .font(.system(size: 13, weight: .medium))
-                        Image(systemName: sortAscending ? "arrow.up" : "arrow.down")
-                            .font(.system(size: 10, weight: .bold))
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color(.tertiarySystemGroupedBackground), in: Capsule())
-                }
-                
-                Spacer()
-                
-                // Display mode toggle
-                Picker("", selection: $displayMode) {
-                    Image(systemName: "square.grid.3x3.fill").tag(DisplayMode.grid)
-                    Image(systemName: "list.bullet").tag(DisplayMode.list)
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 100)
-            }
-            
-            // Grid-specific controls
-            if displayMode == .grid {
+            VStack(spacing: 12) {
                 HStack(spacing: 12) {
-                    // Badge mode
-                    Picker("", selection: $badgeMode) {
-                        Text("scoreQuery.badge.rank").tag(BadgeMode.rank)
-                        Text("scoreQuery.badge.fc").tag(BadgeMode.fc)
-                        Text("scoreQuery.badge.fs").tag(BadgeMode.fs)
+                    Menu {
+                        Picker("", selection: $sortMode) {
+                            Label("scoreQuery.sort.rating", systemImage: "star.fill").tag(SortMode.rating)
+                            Label("scoreQuery.sort.achievement", systemImage: "percent").tag(SortMode.achievement)
+                            Label("scoreQuery.sort.level", systemImage: "chart.bar.fill").tag(SortMode.level)
+                        }
+                        
+                        Divider()
+                        
+                        Button {
+                            sortAscending.toggle()
+                        } label: {
+                            Label(
+                                sortAscending ? String(localized: "sort.ascending") : String(localized: "sort.descending"),
+                                systemImage: sortAscending ? "arrow.up" : "arrow.down"
+                            )
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.up.arrow.down")
+                            Text(sortModeLabel)
+                                .font(.system(size: 13, weight: .medium))
+                            Image(systemName: sortAscending ? "arrow.up" : "arrow.down")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color(.tertiarySystemGroupedBackground), in: Capsule())
                     }
-                    .pickerStyle(.segmented)
-                    .frame(width: 180)
                     
                     Spacer()
+                    
+                    Picker("", selection: $displayMode) {
+                        Image(systemName: "square.grid.3x3.fill").tag(DisplayMode.grid)
+                        Image(systemName: "list.bullet").tag(DisplayMode.list)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 100)
                 }
+                
+                if displayMode == .grid {
+                    HStack(spacing: 12) {
+                        Picker("", selection: $badgeMode) {
+                            Text("scoreQuery.badge.rank").tag(BadgeMode.rank)
+                            Text("scoreQuery.badge.fc").tag(BadgeMode.fc)
+                            Text("scoreQuery.badge.fs").tag(BadgeMode.fs)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 180)
+                        
+                        Spacer()
+                    }
+                }
+            }
+            .padding(16)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+            
+            if !availableExportBaseLevels.isEmpty {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label("scoreQuery.export.title", systemImage: "square.and.arrow.up")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("scoreQuery.export.subtitle")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .trailing, spacing: 3) {
+                            Text("\(exportEntries.count)")
+                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                            Text("scoreQuery.export.charts")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    
+                    HStack(spacing: 10) {
+                        Menu {
+                            Picker("scoreQuery.export.level", selection: $selectedExportBaseLevel) {
+                                ForEach(availableExportBaseLevels, id: \.self) { value in
+                                    Text(exportBaseLevelLabel(for: value)).tag(value)
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "chart.bar.doc.horizontal")
+                                Text(exportBaseLevelLabel(for: selectedExportBaseLevel))
+                                    .font(.system(size: 13, weight: .semibold))
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color(.tertiarySystemGroupedBackground), in: Capsule())
+                        }
+                        
+                        Text("\(exportSectionCount) \(String(localized: "scoreQuery.export.sections"))")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                        
+                        Spacer()
+                    }
+                    
+                    Picker("", selection: $constantExportMode) {
+                        Text("scoreQuery.export.mode.constants").tag(ConstantExportMode.constantsOnly)
+                        Text("scoreQuery.export.mode.scores").tag(ConstantExportMode.withScores)
+                    }
+                    .pickerStyle(.segmented)
+                    
+                    HStack(spacing: 8) {
+                        if constantExportMode == .withScores, let activeProfile {
+                            Label(activeProfile.name, systemImage: "person.crop.circle")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
+                        
+                        Label("scoreQuery.export.regularOnly", systemImage: "music.note")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                        
+                        Spacer()
+                    }
+                    
+                    Button {
+                        exportConstantTable()
+                    } label: {
+                        HStack(spacing: 8) {
+                            if isExporting {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Image(systemName: "photo.on.rectangle.angled")
+                            }
+                            
+                            Text(isExporting ? "scoreQuery.export.exporting" : "scoreQuery.export.button")
+                                .font(.system(size: 15, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(exportEntries.isEmpty || isExporting)
+                }
+                .padding(16)
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
             }
         }
     }
@@ -696,6 +852,7 @@ struct ScoreQueryView: View {
         
         var sMap: [String: Song] = [:]
         var rootEntries: [ScoreEntry] = []
+        var chartEntries: [ConstantTableEntry] = []
         
         for song in songs {
             sMap[song.songIdentifier] = song
@@ -705,15 +862,32 @@ struct ScoreQueryView: View {
             for sheet in song.sheets {
                 if sheet.type.lowercased().contains("utage") { continue }
                 
-                let sheetId = "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)"
-                guard let score = map[sheetId], score.rate > 0 else { continue }
+                let level = sheet.internalLevelValue ?? sheet.levelValue ?? 0
+                guard level > 0 else { continue }
+                
+                let score = scoreForSheet(sheet, in: map)
+                
+                chartEntries.append(ConstantTableEntry(
+                    id: "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)",
+                    songIdentifier: song.songIdentifier,
+                    songTitle: song.title,
+                    imageName: song.imageName,
+                    difficulty: sheet.difficulty,
+                    type: sheet.type,
+                    level: level,
+                    achievement: score?.rate,
+                    rank: score.map { RatingUtils.calculateRank(achievement: $0.rate) },
+                    fc: score?.fc,
+                    fs: score?.fs
+                ))
+                
+                guard let score, score.rate > 0 else { continue }
                 
                 let rank = RatingUtils.calculateRank(achievement: score.rate)
-                let level = sheet.internalLevelValue ?? sheet.levelValue ?? 0
                 let rating = RatingUtils.calculateRating(internalLevel: level, achievement: score.rate)
                 
                 rootEntries.append(ScoreEntry(
-                    id: sheetId,
+                    id: "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)",
                     songId: song.songId,
                     songIdentifier: song.songIdentifier,
                     songTitle: song.title,
@@ -735,6 +909,11 @@ struct ScoreQueryView: View {
         
         self.songMap = sMap
         self.allEntries = rootEntries
+        self.allChartEntries = chartEntries
+        
+        if let firstExportLevel = availableExportBaseLevels.first, !availableExportBaseLevels.contains(selectedExportBaseLevel) {
+            selectedExportBaseLevel = firstExportLevel
+        }
         
         computeStats(from: map)
         applyFiltersAndSort()
@@ -851,6 +1030,379 @@ struct ScoreQueryView: View {
         
         withAnimation(.easeInOut(duration: 0.2)) {
             filteredEntries = entries
+        }
+    }
+    
+    private func scoreForSheet(_ sheet: Sheet, in map: [String: Score]) -> Score? {
+        for candidate in candidateSheetIds(for: sheet) {
+            if let score = map[candidate] {
+                return score
+            }
+        }
+        return nil
+    }
+    
+    private func candidateSheetIds(for sheet: Sheet) -> [String] {
+        let rawIdentifiers: [String?] = [
+            sheet.songIdentifier,
+            sheet.song.map { String($0.songId) },
+            sheet.song?.songIdentifier,
+            sheet.songId == 0 ? nil : String(sheet.songId)
+        ]
+        
+        var candidates: [String] = []
+        var seen = Set<String>()
+        
+        for raw in rawIdentifiers {
+            guard let raw, !raw.isEmpty, raw != "0" else { continue }
+            
+            for separator in ["_", "-"] {
+                let sheetId = "\(raw)\(separator)\(sheet.type)\(separator)\(sheet.difficulty)"
+                if seen.insert(sheetId).inserted {
+                    candidates.append(sheetId)
+                }
+            }
+        }
+        
+        return candidates
+    }
+    
+    private func constantKey(for level: Double) -> String {
+        let normalized = (level * 10).rounded(.towardZero) / 10
+        return String(format: "%.1f", normalized)
+    }
+    
+    private func exportBucketBaseLevel(for level: Double) -> Int {
+        level >= 15 ? 14 : Int(level.rounded(.down))
+    }
+    
+    private func exportBaseLevelLabel(for level: Int) -> String {
+        level == 14 ? "14~15" : "\(level)"
+    }
+    
+    private func exportEntryComparator(_ lhs: ConstantTableEntry, _ rhs: ConstantTableEntry) -> Bool {
+        if lhs.songTitle != rhs.songTitle {
+            return lhs.songTitle.localizedStandardCompare(rhs.songTitle) == .orderedAscending
+        }
+        
+        let lhsDiff = ThemeUtils.difficultyOrder(lhs.difficulty)
+        let rhsDiff = ThemeUtils.difficultyOrder(rhs.difficulty)
+        if lhsDiff != rhsDiff {
+            return lhsDiff > rhsDiff
+        }
+        
+        if lhs.type != rhs.type {
+            return lhs.type.localizedCaseInsensitiveCompare(rhs.type) == .orderedAscending
+        }
+        
+        return lhs.id < rhs.id
+    }
+    
+    private func exportConstantTable() {
+        guard !exportSections.isEmpty else { return }
+        isExporting = true
+        
+        Task {
+            let image = await MainActor.run {
+                ScoreConstantExportView.renderImage(
+                    baseLevel: selectedExportBaseLevel,
+                    sections: exportSections,
+                    mode: constantExportMode,
+                    userName: activeProfile?.name,
+                    colorScheme: colorScheme
+                )
+            }
+            
+            await MainActor.run {
+                isExporting = false
+                if let image {
+                    exportSharePayload = ExportSharePayload(image: image)
+                }
+            }
+        }
+    }
+}
+
+private struct ScoreConstantExportView: View {
+    let baseLevel: Int
+    let sections: [ScoreQueryView.ConstantExportSection]
+    let mode: ScoreQueryView.ConstantExportMode
+    let userName: String?
+    
+    @Environment(\.colorScheme) private var colorScheme
+
+    private let canvasWidth: CGFloat = 1440
+    private let horizontalPadding: CGFloat = 28
+    private let labelWidth: CGFloat = 72
+    
+    private var chartWidth: CGFloat { mode == .withScores ? 58 : 52 }
+    private var jacketSize: CGFloat { mode == .withScores ? 58 : 52 }
+    private var chartSpacing: CGFloat { mode == .withScores ? 8 : 6 }
+    private var maxColumns: Int {
+        let usableWidth = canvasWidth - horizontalPadding * 2 - labelWidth - 20
+        return max(Int((usableWidth + chartSpacing) / (chartWidth + chartSpacing)), 1)
+    }
+    
+    private var bgColor: Color { colorScheme == .dark ? Color(hex: "#111216") : Color(hex: "#FFF5FB") }
+    private var bgSecondary: Color { colorScheme == .dark ? Color(hex: "#171922") : Color(hex: "#FAEEFF") }
+    private var bgTertiary: Color { colorScheme == .dark ? Color(hex: "#20172B") : Color(hex: "#F8F0FF") }
+    private var primaryColor: Color { colorScheme == .dark ? .white : Color(hex: "#8A245C") }
+    private var secondaryColor: Color { colorScheme == .dark ? Color.white.opacity(0.66) : Color.black.opacity(0.58) }
+    private var sectionFillA: Color { colorScheme == .dark ? Color.white.opacity(0.06) : Color.white.opacity(0.24) }
+    private var sectionFillB: Color { colorScheme == .dark ? Color.white.opacity(0.03) : Color.white.opacity(0.14) }
+    private var dividerColor: Color { colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.85) }
+    private var overlayTextColor: Color { colorScheme == .dark ? .white : .white }
+    private var overlaySubtextColor: Color { colorScheme == .dark ? Color.white.opacity(0.9) : Color.white.opacity(0.92) }
+    
+    private var totalCharts: Int {
+        sections.reduce(0) { $0 + $1.entries.count }
+    }
+    
+    private var backgroundGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                bgColor,
+                bgSecondary,
+                bgTertiary
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+    
+    var body: some View {
+        ZStack {
+            backgroundGradient
+            
+            VStack(alignment: .leading, spacing: 20) {
+                headerSection
+                
+                ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                    sectionView(section, index: index)
+                }
+                
+                footerSection
+            }
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, 24)
+        }
+        .frame(width: canvasWidth)
+    }
+    
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(
+                        String(
+                            format: String(
+                                localized: mode == .constantsOnly
+                                    ? "scoreQuery.export.imageTitle.constants"
+                                    : "scoreQuery.export.imageTitle.scores"
+                            ),
+                            displayBaseLevel
+                        )
+                    )
+                        .font(.system(size: 36, weight: .black, design: .rounded))
+                        .foregroundStyle(primaryColor)
+                    Text(
+                        String(
+                            format: String(localized: "scoreQuery.export.imageSummary"),
+                            sections.count,
+                            totalCharts
+                        )
+                    )
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(secondaryColor)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 8) {
+                    if let userName, mode == .withScores {
+                        exportPill(text: userName, icon: "person.crop.circle.fill", tint: Color(hex: "#8E3DFF"))
+                    }
+                }
+            }
+            
+            Divider()
+                .overlay(dividerColor)
+        }
+    }
+    
+    private var displayBaseLevel: String {
+        baseLevel == 14 ? "14~15" : "\(baseLevel)"
+    }
+    
+    private func sectionView(_ section: ScoreQueryView.ConstantExportSection, index: Int) -> some View {
+        HStack(alignment: .top, spacing: 16) {
+            Text(section.levelLabel)
+                .font(.system(size: 32, weight: .black, design: .rounded))
+                .foregroundStyle(levelColor(for: section.levelLabel, index: index))
+                .frame(width: labelWidth, alignment: .leading)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            
+            VStack(alignment: .leading, spacing: chartSpacing) {
+                ForEach(Array(section.entries.chunked(into: maxColumns).enumerated()), id: \.offset) { _, row in
+                    HStack(spacing: chartSpacing) {
+                        ForEach(row) { entry in
+                            exportChartCell(entry)
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(index.isMultiple(of: 2) ? sectionFillA : sectionFillB)
+        )
+    }
+    
+    private func exportChartCell(_ entry: ScoreQueryView.ConstantTableEntry) -> some View {
+        let borderColor = ThemeUtils.colorForDifficulty(entry.difficulty, entry.type)
+        
+        return ZStack(alignment: .bottomLeading) {
+            ZStack(alignment: .topTrailing) {
+                SongJacketView(
+                    imageName: entry.imageName,
+                    size: jacketSize,
+                    cornerRadius: 8,
+                    useThumbnail: true
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(borderColor, lineWidth: 2)
+                )
+            }
+            
+            if mode == .withScores {
+                VStack(spacing: 2) {
+                    overlayLine(
+                        text: entry.fc.map(ThemeUtils.normalizeFC),
+                        color: entry.fc.map(ThemeUtils.fcColor)
+                    )
+                    overlayLine(
+                        text: entry.fs.map(ThemeUtils.normalizeFS),
+                        color: entry.fs.map(ThemeUtils.fsColor)
+                    )
+                    overlayLine(
+                        text: entry.rank,
+                        color: entry.rank.map(RatingUtils.colorForRank)
+                    )
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(4)
+                .frame(width: chartWidth, height: jacketSize * 0.6, alignment: .bottomLeading)
+                .background(
+                    LinearGradient(
+                        colors: [
+                            Color.clear,
+                            Color.black.opacity(colorScheme == .dark ? 0.18 : 0.10),
+                            Color.black.opacity(colorScheme == .dark ? 0.86 : 0.78)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    in: RoundedRectangle(cornerRadius: 8)
+                )
+            }
+        }
+        .frame(width: chartWidth, height: jacketSize, alignment: .bottomLeading)
+    }
+    
+    private func exportPill(text: String, icon: String, tint: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+            Text(text)
+                .lineLimit(1)
+        }
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundStyle(tint)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(tint.opacity(0.12), in: Capsule())
+    }
+    
+    private var footerSection: some View {
+        HStack {
+            Text(String(localized: "scoreQuery.export.watermark"))
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(secondaryColor)
+            Spacer()
+        }
+        .padding(.top, 4)
+    }
+    
+    @ViewBuilder
+    private func overlayLine(text: String?, color: Color?) -> some View {
+        if let text, !text.isEmpty, let color {
+            Text(text)
+                .font(.system(size: 10, weight: .black, design: .rounded))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 1.5)
+                .background(color.opacity(colorScheme == .dark ? 0.7 : 0.64), in: RoundedRectangle(cornerRadius: 4))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        } else {
+            Color.clear
+                .frame(height: 0)
+        }
+    }
+    
+    private func levelColor(for label: String, index: Int) -> Color {
+        let tenths = Int(((Double(label) ?? 0) * 10).rounded()) % 10
+        
+        switch tenths {
+        case 0, 5:
+            return Color(hex: "#D34A63")
+        case 1, 6:
+            return Color(hex: "#4D78FF")
+        case 2, 7:
+            return Color(hex: "#3F9B74")
+        case 3, 8:
+            return Color(hex: "#B45BFF")
+        default:
+            return index.isMultiple(of: 2) ? Color(hex: "#C84A7B") : Color(hex: "#5489FF")
+        }
+    }
+}
+
+private extension ScoreConstantExportView {
+    @MainActor
+    static func renderImage(
+        baseLevel: Int,
+        sections: [ScoreQueryView.ConstantExportSection],
+        mode: ScoreQueryView.ConstantExportMode,
+        userName: String?,
+        colorScheme: ColorScheme
+    ) -> UIImage? {
+        let view = ScoreConstantExportView(
+            baseLevel: baseLevel,
+            sections: sections,
+            mode: mode,
+            userName: userName
+        )
+        .environment(\.colorScheme, colorScheme)
+        .preferredColorScheme(colorScheme)
+        
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 2
+        
+        return renderer.uiImage
+    }
+}
+
+private extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        guard size > 0 else { return [] }
+        
+        return stride(from: 0, to: count, by: size).map { index in
+            Array(self[index..<Swift.min(index + size, count)])
         }
     }
 }

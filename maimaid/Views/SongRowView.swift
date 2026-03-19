@@ -14,8 +14,18 @@ struct SongRowView: View {
     }
     
     private var accentColor: Color {
-        guard let sheet = highestSheet else { return .pink }
+        guard let sheet = highestSheet else { return Color(light: Color(hex: "#ec48e9"), dark: Color(hex: "#bb38b9")) }
         return ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
+    }
+    
+    private var versionBadgeColor: Color {
+        if song.sheets.contains(where: { $0.type.lowercased() == "utage" }) ||
+            song.category.lowercased().contains("utage") ||
+            song.category.contains("宴") {
+            return Color(light: Color(hex: "#ec48e9"), dark: Color(hex: "#bb38b9"))
+        }
+        
+        return song.sheets.contains(where: { $0.type.lowercased() == "dx" }) ? .orange : .blue
     }
     
     var body: some View {
@@ -52,7 +62,7 @@ struct SongRowView: View {
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
                             .background(
-                                song.sheets.contains(where: { $0.type.lowercased() == "dx" }) ? Color.orange : Color.blue,
+                                versionBadgeColor,
                                 in: RoundedRectangle(cornerRadius: 4)
                             )
                     }

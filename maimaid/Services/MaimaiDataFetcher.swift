@@ -163,7 +163,7 @@ class MaimaiDataFetcher {
         self.log(message)
     }
     
-    struct SyncOptions: Sendable {
+    nonisolated struct SyncOptions: Sendable {
         var updateRemoteData = true
         var updateAliases = true
         var updateCovers = true

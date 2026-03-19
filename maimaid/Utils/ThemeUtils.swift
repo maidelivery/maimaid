@@ -151,7 +151,7 @@ struct ThemeUtils {
             return Color(light: Color(hex: "#ec48e9"), dark: Color(hex: "#bb38b9"))
         }
         
-        return .pink
+        return Color.pink.opacity(0.5)
     }
     
     struct AppVersion: Decodable {
