@@ -32,6 +32,11 @@ struct maimaidApp: App {
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                .onOpenURL { url in
+                    Task {
+                        await SupabaseManager.shared.handleAuthRedirect(url)
+                    }
+                }
         }
         .modelContainer(sharedModelContainer)
         .backgroundTask(.appRefresh(StaticDataAutoUpdate.taskIdentifier)) {

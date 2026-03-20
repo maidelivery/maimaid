@@ -90,10 +90,15 @@ extension Data {
 @Observable
 final class SupabaseManager {
     static let shared = SupabaseManager()
+    static let authRedirectURL = URL(string: "maimaid://auth/callback")
+    static let recoveryRedirectURL = URL(string: "maimaid://auth/callback?flow=recovery")
     
     let client: SupabaseClient?
     
     var currentUser: User?
+    var isPasswordRecoveryFlow = false
+    var pendingAuthMessage: String?
+    var pendingAuthMessageIsError = false
 
     var isConfigured: Bool {
         client != nil
@@ -114,7 +119,10 @@ final class SupabaseManager {
                 supabaseURL: projectURL,
                 supabaseKey: publishableKey,
                 options: SupabaseClientOptions(
-                    auth: SupabaseClientOptions.AuthOptions(emitLocalSessionAsInitialSession: true)
+                    auth: SupabaseClientOptions.AuthOptions(
+                        redirectToURL: Self.authRedirectURL,
+                        emitLocalSessionAsInitialSession: true
+                    )
                 )
             )
         } else {
@@ -146,6 +154,82 @@ final class SupabaseManager {
                 self.currentUser = nil
             }
         }
+    }
+
+    func handleAuthRedirect(_ url: URL) async {
+        guard let client else { return }
+        guard isAppAuthCallbackURL(url) else { return }
+
+        do {
+            let callbackType = authCallbackType(from: url)
+            let callbackFlow = authCallbackFlow(from: url)
+            _ = try await client.auth.session(from: url)
+            await checkSession()
+
+            await MainActor.run {
+                let isRecoveryFlow = callbackType == "recovery" || callbackFlow == "recovery"
+                self.isPasswordRecoveryFlow = isRecoveryFlow
+                self.pendingAuthMessage = isRecoveryFlow
+                    ? "settings.cloud.message.recoveryLinkOpened"
+                    : "settings.cloud.message.authLinkSuccess"
+                self.pendingAuthMessageIsError = false
+            }
+        } catch {
+            await MainActor.run {
+                self.pendingAuthMessage = error.localizedDescription
+                self.pendingAuthMessageIsError = true
+            }
+        }
+    }
+
+    func clearPendingAuthMessage() {
+        pendingAuthMessage = nil
+        pendingAuthMessageIsError = false
+    }
+
+    func clearPasswordRecoveryFlow() {
+        isPasswordRecoveryFlow = false
+    }
+
+    private func isAppAuthCallbackURL(_ url: URL) -> Bool {
+        guard let redirect = Self.authRedirectURL else { return false }
+        guard
+            let redirectComponents = URLComponents(url: redirect, resolvingAgainstBaseURL: false),
+            let incomingComponents = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        else {
+            return false
+        }
+
+        return incomingComponents.scheme == redirectComponents.scheme
+            && incomingComponents.host == redirectComponents.host
+            && incomingComponents.path == redirectComponents.path
+    }
+
+    private func authCallbackType(from url: URL) -> String? {
+        value(of: "type", from: url)
+    }
+
+    private func authCallbackFlow(from url: URL) -> String? {
+        value(of: "flow", from: url)
+    }
+
+    private func value(of name: String, from url: URL) -> String? {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return nil
+        }
+
+        if let value = components.queryItems?.first(where: { $0.name == name })?.value {
+            return value
+        }
+
+        guard let fragment = components.fragment else {
+            return nil
+        }
+
+        return URLComponents(string: "?\(fragment)")?
+            .queryItems?
+            .first(where: { $0.name == name })?
+            .value
     }
     
     

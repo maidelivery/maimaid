@@ -1,6 +1,7 @@
 import SwiftUI
 import Supabase
 import SwiftData
+import Combine
 
 struct SupabaseAuthView: View {
     @Environment(\.modelContext) private var modelContext
@@ -9,20 +10,39 @@ struct SupabaseAuthView: View {
     @State private var supabaseManager = SupabaseManager.shared
     @State private var email = ""
     @State private var password = ""
+    @State private var recoveryPassword = ""
+    @State private var recoveryPasswordConfirm = ""
     @State private var isLoading = false
+    @State private var isSendingPasswordReset = false
+    @State private var isSendingVerification = false
+    @State private var isUpdatingRecoveryPassword = false
     @State private var isSyncing = false
     @State private var toastMessage: String? = nil
     @State private var isError = false
     @State private var isSignUpMode = false
+    @State private var now = Date()
+    @State private var lastAuthEmailSentAt = UserDefaults.app.object(forKey: "supabase.auth.email.lastSentAt") as? Date
     @FocusState private var focusedField: Field?
 
     private enum Field {
         case email
         case password
+        case recoveryPassword
+        case recoveryPasswordConfirm
     }
 
     private var isBusy: Bool {
-        isLoading || isSyncing
+        isLoading || isSendingPasswordReset || isSendingVerification || isUpdatingRecoveryPassword || isSyncing
+    }
+
+    private var isEmailRateLimited: Bool {
+        emailCooldownRemainingSeconds > 0
+    }
+
+    private var emailCooldownRemainingSeconds: Int {
+        guard let lastAuthEmailSentAt else { return 0 }
+        let remaining = Int(ceil(lastAuthEmailSentAt.addingTimeInterval(60).timeIntervalSince(now)))
+        return max(0, remaining)
     }
     
     private var config: SyncConfig? { configs.first }
@@ -35,6 +55,8 @@ struct SupabaseAuthView: View {
             List {
                 if !supabaseManager.isConfigured {
                     configurationContent
+                } else if supabaseManager.isPasswordRecoveryFlow {
+                    passwordRecoveryContent
                 } else if supabaseManager.isAuthenticated, let user = supabaseManager.currentUser {
                     authenticatedContent(user: user)
                 } else {
@@ -56,6 +78,15 @@ struct SupabaseAuthView: View {
         .animation(.easeInOut(duration: 0.2), value: isSignUpMode)
         .navigationTitle("settings.cloud.title")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            consumePendingAuthMessageIfNeeded()
+        }
+        .onChange(of: supabaseManager.pendingAuthMessage) { _, _ in
+            consumePendingAuthMessageIfNeeded()
+        }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { tick in
+            now = tick
+        }
     }
 
     // MARK: - Toast helper
@@ -197,6 +228,87 @@ struct SupabaseAuthView: View {
     // MARK: - Authentication View
 
     @ViewBuilder
+    private var passwordRecoveryContent: some View {
+        Section {
+            accountSummaryCard(
+                icon: "key.fill",
+                title: String(localized: "settings.cloud.recovery.title"),
+                subtitle: String(localized: "settings.cloud.recovery.subtitle")
+            )
+        }
+        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+        .listRowBackground(Color.clear)
+        .listSectionSeparator(.hidden)
+
+        Section("settings.cloud.recovery.section") {
+            HStack(spacing: 12) {
+                settingsIcon(icon: "lock.fill", color: .gray)
+
+                SecureField("settings.cloud.recovery.newPassword", text: $recoveryPassword)
+                    .textContentType(.newPassword)
+                    .focused($focusedField, equals: .recoveryPassword)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.next)
+                    .onSubmit {
+                        focusedField = .recoveryPasswordConfirm
+                    }
+            }
+            .padding(.vertical, 2)
+
+            HStack(spacing: 12) {
+                settingsIcon(icon: "lock.rotation", color: .gray)
+
+                SecureField("settings.cloud.recovery.confirmPassword", text: $recoveryPasswordConfirm)
+                    .textContentType(.newPassword)
+                    .focused($focusedField, equals: .recoveryPasswordConfirm)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.go)
+                    .onSubmit {
+                        focusedField = nil
+                        Task { await completePasswordRecovery() }
+                    }
+            }
+            .padding(.vertical, 2)
+        }
+
+        Section {
+            Button {
+                focusedField = nil
+                Task { await completePasswordRecovery() }
+            } label: {
+                HStack {
+                    Spacer()
+                    if isUpdatingRecoveryPassword {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Text("settings.cloud.recovery.updateButton")
+                            .fontWeight(.semibold)
+                    }
+                    Spacer()
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(recoveryPassword.isEmpty || recoveryPasswordConfirm.isEmpty || isBusy)
+            .listRowBackground(Color.clear)
+        }
+        .listSectionSeparator(.hidden)
+
+        Section {
+            Button("settings.cloud.recovery.cancel", role: .cancel) {
+                focusedField = nil
+                recoveryPassword = ""
+                recoveryPasswordConfirm = ""
+                supabaseManager.clearPasswordRecoveryFlow()
+            }
+            .disabled(isBusy)
+        }
+    }
+
+    @ViewBuilder
     private var configurationContent: some View {
         Section {
             accountSummaryCard(
@@ -288,10 +400,52 @@ struct SupabaseAuthView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(email.isEmpty || password.isEmpty || isBusy)
+            .disabled(email.isEmpty || password.isEmpty || isBusy || (isSignUpMode && isEmailRateLimited))
             .listRowBackground(Color.clear)
         }
+
+        Section {
+            if isSignUpMode {
+                Button {
+                    focusedField = nil
+                    Task { await resendVerificationEmail() }
+                } label: {
+                    HStack {
+                        Text("settings.cloud.resendVerification")
+                        Spacer()
+                        if isSendingVerification {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                    }
+                }
+                .disabled(email.isEmpty || isBusy)
+            } else {
+                Button {
+                    focusedField = nil
+                    Task { await sendPasswordResetEmail() }
+                } label: {
+                    HStack {
+                        Text("settings.cloud.forgotPassword")
+                        Spacer()
+                        if isSendingPasswordReset {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                    }
+                }
+                .disabled(email.isEmpty || isBusy)
+            }
+        }
         .listSectionSeparator(.hidden)
+
+        if isEmailRateLimited {
+            Section {
+                Text("settings.cloud.message.emailRateLimited")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 
     private func credentialField(
@@ -407,6 +561,28 @@ struct SupabaseAuthView: View {
         return lastBackup.formatted(date: .numeric, time: .shortened)
     }
 
+    private func consumePendingAuthMessageIfNeeded() {
+        guard let message = supabaseManager.pendingAuthMessage else { return }
+        let shouldShowError = supabaseManager.pendingAuthMessageIsError
+        supabaseManager.clearPendingAuthMessage()
+        showToast(message: message, error: shouldShowError)
+    }
+
+    private func canSendAuthEmailNow() -> Bool {
+        guard !isEmailRateLimited else {
+            showToast(message: "settings.cloud.message.emailRateLimited", error: true)
+            return false
+        }
+        return true
+    }
+
+    private func markAuthEmailSentNow() {
+        let sentAt = Date()
+        lastAuthEmailSentAt = sentAt
+        now = sentAt
+        UserDefaults.app.set(sentAt, forKey: "supabase.auth.email.lastSentAt")
+    }
+
     func signIn() async {
         guard !email.isEmpty, !password.isEmpty else { return }
         guard let client = supabaseManager.client else {
@@ -428,6 +604,7 @@ struct SupabaseAuthView: View {
 
     func signUp() async {
         guard !email.isEmpty, !password.isEmpty else { return }
+        guard canSendAuthEmailNow() else { return }
         guard let client = supabaseManager.client else {
             showToast(message: supabaseManager.configurationErrorDescription ?? String(localized: "settings.cloud.config.error.unconfigured"), error: true)
             return
@@ -435,12 +612,95 @@ struct SupabaseAuthView: View {
 
         isLoading = true
         do {
-            let _ = try await client.auth.signUp(email: email, password: password)
-            showToast(message: "settings.cloud.message.signupSuccess")
+            let response = try await client.auth.signUp(
+                email: email,
+                password: password,
+                redirectTo: SupabaseManager.authRedirectURL
+            )
+            if response.session != nil {
+                showToast(message: "settings.cloud.message.signupSuccess")
+                await supabaseManager.checkSession()
+                await SupabaseAutoBackup.scheduleNextBackup(container: modelContext.container)
+            } else {
+                showToast(message: "settings.cloud.message.signupVerificationSent")
+                markAuthEmailSentNow()
+                password = ""
+                isSignUpMode = false
+            }
         } catch {
             showToast(message: error.localizedDescription, error: true)
         }
         isLoading = false
+    }
+
+    func resendVerificationEmail() async {
+        guard !email.isEmpty else { return }
+        guard canSendAuthEmailNow() else { return }
+        guard let client = supabaseManager.client else {
+            showToast(message: supabaseManager.configurationErrorDescription ?? String(localized: "settings.cloud.config.error.unconfigured"), error: true)
+            return
+        }
+
+        isSendingVerification = true
+        do {
+            try await client.auth.resend(
+                email: email,
+                type: .signup,
+                emailRedirectTo: SupabaseManager.authRedirectURL
+            )
+            markAuthEmailSentNow()
+            showToast(message: "settings.cloud.message.verificationEmailResent")
+        } catch {
+            showToast(message: error.localizedDescription, error: true)
+        }
+        isSendingVerification = false
+    }
+
+    func sendPasswordResetEmail() async {
+        guard !email.isEmpty else { return }
+        guard canSendAuthEmailNow() else { return }
+        guard let client = supabaseManager.client else {
+            showToast(message: supabaseManager.configurationErrorDescription ?? String(localized: "settings.cloud.config.error.unconfigured"), error: true)
+            return
+        }
+
+        isSendingPasswordReset = true
+        do {
+            try await client.auth.resetPasswordForEmail(
+                email,
+                redirectTo: SupabaseManager.recoveryRedirectURL
+            )
+            markAuthEmailSentNow()
+            showToast(message: "settings.cloud.message.resetEmailSent")
+        } catch {
+            showToast(message: error.localizedDescription, error: true)
+        }
+        isSendingPasswordReset = false
+    }
+
+    func completePasswordRecovery() async {
+        guard !recoveryPassword.isEmpty, !recoveryPasswordConfirm.isEmpty else { return }
+        guard recoveryPassword == recoveryPasswordConfirm else {
+            showToast(message: "settings.cloud.message.passwordMismatch", error: true)
+            return
+        }
+        guard let client = supabaseManager.client else {
+            showToast(message: supabaseManager.configurationErrorDescription ?? String(localized: "settings.cloud.config.error.unconfigured"), error: true)
+            return
+        }
+
+        isUpdatingRecoveryPassword = true
+        do {
+            _ = try await client.auth.update(user: UserAttributes(password: recoveryPassword))
+            showToast(message: "settings.cloud.message.passwordUpdated")
+            recoveryPassword = ""
+            recoveryPasswordConfirm = ""
+            supabaseManager.clearPasswordRecoveryFlow()
+            await supabaseManager.checkSession()
+        } catch {
+            showToast(message: error.localizedDescription, error: true)
+        }
+        isUpdatingRecoveryPassword = false
     }
 
     func logout() async {
@@ -454,6 +714,7 @@ struct SupabaseAuthView: View {
         }
         isLoading = false
         await supabaseManager.checkSession()
+        supabaseManager.clearPasswordRecoveryFlow()
         SupabaseAutoBackup.cancelScheduledBackup()
     }
 
