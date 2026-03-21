@@ -42,9 +42,11 @@ struct SongDetailContent: View {
     @Binding var selectedType: String
     @Binding var selectedSheet: Sheet?
     @Binding var toastMessage: String?
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     @State private var statsService = ChartStatsService.shared
+    @State private var extractedDominantUIColor: UIColor? = nil
     
     private var filteredSheets: [Sheet] {
         song.sheets
@@ -123,7 +125,8 @@ struct SongDetailContent: View {
                     .zIndex(100)
             }
         }
-        .task {
+        .task(id: song.imageName) {
+            updateJacketDominantColor()
             await statsService.fetchStats()
         }
     }
@@ -188,18 +191,53 @@ struct SongDetailContent: View {
     // MARK: - Ambient Background
     
     private var ambientBackground: some View {
-        ZStack {
-            Color(.systemBackground)
-            
-            GeometryReader { geo in
-                SongJacketView(imageName: song.imageName, size: geo.size.width, cornerRadius: 0)
-                    .blur(radius: 80)
-                    .opacity(0.4)
-                    .allowsHitTesting(false)
-            }
+        Color(adjustedBackgroundUIColor(for: colorScheme))
             .ignoresSafeArea()
+    }
+    
+    private func updateJacketDominantColor() {
+        guard
+            let image = getJacketImage(),
+            let cgImage = image.cgImage,
+            let dominantUIColor = cgImage.averageColor()
+        else {
+            extractedDominantUIColor = nil
+            return
         }
-        .ignoresSafeArea()
+        extractedDominantUIColor = dominantUIColor
+    }
+    
+    private func adjustedBackgroundUIColor(for scheme: ColorScheme) -> UIColor {
+        let sourceColor = extractedDominantUIColor ?? UIColor.systemBackground
+        
+        var hue: CGFloat = 0
+        var saturation: CGFloat = 0
+        var brightness: CGFloat = 0
+        var alpha: CGFloat = 0
+        
+        if sourceColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) {
+            if scheme == .dark {
+                // Keep song hue, but generate a controlled dark variant for readability.
+                let darkSaturation = min(max(saturation * 0.75, 0.20), 0.45)
+                let darkBrightness = min(max(brightness * 0.35, 0.12), 0.28)
+                return UIColor(hue: hue, saturation: darkSaturation, brightness: darkBrightness, alpha: 1.0)
+            } else {
+                // Keep song hue, but generate a controlled light variant for readability.
+                let lightSaturation = min(max(saturation * 0.45, 0.08), 0.30)
+                let lightBrightness = min(max(0.88 + (brightness - 0.5) * 0.08, 0.84), 0.94)
+                return UIColor(hue: hue, saturation: lightSaturation, brightness: lightBrightness, alpha: 1.0)
+            }
+        }
+        
+        var white: CGFloat = 0
+        if sourceColor.getWhite(&white, alpha: &alpha) {
+            let adjusted = scheme == .dark
+                ? min(max(white * 0.25, 0.10), 0.24)
+                : min(max(0.86 + (white - 0.5) * 0.08, 0.82), 0.94)
+            return UIColor(white: adjusted, alpha: 1.0)
+        }
+        
+        return scheme == .dark ? UIColor.black : UIColor.systemBackground
     }
     
     // MARK: - Hero Section
@@ -292,6 +330,7 @@ struct SongDetailContent: View {
                 pillsContent(isGrid: false)
             }
             
+            
             // Priority 2: Two per row
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                 pillsContent(isGrid: true)
@@ -356,6 +395,10 @@ struct SongDetailContent: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(.ultraThinMaterial, in: Capsule())
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+        )
     }
     
     // MARK: - Availability Section
@@ -625,6 +668,7 @@ struct SheetCardView: View {
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(diffColor.opacity(0.15), lineWidth: 1)
         )
+        
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isExpanded)
         .alert("song.detail.history.delete.title", isPresented: $showingDeleteConfirm) {
             Button("song.detail.history.delete.confirm", role: .destructive) {
