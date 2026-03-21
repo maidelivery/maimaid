@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import SwiftData
 import UIKit
 import Yams
@@ -72,6 +73,7 @@ struct RemoteSong: Decodable {
 struct RemoteSheet: Decodable {
     let type: String
     let difficulty: String
+    let version: String?
     let level: String
     let levelValue: Double?
     let internalLevel: String?
@@ -96,10 +98,20 @@ struct RemoteNoteCounts: Decodable {
     }
 }
 
+struct UtageChartStatsItem: Decodable {
+    let id: Int
+    let title: String
+    let notes: Int
+}
+
 @Observable
 @MainActor
 class MaimaiDataFetcher {
     static let shared = MaimaiDataFetcher()
+    private let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "maimaid",
+        category: "MaimaiDataFetcher"
+    )
     
     nonisolated private init() {}
     
@@ -113,6 +125,7 @@ class MaimaiDataFetcher {
         case downloadingIcons = "data.sync.stage.downloadingIcons"
         case fetchingDanData = "data.sync.stage.fetchingDanData"
         case fetchingChartStats = "data.sync.stage.fetchingChartStats"
+        case fetchingUtageChartStats = "data.sync.stage.fetchingUtageChartStats"
         case saving = "data.sync.stage.saving"
         case completed = "data.sync.stage.completed"
         case failed = "data.sync.stage.failed"
@@ -126,7 +139,7 @@ class MaimaiDataFetcher {
     var estimatedTimeRemaining: TimeInterval? = nil
     
     func log(_ message: String) {
-        print(message)
+        logger.info("\(message, privacy: .public)")
         self.syncLogs += "[\(Date().formatted(date: .omitted, time: .standard))] \(message)\n"
     }
     
@@ -170,6 +183,7 @@ class MaimaiDataFetcher {
         var updateIcons = true
         var updateDanData = true
         var updateChartStats = true
+        var updateUtageChartStats = true
     }
     
     func fetchSongs(modelContext: ModelContext, options: SyncOptions = SyncOptions()) async throws {
@@ -186,6 +200,8 @@ class MaimaiDataFetcher {
             var titleToSongId: [String: Int] = [:]
             var lxnsIcons: [LxnsPresetIcon] = []
             var nameToProviderIds: [String: [Int]] = [:]
+            var utageNotesById: [Int: Int] = [:]
+            var utageNotesByKey: [String: [Int]] = [:]
             
             // --- 阶段 1: 远程 data.json ---
             if options.updateRemoteData {
@@ -270,8 +286,15 @@ class MaimaiDataFetcher {
             // --- Stage 3.5: Dan Data ---
             if options.updateDanData {
                 updateStage(.fetchingDanData, base: 0.50, message: String(localized: "data.sync.status.fetchingDanData"))
-                if let danUrl = URL(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/gallery.yaml") {
-                    let (data, _) = try await URLSession.shared.data(from: danUrl)
+                var danComponents = URLComponents(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/gallery.yaml")
+                danComponents?.queryItems = [URLQueryItem(name: "ts", value: String(Int(Date().timeIntervalSince1970)))]
+                
+                if let danUrl = danComponents?.url {
+                    var danRequest = URLRequest(url: danUrl, cachePolicy: .reloadIgnoringLocalCacheData)
+                    danRequest.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+                    danRequest.setValue("no-cache", forHTTPHeaderField: "Pragma")
+                    
+                    let (data, _) = try await URLSession.shared.data(for: danRequest)
                     if let yamlString = String(data: data, encoding: .utf8) {
                         do {
                             let decoder = YAMLDecoder()
@@ -294,9 +317,22 @@ class MaimaiDataFetcher {
                 await ChartStatsService.shared.fetchStats(forceRefresh: true)
                 log("谱面拟合信息已更新并写入本地缓存")
             }
+
+            if options.updateUtageChartStats {
+                updateStage(.fetchingUtageChartStats, base: 0.54, message: "正在下载宴谱音符总数…")
+                if let utageStatsURL = URL(string: "https://maimaid.shikoch.in/utage_chart_stats.json") {
+                    var request = URLRequest(url: utageStatsURL)
+                    request.setValue("Mozilla/5.0 (maimaid)", forHTTPHeaderField: "User-Agent")
+                    let (data, _) = try await URLSession.shared.data(for: request)
+                    let stats = try JSONDecoder().decode([UtageChartStatsItem].self, from: data)
+                    utageNotesById = Dictionary(uniqueKeysWithValues: stats.map { ($0.id, $0.notes) })
+                    utageNotesByKey = Self.buildUtageNotesByKey(stats)
+                    log("宴谱音符总数已下载：\(stats.count) 条")
+                }
+            }
             
             // --- 阶段 4: 合并数据入库 ---
-            if options.updateRemoteData || options.updateAliases || options.updateIcons {
+            if options.updateRemoteData || options.updateAliases || options.updateIcons || options.updateUtageChartStats {
                 updateStage(.processingSongs, base: 0.55, message: String(localized: "data.sync.status.processing"))
                 
                 let existingSongsFromDB = try modelContext.fetch(FetchDescriptor<Song>())
@@ -324,6 +360,7 @@ class MaimaiDataFetcher {
                                 RemoteSheet(
                                     type: sh.type,
                                     difficulty: sh.difficulty,
+                                    version: sh.version,
                                     level: sh.level,
                                     levelValue: sh.levelValue,
                                     internalLevel: sh.internalLevel,
@@ -359,6 +396,7 @@ class MaimaiDataFetcher {
                 
                 var providerMatchCount = 0
                 var sheetMatchCount = 0
+                var utageNotesMergeCount = 0
                 
                 for (index, remoteSong) in songsToProcess.enumerated() {
                     let song: Song
@@ -452,6 +490,7 @@ class MaimaiDataFetcher {
                                 songIdentifier: song.songIdentifier,
                                 type: remoteSheet.type,
                                 difficulty: remoteSheet.difficulty,
+                                version: remoteSheet.version,
                                 level: remoteSheet.level,
                                 levelValue: remoteSheet.levelValue ?? 0
                             )
@@ -481,6 +520,7 @@ class MaimaiDataFetcher {
                         }
                         
                         if options.updateRemoteData {
+                            sheet.version = remoteSheet.version
                             sheet.level = remoteSheet.level
                             sheet.levelValue = remoteSheet.levelValue ?? 0
                             sheet.internalLevel = remoteSheet.internalLevel
@@ -501,6 +541,21 @@ class MaimaiDataFetcher {
                                 sheet.regionIntl = regions["intl"] ?? false
                                 sheet.regionUsa = regions["usa"] ?? false
                                 sheet.regionCn = regions["cn"] ?? false
+                            }
+                        }
+
+                        if options.updateUtageChartStats && remoteSheet.type.lowercased() == "utage" {
+                            let mergedNotes = Self.resolveUtageTotalNotes(
+                                for: sheet,
+                                songTitle: song.title,
+                                songIdentifier: song.songIdentifier,
+                                sheetLevel: sheet.level,
+                                notesById: utageNotesById,
+                                notesByKey: utageNotesByKey
+                            )
+                            if let mergedNotes, sheet.total != mergedNotes {
+                                sheet.total = mergedNotes
+                                utageNotesMergeCount += 1
                             }
                         }
                     }
@@ -533,6 +588,9 @@ class MaimaiDataFetcher {
                 
                 log(String(localized: "data.sync.log.processingCompleted \(providerMatchCount) \(songsToProcess.count)"))
                 log(String(localized: "data.sync.log.syncedSummary \(providerMatchCount) \(sheetMatchCount)"))
+                if options.updateUtageChartStats {
+                    log("宴谱音符总数合并完成：更新 \(utageNotesMergeCount) 张谱面")
+                }
                 
                 remoteSongs = []
                 aliasMap = [:]
@@ -672,6 +730,148 @@ class MaimaiDataFetcher {
             isSyncing = false
             throw error
         }
+    }
+
+    private static func buildUtageNotesByKey(_ stats: [UtageChartStatsItem]) -> [String: [Int]] {
+        var lookup: [String: [Int]] = [:]
+
+        for item in stats {
+            guard let kanji = extractUtageKanji(from: item.title),
+                  let key = utageLookupKey(title: item.title, kanji: kanji) else {
+                continue
+            }
+            lookup[key, default: []].append(item.notes)
+        }
+
+        for key in lookup.keys {
+            let unique = Array(Set(lookup[key] ?? [])).sorted()
+            lookup[key] = unique
+        }
+
+        return lookup
+    }
+
+    private static func resolveUtageTotalNotes(
+        for sheet: Sheet,
+        songTitle: String,
+        songIdentifier: String,
+        sheetLevel: String,
+        notesById: [Int: Int],
+        notesByKey: [String: [Int]]
+    ) -> Int? {
+        if sheet.songId > 0, let exact = notesById[sheet.songId] {
+            return exact
+        }
+
+        let fallbackKanji = extractUtageKanji(from: songTitle)
+        guard let kanji = extractUtageKanji(from: sheet.difficulty) ?? fallbackKanji else {
+            return nil
+        }
+
+        let normalizedIdentifier = songIdentifier
+            .replacingOccurrences(of: #"^\s*[\(（]宴[\)）]\s*"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"（[^）]+）\s*$"#, with: "", options: .regularExpression)
+
+        var candidateKeys: [String] = []
+        if let key = utageLookupKey(title: songTitle, kanji: kanji) {
+            candidateKeys.append(key)
+        }
+        if let key = utageLookupKey(title: normalizedIdentifier, kanji: kanji) {
+            candidateKeys.append(key)
+        }
+
+        for key in Set(candidateKeys) {
+            guard let candidates = notesByKey[key], !candidates.isEmpty else { continue }
+            return selectUtageNotesCandidate(candidates, songIdentifier: songIdentifier, sheetLevel: sheetLevel)
+        }
+
+        return nil
+    }
+
+    private static func selectUtageNotesCandidate(_ candidates: [Int], songIdentifier: String, sheetLevel: String) -> Int? {
+        let unique = Array(Set(candidates)).sorted()
+        guard !unique.isEmpty else { return nil }
+        if unique.count == 1 { return unique.first }
+
+        let identifierUpper = songIdentifier.uppercased()
+        let difficultyOrder = ["(EASY)", "(BASIC)", "(ADVANCED)", "(EXPERT)", "(MASTER)", "(RE:MASTER)"]
+        if let idx = difficultyOrder.firstIndex(where: { identifierUpper.contains($0) }) {
+            return unique[min(idx, unique.count - 1)]
+        }
+
+        if songIdentifier.contains("入門") {
+            return unique.first
+        }
+
+        if songIdentifier.contains("ヒーロー") {
+            return unique.last
+        }
+
+        if let level = parseApproximateUtageLevel(sheetLevel) {
+            let ratio = max(0, min((level - 1.0) / 14.0, 1.0))
+            let idx = Int((Double(unique.count - 1) * ratio).rounded())
+            return unique[idx]
+        }
+
+        return unique.last
+    }
+
+    private static func parseApproximateUtageLevel(_ raw: String) -> Double? {
+        let cleaned = raw
+            .replacingOccurrences(of: "?", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard cleaned != "*" else { return nil }
+
+        let hasPlus = cleaned.contains("+")
+        let numeric = cleaned.filter { $0.isNumber || $0 == "." }
+        guard let value = Double(numeric) else { return nil }
+        return hasPlus ? value + 0.7 : value
+    }
+
+    private static func utageLookupKey(title: String, kanji: String) -> String? {
+        let normalizedKanji = normalizeUtageKanji(kanji)
+        let normalizedTitle = normalizeUtageTitle(title)
+        guard !normalizedKanji.isEmpty, !normalizedTitle.isEmpty else { return nil }
+        return "\(normalizedKanji)|\(normalizedTitle)"
+    }
+
+    private static func normalizeUtageKanji(_ raw: String) -> String {
+        raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "藏", with: "蔵")
+            .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+            .lowercased()
+    }
+
+    private static func normalizeUtageTitle(_ raw: String) -> String {
+        let stripped = raw
+            .replacingOccurrences(of: "\u{3000}", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: #"^\s*(?:\[[^\]]+\]|【[^】]+】)\s*"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"^\s*[\(（]宴[\)）]\s*"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"\s*[\(（](?:EASY|BASIC|ADVANCED|EXPERT|MASTER|Re:MASTER)[\)）]\s*$"#, with: "", options: [.regularExpression, .caseInsensitive])
+            .replacingOccurrences(of: "藏", with: "蔵")
+            .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+            .lowercased()
+
+        return stripped.replacingOccurrences(of: #"[[:space:]\[\]【】\(\)（）]+"#, with: "", options: .regularExpression)
+    }
+
+    private static func extractUtageKanji(from text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = trimmed.first else { return nil }
+
+        if first == "【", let close = trimmed.firstIndex(of: "】"), close > trimmed.startIndex {
+            let start = trimmed.index(after: trimmed.startIndex)
+            return normalizeUtageKanji(String(trimmed[start..<close]))
+        }
+
+        if first == "[", let close = trimmed.firstIndex(of: "]"), close > trimmed.startIndex {
+            let start = trimmed.index(after: trimmed.startIndex)
+            return normalizeUtageKanji(String(trimmed[start..<close]))
+        }
+
+        return nil
     }
     
     func getDanDataFileURL() -> URL {

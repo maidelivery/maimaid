@@ -164,21 +164,24 @@ class RecommendationService {
                     let currentRate = currentScore?.rate ?? 0.0
                     guard currentRate < 100.5 else { continue }
                     
-                    // Determine isRegionActive dynamically using same logic as RatingUtils.toCalculationInput
+                    // Determine region/version at the chart level so newly added charts on old songs
+                    // can still enter B15 when the chart itself belongs to the latest version.
                     let isRegionActive: Bool
                     if let targetServer = serverContext {
-                        isRegionActive = song.sheets.contains { sh in
-                            switch targetServer {
-                            case .jp: return sh.regionJp
-                            case .intl: return sh.regionIntl
-                            case .cn: return sh.regionCn
-                            }
+                        switch targetServer {
+                        case .jp: isRegionActive = sheet.regionJp
+                        case .intl: isRegionActive = sheet.regionIntl
+                        case .cn: isRegionActive = sheet.regionCn
                         }
                     } else {
                         isRegionActive = false
                     }
                     
-                    let category = RatingUtils.determineSongCategory(songVersion: song.version, latestServerVersion: latestVersion, isRegionActive: isRegionActive)
+                    let category = RatingUtils.determineSongCategory(
+                        songVersion: sheet.version ?? song.version,
+                        latestServerVersion: latestVersion,
+                        isRegionActive: isRegionActive
+                    )
                     if category == .excluded { continue }
                     
                     let isNew = (category == .b15)

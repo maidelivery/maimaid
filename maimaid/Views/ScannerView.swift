@@ -157,7 +157,55 @@ extension ScannerView {
             result.removeSubrange(range)
         }
         
-        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let range = result.range(of: "^［[^］]+］\\s*", options: .regularExpression) {
+            result.removeSubrange(range)
+        }
+        
+        return result
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+    }
+    
+    private func extractUtagePrefixKanji(from text: String?) -> String? {
+        guard let text else { return nil }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if let range = trimmed.range(of: #"^【([^】]+)】"#, options: .regularExpression) {
+            return String(trimmed[range]).dropFirst().dropLast().trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        if let range = trimmed.range(of: #"^\[([^\]]+)\]"#, options: .regularExpression) {
+            return String(trimmed[range]).dropFirst().dropLast().trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        if let range = trimmed.range(of: #"^［([^］]+)］"#, options: .regularExpression) {
+            return String(trimmed[range]).dropFirst().dropLast().trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        return nil
+    }
+    
+    private func songHasExplicitUtagePrefix(_ song: Song, kanji: String?) -> Bool {
+        for text in [song.title, song.songIdentifier] {
+            if let detected = extractUtagePrefixKanji(from: text) {
+                if let kanji, !kanji.isEmpty {
+                    if detected == kanji { return true }
+                } else {
+                    return true
+                }
+            }
+        }
+        
+        return false
+    }
+    
+    private func normalizedSongMatchTitle(_ title: String) -> String {
+        stripUtagePrefix(title)
+            .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+            .replacingOccurrences(of: "\u{3000}", with: " ")
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
     }
     
     private func matchUtageSheet(for song: Song, kanji: String?, maxDxScore: Int?, dxScore: Int?) -> Sheet? {
@@ -492,10 +540,13 @@ struct ScannerView: View {
     // MARK: - Song Matching
     
     private func matchSongsWithFilters(titleCandidates: [String], title: String?, difficulty: String?, level: Double?, maxCombo: Int?, dxScore: Int?, maxDxScore: Int?, type: String?, kanji: String?) -> [Song] {
+        let rawCandidates = ([title] + titleCandidates.map { Optional($0) }).compactMap { $0 }
         var allCandidates = titleCandidates
         if let exactTitle = title { allCandidates.insert(exactTitle, at: 0) }
         let isUtage = type?.lowercased() == "utage"
         if isUtage { allCandidates = allCandidates.map { stripUtagePrefix($0) } }
+        let explicitTitleKanji = rawCandidates.compactMap { extractUtagePrefixKanji(from: $0) }.first
+        let hasExplicitUtagePrefix = explicitTitleKanji != nil
         
         let derivedTotalNotes: Int? = {
             if let maxDx = maxDxScore, maxDx > 0 { return maxDx / 3 }
@@ -515,6 +566,7 @@ struct ScannerView: View {
             if isUtage {
                 let utageSheets = song.sheets.filter { $0.type.lowercased() == "utage" }
                 if utageSheets.isEmpty { return false }
+                if hasExplicitUtagePrefix && !songHasExplicitUtagePrefix(song, kanji: explicitTitleKanji) { return false }
                 if hasKanji { if !utageSheets.contains(where: { $0.difficulty.contains(kanji!) }) { return false } }
                 if hasTotalNotes {
                     let totalMatch = utageSheets.contains { sheet in guard let total = sheet.total else { return true }; return total == derivedTotalNotes! }
@@ -561,13 +613,24 @@ struct ScannerView: View {
                 guard !seenIds.contains(song.songIdentifier) else { continue }
                 var matchScore = 0
                 var constraintBonus = 0
+                let normalizedSongTitle = normalizedSongMatchTitle(song.title)
                 if hasMaxDxScore { if song.sheets.contains(where: { guard let total = $0.total else { return false }; return total * 3 == maxDxScore! }) { constraintBonus += 20 } }
                 for searchCandidate in variants {
                     let searchLower = searchCandidate.lowercased()
+                    let normalizedSearchTitle = normalizedSongMatchTitle(searchCandidate)
+                    if normalizedSongTitle == normalizedSearchTitle { matchScore = 110; break }
                     if song.title.localizedCaseInsensitiveCompare(searchCandidate) == .orderedSame { matchScore = 100; break }
                     if song.aliases.contains(where: { $0.localizedCaseInsensitiveCompare(searchCandidate) == .orderedSame }) { matchScore = max(matchScore, 95); break }
-                    if song.title.localizedCaseInsensitiveContains(searchLower) { matchScore = max(matchScore, 80); continue }
-                    if searchLower.localizedCaseInsensitiveContains(song.title.lowercased()) { matchScore = max(matchScore, 75); continue }
+                    if normalizedSongTitle.hasPrefix(normalizedSearchTitle) && normalizedSongTitle != normalizedSearchTitle {
+                        matchScore = max(matchScore, isUtage ? 45 : 80)
+                        continue
+                    }
+                    if normalizedSearchTitle.hasPrefix(normalizedSongTitle) && normalizedSongTitle != normalizedSearchTitle {
+                        matchScore = max(matchScore, isUtage ? 40 : 75)
+                        continue
+                    }
+                    if song.title.localizedCaseInsensitiveContains(searchLower) { matchScore = max(matchScore, isUtage ? 35 : 80); continue }
+                    if searchLower.localizedCaseInsensitiveContains(song.title.lowercased()) { matchScore = max(matchScore, isUtage ? 30 : 75); continue }
                     if song.aliases.contains(where: { $0.localizedCaseInsensitiveContains(searchLower) }) { matchScore = max(matchScore, 70); continue }
                     if let keywords = song.searchKeywords, keywords.localizedCaseInsensitiveContains(searchLower) { matchScore = max(matchScore, 60); continue }
                     let dist = levenshteinDistance(cleaned, song.title)
@@ -598,10 +661,13 @@ struct ScannerView: View {
     // MARK: - Fast Camera Frame Matching
     
     private func matchSongsForCameraFrame(titleCandidates: [String], title: String?, difficulty: String?, level: Double?, maxCombo: Int?, dxScore: Int?, maxDxScore: Int?, type: String?, kanji: String?) -> [String] {
+        let rawCandidates = ([title] + titleCandidates.map { Optional($0) }).compactMap { $0 }
         var allCandidates = titleCandidates
         if let exactTitle = title { allCandidates.insert(exactTitle, at: 0) }
         let isUtage = type?.lowercased() == "utage"
         if isUtage { allCandidates = allCandidates.map { stripUtagePrefix($0) } }
+        let explicitTitleKanji = rawCandidates.compactMap { extractUtagePrefixKanji(from: $0) }.first
+        let hasExplicitUtagePrefix = explicitTitleKanji != nil
         let derivedTotalNotes: Int? = { if let maxDx = maxDxScore, maxDx > 0 { return maxDx / 3 }; return maxCombo }()
         let hasMaxDxScore = maxDxScore != nil && maxDxScore! > 0
         let hasAnyValidation = (difficulty != nil && !isUtage) || (level != nil && level! >= 1 && level! <= 15) || (derivedTotalNotes != nil && derivedTotalNotes! > 0) || (dxScore != nil && dxScore! > 0) || hasMaxDxScore || (kanji != nil && !(kanji!.isEmpty))
@@ -610,6 +676,7 @@ struct ScannerView: View {
             if isUtage {
                 if sheet.type.lowercased() != "utage" { return false }
                 if let k = kanji, !k.isEmpty, !sheet.difficulty.contains(k) { return false }
+                if hasExplicitUtagePrefix, let song = sheet.song, !songHasExplicitUtagePrefix(song, kanji: explicitTitleKanji) { return false }
                 if let tn = derivedTotalNotes, tn > 0 { if let total = sheet.total, total != tn { return false } }
                 if let dx = dxScore, dx > 0 { if let total = sheet.total, total * 3 < dx { return false } }
                 return true
@@ -632,11 +699,28 @@ struct ScannerView: View {
             let cleaned = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
             guard cleaned.count >= 2 else { continue }
             var foundFast = false
+            let normalizedCleaned = normalizedSongMatchTitle(cleaned)
+            var exactTitleMatches: [String] = []
             for song in songs {
                 if !song.sheets.contains(where: { sheetOK($0) }) { continue }
-                if song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title) {
-                    frameMatches.append(song.songIdentifier); foundFast = true
-                    if frameMatches.count > 3 { break }
+                let normalizedSongTitle = normalizedSongMatchTitle(song.title)
+                if normalizedSongTitle == normalizedCleaned {
+                    exactTitleMatches.append(song.songIdentifier)
+                    foundFast = true
+                    if exactTitleMatches.count > 3 { break }
+                }
+            }
+            if !exactTitleMatches.isEmpty {
+                frameMatches.append(contentsOf: exactTitleMatches)
+            } else {
+                for song in songs {
+                    if !song.sheets.contains(where: { sheetOK($0) }) { continue }
+                    let normalizedSongTitle = normalizedSongMatchTitle(song.title)
+                    if (!isUtage && (song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title))) ||
+                        (isUtage && normalizedSongTitle.hasPrefix(normalizedCleaned)) {
+                        frameMatches.append(song.songIdentifier); foundFast = true
+                        if frameMatches.count > 3 { break }
+                    }
                 }
             }
             if !foundFast && cleaned.count > 4 {

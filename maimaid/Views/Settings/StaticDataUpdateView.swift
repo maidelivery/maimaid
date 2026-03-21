@@ -26,6 +26,7 @@ struct StaticDataUpdateView: View {
     @AppStorage(AppStorageKeys.syncUpdateIcons) private var updateIcons = true
     @AppStorage(AppStorageKeys.syncUpdateDanData) private var updateDanData = true
     @AppStorage(AppStorageKeys.syncUpdateChartStats) private var updateChartStats = true
+    @AppStorage(AppStorageKeys.syncUpdateUtageChartStats) private var updateUtageChartStats = true
     
     var body: some View {
         Form {
@@ -59,7 +60,8 @@ struct StaticDataUpdateView: View {
                                 updateCovers: updateCovers,
                                 updateIcons: updateIcons,
                                 updateDanData: updateDanData,
-                                updateChartStats: updateChartStats
+                                updateChartStats: updateChartStats,
+                                updateUtageChartStats: updateUtageChartStats
                             )
                             Task {
                                 do {
@@ -79,10 +81,10 @@ struct StaticDataUpdateView: View {
                                 Spacer()
                             }
                         }
-                        .disabled(!updateRemoteData && !updateAliases && !updateCovers && !updateIcons && !updateDanData && !updateChartStats)
+                        .disabled(!updateRemoteData && !updateAliases && !updateCovers && !updateIcons && !updateDanData && !updateChartStats && !updateUtageChartStats)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         
-                        if !updateRemoteData && !updateAliases && !updateCovers && !updateIcons && !updateDanData && !updateChartStats {
+                        if !updateRemoteData && !updateAliases && !updateCovers && !updateIcons && !updateDanData && !updateChartStats && !updateUtageChartStats {
                             Text("update.control.selectAtLeastOne")
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
@@ -105,6 +107,7 @@ struct StaticDataUpdateView: View {
                 Toggle("update.option.iconsDataAndImages", isOn: $updateIcons)
                 Toggle("update.option.danData", isOn: $updateDanData)
                 Toggle("update.option.chartStats", isOn: $updateChartStats)
+                Toggle("update.option.utageChartStats", isOn: $updateUtageChartStats)
             }
             .disabled(MaimaiDataFetcher.shared.isSyncing)
             

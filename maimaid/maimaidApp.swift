@@ -188,14 +188,15 @@ enum StaticDataAutoUpdate {
             updateCovers: defaults.bool(forKey: AppStorageKeys.syncUpdateCovers, defaultValue: true),
             updateIcons: defaults.bool(forKey: AppStorageKeys.syncUpdateIcons, defaultValue: true),
             updateDanData: defaults.bool(forKey: AppStorageKeys.syncUpdateDanData, defaultValue: true),
-            updateChartStats: defaults.bool(forKey: AppStorageKeys.syncUpdateChartStats, defaultValue: true)
+            updateChartStats: defaults.bool(forKey: AppStorageKeys.syncUpdateChartStats, defaultValue: true),
+            updateUtageChartStats: defaults.bool(forKey: AppStorageKeys.syncUpdateUtageChartStats, defaultValue: true)
         )
     }
 }
 
 private extension MaimaiDataFetcher.SyncOptions {
     var hasEnabledWork: Bool {
-        updateRemoteData || updateAliases || updateCovers || updateIcons || updateDanData || updateChartStats
+        updateRemoteData || updateAliases || updateCovers || updateIcons || updateDanData || updateChartStats || updateUtageChartStats
     }
 }
 

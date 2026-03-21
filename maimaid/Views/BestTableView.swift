@@ -405,11 +405,11 @@ struct BestTableView: View {
                     BadgeView(text: ThemeUtils.diffShort(entry.diff), background: ThemeUtils.colorForDifficulty(entry.diff, entry.type))
                     
                     if let fc = entry.fc, !fc.isEmpty {
-                        BadgeView(text: fc.uppercased(), background: ThemeUtils.fcColor(fc))
+                        BadgeView(text: ThemeUtils.normalizeFC(fc), background: ThemeUtils.fcColor(fc))
                     }
                     
                     if let fs = entry.fs, !fs.isEmpty {
-                        BadgeView(text: fs.uppercased(), background: ThemeUtils.fsColor(fs))
+                        BadgeView(text: ThemeUtils.normalizeFS(fs), background: ThemeUtils.fsColor(fs))
                     }
                 }
             }

@@ -6,6 +6,7 @@ final class Sheet {
     var songIdentifier: String
     var type: String // "dx", "std", "utage"
     var difficulty: String // "basic", "advanced", "expert", "master", "remaster", or Utage Kanji
+    var version: String?
     var level: String
     var levelValue: Double?
     var internalLevel: String?
@@ -41,10 +42,11 @@ final class Sheet {
         return scores.first { $0.userProfileId == nil }
     }
     
-    init(songIdentifier: String, type: String, difficulty: String, level: String, levelValue: Double? = nil, internalLevel: String? = nil, internalLevelValue: Double? = nil, noteDesigner: String? = nil, tap: Int? = nil, hold: Int? = nil, slide: Int? = nil, touch: Int? = nil, breakCount: Int? = nil, total: Int? = nil, songId: Int = 0) {
+    init(songIdentifier: String, type: String, difficulty: String, version: String? = nil, level: String, levelValue: Double? = nil, internalLevel: String? = nil, internalLevelValue: Double? = nil, noteDesigner: String? = nil, tap: Int? = nil, hold: Int? = nil, slide: Int? = nil, touch: Int? = nil, breakCount: Int? = nil, total: Int? = nil, songId: Int = 0) {
         self.songIdentifier = songIdentifier
         self.type = type
         self.difficulty = difficulty
+        self.version = version
         self.level = level
         self.levelValue = levelValue
         self.internalLevel = internalLevel
@@ -59,4 +61,3 @@ final class Sheet {
         self.songId = songId
     }
 }
-

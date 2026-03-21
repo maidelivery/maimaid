@@ -310,6 +310,7 @@
 "update.option.iconsDataAndImages" = "Icon data & images";
 "update.option.danData" = "Dan data";
 "update.option.chartStats" = "Chart Stats";
+"update.option.utageChartStats" = "Utage note totals";
 "update.options.footer" = "Aliases also sync song/chart IDs. Covers and icons only download missing assets and do not overwrite existing files.";
 "update.control.selectAtLeastOne" = "Select at least one update option.";
 "update.control.error %@" = "Sync failed: %@";
@@ -397,6 +398,7 @@
 "data.sync.stage.downloadingImages" = "Downloading covers...";
 "data.sync.stage.downloadingIcons" = "Downloading icons...";
 "data.sync.stage.fetchingChartStats" = "Fetching chart stats...";
+"data.sync.stage.fetchingUtageChartStats" = "Fetching utage note totals...";
 "data.sync.stage.saving" = "Saving database...";
 "data.sync.stage.completed" = "Sync Completed";
 "data.sync.stage.failed" = "Sync Failed";

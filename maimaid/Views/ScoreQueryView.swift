@@ -647,7 +647,7 @@ struct ScoreQueryView: View {
             let activeCount = selectedDifficulties.count + selectedRanks.count + selectedFC.count + selectedFS.count
             if activeCount > 0 {
                 HStack {
-                    Text("^[\(filteredEntries.count) \("scoreQuery.results")](inflect: true)")
+                    Text("^[\(filteredEntries.count) \(String(localized: "scoreQuery.results"))](inflect: true)")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                     

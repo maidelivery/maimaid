@@ -68,7 +68,7 @@ struct ScannerResultCardView: View, Equatable {
                                     Text(chartType.uppercased() == "STD" ? String(localized: "scanner.chart.std") : chartType.uppercased())
                                         .font(.system(size: 8, weight: .black))
                                         .padding(.horizontal, 4).padding(.vertical, 1)
-                                        .background(chartType.lowercased() == "dx" ? Color.orange : Color.blue)
+                                        .background(ThemeUtils.badgeColorForChartType(chartType))
                                         .foregroundColor(.white).cornerRadius(3)
                                     Text(song.title).font(.system(size: 12, weight: .bold)).foregroundColor(.primary).lineLimit(1)
                                 }

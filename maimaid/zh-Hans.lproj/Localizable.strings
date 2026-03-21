@@ -309,6 +309,7 @@
 "update.option.iconsDataAndImages" = "头像数据与图片";
 "update.option.danData" = "段位数据";
 "update.option.chartStats" = "谱面拟合信息";
+"update.option.utageChartStats" = "宴谱音符总数";
 "update.options.footer" = "别名项同时会同步歌曲/谱面 ID；封面和图标仅补全缺失资源，不会强制覆盖已有文件。";
 "update.control.selectAtLeastOne" = "请至少选择一项更新内容。";
 "update.control.error %@" = "同步失败：%@";
@@ -397,6 +398,7 @@
 "data.sync.stage.downloadingIcons" = "正在并发下载预设头像...";
 "data.sync.stage.saving" = "正在保存到本地数据库...";
 "data.sync.stage.fetchingChartStats" = "获取谱面拟合信息...";
+"data.sync.stage.fetchingUtageChartStats" = "获取宴谱音符总数...";
 "data.sync.stage.completed" = "同步完成";
 "data.sync.stage.failed" = "同步失败";
 

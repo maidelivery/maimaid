@@ -239,6 +239,13 @@ nonisolated final class MLScoreProcessor {
             print("  [difficulty] ✗ no bounding box detected")
         }
         
+        if scoreResult.type == nil {
+            scoreResult.type = inferChartType(from: scoreResult)
+            if let inferredType = scoreResult.type {
+                print("  [type] ✓ inferred: \(inferredType)")
+            }
+        }
+        
         // If utage type detected but no difficulty set, mark as utage
         if scoreResult.type == "utage" && scoreResult.difficulty == nil {
             scoreResult.difficulty = "utage"
@@ -252,6 +259,14 @@ nonisolated final class MLScoreProcessor {
                 print("  [kanji] ✓ extracted from title: '\(extracted)'")
             }
         }
+
+        // For utage charts, matching should prioritize total notes derived from maxDxScore.
+        if scoreResult.type == "utage", let maxDx = scoreResult.maxDxScore, maxDx > 0 {
+            let utageTotalNotes = maxDx / 3
+            scoreResult.utageTotalNotes = utageTotalNotes
+            scoreResult.maxCombo = utageTotalNotes
+            print("  [utage] ✓ prioritize maxdxscore/3 for song matching: \(maxDx)/3 = \(utageTotalNotes)")
+        }
         
         // Final summary
         print("────────────────────────────────────────")
@@ -264,6 +279,7 @@ nonisolated final class MLScoreProcessor {
         print("  dxScore: \(scoreResult.dxScore != nil ? "\(scoreResult.dxScore!)" : "nil")")
         print("  maxDxScore: \(scoreResult.maxDxScore != nil ? "\(scoreResult.maxDxScore!)" : "nil")")
         print("  maxCombo (total): \(scoreResult.maxCombo != nil ? "\(scoreResult.maxCombo!)" : "nil")")
+        print("  utageTotalNotes: \(scoreResult.utageTotalNotes != nil ? "\(scoreResult.utageTotalNotes!)" : "nil")")
         print("  level: \(scoreResult.level != nil ? String(format: "%.0f", scoreResult.level!) : "nil")")
         print("  kanji: \(scoreResult.kanji ?? "nil")")
         print("  comboStatus: \(scoreResult.comboStatus ?? "nil")")
@@ -300,6 +316,34 @@ nonisolated final class MLScoreProcessor {
                     .dropLast(1)   // drop ]
                 let kanji = String(inner).trimmingCharacters(in: .whitespacesAndNewlines)
                 if !kanji.isEmpty { return kanji }
+            }
+            
+            // Pattern 3: Full-width square brackets ［X］
+            if let match = trimmed.range(of: "^［([^］]+)］", options: .regularExpression) {
+                let inner = trimmed[match]
+                    .dropFirst(1)  // drop ［
+                    .dropLast(1)   // drop ］
+                let kanji = String(inner).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !kanji.isEmpty { return kanji }
+            }
+        }
+        
+        return nil
+    }
+    
+    private static func inferChartType(from result: MLScoreResult) -> String? {
+        if result.difficulty?.lowercased() == "utage" {
+            return "utage"
+        }
+        
+        if result.kanji?.isEmpty == false {
+            return "utage"
+        }
+        
+        let titleTexts = [result.title] + result.titleCandidates
+        for candidate in titleTexts.compactMap({ $0?.trimmingCharacters(in: .whitespacesAndNewlines) }) {
+            if candidate.range(of: #"^(?:【[^】]+】|\[[^\]]+\]|［[^］]+］)"#, options: .regularExpression) != nil {
+                return "utage"
             }
         }
         
@@ -483,6 +527,7 @@ nonisolated struct MLScoreResult: Sendable {
     var level: Double? // integer level from OCR (e.g. 14)
     var maxCombo: Int? // derived from maxDxScore / 3
     var kanji: String? // NEW: utage kanji identifier (e.g. "宴", "狂", "覚")
+    var utageTotalNotes: Int? // prioritized notes count for utage matching (maxDxScore / 3)
     
     var debugInfo: String = ""
     var boxes: [RecognizedBox] = []

@@ -14,6 +14,7 @@ enum AppStorageKeys {
     static let syncUpdateIcons = "syncUpdateIcons"
     static let syncUpdateDanData = "syncUpdateDanData"
     static let syncUpdateChartStats = "syncUpdateChartStats"
+    static let syncUpdateUtageChartStats = "syncUpdateUtageChartStats"
     static let songsSortOption = "songs.sortOption"
     static let songsSortAscending = "songs.sortAscending"
     static let songsGridColumns = "songs.gridColumns"
@@ -152,6 +153,19 @@ struct ThemeUtils {
         }
         
         return Color.pink.opacity(0.5)
+    }
+    
+    static func badgeColorForChartType(_ type: String) -> Color {
+        let normalizedType = type.lowercased()
+        
+        if normalizedType == "dx" {
+            return .orange
+        }
+        if normalizedType.contains("utage") {
+            return Color(light: Color(hex: "#ff69b4"), dark: Color(hex: "#d6549a"))
+        }
+        
+        return .blue
     }
     
     struct AppVersion: Decodable {

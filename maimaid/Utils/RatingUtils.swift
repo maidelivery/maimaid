@@ -86,46 +86,35 @@ enum RatingUtils {
     }
     
     private static let ratingCoefficients: [RatingBreakpoint] = [
-        RatingBreakpoint(achievement: 100.5, coefficient: 22.4),
-        RatingBreakpoint(achievement: 100.4999, coefficient: 22.2),
-        RatingBreakpoint(achievement: 100.0, coefficient: 21.6),
-        RatingBreakpoint(achievement: 99.9999, coefficient: 21.4),
-        RatingBreakpoint(achievement: 99.5, coefficient: 21.1),
-        RatingBreakpoint(achievement: 99.0, coefficient: 20.8),
-        RatingBreakpoint(achievement: 98.99, coefficient: 20.6),
-        RatingBreakpoint(achievement: 98.0, coefficient: 20.3),
-        RatingBreakpoint(achievement: 97.0, coefficient: 20.0),
-        RatingBreakpoint(achievement: 96.99, coefficient: 17.6),
-        RatingBreakpoint(achievement: 94.0, coefficient: 16.8),
-        RatingBreakpoint(achievement: 90.0, coefficient: 15.2),
-        RatingBreakpoint(achievement: 80.0, coefficient: 13.6),
-        RatingBreakpoint(achievement: 79.99, coefficient: 12.8),
-        RatingBreakpoint(achievement: 75.0, coefficient: 12.0),
-        RatingBreakpoint(achievement: 70.0, coefficient: 11.2),
-        RatingBreakpoint(achievement: 60.0, coefficient: 9.6),
-        RatingBreakpoint(achievement: 50.0, coefficient: 8.0),
-        RatingBreakpoint(achievement: 40.0, coefficient: 6.4),
-        RatingBreakpoint(achievement: 30.0, coefficient: 4.8),
-        RatingBreakpoint(achievement: 20.0, coefficient: 3.2),
+        RatingBreakpoint(achievement: 0.0, coefficient: 0.0),
         RatingBreakpoint(achievement: 10.0, coefficient: 1.6),
-        RatingBreakpoint(achievement: 0.0, coefficient: 0.0)
-    ].sorted { $0.achievement > $1.achievement }
+        RatingBreakpoint(achievement: 20.0, coefficient: 3.2),
+        RatingBreakpoint(achievement: 30.0, coefficient: 4.8),
+        RatingBreakpoint(achievement: 40.0, coefficient: 6.4),
+        RatingBreakpoint(achievement: 50.0, coefficient: 8.0),
+        RatingBreakpoint(achievement: 60.0, coefficient: 9.6),
+        RatingBreakpoint(achievement: 70.0, coefficient: 11.2),
+        RatingBreakpoint(achievement: 75.0, coefficient: 12.0),
+        RatingBreakpoint(achievement: 79.9999, coefficient: 12.8),
+        RatingBreakpoint(achievement: 80.0, coefficient: 13.6),
+        RatingBreakpoint(achievement: 90.0, coefficient: 15.2),
+        RatingBreakpoint(achievement: 94.0, coefficient: 16.8),
+        RatingBreakpoint(achievement: 96.9999, coefficient: 17.6),
+        RatingBreakpoint(achievement: 97.0, coefficient: 20.0),
+        RatingBreakpoint(achievement: 98.0, coefficient: 20.3),
+        RatingBreakpoint(achievement: 98.9999, coefficient: 20.6),
+        RatingBreakpoint(achievement: 99.0, coefficient: 20.8),
+        RatingBreakpoint(achievement: 99.5, coefficient: 21.1),
+        RatingBreakpoint(achievement: 99.9999, coefficient: 21.4),
+        RatingBreakpoint(achievement: 100.0, coefficient: 21.6),
+        RatingBreakpoint(achievement: 100.4999, coefficient: 22.2),
+        RatingBreakpoint(achievement: 100.5, coefficient: 22.4)
+    ]
     
     static func getRatingCoefficient(for achievement: Double) -> Double {
-        let cappedAchievement = min(achievement, 100.5)
-        
-        for i in 0..<ratingCoefficients.count - 1 {
-            let upper = ratingCoefficients[i]
-            let lower = ratingCoefficients[i+1]
-            
-            if cappedAchievement >= lower.achievement {
-                if cappedAchievement == upper.achievement { return upper.coefficient }
-                if cappedAchievement == lower.achievement { return lower.coefficient }
-                
-                let range = upper.achievement - lower.achievement
-                if range <= 0 { return lower.coefficient }
-                let fraction = (cappedAchievement - lower.achievement) / range
-                return lower.coefficient + fraction * (upper.coefficient - lower.coefficient)
+        for i in 0..<ratingCoefficients.count {
+            if i == ratingCoefficients.count - 1 || achievement < ratingCoefficients[i + 1].achievement {
+                return ratingCoefficients[i].coefficient
             }
         }
         
@@ -298,6 +287,7 @@ enum RatingUtils {
         let songIdentifier: String
         let type: String
         let difficulty: String
+        let version: String?
         let internalLevelValue: Double?
         let fitDiffValue: Double?
         let regionJp: Bool
@@ -331,30 +321,31 @@ enum RatingUtils {
                 continue
             }
             
-            let isRegionActive: Bool
-            if let server = input.server {
-                isRegionActive = songData.sheets.contains { sheet in
-                    switch server {
-                    case .jp: return sheet.regionJp
-                    case .intl: return sheet.regionIntl
-                    case .cn: return sheet.regionCn
-                    }
-                }
-            } else {
-                isRegionActive = false
-            }
-            
-            let category = determineSongCategory(
-                songVersion: songData.version,
-                latestServerVersion: latestVersion,
-                isRegionActive: isRegionActive
-            )
-            
-            guard category != .excluded else { continue }
-            
             for sheetData in songData.sheets {
                 // Skip utage sheets
                 if sheetData.type.lowercased().contains("utage") { continue }
+
+                let isRegionActive: Bool
+                if let server = input.server {
+                    switch server {
+                    case .jp:
+                        isRegionActive = sheetData.regionJp
+                    case .intl:
+                        isRegionActive = sheetData.regionIntl
+                    case .cn:
+                        isRegionActive = sheetData.regionCn
+                    }
+                } else {
+                    isRegionActive = false
+                }
+
+                let category = determineSongCategory(
+                    songVersion: sheetData.version ?? songData.version,
+                    latestServerVersion: latestVersion,
+                    isRegionActive: isRegionActive
+                )
+
+                guard category != .excluded else { continue }
                 
                 let sheetId = "\(sheetData.songIdentifier)_\(sheetData.type)_\(sheetData.difficulty)"
                 guard let scoreData = input.scoreMap[sheetId] else { continue }
@@ -432,6 +423,7 @@ extension Array where Element == Song {
                         songIdentifier: sheet.songIdentifier,
                         type: sheet.type,
                         difficulty: sheet.difficulty,
+                        version: sheet.version,
                         internalLevelValue: sheet.internalLevelValue ?? sheet.levelValue,
                         fitDiffValue: useFitDiff ? ChartStatsService.shared.getStat(for: sheet)?.fit_diff : nil,
                         regionJp: sheet.regionJp,

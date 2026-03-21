@@ -301,7 +301,7 @@ struct ScoreEntryView: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
-                        .background(sheet.type.lowercased() == "dx" ? Color.orange : Color.blue, in: Capsule())
+                        .background(ThemeUtils.badgeColorForChartType(sheet.type), in: Capsule())
                     
                     Text(difficultyLabel)
                         .font(.subheadline.weight(.semibold))
