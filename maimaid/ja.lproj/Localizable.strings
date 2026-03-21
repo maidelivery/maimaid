@@ -1,0 +1,572 @@
+/* 
+  Localizable.strings
+  maimaid
+*/
+
+// MARK: - Main Tab View
+"tab.home" = "ホーム";
+"tab.scan" = "スキャン";
+"tab.settings" = "設定";
+"tab.search" = "検索";
+"search.placeholder" = "曲、アーティスト、別名...";
+
+// MARK: - Home View
+"home.title" = "ホーム";
+"home.profile.unbound" = "未連携ユーザー";
+"home.profile.editHint" = "タップして編集";
+"home.bestTable.button.title %lld" = "ベスト %lld テーブルを表示";
+"home.bestTable.button.subtitle %lld %lld" = "B%lld + N%lld に基づく DX Rating";
+"home.randomSong.title" = "ランダムソング";
+"home.randomSong.subtitle" = "スロット風ランダム";
+"home.recommendation.title" = "おすすめ";
+"home.recommendation.subtitle" = "定数分析";
+"home.plateProgress.title" = "プレートの進捗状況";
+"home.plateProgress.subtitle" = "バージョンプレートの進捗状況";
+"home.usefulLinks.title" = "役立つリンク";
+"home.usefulLinks.subtitle" = "Wiki、パーサーなど";
+"home.scoreQuery.title" = "スコア検索";
+"home.scoreQuery.subtitle" = "すべてのスコアを閲覧";
+"home.dan.title" = "段位認定";
+"home.dan.subtitle" = "各バージョンの段位課題曲を確認";
+
+// MARK: - Profile Edit
+"profile.edit.title" = "プロフィール";
+"profile.edit.changeAvatar" = "アバターの変更";
+"profile.edit.clearAvatar" = "アバターを削除";
+"profile.edit.basicInfo" = "基本情報";
+"profile.edit.name" = "名前";
+"profile.edit.name.placeholder" = "名前を入力してください";
+"profile.edit.titleName" = "タイトル";
+"profile.edit.titleName.placeholder" = "タイトルを入力してください";
+"profile.edit.presetIcon" = "プリセットアバター";
+"profile.edit.presetIcon.select" = "プリセットアバターを選択";
+"profile.edit.save" = "保存";
+"profile.edit.cancel" = "キャンセル";
+"profile.picker.title" = "アバターの選択";
+"profile.picker.search" = "アバターまたはカテゴリを検索";
+
+// MARK: - Scanner
+"scanner.processing" = "写真を認識中...";
+"scanner.error.load" = "画像をロードできません";
+"scanner.error.title" = "曲名を認識できませんでした";
+"scanner.chart.std" = "STD";
+"scanner.chart.dx" = "DX";
+"scanner.reset.hint" = "ロック解除が必要です"; // For lock status in scanner
+"scanner.unlock.needed" = "ロック解除が必要です";
+"scanner.unlock.notNeeded" = "ロック解除は必要ありません";
+"scanner.capture.button" = "写真を撮影";
+"scanner.capture.saving" = "写真を保存中";
+"scanner.capture.hint" = "現在認識中のスコア画面を maimai アルバムに保存します。";
+"scanner.library.button" = "写真を選択";
+"scanner.library.hint" = "認識のためにライブラリから写真をインポートします。";
+"scanner.photo.saved" = "maimaiアルバムに保存しました";
+"scanner.photo.error" = "写真の保存に失敗しました";
+
+// MARK: - Settings
+"settings.title" = "設定";
+"settings.data.header" = "静的データ";
+"settings.data.footer" = "曲、エイリアス、ID を更新します。自動更新がサポートされています。";
+"settings.data.syncing" = "更新中...";
+"settings.data.updateAll" = "静的データを更新する";
+"settings.data.importDivingFish" = "Diving Fish からインポート";
+"settings.data.importLxns" = "LXNS からインポート";
+"settings.data.bound" = "連携済み";
+"settings.sync.header" = "スコアの同期";
+"settings.sync.footer" = "保存時に新しいスコアを自動で外部サービスへ同期します。";
+"settings.sync.autoUpload" = "自動アップロード";
+"settings.appearance.header" = "外観";
+"settings.appearance.theme" = "テーマ";
+"settings.appearance.system" = "システムに従う";
+"settings.appearance.light" = "ライト";
+"settings.appearance.dark" = "ダーク";
+"settings.about.header" = "情報";
+"settings.about.version" = "バージョン";
+"settings.appearance.showBoundingBox" = "境界ボックスを表示";
+
+// MARK: - Data Transfer
+"settings.transfer.header" = "データ管理";
+"settings.transfer.footer" = "すべてのスコア、お気に入り、設定をエクスポートします。インポートではデータがマージされ、より高いスコアが維持されます。";
+"settings.transfer.export" = "データのエクスポート";
+"settings.transfer.import" = "データのインポート";
+"settings.transfer.error" = "エラー";
+"settings.transfer.importConfirm" = "インポートの確認";
+"settings.transfer.importConfirmMessage" = "インポートしたデータを現在のアプリにマージします。既存の高いスコアは上書きされません。続行しますか？";
+"settings.transfer.importAction" = "インポート";
+"settings.transfer.cancel" = "キャンセル";
+"settings.transfer.importSuccess" = "インポート成功";
+"settings.transfer.importSummary" = "%d スコアをインポートし、%d のお気に入りを復元しました。";
+
+// MARK: - iCloud Backup
+"settings.icloud.header" = "iCloudバックアップ";
+"settings.icloud.footer" = "アプリがバックグラウンドになると、データが自動的に iCloud にバックアップされます。新しいデバイスで復元します。";
+"settings.icloud.unavailable" = "iCloudは利用できません。設定で iCloud にサインインしてください。";
+"settings.icloud.autoBackup" = "iCloudへの自動バックアップ";
+"settings.icloud.lastBackup" = "最後のバックアップ";
+"settings.icloud.backupNow" = "今すぐバックアップ";
+"settings.icloud.restore" = "iCloudから復元";
+"settings.icloud.restoreConfirm" = "復元の確認";
+"settings.icloud.restoreConfirmMessage" = "iCloud バックアップからデータを復元します。既存の高いスコアは上書きされません。続行しますか？";
+"settings.icloud.restoreAction" = "復元する";
+"settings.icloud.restoreSuccess" = "復元に成功しました";
+
+// MARK: - Useful Links
+"links.title" = "役立つリンク";
+"links.tip" = "カードをタップしてブラウザで開きます";
+"links.nearcade.title" = "nearcade";
+"links.nearcade.subtitle" = "近くのゲームセンターの場所を探す";
+"links.dx_jp.title" = "maimai DX Japan";
+"links.dx_jp.subtitle" = "公式サイト（JP）";
+"links.df.title" = "Diving Fish";
+"links.df.subtitle" = "スコアツール＆B50計算";
+"links.lxns.title" = "LXNS Coffee House";
+"links.lxns.subtitle" = "最新のスコアツール";
+"links.gamerch.title" = "maimai Wiki (Gamerch)";
+"links.gamerch.subtitle" = "JPの戦略とチャート";
+"links.dxrating.title" = "DXRating.net";
+"links.dxrating.subtitle" = "チャートデータベース";
+"links.mailv.title" = "チャート定数ステーション 🏖☀️";
+"links.mailv.subtitle" = "チャート定数情報";
+
+// MARK: - Song Detail
+"song.detail.copy.success %@" = "%@ をコピーしました";
+"song.detail.region.cn" = "中国";
+"song.detail.stats.fitDiff" = "擬合難度";
+"song.detail.stats.avgRate" = "平均レート";
+"song.detail.stats.sampleCount" = "サンプル";
+"song.detail.copy.image" = "画像をコピーしました";
+"song.detail.save.image" = "画像をアルバムに保存";
+"song.detail.metadata.bpm" = "BPM";
+"song.detail.metadata.category" = "カテゴリ";
+"song.detail.metadata.version" = "バージョン";
+"song.detail.metadata.releaseDate" = "リリース";
+"song.detail.region.jp" = "日本";
+"song.detail.region.intl" = "国際";
+"song.detail.region.usa" = "USA";
+"song.detail.region.cn" = "中国";
+"song.detail.lock.required" = "ロック";
+"song.detail.lock.notRequired" = "ロックなし";
+"song.detail.action.record" = "スコアを記録する";
+"song.detail.section.notes" = "ノーツ情報";
+"song.detail.section.rating" = "レーティング表";
+"song.detail.section.history" = "プレイ履歴";
+"song.detail.sort.time" = "時間";
+"song.detail.sort.rate" = "レート";
+"song.detail.table.achievement" = "達成率";
+"song.detail.table.rating" = "レーティング";
+"song.detail.table.delta" = "デルタ";
+"song.detail.calculator.title" = "許容値計算";
+"song.detail.calculator.hint" = "TAPベース、CPとしてBREAK";
+"song.detail.copy.title" = "画像をコピー";
+"song.detail.save.action" = "画像の保存";
+"song.detail.share.action" = "画像を共有する";
+"song.detail.label.title" = "タイトル";
+"song.detail.label.artist" = "アーティスト";
+"song.detail.history.delete.title" = "スコアの削除";
+"song.detail.history.delete.confirm" = "削除";
+"song.detail.history.delete.cancel" = "キャンセル";
+"song.detail.history.delete.message" = "これにより、選択したスコア レコードが削除されます。この操作は元に戻すことができません。";
+"song.detail.history.pagePicker" = "ページ";
+"song.detail.page %lld" = "ページ%lld";
+
+// MARK: - Filter
+"filter.title" = "フィルターオプション";
+"filter.quick" = "クイックフィルター";
+"filter.hideDeleted" = "削除した曲を非表示にする";
+"filter.favorites" = "お気に入りのみ";
+"filter.difficulty" = "難易度";
+"filter.levelRange" = "レベル範囲";
+"filter.levelRange.hint" = "少なくとも 1 つの難易度を選択してください。";
+"filter.category" = "カテゴリ";
+"filter.version" = "バージョン";
+"filter.type" = "タイプ";
+"filter.reset" = "リセット";
+"filter.done" = "完了";
+
+// MARK: - Score Entry
+"score.entry.title" = "スコアを記録する";
+"score.entry.recognizing" = "認識しています...";
+"score.entry.success" = "正常に認識されました";
+"score.entry.failed" = "認識に失敗しました";
+"score.entry.manualHint" = "達成率を手動で入力";
+"score.entry.selectPhoto" = "スクリーンショットを選択";
+"score.entry.currentBest" = "最高";
+"score.entry.combo" = "コンボ";
+"score.entry.sync" = "同期";
+"score.entry.dxScore" = "DXスコア";
+"score.entry.rank" = "ランク";
+"score.entry.rank.pending" = "保留中";
+"score.entry.keyboard.next" = "次";
+"score.entry.repickPhoto" = "別のスクリーンショットを選択してください";
+"score.entry.repickPhoto.hint" = "別のスクリーンショットを使用して認識を再度実行します。";
+"score.entry.validation.rateFormat" = "有効な実績値を入力してください。";
+"score.entry.validation.rateRange" = "達成率は 0 ～ 101% でなければなりません。";
+"score.entry.validation.dxFormat" = "有効な DX スコアを入力してください。";
+"score.entry.validation.dxRange %lld" = "DX スコアは %lld を超えてはなりません。";
+"score.entry.savedHint" = "スコアが保存されました。内容を確認し、完了したら「完了」をタップします。";
+"score.entry.save" = "スコアの保存";
+"score.entry.saved" = "保存されました";
+
+// MARK: - Content View / Sorting
+"songs.title" = "楽曲";
+"songs.unavailable.title" = "楽曲がありません";
+"songs.unavailable.description" = "設定でデータをダウンロードする";
+"sort.title" = "並べ替え";
+"sort.default" = "デフォルト";
+"sort.versionDate" = "バージョン/日付";
+"sort.difficulty" = "最大難易度";
+"sort.ascending" = "昇順";
+"sort.descending" = "降順";
+
+// MARK: - Random Song
+"random.title" = "ランダムソング";
+"random.count" = "カウント";
+"random.count.3" = "3曲";
+"random.count.4" = "4曲";
+"random.action.spin" = "今すぐスピン";
+"random.action.skip" = "今すぐスキップ";
+"random.results" = "結果";
+"random.ready" = "準備はいい？";
+
+// MARK: - Plate Progress
+"plate.title" = "プレートの進捗状況";
+"plate.unavailable.title" = "チャートなし";
+"plate.unavailable.description" = "選択したバージョンと難易度のチャートが見つかりませんでした";
+"plate.menu.version" = "バージョン";
+"plate.menu.difficulty" = "難易度";
+"plate.menu.plate" = "プレート";
+"plate.section.count %@ %lld" = "Lv.%@ (%lld チャート)";
+
+"极牌" = "極プレート";
+"将牌" = "将プレート";
+"神牌" = "神プレート";
+"舞舞牌" = "舞舞プレート";
+
+// MARK: - Data Import & Update
+"import.status.header" = "状態";
+"import.status.syncing" = "同期中...";
+"import.status.importing" = "インポート中...";
+"import.status.failed" = "失敗";
+"import.status.failed.network" = "ネットワークエラー";
+"import.status.failed.message %@" = "失敗しました: %@";
+"import.status.failed.code %lld" = "HTTP エラー %lld";
+"import.status.failed.noRecords" = "記録がありません";
+"import.status.failed.empty" = "スコアが見つかりませんでした";
+"import.status.processing %lld" = "%lld レコードを処理しています...";
+"import.status.success %lld" = "%lld スコアをインポートしました";
+"import.status.error" = "エラー";
+"import.status.error.message %@" = "エラー: %@";
+"import.status.error.unknown" = "ネットワークエラー";
+
+// Diving Fish
+"import.df.title" = "Diving Fish からインポート";
+"import.df.bound.header" = "連携アカウント";
+"import.df.username" = "現在のアカウント";
+"import.df.action.quickSync" = "クイック同期スコア";
+"import.df.rebind.header" = "再連携";
+"import.df.rebind.footer" = "アカウント/トークンを更新します。自動アップロードに必要です。";
+"import.df.username.placeholder" = "QQ / ユーザー名";
+"import.df.token.placeholder" = "トークン (オプション、同期用)";
+"import.df.action.update" = "更新して連携";
+"import.df.setup.header" = "アカウントのセットアップ";
+"import.df.setup.footer" = "QQ またはユーザー名を入力してください。";
+"import.df.token.setup.placeholder" = "トークン（同期用）";
+"import.df.action.bindImport" = "連携してインポート";
+"import.df.status.connecting" = "接続中...";
+
+// LXNS
+"import.lxns.title" = "LXNS からインポート";
+"import.lxns.bound.header" = "LXNS 連携済み";
+"import.lxns.status" = "認証ステータス";
+"import.lxns.status.connected" = "接続済み";
+"import.lxns.status.checking" = "チェック中";
+"import.lxns.action.quickSync" = "クイック同期スコア";
+"import.lxns.manage.header" = "アカウント管理";
+"import.lxns.action.relogin" = "連携解除 / 再ログイン";
+"import.lxns.step1.header" = "ステップ 1: 認証コードを取得する";
+"import.lxns.step1.footer" = "ブラウザを開いてログインし、コードをコピーします。";
+"import.lxns.action.openBrowser" = "ブラウザを開く";
+"import.lxns.step2.header" = "ステップ 2: コードを貼り付ける";
+"import.lxns.step2.footer" = "コードを貼り付けてインポートします。";
+"import.lxns.code.placeholder" = "認証コード (例: JVJ6-VPTM-MGHZ)";
+"import.lxns.action.startImport" = "インポートの開始";
+"import.lxns.error.clientId" = "開発エラー: クライアント ID が構成されていません。";
+"import.lxns.error.security" = "セッションが失われました。手順 1 をもう一度試してください。";
+"import.lxns.status.exchanging" = "トークンを交換中...";
+"import.lxns.status.failed.token %@" = "トークンエラー: %@";
+"import.lxns.status.failed.networkToken" = "ネットワークエラー";
+"import.lxns.status.refreshing" = "状態を更新中...";
+"import.lxns.status.failed.expired" = "認証の有効期限が切れました。再ログインしてください。";
+"import.lxns.status.player" = "プレイヤー情報を取得中...";
+"import.lxns.status.fetching" = "接続中...";
+
+// Static Data Update
+"update.title" = "静的データの更新";
+"update.control.header" = "更新制御";
+"update.action.now" = "静的データを今すぐ更新する";
+"update.options.header" = "オプション";
+"update.option.remoteData" = "ベースソングデータ";
+"update.option.aliasesAndIds" = "エイリアスとチャート ID";
+"update.option.coversMissing" = "不足しているカバーをダウンロードする";
+"update.option.iconsDataAndImages" = "アイコンデータと画像";
+"update.option.danData" = "段位データ";
+"update.option.chartStats" = "チャート統計";
+"update.option.utageChartStats" = "宴譜ノーツ合計";
+"update.options.footer" = "エイリアスは曲/チャート ID も同期します。カバーとアイコンは不足しているアセットをダウンロードするだけであり、既存のファイルは上書きされません。";
+"update.control.selectAtLeastOne" = "少なくとも 1 つの更新オプションを選択します。";
+"update.control.error %@" = "同期に失敗しました: %@";
+"update.logs.header" = "ログ";
+"update.auto.header" = "スケジュールされたアップデートのチェック";
+"update.auto.footer" = "iOS はバックグラウンドで便宜的にチェックを実行するか、アプリが次の起動まで待機することがあります。正確なタイミングは保証されません。";
+"update.auto.interval" = "チェック間隔";
+"update.interval.disabled" = "無効";
+"update.interval.days.1" = "1日";
+"update.interval.days.7" = "7日間";
+"update.interval.days.14" = "14日間";
+"update.interval.days.30" = "30日";
+"update.debug.header" = "デバッグ情報";
+"update.debug.lastUpdate" = "最終更新";
+"update.debug.never" = "なし";
+"update.debug.timeSince" = "経過時間";
+"update.debug.timeAgo.days %lld %lld" = "%lld日 %lld時間前";
+"update.debug.timeAgo.hours %lld" = "%lld時間前";
+"update.debug.totalSongs" = "総曲数";
+"update.debug.totalSheets" = "譜面総数";
+"update.debug.totalCategories" = "カテゴリー";
+"update.debug.utageSongs" = "宴曲数";
+"update.debug.songsWithAliases" = "別名のある曲";
+"update.debug.knownInternalLevels" = "既知の定数";
+"update.debug.totalIcons" = "プリセットアバター";
+"update.debug.totalDanCategories" = "ダンのカテゴリー";
+"update.debug.totalDanSections" = "ダンセクション";
+"update.debug.appVersion" = "アプリのバージョン";
+
+// MARK: - Best Table
+"bestTable.title" = "ベストテーブル";
+"bestTable.rating" = "DX Rating";
+"bestTable.old.count %lld" = "旧: %lld";
+"bestTable.new.count %lld" = "新規: %lld";
+"bestTable.settings.capacity" = "容量";
+"bestTable.settings.old" = "旧曲";
+"bestTable.settings.new" = "新曲";
+"bestTable.settings.total" = "合計";
+"bestTable.section.new %lld" = "新しい B%lld";
+"bestTable.section.old %lld" = "古い B%lld";
+"bestTable.empty" = "データなし";
+"bestTable.base %.1f" = "定数 %.1f";
+"bestTable.export.watermark" = "Generated by maimaid";
+"bestTable.export.fitDiff" = "擬合難度を使用";
+"bestTable.export.fitDiff.rating" = "擬合 Rating";
+"bestTable.settings.useFitDiff" = "擬合難度を使う";
+"bestTable.action.export" = "B50画像のエクスポート";
+
+// English Localizable.strings entries for Version Override Feature
+
+// MARK: - BestTableView Version Settings
+"bestTable.settings.version" = "ゲームバージョン";
+"bestTable.settings.version.current" = "現在のバージョン";
+"bestTable.settings.version.reset" = "リセット";
+"bestTable.settings.version.overrideHint" = "一時的に %@ を最新バージョンとして使用します";
+"bestTable.settings.version.custom" = "%@ (カスタム)";
+"bestTable.settings.version.unknown" = "未知";
+"bestTable.settings.version.auto" = "自動";
+"bestTable.settings.version.auto.footer" = "サーバーのデフォルト: %@";
+"bestTable.settings.version.available" = "利用可能なバージョン";
+"bestTable.settings.version.title" = "バージョンの選択";
+"bestTable.settings.version.cancel" = "キャンセル";
+"bestTable.settings.version.confirm" = "確認する";
+
+// MARK: - Recommendation
+"rec.title" = "おすすめ";
+"rec.settings.capacity" = "容量";
+"rec.settings.new" = "新曲おすすめ";
+"rec.settings.old" = "旧曲おすすめ";
+"rec.section.new" = "新曲おすすめ";
+"rec.section.old" = "旧曲おすすめ";
+"rec.loading" = "データを分析中...";
+"rec.empty.title" = "おすすめなし";
+"rec.empty.desc" = "データが不十分であるか、高収量トラックが見つかりません。";
+"rec.status.notPlayed" = "未プレイ";
+"rec.afterRank %@" = "%@以降";
+
+// MARK: - Data Sync
+"data.sync.stage.idle" = "待機中";
+"data.sync.stage.fetchingRemoteData" = "data.json を取得しています...";
+"data.sync.stage.fetchingAliases" = "エイリアスを取得しています...";
+"data.sync.stage.fetchingIcons" = "アイコンを取得しています...";
+"data.sync.stage.fetchingDanData" = "段位データを取得しています (gallery.yaml)...";
+"data.sync.stage.processingSongs" = "データを分析中...";
+"data.sync.stage.downloadingImages" = "カバーをダウンロード中...";
+"data.sync.stage.downloadingIcons" = "アイコンをダウンロード中...";
+"data.sync.stage.fetchingChartStats" = "チャート統計を取得しています...";
+"data.sync.stage.fetchingUtageChartStats" = "宴譜ノーツ合計を取得しています...";
+"data.sync.stage.saving" = "データベースを保存しています...";
+"data.sync.stage.completed" = "同期が完了しました";
+"data.sync.stage.failed" = "同期に失敗しました";
+
+"data.sync.eta.calculating" = "計算中...";
+"data.sync.eta.minutes %lld %02lld" = "残り約 %lld分%02lld秒";
+"data.sync.eta.seconds %lld" = "残り約 %lld秒";
+"data.sync.log.start" = "更新プロセスを開始しています...";
+"data.sync.status.fetchingData" = "リモート データを取得しています...";
+"data.sync.log.fetchedData %lld" = "%lld 曲をフェッチしました";
+"data.sync.status.fetchingAliases" = "LXNS からエイリアスを取得しています...";
+"data.sync.status.fetchingDanData" = "gallery.yaml をダウンロード中...";
+"data.sync.status.fetchingIcons" = "アイコンリストを取得中...";
+"data.sync.log.fetchedIcons %lld" = "LXNS から %lld アイコンを取得しました";
+"data.sync.log.fetchedDanData %lld" = "Dan データ、%lld カテゴリが正常にダウンロードされました";
+"data.sync.log.fetchedProviderIds %lld" = "プロバイダーから %lld ID を取得しました";
+"data.sync.log.providerIdError %@" = "プロバイダー ID のデコードに失敗しました: %@";
+"data.sync.log.processingCompleted %lld %lld" = "処理が完了しました。プロバイダーの一致: %lld/%lld";
+"data.sync.log.syncedSummary %lld %lld" = "%lld 曲と %lld シートをプロバイダー ID と同期しました";
+"data.sync.status.processing" = "データを処理中...";
+"data.sync.log.newSong %@" = "新規: %@";
+"data.sync.status.processingSong %@" = "処理中: %@";
+"data.sync.status.scanningCovers" = "表紙をスキャン中...";
+"data.sync.status.downloadingCovers %lld %lld" = "カバーのダウンロード (%lld/%lld)";
+"data.sync.status.downloadingIcons" = "アイコンをダウンロード中...";
+"data.sync.log.downloadingIcons %lld" = "%lld アイコンをダウンロードしています...";
+"data.sync.status.downloadingIconsProgress %lld %lld" = "アイコンのダウンロード: %lld/%lld";
+"data.sync.status.saving" = "データを保存中...";
+"data.sync.status.completed" = "アップデート完了！";
+"data.sync.status.failed %@" = "エラー: %@";
+
+// MARK: - Servers
+"server.jp" = "日本";
+"server.intl" = "国際";
+"server.cn" = "中国";
+"server.usa" = "USA";
+
+// MARK: - User Profile
+"userProfile.title" = "ユーザープロフィール";
+"userProfile.empty.title" = "プロファイルがありません";
+"userProfile.empty.description" = "始めるにはプロフィールを作成してください";
+"userProfile.create" = "プロファイルの作成";
+"userProfile.edit" = "編集";
+"userProfile.delete" = "削除";
+"userProfile.active" = "アクティブ";
+"userProfile.switchTo" = "切替";
+"userProfile.unnamed" = "無名";
+"userProfile.defaultName" = "プレーヤー";
+"userProfile.createTitle" = "プロファイルの作成";
+"userProfile.editTitle" = "プロフィールの編集";
+"userProfile.cancel" = "キャンセル";
+"userProfile.save" = "保存";
+"userProfile.name" = "名前";
+"userProfile.server" = "サーバ";
+"userProfile.latestVersion" = "最新バージョン";
+"userProfile.section.basic" = "基本情報";
+"userProfile.section.b50" = "B50の設定";
+"userProfile.section.credentials" = "認証情報";
+"userProfile.section.metadata" = "メタデータ";
+"userProfile.profileId" = "プロフィールID";
+"settings.sync.dfUsername" = "DF ユーザー名";
+"settings.sync.dfToken" = "DFインポートトークン";
+"settings.sync.lxnsToken" = "LXNS リフレッシュ トークン";
+
+// MARK: - Settings (User Management)
+"settings.userManagement.header" = "ユーザー管理";
+"settings.userManagement.footer" = "異なるサーバーの複数のユーザー プロファイルを管理します。";
+"settings.userManagement.title" = "ユーザープロフィール";
+
+// MARK: - Score Query
+"scoreQuery.title" = "スコア検索";
+"scoreQuery.stats.played" = "合計スコア";
+"scoreQuery.stats.fc" = "FC/FC+";
+"scoreQuery.stats.ap" = "AP/AP+";
+"scoreQuery.stats.fs" = "FS/FS+";
+"scoreQuery.stats.fsd" = "FDX/FDX+";
+"scoreQuery.sort.rating" = "Rating";
+"scoreQuery.sort.achievement" = "達成率";
+"scoreQuery.sort.level" = "レベル";
+"scoreQuery.display.grid" = "グリッド";
+"scoreQuery.display.list" = "リスト";
+"scoreQuery.badge.rank" = "ランク";
+"scoreQuery.badge.fc" = "FC";
+"scoreQuery.badge.fs" = "FS";
+"scoreQuery.columns" = "列";
+"scoreQuery.empty" = "まだスコアがありません";
+"scoreQuery.results" = "件";
+"scoreQuery.songNotFound" = "曲が見つかりません";
+"scoreQuery.export.title" = "定数テーブルのエクスポート";
+"scoreQuery.export.subtitle" = "スコアオーバーレイの有無にかかわらず、整数定数内のすべてのチャートをエクスポートします。";
+"scoreQuery.export.charts" = "チャート";
+"scoreQuery.export.level" = "整数定数";
+"scoreQuery.export.sections" = "セクション";
+"scoreQuery.export.mode.constants" = "定数";
+"scoreQuery.export.mode.scores" = "スコア付き";
+"scoreQuery.export.regularOnly" = "通常のチャートのみ";
+"scoreQuery.export.exporting" = "画像を生成中...";
+"scoreQuery.export.button" = "画像のエクスポート";
+"scoreQuery.export.imageTitle.constants" = "%@ 定数テーブル";
+"scoreQuery.export.imageTitle.scores" = "%@ スコアを含む定数テーブル";
+"scoreQuery.export.imageSummary" = "%d セクション · %d 通常のチャート";
+"scoreQuery.export.imageMode.constants" = "定数";
+"scoreQuery.export.imageMode.scores" = "スコア付き";
+"scoreQuery.export.watermark" = "Generated by maimaid";
+"scoreQuery.export.footer.constants" = "通常のチャートのみ";
+"scoreQuery.export.footer.scores" = "スコアオーバーレイを備えた通常のチャート";
+
+// MARK: - Cloud Sync
+"settings.cloud.title" = "クラウドアカウント";
+"settings.cloud.status.loggedIn" = "ログイン済み";
+"settings.cloud.section.sync" = "データ同期";
+"settings.cloud.section.autoBackup" = "自動バックアップ";
+"settings.cloud.backup" = "クラウドへのバックアップ";
+"settings.cloud.restore" = "クラウドから復元";
+"settings.cloud.syncing" = "同期中...";
+"settings.cloud.logout" = "ログアウト";
+"settings.cloud.login.title" = "クラウドログイン";
+"settings.cloud.login.subtitle" = "メールでサインインしてクラウド同期サービスを有効にします";
+"settings.cloud.login.button" = "ログイン";
+"settings.cloud.signup.title" = "クラウドアカウントの作成";
+"settings.cloud.signup.subtitle" = "メールでサインアップしてクラウド同期サービスを有効にします";
+"settings.cloud.signup.button" = "サインアップ";
+"settings.cloud.mode.login" = "ログイン";
+"settings.cloud.mode.signup" = "サインアップ";
+"settings.cloud.email" = "電子メール";
+"settings.cloud.password" = "パスワード";
+"settings.cloud.forgotPassword" = "パスワードをお忘れですか？";
+"settings.cloud.resendVerification" = "確認メールを再送信する";
+"settings.cloud.recovery.title" = "パスワードのリセット";
+"settings.cloud.recovery.subtitle" = "リカバリーリンクを確認しました。新しいパスワードを設定して復旧を完了してください。";
+"settings.cloud.recovery.section" = "新しいパスワードを設定する";
+"settings.cloud.recovery.newPassword" = "新しいパスワード";
+"settings.cloud.recovery.confirmPassword" = "新しいパスワードを確認する";
+"settings.cloud.recovery.updateButton" = "パスワードを更新する";
+"settings.cloud.recovery.cancel" = "キャンセル";
+"settings.cloud.privacy.hint" = "アカウント情報は、サインイン時にクラウド同期を有効にするために使用されます。データは Supabase に安全に保存されます。";
+"settings.cloud.message.loginSuccess" = "ログインしました。";
+"settings.cloud.message.signupSuccess" = "登録が完了しました。";
+"settings.cloud.message.authLinkSuccess" = "アカウント認証が完了しました。これでサインインできるようになりました。";
+"settings.cloud.message.recoveryLinkOpened" = "リカバリリンクが確認されました。新しいパスワードを設定してください。";
+"settings.cloud.message.passwordMismatch" = "2 つのパスワードが一致しません。";
+"settings.cloud.message.passwordUpdated" = "パスワードが正常に更新されました。";
+"settings.cloud.message.emailRateLimited" = "1 分あたり 1 つの認証メールのみをリクエストできます。";
+"settings.cloud.message.signupVerificationSent" = "登録が完了しました。メールを確認してアカウントを認証してください。";
+"settings.cloud.message.verificationEmailResent" = "確認メールが送信されました。受信箱をご確認ください。";
+"settings.cloud.message.resetEmailSent" = "パスワードリセットメールを送信しました。受信箱をご確認ください。";
+"settings.cloud.message.backupSuccess" = "バックアップが完了しました。";
+"settings.cloud.message.backupFailed" = "バックアップに失敗しました";
+"settings.cloud.message.restoreSuccess" = "復元が完了しました。";
+"settings.cloud.message.restoreFailed" = "復元に失敗しました";
+"settings.cloud.autoBackup.footer" = "iOS は都合よくバックグラウンドでバックアップを実行するか、アプリが次回起動するまで待機することがあります。正確なタイミングは保証されません。";
+"settings.cloud.autoBackup.interval" = "バックアップ間隔";
+"settings.cloud.autoBackup.lastBackup" = "最後のバックアップ";
+"settings.cloud.autoBackup.never" = "なし";
+"settings.cloud.config.title" = "Supabase が未設定です";
+"settings.cloud.config.subtitle" = "`Config/Secrets.xcconfig` にクラウド同期設定を追加してください。";
+"settings.cloud.config.section" = "構成";
+"settings.cloud.config.step.copy" = "1. 「Config/Secrets.example.xcconfig」を「Config/Secrets.xcconfig」にコピーします。";
+"settings.cloud.config.step.fill" = "2.「SUPABASE_URL」と「SUPABASE_PUBLISHABLE_KEY」を入力します。";
+"settings.cloud.config.error.unconfigured" = "Supabase が構成されていません。";
+"supabase.config.error.missingUrl" = "`SUPABASE_URL` が未設定です。`Config/Secrets.xcconfig` または Xcode Build Settings を設定してください。";
+"supabase.config.error.missingPublishableKey" = "`SUPABASE_PUBLISHABLE_KEY` が未設定です。`Config/Secrets.xcconfig` または Xcode Build Settings を設定してください。";
+"common.unknown" = "未知";
+"dan.detail.noRecord" = "記録なし";
+"dan.detail.missing" = "未達";
+"dan.list.sections %lld" = "%lld セクション";
+"avatar.editor.title" = "アバターの調整";
+"avatar.editor.hint" = "ドラッグして位置を決めたり、ピンチしてズームしたり、2 本の指で回転したりできます。";
+"avatar.editor.reset" = "リセット";
+"avatar.editor.apply" = "クロップを適用する";
+"avatar.editor.reedit" = "アバターの編集";

@@ -51,6 +51,7 @@
 "scanner.error.title" = "未能识别到歌曲标题";
 "scanner.chart.std" = "STD";
 "scanner.chart.dx" = "DX";
+"scanner.reset.hint" = "需要解锁";
 "scanner.unlock.needed" = "需要解锁";
 "scanner.unlock.notNeeded" = "无需解锁";
 "scanner.capture.button" = "拍摄照片";

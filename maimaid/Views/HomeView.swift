@@ -392,6 +392,7 @@ struct HomeView: View {
                 .foregroundStyle(
                     LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
                 )
+                .frame(width: 32, height: 32, alignment: .leading)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)

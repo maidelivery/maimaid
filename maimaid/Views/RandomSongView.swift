@@ -51,6 +51,7 @@ struct RandomSongView: View {
                         )
                     }
                 }
+                .allowsHitTesting(false)
                 .frame(height: currentSlotHeight)
                 .padding(16)
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 24))
