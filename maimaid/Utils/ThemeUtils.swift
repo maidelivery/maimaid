@@ -18,6 +18,7 @@ enum AppStorageKeys {
     static let songsSortOption = "songs.sortOption"
     static let songsSortAscending = "songs.sortAscending"
     static let songsGridColumns = "songs.gridColumns"
+    static let didShowOnboarding = "onboarding.didShowOnboarding"
 }
 
 enum UserDefaultsKeys {
@@ -29,6 +30,7 @@ enum UserDefaultsKeys {
     static let hideDeletedSongs = "filter.hideDeletedSongs"
     static let didFixOrphanedScoresMigration = "migration.fixOrphanedScoresRelationships"
     static let didForceRegionSyncMigration = "migration.forceRegionBackfillSync"
+    static let didShowOnboarding = "onboarding.didShowOnboarding"
 }
 
 enum BundleInfoKeys {
@@ -126,6 +128,11 @@ extension UserDefaults {
     var didForceRegionSyncMigration: Bool {
         get { bool(forKey: UserDefaultsKeys.didForceRegionSyncMigration) }
         set { set(newValue, forKey: UserDefaultsKeys.didForceRegionSyncMigration) }
+    }
+
+    var didShowOnboarding: Bool {
+        get { bool(forKey: UserDefaultsKeys.didShowOnboarding) }
+        set { set(newValue, forKey: UserDefaultsKeys.didShowOnboarding) }
     }
 }
 

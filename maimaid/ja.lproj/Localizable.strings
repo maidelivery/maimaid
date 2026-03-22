@@ -570,3 +570,22 @@
 "avatar.editor.reset" = "リセット";
 "avatar.editor.apply" = "クロップを適用する";
 "avatar.editor.reedit" = "アバターの編集";
+
+// MARK: - Onboarding
+"onboarding.title" = "ようこそ\nmaimaid";
+"onboarding.titlePrefix" = "ようこそ";
+"onboarding.appName" = "maimaid";
+"onboarding.subtitle" = "コア機能をすぐ把握して、すぐに記録と分析を始められます。";
+"onboarding.feature.fastScan" = "高速スキャン";
+"onboarding.feature.fastScan.detail" = "スコア画像から主要情報を素早く読み取り、入力を効率化します。";
+"onboarding.feature.localOffline" = "ローカル・オフライン";
+"onboarding.feature.localOffline.detail" = "データは端末内に保存され、オフラインでも閲覧・記録できます。";
+"onboarding.feature.multiUser" = "マルチユーザー対応";
+"onboarding.feature.multiUser.detail" = "複数プロフィールを作成して切り替え、プレイヤーごとに管理できます。";
+"onboarding.startButton" = "使い始める";
+"onboarding.download.sectionTitle" = "静的リソースのダウンロード";
+"onboarding.download.required" = "初回利用前に静的リソースをダウンロードしてください。完了後は自動でホームへ進みます。";
+"onboarding.download.failed" = "ダウンロードに失敗しました。ネットワークを確認して再試行してください。";
+"onboarding.download.action.start" = "ダウンロードして続行";
+"onboarding.download.action.retry" = "再試行";
+"onboarding.download.action.inProgress" = "ダウンロード中...";

@@ -571,3 +571,22 @@
 "avatar.editor.reset" = "Reset";
 "avatar.editor.apply" = "Apply Crop";
 "avatar.editor.reedit" = "Edit Avatar";
+
+// MARK: - Onboarding
+"onboarding.title" = "Welcome to\nmaimaid";
+"onboarding.titlePrefix" = "Welcome to";
+"onboarding.appName" = "maimaid";
+"onboarding.subtitle" = "See the core value at a glance, then jump right in.";
+"onboarding.feature.fastScan" = "Fast scanning";
+"onboarding.feature.fastScan.detail" = "Capture a score photo and extract key info in one smooth flow.";
+"onboarding.feature.localOffline" = "Local & offline";
+"onboarding.feature.localOffline.detail" = "Your data stays on device and remains available even without network.";
+"onboarding.feature.multiUser" = "Multi-user support";
+"onboarding.feature.multiUser.detail" = "Create and switch multiple profiles to manage each player separately.";
+"onboarding.startButton" = "Get Started";
+"onboarding.download.sectionTitle" = "Static Resource Download";
+"onboarding.download.required" = "Download static resources before first use. You will enter Home automatically when done.";
+"onboarding.download.failed" = "Download failed. Check your connection and try again.";
+"onboarding.download.action.start" = "Download and Continue";
+"onboarding.download.action.retry" = "Retry Download";
+"onboarding.download.action.inProgress" = "Downloading...";

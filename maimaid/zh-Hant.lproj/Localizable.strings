@@ -570,3 +570,22 @@
 "avatar.editor.reset" = "重置";
 "avatar.editor.apply" = "應用裁剪";
 "avatar.editor.reedit" = "編輯頭像";
+
+// MARK: - Onboarding
+"onboarding.title" = "歡迎使用\nmaimaid";
+"onboarding.titlePrefix" = "歡迎使用";
+"onboarding.appName" = "maimaid";
+"onboarding.subtitle" = "一眼看懂核心能力，立即開始記錄與分析。";
+"onboarding.feature.fastScan" = "快速掃描";
+"onboarding.feature.fastScan.detail" = "拍照識別成績與關鍵資訊，輸入流程更順手。";
+"onboarding.feature.localOffline" = "本地離線";
+"onboarding.feature.localOffline.detail" = "資料保存在裝置本地，離線時也能持續查看與記錄。";
+"onboarding.feature.multiUser" = "多使用者支援";
+"onboarding.feature.multiUser.detail" = "可建立並切換多個檔案，分別管理不同玩家資料。";
+"onboarding.startButton" = "開始使用";
+"onboarding.download.sectionTitle" = "靜態資源下載";
+"onboarding.download.required" = "首次使用需先下載靜態資源，完成後將自動進入首頁。";
+"onboarding.download.failed" = "下載失敗，請檢查網路後重試。";
+"onboarding.download.action.start" = "下載資源並繼續";
+"onboarding.download.action.retry" = "重試下載";
+"onboarding.download.action.inProgress" = "正在下載...";

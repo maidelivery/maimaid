@@ -8,8 +8,11 @@ struct HomeView: View {
     @Query(sort: \MaimaiIcon.id) private var icons: [MaimaiIcon]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     @Query private var allScores: [Score]
+    @AppStorage(UserDefaultsKeys.didPerformInitialSync) private var didPerformInitialSync = false
+    @AppStorage(AppStorageKeys.didShowOnboarding) private var didShowOnboarding = false
     
     @State private var showingEditProfile = false
+    @State private var showingOnboarding = false
     @State private var computedB50Total: Int = 0
     @State private var standardB50Total: Int = 0
     
@@ -96,6 +99,24 @@ struct HomeView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingOnboarding) {
+                FirstLaunchView(onCompleted: {
+                    didShowOnboarding = true
+                    showingOnboarding = false
+                })
+                .presentationDetents([.large])
+                .presentationDragIndicator(.hidden)
+                .interactiveDismissDisabled(true)
+            }
+            .onAppear {
+                evaluateOnboardingGate()
+            }
+            .onChange(of: songs.count) { _, _ in
+                evaluateOnboardingGate()
+            }
+            .onChange(of: didPerformInitialSync) { _, _ in
+                evaluateOnboardingGate()
+            }
             .task {
                 await updateB50IfNeeded()
                 await updateStandardB50IfNeeded()
@@ -120,6 +141,24 @@ struct HomeView: View {
             .onChange(of: config?.b35Count) { _, _ in
                 Task { await updateB50IfNeeded() }
             }
+        }
+    }
+
+    private func evaluateOnboardingGate() {
+        let hasLocalStaticData = !songs.isEmpty
+
+        // Fallback for existing users: if they already have local song data, treat initial sync as completed.
+        if !didPerformInitialSync && hasLocalStaticData {
+            didPerformInitialSync = true
+            didShowOnboarding = true
+        }
+
+        let shouldRequireInitialDownload = !didPerformInitialSync && !hasLocalStaticData
+
+        if shouldRequireInitialDownload {
+            showingOnboarding = true
+        } else if showingOnboarding && !MaimaiDataFetcher.shared.isSyncing {
+            showingOnboarding = false
         }
     }
     
