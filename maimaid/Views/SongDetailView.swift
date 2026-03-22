@@ -84,10 +84,8 @@ struct SongDetailContent: View {
                     // External search links
                     externalLinksSection
                     
-                    // Type picker
-                    if availableTypes.count > 1 {
-                        typePicker
-                    }
+                    // Chart type
+                    chartTypeSection
                     
                     // Sheet cards
                     sheetCards
@@ -522,15 +520,72 @@ struct SongDetailContent: View {
         }
     }
     
-    // MARK: - Type Picker
-    
+    // MARK: - Chart Type
+
+    private var chartTypeLabel: String {
+        String(localized: "song.detail.chartType")
+    }
+
+    private var currentChartTypeText: String {
+        localizedChartType(selectedType)
+    }
+
+    private var currentChartTypeColor: Color {
+        ThemeUtils.badgeColorForChartType(selectedType)
+    }
+
+    private func localizedChartType(_ type: String) -> String {
+        switch type.lowercased() {
+        case "dx":
+            return String(localized: "scanner.chart.dx")
+        case "std":
+            return String(localized: "scanner.chart.std")
+        default:
+            return type.uppercased()
+        }
+    }
+
+    private var chartTypeSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if availableTypes.count > 1 {
+                typePicker
+            } else {
+                readOnlyChartTypeIndicator
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(chartTypeLabel)，\(currentChartTypeText)")
+    }
+
     private var typePicker: some View {
         Picker("Version", selection: $selectedType) {
             ForEach(availableTypes, id: \.self) { type in
-                Text(type.uppercased() == "STD" ? String(localized: "scanner.chart.std") : type.uppercased()).tag(type)
+                Text(localizedChartType(type)).tag(type)
             }
         }
         .pickerStyle(.segmented)
+        .tint(currentChartTypeColor)
+    }
+
+    private var readOnlyChartTypeIndicator: some View {
+        HStack(spacing: 10) {
+            Circle()
+                .fill(currentChartTypeColor)
+                .frame(width: 10, height: 10)
+
+            Text(currentChartTypeText)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(.primary)
+
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(currentChartTypeColor.opacity(0.18), lineWidth: 1)
+        )
     }
     
     // MARK: - Sheet Cards
@@ -691,41 +746,65 @@ struct SheetCardView: View {
     private var chartStatsGrid: some View {
         if let stat = stat {
             HStack(spacing: 0) {
-                VStack(spacing: 4) {
-                    Text("song.detail.stats.fitDiff")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                    Text(stat.formattedFitDiff)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
-                }
-                .frame(maxWidth: .infinity)
-                
-                VStack(spacing: 4) {
-                    Text("song.detail.stats.avgRate")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                    Text(stat.formattedAvg)
-                        .font(.system(size: 14, weight: .bold, design: .monospaced))
-                        .foregroundColor(.primary)
-                }
-                .frame(maxWidth: .infinity)
-                
-                VStack(spacing: 4) {
-                    Text("song.detail.stats.sampleCount")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                    Text("\(Int(stat.cnt ?? 0))")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
-                }
-                .frame(maxWidth: .infinity)
+                chartStatItem(
+                    title: "song.detail.stats.fitDiff",
+                    value: stat.formattedFitDiff,
+                    design: .rounded
+                )
+
+                statDivider
+
+                chartStatItem(
+                    title: "song.detail.stats.avgRate",
+                    value: stat.formattedAvg,
+                    design: .monospaced
+                )
+
+                statDivider
+
+                chartStatItem(
+                    title: "song.detail.stats.sampleCount",
+                    value: "\(Int(stat.cnt ?? 0))",
+                    design: .rounded
+                )
             }
             .multilineTextAlignment(.center)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(diffColor.opacity(0.10), lineWidth: 1)
+            )
             .padding(.horizontal, 16)
-            .padding(.top, 4)
-            .padding(.bottom, 12)
+            .padding(.top, 2)
+            .padding(.bottom, 4)
         }
+    }
+
+    private func chartStatItem(title: LocalizedStringKey, value: String, design: Font.Design) -> some View {
+        VStack(spacing: 2) {
+            Text(title)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+
+            Text(value)
+                .font(.system(size: 17, weight: .semibold, design: design))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+    }
+
+    private var statDivider: some View {
+        Rectangle()
+            .fill(diffColor.opacity(0.10))
+            .frame(width: 1, height: 28)
     }
     
     @ViewBuilder

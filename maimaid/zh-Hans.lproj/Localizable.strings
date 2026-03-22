@@ -135,6 +135,7 @@
 "song.detail.stats.sampleCount" = "样本人数";
 "song.detail.copy.image" = "图片已复制";
 "song.detail.save.image" = "图片已保存至相册";
+"song.detail.chartType" = "谱面类型";
 "song.detail.metadata.bpm" = "BPM";
 "song.detail.metadata.category" = "分类";
 "song.detail.metadata.version" = "版本";

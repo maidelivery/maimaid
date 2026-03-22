@@ -135,6 +135,7 @@
 "song.detail.stats.sampleCount" = "Samples";
 "song.detail.copy.image" = "Image copied";
 "song.detail.save.image" = "Image saved to album";
+"song.detail.chartType" = "Chart Type";
 "song.detail.metadata.bpm" = "BPM";
 "song.detail.metadata.category" = "Category";
 "song.detail.metadata.version" = "Version";
