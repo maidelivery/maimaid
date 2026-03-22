@@ -268,7 +268,7 @@ struct ThemeUtils {
     // MARK: - Status Colors
     
     /// Color for Full Combo status badges.
-    static func fcColor(_ fc: String) -> Color {
+    nonisolated static func fcColor(_ fc: String) -> Color {
         let low = fc.lowercased()
         if low.contains("ap") { return Color(red: 1.0, green: 0.6, blue: 0.0) }   // gold
         if low.contains("fc") { return Color(red: 0.2, green: 0.75, blue: 0.2) }  // green
@@ -276,7 +276,7 @@ struct ThemeUtils {
     }
     
     /// Color for Full Sync status badges.
-    static func fsColor(_ fs: String) -> Color {
+    nonisolated static func fsColor(_ fs: String) -> Color {
         let low = fs.lowercased()
         if low.contains("fsd") { return Color(red: 0.7, green: 0.3, blue: 1.0) } // purple
         if low.contains("fs") || low.contains("sync") { return Color(red: 0.3, green: 0.5, blue: 1.0) } // blue
@@ -321,7 +321,7 @@ struct ThemeUtils {
     }
     
     /// Normalizes FC status codes to display strings (fc→FC, fcp→FC+, ap→AP, app→AP+).
-    static func normalizeFC(_ fc: String) -> String {
+    nonisolated static func normalizeFC(_ fc: String) -> String {
         switch fc.lowercased() {
         case "app": return "AP+"
         case "ap":  return "AP"
@@ -332,7 +332,7 @@ struct ThemeUtils {
     }
     
     /// Normalizes FS status codes to display strings (fs→FS, fsp→FS+, fsd→FDX, fsdp→FDX+).
-    static func normalizeFS(_ fs: String) -> String {
+    nonisolated static func normalizeFS(_ fs: String) -> String {
         switch fs.lowercased() {
         case "fsdp": return "FDX+"
         case "fsd":  return "FDX"

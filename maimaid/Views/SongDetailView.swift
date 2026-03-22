@@ -10,10 +10,13 @@ struct SongDetailView: View {
     @State private var toastMessage: String? = nil
     @State private var statsService = ChartStatsService.shared
     
-    init(song: Song) {
+    init(song: Song, preferredType: String? = nil) {
         self.song = song
         let types = Set(song.sheets.map { $0.type.lowercased() })
-        if types.contains("dx") {
+
+        if let preferredType, types.contains(preferredType.lowercased()) {
+            _selectedType = State(initialValue: preferredType.lowercased())
+        } else if types.contains("dx") {
             _selectedType = State(initialValue: "dx")
         } else if types.contains("std") {
             _selectedType = State(initialValue: "std")

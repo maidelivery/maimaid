@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-struct ChartStat: Codable, Sendable {
+nonisolated struct ChartStat: Codable, Sendable {
     let cnt: Double?
     let diff: String?
     let fit_diff: Double?
@@ -39,11 +39,12 @@ struct ChartStat: Codable, Sendable {
     }
 }
 
-struct ChartStatsResponse: Codable {
+nonisolated struct ChartStatsResponse: Codable, Sendable {
     let charts: [String: [ChartStat]]
 }
 
 @Observable
+@MainActor
 class ChartStatsService {
     static let shared = ChartStatsService()
     
@@ -73,14 +74,14 @@ class ChartStatsService {
         
         let task = Task {
             guard let url = URL(string: "https://www.diving-fish.com/api/maimaidxprober/chart_stats") else { return }
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try JSONDecoder().decode(ChartStatsResponse.self, from: data)
-            
-            await MainActor.run {
-                self.cache = response.charts
-                self.lastFetchDate = Date()
-                self.saveCachedStats()
-            }
+            let response = try await Task.detached(priority: .utility) {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                return try JSONDecoder().decode(ChartStatsResponse.self, from: data)
+            }.value
+
+            self.cache = response.charts
+            self.lastFetchDate = Date()
+            self.saveCachedStats()
         }
         
         self.fetchTask = task

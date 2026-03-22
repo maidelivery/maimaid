@@ -838,7 +838,7 @@ struct ScoreQueryView: View {
     @ViewBuilder
     private func songDetailDestination(entry: ScoreEntry) -> some View {
         if let song = songMap[entry.songIdentifier] {
-            SongDetailView(song: song)
+            SongDetailView(song: song, preferredType: entry.type)
         } else {
             Text("scoreQuery.songNotFound")
         }

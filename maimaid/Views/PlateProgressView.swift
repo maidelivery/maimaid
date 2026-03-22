@@ -140,17 +140,16 @@ struct PlateProgressView: View {
             isComputing = false
             return
         }
-        
-        let versionSet = Set(group.versions)
         let targetDifficulty = selectedDifficulty.lowercased()
         
         var sheets: [Sheet] = []
         for song in songs {
-            guard let version = song.version, versionSet.contains(version) else { continue }
+            guard PlateService.shared.isSongIncluded(song, in: group) else { continue }
             if isUtageCategory(song.category) { continue }
             for sheet in song.sheets {
                 if isUtageType(sheet.type) { continue }
                 if !sheet.regionJp { continue }
+                if !PlateService.shared.isSheetIncluded(sheet, song: song, in: group) { continue }
                 if sheet.difficulty.lowercased() == targetDifficulty {
                     sheets.append(sheet)
                 }
@@ -360,7 +359,7 @@ struct PlateProgressView: View {
             LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
                 ForEach(section.sheets) { sheet in
                     if let song = sheet.song {
-                        NavigationLink(destination: SongDetailView(song: song)) {
+                        NavigationLink(destination: SongDetailView(song: song, preferredType: sheet.type)) {
                             jacketItem(sheet)
                         }
                         .buttonStyle(.plain)

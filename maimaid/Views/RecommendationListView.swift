@@ -71,7 +71,7 @@ struct RecommendationListView: View {
                     if let b15 = response?.b15, !b15.isEmpty {
                         Section("rec.section.new") {
                             ForEach(b15) { result in
-                                NavigationLink(destination: SongDetailView(song: result.song)) {
+                                NavigationLink(destination: SongDetailView(song: result.song, preferredType: result.sheet.type)) {
                                     RecommendationRow(result: result)
                                 }
                             }
@@ -82,7 +82,7 @@ struct RecommendationListView: View {
                     if let b35 = response?.b35, !b35.isEmpty {
                         Section("rec.section.old") {
                             ForEach(b35) { result in
-                                NavigationLink(destination: SongDetailView(song: result.song)) {
+                                NavigationLink(destination: SongDetailView(song: result.song, preferredType: result.sheet.type)) {
                                     RecommendationRow(result: result)
                                 }
                             }

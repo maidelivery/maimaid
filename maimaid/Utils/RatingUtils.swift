@@ -211,7 +211,7 @@ enum RatingUtils {
     
     // MARK: - Rank Colors
     
-    static func colorForRank(_ rank: String) -> Color {
+    nonisolated static func colorForRank(_ rank: String) -> Color {
         switch rank {
         case "SSS+", "SSS":
             return Color(red: 1.0, green: 0.85, blue: 0.0) // Gold
