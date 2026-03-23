@@ -311,6 +311,16 @@ struct HomeView: View {
                 )
             }
             .buttonStyle(.plain)
+
+            NavigationLink(destination: CommunityAliasVotingBoardView()) {
+                functionCard(
+                    icon: "person.3.sequence.fill",
+                    title: "home.communityAlias.title",
+                    subtitle: "home.communityAlias.subtitle",
+                    gradient: [Color.teal, Color.green]
+                )
+            }
+            .buttonStyle(.plain)
             
             NavigationLink(destination: UsefulLinksView()) {
                 functionCard(

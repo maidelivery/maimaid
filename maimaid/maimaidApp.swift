@@ -22,7 +22,8 @@ struct maimaidApp: App {
                 PlayRecord.self,
                 SyncConfig.self,
                 MaimaiIcon.self,
-                UserProfile.self
+                UserProfile.self,
+                CommunityAliasCache.self
             )
         } catch {
             fatalError("Failed to create ModelContainer: \(error)")
@@ -56,6 +57,9 @@ struct maimaidApp: App {
                     await SupabaseAutoBackup.backupIfNeeded(
                         container: sharedModelContainer,
                         reason: "scenePhase.active"
+                    )
+                    await MaimaiDataFetcher.shared.syncApprovedCommunityAliasesIfNeeded(
+                        container: sharedModelContainer
                     )
                 }
             case .background:

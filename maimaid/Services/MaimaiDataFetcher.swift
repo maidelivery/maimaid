@@ -185,6 +185,27 @@ class MaimaiDataFetcher {
         var updateChartStats = true
         var updateUtageChartStats = true
     }
+
+    /// Sync approved community aliases into local Song/CommunityAliasCache.
+    /// This path is intentionally login-agnostic (anonymous users can also pull approved aliases).
+    func syncApprovedCommunityAliasesIfNeeded(
+        container: ModelContainer,
+        minimumInterval: TimeInterval = 10 * 60
+    ) async {
+        if let lastPoll = UserDefaults.app.communityAliasLastPollAt,
+           Date().timeIntervalSince(lastPoll) < minimumInterval {
+            return
+        }
+
+        UserDefaults.app.communityAliasLastPollAt = Date()
+        let context = ModelContext(container)
+        await CommunityAliasService.shared.syncApprovedAliasesIntoSongs(modelContext: context)
+    }
+
+    /// Force a full approved-alias pull, typically after static data refresh.
+    func forceSyncApprovedCommunityAliases(modelContext: ModelContext) async {
+        await CommunityAliasService.shared.syncApprovedAliasesIntoSongs(modelContext: modelContext, force: true)
+    }
     
     func fetchSongs(modelContext: ModelContext, options: SyncOptions = SyncOptions()) async throws {
         isSyncing = true
@@ -197,6 +218,7 @@ class MaimaiDataFetcher {
         do {
             var remoteSongs: [RemoteSong] = []
             var aliasMap: [String: [String]] = [:]
+            var hasFreshAliasSnapshot = false
             var titleToSongId: [String: Int] = [:]
             var lxnsIcons: [LxnsPresetIcon] = []
             var nameToProviderIds: [String: [Int]] = [:]
@@ -242,6 +264,7 @@ class MaimaiDataFetcher {
                         let lxnsSongResponse = try? JSONDecoder().decode(LxnsSongListResponse.self, from: lxnsSongData)
                         
                         if let aliasResponse = aliasResponse, let lxnsSongResponse = lxnsSongResponse {
+                            hasFreshAliasSnapshot = true
                             var songIdToTitle: [Int: String] = [:]
                             for lxnsSong in lxnsSongResponse.songs {
                                 songIdToTitle[lxnsSong.id] = lxnsSong.title
@@ -313,13 +336,13 @@ class MaimaiDataFetcher {
             }
 
             if options.updateChartStats {
-                updateStage(.fetchingChartStats, base: 0.53, message: "正在下载谱面拟合信息…")
+                updateStage(.fetchingChartStats, base: 0.53, message: String(localized: "data.sync.status.fetchingChartStats"))
                 await ChartStatsService.shared.fetchStats(forceRefresh: true)
-                log("谱面拟合信息已更新并写入本地缓存")
+                log(String(localized: "data.sync.log.chartStatsUpdated"))
             }
 
             if options.updateUtageChartStats {
-                updateStage(.fetchingUtageChartStats, base: 0.54, message: "正在下载宴谱音符总数…")
+                updateStage(.fetchingUtageChartStats, base: 0.54, message: String(localized: "data.sync.status.fetchingUtageChartStats"))
                 if let utageStatsURL = URL(string: "https://maimaid.shikoch.in/utage_chart_stats.json") {
                     var request = URLRequest(url: utageStatsURL)
                     request.setValue("Mozilla/5.0 (maimaid)", forHTTPHeaderField: "User-Agent")
@@ -327,7 +350,7 @@ class MaimaiDataFetcher {
                     let stats = try JSONDecoder().decode([UtageChartStatsItem].self, from: data)
                     utageNotesById = Dictionary(uniqueKeysWithValues: stats.map { ($0.id, $0.notes) })
                     utageNotesByKey = Self.buildUtageNotesByKey(stats)
-                    log("宴谱音符总数已下载：\(stats.count) 条")
+                    log(String(localized: "data.sync.log.fetchedUtageChartStats \(stats.count)"))
                 }
             }
             
@@ -446,8 +469,20 @@ class MaimaiDataFetcher {
                         if let officialId = titleToSongId[song.title] {
                             song.songId = officialId
                         }
-                        if let aliases = aliasMap[song.title], !aliases.isEmpty {
-                            song.aliases = aliases
+                        if hasFreshAliasSnapshot {
+                            // Full replace on each successful alias sync so stale local aliases
+                            // (e.g. removed community aliases) do not survive future refreshes.
+                            let officialAliases = aliasMap[song.title] ?? []
+                            if officialAliases.isEmpty {
+                                song.aliases = []
+                            } else {
+                                var seen = Set<String>()
+                                song.aliases = officialAliases.filter {
+                                    let norm = $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                                    guard !norm.isEmpty else { return false }
+                                    return seen.insert(norm).inserted
+                                }
+                            }
                         }
                         
                         let trimmedSearch = song.title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -589,7 +624,7 @@ class MaimaiDataFetcher {
                 log(String(localized: "data.sync.log.processingCompleted \(providerMatchCount) \(songsToProcess.count)"))
                 log(String(localized: "data.sync.log.syncedSummary \(providerMatchCount) \(sheetMatchCount)"))
                 if options.updateUtageChartStats {
-                    log("宴谱音符总数合并完成：更新 \(utageNotesMergeCount) 张谱面")
+                    log(String(localized: "data.sync.log.mergedUtageChartStats \(utageNotesMergeCount)"))
                 }
                 
                 remoteSongs = []
@@ -719,6 +754,9 @@ class MaimaiDataFetcher {
                 modelContext.insert(newConfig)
             }
             try modelContext.save()
+
+            // Pull newly approved community aliases after static data refresh so merged aliases remain visible.
+            await forceSyncApprovedCommunityAliases(modelContext: modelContext)
             
             UserDefaults.app.didPerformInitialSync = true
             updateStage(.completed, base: 1.0, message: String(localized: "data.sync.status.completed"))

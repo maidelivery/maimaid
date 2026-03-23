@@ -49,7 +49,52 @@ struct SongDetailContent: View {
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     @State private var statsService = ChartStatsService.shared
+    private let communityAliasService = CommunityAliasService.shared
+    @State private var supabaseManager = SupabaseManager.shared
     @State private var extractedDominantUIColor: UIColor? = nil
+    @State private var communityAliasDraft = ""
+    @State private var isSubmittingCommunityAlias = false
+    @State private var myCommunityCandidates: [CommunityAliasMyCandidate] = []
+    @State private var approvedCommunityAliases: [CommunityAliasCache] = []
+
+    private struct DisplayAlias: Identifiable {
+        let text: String
+        let isCommunity: Bool
+        var id: String { "\(isCommunity ? "community" : "official"):\(text.lowercased())" }
+    }
+
+    private var displayAliases: [DisplayAlias] {
+        let approvedCommunityNormSet = Set(
+            approvedCommunityAliases.map { $0.aliasText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        )
+
+        var seen = Set<String>()
+        var merged: [DisplayAlias] = []
+
+        for alias in song.aliases {
+            let normalized = alias.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !normalized.isEmpty else { continue }
+            if seen.insert(normalized).inserted {
+                merged.append(
+                    DisplayAlias(
+                        text: alias,
+                        isCommunity: approvedCommunityNormSet.contains(normalized)
+                    )
+                )
+            }
+        }
+
+        for item in approvedCommunityAliases {
+            let alias = item.aliasText
+            let normalized = alias.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !normalized.isEmpty else { continue }
+            if seen.insert(normalized).inserted {
+                merged.append(DisplayAlias(text: alias, isCommunity: true))
+            }
+        }
+
+        return merged
+    }
     
     private var filteredSheets: [Sheet] {
         song.sheets
@@ -77,6 +122,9 @@ struct SongDetailContent: View {
                 VStack(spacing: 20) {
                     // Metadata pills
                     metadataPills
+
+                    // Community aliases
+                    communityAliasSection
                     
                     // Region & Lock status
                     availabilitySection
@@ -129,6 +177,12 @@ struct SongDetailContent: View {
         .task(id: song.imageName) {
             updateJacketDominantColor()
             await statsService.fetchStats()
+            await refreshCommunityAliasState()
+        }
+        .onChange(of: supabaseManager.isAuthenticated) { _, _ in
+            Task {
+                await refreshCommunityAliasState()
+            }
         }
     }
     
@@ -187,6 +241,56 @@ struct SongDetailContent: View {
     private func copyToClipboard(_ text: String, label: String) {
         UIPasteboard.general.string = text
         showToast(message: String(localized: "song.detail.copy.success \(label)"))
+    }
+
+    private func refreshCommunityAliasState() async {
+        // Pull latest approved aliases before reading local cache, so other devices
+        // can see newly approved aliases promptly without waiting for app lifecycle sync.
+        await communityAliasService.syncApprovedAliasesIntoSongs(modelContext: modelContext)
+
+        let songIdentifier = song.songIdentifier
+        let approvedStatus = "approved"
+        let descriptor = FetchDescriptor<CommunityAliasCache>(
+            predicate: #Predicate { item in
+                item.songIdentifier == songIdentifier && item.status == approvedStatus
+            },
+            sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+        )
+        approvedCommunityAliases = (try? modelContext.fetch(descriptor)) ?? []
+        myCommunityCandidates = await communityAliasService.fetchMySongCandidates(songIdentifier: songIdentifier, limit: 30)
+    }
+
+    private func submitCommunityAlias() async {
+        let text = communityAliasDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+
+        isSubmittingCommunityAlias = true
+        defer { isSubmittingCommunityAlias = false }
+
+        let result = await communityAliasService.submitAlias(songIdentifier: song.songIdentifier, aliasText: text)
+
+        switch result.status {
+        case .created:
+            communityAliasDraft = ""
+            showToast(message: String(localized: "community.alias.submit.success"))
+        case .rejectedDuplicate:
+            let suggestions = result.similarAliases?.prefix(3).joined(separator: " / ") ?? ""
+            if suggestions.isEmpty {
+                showToast(message: String(localized: "community.alias.submit.duplicate"))
+            } else {
+                showToast(message: String(localized: "community.alias.submit.duplicateWithSuggestions \(suggestions)"))
+            }
+        case .quotaExceeded:
+            showToast(message: String(localized: "community.alias.submit.quotaExceeded"))
+        case .unauthenticated:
+            showToast(message: result.message.isEmpty ? String(localized: "community.alias.submit.loginRequired") : result.message)
+        case .invalidRequest:
+            showToast(message: String(localized: "community.alias.submit.invalidRequest"))
+        case .error:
+            showToast(message: result.message)
+        }
+
+        await refreshCommunityAliasState()
     }
     
     // MARK: - Ambient Background
@@ -297,18 +401,27 @@ struct SongDetailContent: View {
                     .padding(.top, 2)
                 }
                 
-                if !song.aliases.isEmpty {
+                if !displayAliases.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 6) {
-                            ForEach(song.aliases, id: \.self) { alias in
-                                Text(alias)
+                            ForEach(displayAliases) { alias in
+                                Text(alias.text)
                                     .font(.system(size: 11, weight: .medium))
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(alias.isCommunity ? .primary : .secondary)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
-                                    .background(.secondary.opacity(0.1), in: Capsule())
+                                    .background(.secondary.opacity(alias.isCommunity ? 0.06 : 0.1), in: Capsule())
+                                    .overlay {
+                                        if alias.isCommunity {
+                                            Capsule()
+                                                .strokeBorder(
+                                                    Color.accentColor.opacity(0.55),
+                                                    style: StrokeStyle(lineWidth: 1, dash: [4, 3])
+                                                )
+                                        }
+                                    }
                                     .onTapGesture {
-                                        copyToClipboard(alias, label: String(localized: "profile.edit.titleName")) // Using TitleName or Alias if available, but I'll use common key
+                                        copyToClipboard(alias.text, label: String(localized: "profile.edit.titleName"))
                                     }
                             }
                         }
@@ -317,13 +430,125 @@ struct SongDetailContent: View {
                     .padding(.top, 4)
                 }
             }
-            .padding(.horizontal, song.aliases.isEmpty ? 32 : 0)
+            .padding(.horizontal, displayAliases.isEmpty ? 32 : 0)
         }
         .padding(.top, 8)
     }
     
     // MARK: - Metadata Pills
-    
+
+    private var communityAliasSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("community.alias.section.title", systemImage: "person.3.sequence.fill")
+                    .font(.system(size: 14, weight: .semibold))
+
+                Spacer()
+
+                NavigationLink(destination: CommunityAliasVotingBoardView()) {
+                    Text("community.alias.section.board")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .buttonStyle(.plain)
+            }
+
+            if supabaseManager.isConfigured {
+                if supabaseManager.isAuthenticated {
+                    HStack(spacing: 8) {
+                        TextField(String(localized: "community.alias.section.submit.placeholder"), text: $communityAliasDraft)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .font(.system(size: 13))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+
+                        Button {
+                            Task {
+                                await submitCommunityAlias()
+                            }
+                        } label: {
+                            if isSubmittingCommunityAlias {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Text("community.alias.section.submit.action")
+                                    .font(.system(size: 12, weight: .bold))
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(communityAliasDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSubmittingCommunityAlias)
+                    }
+                } else {
+                    Text("community.alias.section.loginHint")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text("community.alias.section.unconfiguredHint")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+
+            if !myCommunityCandidates.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("community.alias.section.mySubmissions")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+
+                    ForEach(myCommunityCandidates.prefix(4), id: \.candidateId) { item in
+                        HStack(spacing: 8) {
+                            Text(item.aliasText)
+                                .font(.system(size: 12, weight: .medium))
+                            Spacer()
+                            Text(communityStatusLabel(item.status))
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(communityStatusColor(item.status))
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+        )
+    }
+
+    private func communityStatusLabel(_ status: String) -> String {
+        switch status {
+        case "pool_private":
+            return String(localized: "community.alias.status.voting")
+        case "voting":
+            return String(localized: "community.alias.status.voting")
+        case "approved":
+            return String(localized: "community.alias.status.approved")
+        case "rejected":
+            return String(localized: "community.alias.status.rejected")
+        default:
+            return status
+        }
+    }
+
+    private func communityStatusColor(_ status: String) -> Color {
+        switch status {
+        case "pool_private":
+            return .blue
+        case "voting":
+            return .blue
+        case "approved":
+            return .green
+        case "rejected":
+            return .red
+        default:
+            return .secondary
+        }
+    }
+
     private var metadataPills: some View {
         ViewThatFits(in: .horizontal) {
             // Priority 1: All in one row (if they fit)
@@ -1383,7 +1608,7 @@ struct FaultToleranceCalculatorView: View {
                 .font(.system(size: 16, weight: .bold, design: .monospaced))
                 .foregroundColor(.primary)
             
-            Text("上限")
+            Text("song.detail.tolerance.limit")
                 .font(.system(size: 8))
                 .foregroundColor(.secondary)
         }

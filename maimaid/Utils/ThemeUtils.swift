@@ -31,6 +31,8 @@ enum UserDefaultsKeys {
     static let didFixOrphanedScoresMigration = "migration.fixOrphanedScoresRelationships"
     static let didForceRegionSyncMigration = "migration.forceRegionBackfillSync"
     static let didShowOnboarding = "onboarding.didShowOnboarding"
+    static let communityAliasApprovedSyncAt = "communityAlias.approvedSyncAt"
+    static let communityAliasLastPollAt = "communityAlias.lastPollAt"
 }
 
 enum BundleInfoKeys {
@@ -133,6 +135,28 @@ extension UserDefaults {
     var didShowOnboarding: Bool {
         get { bool(forKey: UserDefaultsKeys.didShowOnboarding) }
         set { set(newValue, forKey: UserDefaultsKeys.didShowOnboarding) }
+    }
+
+    var communityAliasApprovedSyncAt: Date? {
+        get { object(forKey: UserDefaultsKeys.communityAliasApprovedSyncAt) as? Date }
+        set {
+            if let newValue {
+                set(newValue, forKey: UserDefaultsKeys.communityAliasApprovedSyncAt)
+            } else {
+                removeObject(forKey: UserDefaultsKeys.communityAliasApprovedSyncAt)
+            }
+        }
+    }
+
+    var communityAliasLastPollAt: Date? {
+        get { object(forKey: UserDefaultsKeys.communityAliasLastPollAt) as? Date }
+        set {
+            if let newValue {
+                set(newValue, forKey: UserDefaultsKeys.communityAliasLastPollAt)
+            } else {
+                removeObject(forKey: UserDefaultsKeys.communityAliasLastPollAt)
+            }
+        }
     }
 }
 
