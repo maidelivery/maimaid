@@ -17,7 +17,6 @@
 		373DA3D92F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */; };
 		373DA3E52F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */; };
 		37438C7F2F697ADB0055D6BD /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = 37438C7E2F697ADB0055D6BD /* Yams */; };
-		37438D122F69C22F0055D6BD /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 37438D112F69C22F0055D6BD /* Secrets.xcconfig */; };
 		37C9CF1B2F4CE4DB002CBF7A /* maimaid.icon in Resources */ = {isa = PBXBuildFile; fileRef = 37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */; };
 /* End PBXBuildFile section */
 
@@ -26,7 +25,6 @@
 		372860792F604BC70028E788 /* maimaid v1.41n.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaid v1.41n.mlpackage"; sourceTree = "<group>"; };
 		373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaidetector v1.2n.mlpackage"; sourceTree = "<group>"; };
 		373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaidistinguish v1.2.mlpackage"; sourceTree = "<group>"; };
-		37438D112F69C22F0055D6BD /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		37C9C3DD2F4CDAAB002CBF7A /* maimaid.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = maimaid.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = maimaid.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -73,7 +71,6 @@
 		3703C0013B00000100000003 /* Config */ = {
 			isa = PBXGroup;
 			children = (
-				37438D112F69C22F0055D6BD /* Secrets.xcconfig */,
 				3703C0013B00000100000001 /* Base.xcconfig */,
 			);
 			path = Config;
@@ -178,7 +175,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				37438D122F69C22F0055D6BD /* Secrets.xcconfig in Resources */,
 				37C9CF1B2F4CE4DB002CBF7A /* maimaid.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

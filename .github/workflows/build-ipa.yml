@@ -1,6 +1,6 @@
 name: Build maimaid IPA
 
-on:
+"on":
   push:
   workflow_dispatch:
 
@@ -27,14 +27,20 @@ jobs:
       - name: Archive app (unsigned)
         env:
           ARCHIVE_PATH: ${{ runner.temp }}/maimaid.xcarchive
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
           set -euo pipefail
+          : "${SUPABASE_URL:?Missing GitHub Secret SUPABASE_URL}"
+          : "${SUPABASE_PUBLISHABLE_KEY:?Missing GitHub Secret SUPABASE_PUBLISHABLE_KEY}"
           xcodebuild \
             -project ios/maimaid.xcodeproj \
             -scheme maimaid \
             -configuration Release \
             -destination "generic/platform=iOS" \
             CODE_SIGNING_ALLOWED=NO \
+            SUPABASE_URL="$SUPABASE_URL" \
+            SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
             archive \
             -archivePath "$ARCHIVE_PATH"
           APP_PATH="$ARCHIVE_PATH/Products/Applications/maimaid.app"

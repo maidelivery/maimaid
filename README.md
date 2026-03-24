@@ -67,6 +67,9 @@ pnpm run migrate:db
 - 触发时机：每次 `push`（也支持手动 `workflow_dispatch`）
 - 产物：`maimaid-ipa-<commit_sha>`，内含 `maimaid.ipa`
 - 当前为无签名归档（`CODE_SIGNING_ALLOWED=NO`），用于持续集成构建产物校验
+- 需要在仓库 `Settings -> Secrets and variables -> Actions` 配置：
+  - `SUPABASE_URL`
+  - `SUPABASE_PUBLISHABLE_KEY`
 
 ## 数据来源
 

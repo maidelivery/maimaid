@@ -66,6 +66,9 @@ pnpm run migrate:db
 - Trigger: every `push` (plus manual `workflow_dispatch`)
 - Artifact: `maimaid-ipa-<commit_sha>` containing `maimaid.ipa`
 - Current mode is unsigned archive build (`CODE_SIGNING_ALLOWED=NO`) for CI artifact verification
+- Configure these repository Action Secrets in `Settings -> Secrets and variables -> Actions`:
+  - `SUPABASE_URL`
+  - `SUPABASE_PUBLISHABLE_KEY`
 
 ## Data Sources
 
