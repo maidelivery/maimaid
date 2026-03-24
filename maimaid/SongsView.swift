@@ -59,11 +59,38 @@ struct SongsView: View {
     private let minColumns: CGFloat = 3
     private let maxColumns: CGFloat = 9
     
+    private struct SongFilterSnapshot: Sendable {
+        struct SheetSnapshot: Sendable {
+            let type: String
+            let difficulty: String
+            let noteDesigner: String?
+            let internalLevelValue: Double?
+            let levelValue: Double?
+            let regionJp: Bool
+            let regionIntl: Bool
+            let regionCn: Bool
+        }
+        
+        let songIdentifier: String
+        let songId: Int
+        let category: String
+        let title: String
+        let artist: String
+        let version: String?
+        let releaseDate: String?
+        let sortOrder: Int
+        let isFavorite: Bool
+        let searchKeywords: String?
+        let aliases: [String]
+        let sheets: [SheetSnapshot]
+        let maxDifficulty: Double
+    }
+    
     private func refreshScoreCache() {
         scoreCacheTask?.cancel()
         scoreCacheTask = Task { @MainActor in
             // Small delay to debounce rapid calls
-            try? await Task.sleep(nanoseconds: 50_000_000)
+            try? await Task.sleep(for: .milliseconds(50))
             guard !Task.isCancelled else { return }
             let profileId = activeProfiles.first?.id
             scoreCache = ScoreService.shared.scoreMap(context: modelContext)
@@ -79,59 +106,180 @@ struct SongsView: View {
         Array(Set(songs.compactMap { $0.version })).sorted { ThemeUtils.versionSortOrder($0) < ThemeUtils.versionSortOrder($1) }
     }
     
-    private func updateDisplayedSongsSync() {
-        searchTask?.cancel()
+    private func makeSongSnapshot(_ song: Song) -> SongFilterSnapshot {
+        let sheetSnapshots = song.sheets.map { sheet in
+            SongFilterSnapshot.SheetSnapshot(
+                type: sheet.type.lowercased(),
+                difficulty: sheet.difficulty.lowercased(),
+                noteDesigner: sheet.noteDesigner,
+                internalLevelValue: sheet.internalLevelValue,
+                levelValue: sheet.levelValue,
+                regionJp: sheet.regionJp,
+                regionIntl: sheet.regionIntl,
+                regionCn: sheet.regionCn
+            )
+        }
         
-        let currentSongs = songs
-        let currentFilter = filterSettings
-        let currentSearch = searchText
-        let currentSort = sortOption
-        let currentAscending = sortAscending
+        let maxDifficulty = sheetSnapshots.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
         
-        let filtered = FilterUtils.filterSongsOptimized(currentSongs, settings: currentFilter, searchText: currentSearch)
+        return SongFilterSnapshot(
+            songIdentifier: song.songIdentifier,
+            songId: song.songId,
+            category: song.category,
+            title: song.title,
+            artist: song.artist,
+            version: song.version,
+            releaseDate: song.releaseDate,
+            sortOrder: song.sortOrder,
+            isFavorite: song.isFavorite,
+            searchKeywords: song.searchKeywords,
+            aliases: song.aliases,
+            sheets: sheetSnapshots,
+            maxDifficulty: maxDifficulty
+        )
+    }
+    
+    private static func filterAndSortSongIdentifiers(
+        from snapshots: [SongFilterSnapshot],
+        settings: FilterSettings,
+        searchText: String,
+        sortOption: SortOption,
+        sortAscending: Bool
+    ) -> [String] {
+        let normalizedSearch = searchText.replacing(" ", with: "")
+        let hasSearch = !searchText.isEmpty
+        let hasCategories = !settings.selectedCategories.isEmpty
+        let hasVersions = !settings.selectedVersions.isEmpty
+        let hasTypes = !settings.selectedTypes.isEmpty
+        let hasDifficulties = !settings.selectedDifficulties.isEmpty
         
-        let result = filtered.sorted { a, b in
-            switch currentSort {
-            case .defaultOrder:
-                return currentAscending ? (a.sortOrder < b.sortOrder) : (a.sortOrder > b.sortOrder)
-            case .versionAndDate:
-                let vA = a.version ?? ""
-                let vB = b.version ?? ""
-                let orderA = ThemeUtils.versionSortOrder(vA)
-                let orderB = ThemeUtils.versionSortOrder(vB)
+        let filtered = snapshots.filter { song in
+            if hasSearch {
+                let titleMatch = song.title.localizedStandardContains(searchText)
+                    || song.title.replacing(" ", with: "").localizedStandardContains(normalizedSearch)
+                let artistMatch = song.artist.localizedStandardContains(searchText)
+                    || song.artist.replacing(" ", with: "").localizedStandardContains(normalizedSearch)
+                let keywordMatch = (song.searchKeywords?.localizedStandardContains(searchText) ?? false)
+                    || (song.searchKeywords?.replacing(" ", with: "").localizedStandardContains(normalizedSearch) ?? false)
+                let aliasMatch = song.aliases.contains {
+                    $0.localizedStandardContains(searchText)
+                        || $0.replacing(" ", with: "").localizedStandardContains(normalizedSearch)
+                }
+                let designerMatch = song.sheets.contains {
+                    ($0.noteDesigner?.localizedStandardContains(searchText) ?? false)
+                        || ($0.noteDesigner?.replacing(" ", with: "").localizedStandardContains(normalizedSearch) ?? false)
+                }
+                let idMatch = String(song.songId) == searchText
                 
-                if orderA != orderB {
-                    return currentAscending ? (orderA < orderB) : (orderA > orderB)
+                if !titleMatch && !artistMatch && !keywordMatch && !aliasMatch && !designerMatch && !idMatch {
+                    return false
+                }
+            }
+            
+            if settings.showFavoritesOnly && !song.isFavorite {
+                return false
+            }
+            
+            if hasCategories && !settings.selectedCategories.contains(song.category) {
+                return false
+            }
+            
+            if hasVersions {
+                guard let version = song.version, settings.selectedVersions.contains(version) else {
+                    return false
+                }
+            }
+            
+            if hasTypes || hasDifficulties || settings.hideDeletedSongs {
+                var hasMatchingType = !hasTypes
+                var hasMatchingDifficulty = !hasDifficulties
+                var isPlayable = !settings.hideDeletedSongs
+                
+                for sheet in song.sheets {
+                    if hasTypes && settings.selectedTypes.contains(sheet.type) {
+                        hasMatchingType = true
+                    }
+                    
+                    if hasDifficulties && settings.selectedDifficulties.contains(sheet.difficulty) {
+                        let level = sheet.internalLevelValue ?? sheet.levelValue ?? 0.0
+                        if level >= settings.minLevel && level <= settings.maxLevel {
+                            hasMatchingDifficulty = true
+                        }
+                    }
+                    
+                    if settings.hideDeletedSongs && (sheet.regionJp || sheet.regionIntl || sheet.regionCn) {
+                        isPlayable = true
+                    }
                 }
                 
-                let dA = a.releaseDate ?? "0000-00-00"
-                let dB = b.releaseDate ?? "0000-00-00"
-                if dA != dB {
-                    return currentAscending ? (dA < dB) : (dA > dB)
+                if !hasMatchingType || !hasMatchingDifficulty || !isPlayable {
+                    return false
+                }
+            }
+            
+            return true
+        }
+        
+        return filtered.sorted { a, b in
+            switch sortOption {
+            case .defaultOrder:
+                return sortAscending ? (a.sortOrder < b.sortOrder) : (a.sortOrder > b.sortOrder)
+            case .versionAndDate:
+                let orderA = ThemeUtils.versionSortOrder(a.version ?? "")
+                let orderB = ThemeUtils.versionSortOrder(b.version ?? "")
+                
+                if orderA != orderB {
+                    return sortAscending ? (orderA < orderB) : (orderA > orderB)
+                }
+                
+                let releaseA = a.releaseDate ?? "0000-00-00"
+                let releaseB = b.releaseDate ?? "0000-00-00"
+                if releaseA != releaseB {
+                    return sortAscending ? (releaseA < releaseB) : (releaseA > releaseB)
                 }
                 return a.sortOrder < b.sortOrder
             case .difficulty:
-                let maxDiffA = a.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
-                let maxDiffB = b.sheets.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
-                if maxDiffA == maxDiffB {
+                if a.maxDifficulty == b.maxDifficulty {
                     return a.sortOrder < b.sortOrder
                 }
-                return currentAscending ? (maxDiffA < maxDiffB) : (maxDiffA > maxDiffB)
+                return sortAscending ? (a.maxDifficulty < b.maxDifficulty) : (a.maxDifficulty > b.maxDifficulty)
             }
         }
-        
-        self.displayedSongs = result
-        self.isSorting = false
+        .map(\.songIdentifier)
     }
     
-    private func updateDisplayedSongsDebounced() {
+    private func updateDisplayedSongs(debounce: Duration? = nil) {
         searchTask?.cancel()
         isSorting = true
         
         searchTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 200_000_000)
-            if Task.isCancelled { return }
-            updateDisplayedSongsSync()
+            defer { isSorting = false }
+            if let debounce {
+                try? await Task.sleep(for: debounce)
+            }
+            guard !Task.isCancelled else { return }
+            
+            let currentSongs = songs
+            let songsByIdentifier = Dictionary(uniqueKeysWithValues: currentSongs.map { ($0.songIdentifier, $0) })
+            let snapshots = currentSongs.map(makeSongSnapshot)
+            
+            let currentFilter = filterSettings
+            let currentSearch = searchText
+            let currentSort = sortOption
+            let currentAscending = sortAscending
+            
+            let identifiers = await Task.detached(priority: .userInitiated) {
+                Self.filterAndSortSongIdentifiers(
+                    from: snapshots,
+                    settings: currentFilter,
+                    searchText: currentSearch,
+                    sortOption: currentSort,
+                    sortAscending: currentAscending
+                )
+            }.value
+            
+            guard !Task.isCancelled else { return }
+            displayedSongs = identifiers.compactMap { songsByIdentifier[$0] }
         }
     }
     
@@ -223,14 +371,16 @@ struct SongsView: View {
                 }
                 
                 if let anchorID = anchorID {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(50))
                         withAnimation(.easeOut(duration: 0.2)) {
                             self.zoomAnchorSongID = anchorID
                         }
                     }
                 }
                 
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(300))
                     navigationDisabled = false
                 }
             }
@@ -275,7 +425,7 @@ struct SongsView: View {
                         }
                     }
                     .overlay {
-                        if isSorting && !displayedSongs.isEmpty {
+                        if isSorting {
                             ProgressView()
                                 .padding()
                                 .background(.ultraThinMaterial)
@@ -367,7 +517,7 @@ struct SongsView: View {
                 refreshScoreCache()
             }
             if displayedSongs.isEmpty && !songs.isEmpty {
-                updateDisplayedSongsSync()
+                updateDisplayedSongs()
             }
             liveColumnCount = CGFloat(committedColumns)
         }
@@ -375,11 +525,15 @@ struct SongsView: View {
         .onChange(of: activeProfiles.first?.id) { _, _ in
             refreshScoreCache()
         }
-        .onChange(of: songs) { _, _ in updateDisplayedSongsSync() }
-        .onChange(of: searchText) { _, _ in updateDisplayedSongsDebounced() }
-        .onChange(of: filterSettings) { _, _ in updateDisplayedSongsSync() }
-        .onChange(of: sortOption) { _, _ in updateDisplayedSongsSync() }
-        .onChange(of: sortAscending) { _, _ in updateDisplayedSongsSync() }
+        .onChange(of: songs) { _, _ in updateDisplayedSongs() }
+        .onChange(of: searchText) { _, _ in updateDisplayedSongs(debounce: .milliseconds(200)) }
+        .onChange(of: filterSettings) { _, _ in updateDisplayedSongs() }
+        .onChange(of: sortOption) { _, _ in updateDisplayedSongs() }
+        .onChange(of: sortAscending) { _, _ in updateDisplayedSongs() }
+        .onDisappear {
+            searchTask?.cancel()
+            scoreCacheTask?.cancel()
+        }
     }
     
     // MARK: - List Layout
