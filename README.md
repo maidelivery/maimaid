@@ -2,64 +2,60 @@
 
 [English](README-en-US.md)
 
-一款专为 maimai DX 玩家打造的现代化原生 iOS 应用。轻松追踪您的分数、分析您的进度并发现新的挑战。
+## 项目简介
 
-## 功能
+`maimaid` 是一款面向 maimai DX 玩家生态的原生 iOS 应用。项目聚焦于成绩记录、曲库检索、进度统计与社区数据协同，采用本地数据优先策略，并结合云端能力完成备份与跨设备恢复。
 
-- **分数追踪器和评分分析**：根据您的最佳分数实时计算 DX 评分
+## 功能模块
 
-- **机器学习扫描器**：通过机器学习技术识别分数图片，快速输入分数
-
-- **随机播放器**：老虎机式的随机歌曲选择器，让您在不知道玩什么的时候也能轻松找到心仪的歌曲
-
-- **智能推荐**：基于您当前评分和谱面常量，为您推荐合适的歌曲
-
-- **谱面进度**：可视化您达成特定版本谱面的进度
-
-- **数据同步**：无缝导入 Diving Fish 和 LXNS 中的数据
+- 多用户档案体系（JP / INTL / CN 服务器上下文）
+- 成绩记录、游玩历史与 B35/B15（B50）计算
+- B50 结果可视化与导出
+- 曲库检索、筛选、收藏与多密度网格浏览
+- 基于 CoreML + Vision 的分数图/选曲图识别录入
+- 随机选歌、推分建议、牌子进度、段位信息
+- Diving Fish / LXNS 数据导入与自动上传
+- Supabase 账号、云备份/恢复、后台定时备份
+- 社区别名投稿、去重、投票与已通过别名同步
 
 ## 技术栈
 
-- **UI框架**：SwiftUI
+- SwiftUI
+- SwiftData
+- CoreML + Vision
+- Supabase (Auth / PostgREST / Storage / Functions)
+- Yams（段位 YAML 解析）
 
-- **持久化**：SwiftData
+## 系统组成
 
-- **机器学习**：YOLOv11 和 CoreML
+- 客户端：SwiftUI + SwiftData，本地存储与业务计算在端侧完成
+- 数据同步：静态曲库、别名、图标、段位、统计数据按配置增量刷新
+- 云端能力：Supabase 用于认证、备份恢复与社区别名服务
+- 识别链路：本地 CoreML 模型完成图片分类、目标检测与 OCR 辅助解析
 
-## 入门指南
+## 仓库结构
 
-### 前提条件
+- `maimaid/`：iOS 主工程（Views / Models / Services / Utils）
+- `supabase/migrations/`：社区别名相关数据库迁移与 RPC
+- `supabase/functions/community-alias-submit/`：别名投稿 Edge Function
+- `Config/`：构建配置（含 Supabase 相关配置键）
 
-- macOS，Xcode 版本 15+
+## 数据来源
 
-- iOS 版本 17.0+（用于 SwiftData 和现代 SwiftUI 功能）
+- [Diving Fish](https://www.diving-fish.com/)：成绩与统计接口
+- [LXNS Coffee House](https://maimai.lxns.net/)：歌曲别名、图标与账号相关接口
+- [arcade-songs](https://arcade-songs.zetaraku.dev/)：歌曲数据参考
 
-### 构建
+## 致谢
 
-1. 克隆仓库：
+- [Diving Fish](https://www.diving-fish.com/)：成绩与统计相关 API
+- [LXNS Coffee House](https://maimai.lxns.net/)：歌曲别名、图标与账号体系相关 API
+- [arcade-songs](https://arcade-songs.zetaraku.dev/)：歌曲数据参考
+- Google Antigravity（模型训练）
+- Ultralytics Platform（模型训练）
+- charaDiana（图像标注支持）
 
-```bash
+## 版权说明
 
-git clone https://github.com/shikochin/maimaid.git
-
-```
-
-2. 在 Xcode 中打开 `maimaid.xcodeproj` 文件。
-
-3. 选择目标设备/模拟器，然后按 `Cmd+R` 运行。
-
-## 特别鸣谢
-
-- **Diving Fish**：感谢他们提供的宝贵社区数据和 API 支持。
-
-- **LXNS Coffee House**：感谢其提供的歌曲别名和评分 API。
-
-- **maimai**：由 SEGA 开发。所有游戏素材和商标均归其各自所有者所有。
-
-- [**arcade-songs**](https://arcade-songs.zetaraku.dev/)：提供了歌曲数据。
-
-- Google Antigravity.
-
-- Ultralytics Platform 用于模型训练。
-
-- charaDiana 帮助了图像标注。
+`maimai` 为 SEGA 旗下作品。游戏素材与商标归原权利方所有。  
+本项目为玩家社区工具，和 SEGA 无官方关联。

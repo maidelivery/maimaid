@@ -1,0 +1,39 @@
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+.MuiDataGrid-root {
+  border: 0 !important;
+  background: #fff;
+}
+
+.MuiDataGrid-columnHeaders {
+  background: rgba(15, 23, 42, 0.03);
+}
+
+.MuiDataGrid-cell:focus,
+.MuiDataGrid-cell:focus-within,
+.MuiDataGrid-columnHeader:focus,
+.MuiDataGrid-columnHeader:focus-within {
+  outline: none !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .MuiDataGrid-root {
+    background: #0f172a;
+  }
+
+  .MuiDataGrid-columnHeaders {
+    background: rgba(203, 213, 225, 0.06);
+  }
+}

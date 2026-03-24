@@ -191,6 +191,18 @@ final class SupabaseManager {
         isPasswordRecoveryFlow = false
     }
 
+    func emailExists(_ email: String) async throws -> Bool {
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedEmail.isEmpty else { return false }
+
+        let client = try requireClient()
+        let exists: Bool = try await client
+            .rpc("auth_email_exists", params: ["p_email": normalizedEmail])
+            .execute()
+            .value
+        return exists
+    }
+
     private func isAppAuthCallbackURL(_ url: URL) -> Bool {
         guard let redirect = Self.authRedirectURL else { return false }
         guard

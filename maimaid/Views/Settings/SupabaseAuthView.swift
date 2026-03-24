@@ -39,6 +39,10 @@ struct SupabaseAuthView: View {
         emailCooldownRemainingSeconds > 0
     }
 
+    private var sanitizedEmail: String {
+        email.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private var emailCooldownRemainingSeconds: Int {
         guard let lastAuthEmailSentAt else { return 0 }
         let remaining = Int(ceil(lastAuthEmailSentAt.addingTimeInterval(60).timeIntervalSince(now)))
@@ -46,6 +50,33 @@ struct SupabaseAuthView: View {
     }
     
     private var config: SyncConfig? { configs.first }
+    
+    private var isSignUpPasswordValid: Bool {
+        meetsPasswordRequirement(password)
+    }
+    
+    private var showSignUpPasswordRequirementAsError: Bool {
+        isSignUpMode && !password.isEmpty && !isSignUpPasswordValid
+    }
+    
+    private var isRecoveryPasswordValid: Bool {
+        meetsPasswordRequirement(recoveryPassword)
+    }
+    
+    private var showRecoveryPasswordRequirementAsError: Bool {
+        !recoveryPassword.isEmpty && !isRecoveryPasswordValid
+    }
+
+    private func meetsPasswordRequirement(_ value: String) -> Bool {
+        guard value.count >= 8 else { return false }
+        
+        let hasLowercase = value.contains { $0.isLowercase }
+        let hasUppercase = value.contains { $0.isUppercase }
+        let hasDigit = value.contains { $0.isNumber }
+        let hasSymbol = value.contains { !$0.isLetter && !$0.isNumber && !$0.isWhitespace }
+        
+        return hasLowercase && hasUppercase && hasDigit && hasSymbol
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -240,7 +271,7 @@ struct SupabaseAuthView: View {
         .listRowBackground(Color.clear)
         .listSectionSeparator(.hidden)
 
-        Section("settings.cloud.recovery.section") {
+        Section {
             HStack(spacing: 12) {
                 settingsIcon(icon: "lock.fill", color: .gray)
 
@@ -271,6 +302,14 @@ struct SupabaseAuthView: View {
                     }
             }
             .padding(.vertical, 2)
+        } header: {
+            Text("settings.cloud.recovery.section")
+        } footer: {
+            Text("settings.cloud.signup.passwordRequirement")
+                .font(.footnote)
+                .foregroundStyle(showRecoveryPasswordRequirementAsError ? .red : .secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
         }
 
         Section {
@@ -292,7 +331,13 @@ struct SupabaseAuthView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(recoveryPassword.isEmpty || recoveryPasswordConfirm.isEmpty || isBusy)
+            .disabled(
+                recoveryPassword.isEmpty
+                    || recoveryPasswordConfirm.isEmpty
+                    || !isRecoveryPasswordValid
+                    || recoveryPassword != recoveryPasswordConfirm
+                    || isBusy
+            )
             .listRowBackground(Color.clear)
         }
         .listSectionSeparator(.hidden)
@@ -373,6 +418,25 @@ struct SupabaseAuthView: View {
                 field: .password,
                 isSecure: true
             )
+        } footer: {
+            if isSignUpMode {
+                Text("settings.cloud.signup.passwordRequirement")
+                    .font(.footnote)
+                    .foregroundStyle(showSignUpPasswordRequirementAsError ? .red : .secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            } else {
+                Button {
+                    focusedField = nil
+                    Task { await sendPasswordResetEmail() }
+                } label: {
+                    Text("settings.cloud.forgotPassword")
+                        .font(.footnote)
+                        .foregroundStyle(Color.accentColor)
+                }
+                .buttonStyle(.plain)
+                .disabled(sanitizedEmail.isEmpty || isBusy)
+            }
         }
 
         Section {
@@ -400,12 +464,18 @@ struct SupabaseAuthView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(email.isEmpty || password.isEmpty || isBusy || (isSignUpMode && isEmailRateLimited))
+            .disabled(
+                sanitizedEmail.isEmpty
+                    || password.isEmpty
+                    || isBusy
+                    || (isSignUpMode && isEmailRateLimited)
+                    || (isSignUpMode && !isSignUpPasswordValid)
+            )
             .listRowBackground(Color.clear)
         }
 
-        Section {
-            if isSignUpMode {
+        if isSignUpMode {
+            Section {
                 Button {
                     focusedField = nil
                     Task { await resendVerificationEmail() }
@@ -419,25 +489,10 @@ struct SupabaseAuthView: View {
                         }
                     }
                 }
-                .disabled(email.isEmpty || isBusy)
-            } else {
-                Button {
-                    focusedField = nil
-                    Task { await sendPasswordResetEmail() }
-                } label: {
-                    HStack {
-                        Text("settings.cloud.forgotPassword")
-                        Spacer()
-                        if isSendingPasswordReset {
-                            ProgressView()
-                                .controlSize(.small)
-                        }
-                    }
-                }
-                .disabled(email.isEmpty || isBusy)
+                .disabled(sanitizedEmail.isEmpty || isBusy)
             }
+            .listSectionSeparator(.hidden)
         }
-        .listSectionSeparator(.hidden)
 
         if isEmailRateLimited {
             Section {
@@ -583,8 +638,27 @@ struct SupabaseAuthView: View {
         UserDefaults.app.set(sentAt, forKey: "supabase.auth.email.lastSentAt")
     }
 
+    private func validateEmailRegistrationState(requiresExistingAccount: Bool) async -> Bool {
+        do {
+            let emailExists = try await supabaseManager.emailExists(sanitizedEmail)
+            guard emailExists == requiresExistingAccount else {
+                showToast(
+                    message: requiresExistingAccount
+                        ? "settings.cloud.message.emailNotRegistered"
+                        : "settings.cloud.message.emailAlreadyRegistered",
+                    error: true
+                )
+                return false
+            }
+            return true
+        } catch {
+            showToast(message: error.localizedDescription, error: true)
+            return false
+        }
+    }
+
     func signIn() async {
-        guard !email.isEmpty, !password.isEmpty else { return }
+        guard !sanitizedEmail.isEmpty, !password.isEmpty else { return }
         guard let client = supabaseManager.client else {
             showToast(message: supabaseManager.configurationErrorDescription ?? String(localized: "settings.cloud.config.error.unconfigured"), error: true)
             return
@@ -592,7 +666,7 @@ struct SupabaseAuthView: View {
 
         isLoading = true
         do {
-            let _ = try await client.auth.signIn(email: email, password: password)
+            let _ = try await client.auth.signIn(email: sanitizedEmail, password: password)
             showToast(message: "settings.cloud.message.loginSuccess")
             await supabaseManager.checkSession()
             await SupabaseAutoBackup.scheduleNextBackup(container: modelContext.container)
@@ -603,17 +677,22 @@ struct SupabaseAuthView: View {
     }
 
     func signUp() async {
-        guard !email.isEmpty, !password.isEmpty else { return }
-        guard canSendAuthEmailNow() else { return }
+        guard !sanitizedEmail.isEmpty, !password.isEmpty else { return }
+        guard isSignUpPasswordValid else {
+            showToast(message: "settings.cloud.message.passwordRequirementNotMet", error: true)
+            return
+        }
         guard let client = supabaseManager.client else {
             showToast(message: supabaseManager.configurationErrorDescription ?? String(localized: "settings.cloud.config.error.unconfigured"), error: true)
             return
         }
+        guard await validateEmailRegistrationState(requiresExistingAccount: false) else { return }
+        guard canSendAuthEmailNow() else { return }
 
         isLoading = true
         do {
             let response = try await client.auth.signUp(
-                email: email,
+                email: sanitizedEmail,
                 password: password,
                 redirectTo: SupabaseManager.authRedirectURL
             )
@@ -634,7 +713,7 @@ struct SupabaseAuthView: View {
     }
 
     func resendVerificationEmail() async {
-        guard !email.isEmpty else { return }
+        guard !sanitizedEmail.isEmpty else { return }
         guard canSendAuthEmailNow() else { return }
         guard let client = supabaseManager.client else {
             showToast(message: supabaseManager.configurationErrorDescription ?? String(localized: "settings.cloud.config.error.unconfigured"), error: true)
@@ -644,7 +723,7 @@ struct SupabaseAuthView: View {
         isSendingVerification = true
         do {
             try await client.auth.resend(
-                email: email,
+                email: sanitizedEmail,
                 type: .signup,
                 emailRedirectTo: SupabaseManager.authRedirectURL
             )
@@ -657,17 +736,18 @@ struct SupabaseAuthView: View {
     }
 
     func sendPasswordResetEmail() async {
-        guard !email.isEmpty else { return }
-        guard canSendAuthEmailNow() else { return }
+        guard !sanitizedEmail.isEmpty else { return }
         guard let client = supabaseManager.client else {
             showToast(message: supabaseManager.configurationErrorDescription ?? String(localized: "settings.cloud.config.error.unconfigured"), error: true)
             return
         }
+        guard await validateEmailRegistrationState(requiresExistingAccount: true) else { return }
+        guard canSendAuthEmailNow() else { return }
 
         isSendingPasswordReset = true
         do {
             try await client.auth.resetPasswordForEmail(
-                email,
+                sanitizedEmail,
                 redirectTo: SupabaseManager.recoveryRedirectURL
             )
             markAuthEmailSentNow()
@@ -680,6 +760,10 @@ struct SupabaseAuthView: View {
 
     func completePasswordRecovery() async {
         guard !recoveryPassword.isEmpty, !recoveryPasswordConfirm.isEmpty else { return }
+        guard isRecoveryPasswordValid else {
+            showToast(message: "settings.cloud.message.passwordRequirementNotMet", error: true)
+            return
+        }
         guard recoveryPassword == recoveryPasswordConfirm else {
             showToast(message: "settings.cloud.message.passwordMismatch", error: true)
             return

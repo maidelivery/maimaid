@@ -526,6 +526,7 @@
 "settings.cloud.mode.signup" = "Sign up";
 "settings.cloud.email" = "Email";
 "settings.cloud.password" = "Password";
+"settings.cloud.signup.passwordRequirement" = "Password must be at least 8 characters and include lowercase, uppercase, digits, and symbols.";
 "settings.cloud.forgotPassword" = "Forgot Password?";
 "settings.cloud.resendVerification" = "Resend Verification Email";
 "settings.cloud.recovery.title" = "Reset Password";
@@ -541,8 +542,11 @@
 "settings.cloud.message.authLinkSuccess" = "Account verification completed. You can now sign in.";
 "settings.cloud.message.recoveryLinkOpened" = "Recovery link verified. Please set a new password.";
 "settings.cloud.message.passwordMismatch" = "The two passwords do not match.";
+"settings.cloud.message.passwordRequirementNotMet" = "Password does not meet the required format.";
 "settings.cloud.message.passwordUpdated" = "Password updated successfully!";
 "settings.cloud.message.emailRateLimited" = "You can request only one auth email per minute.";
+"settings.cloud.message.emailAlreadyRegistered" = "This email is already registered. Please sign in instead.";
+"settings.cloud.message.emailNotRegistered" = "This email is not registered.";
 "settings.cloud.message.signupVerificationSent" = "Signup successful! Check your email to verify your account.";
 "settings.cloud.message.verificationEmailResent" = "Verification email sent. Please check your inbox.";
 "settings.cloud.message.resetEmailSent" = "Password reset email sent. Please check your inbox.";

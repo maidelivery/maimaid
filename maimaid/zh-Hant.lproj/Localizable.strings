@@ -525,6 +525,7 @@
 "settings.cloud.mode.signup" = "註冊";
 "settings.cloud.email" = "電子郵件";
 "settings.cloud.password" = "密碼";
+"settings.cloud.signup.passwordRequirement" = "密碼至少 8 位，且必須包含大小寫字母、數字與符號。";
 "settings.cloud.forgotPassword" = "忘記密碼？";
 "settings.cloud.resendVerification" = "重新發送驗證郵件";
 "settings.cloud.recovery.title" = "重置密碼";
@@ -540,8 +541,11 @@
 "settings.cloud.message.authLinkSuccess" = "帳號驗證已完成，現在可以登入了。";
 "settings.cloud.message.recoveryLinkOpened" = "恢復鏈接已驗證，請設定新密碼。";
 "settings.cloud.message.passwordMismatch" = "兩次輸入的密碼不一致。";
+"settings.cloud.message.passwordRequirementNotMet" = "密碼不符合要求格式。";
 "settings.cloud.message.passwordUpdated" = "密碼更新成功！";
 "settings.cloud.message.emailRateLimited" = "每分鐘最多只能寄送一封驗證信，請稍後再試。";
+"settings.cloud.message.emailAlreadyRegistered" = "該信箱已註冊，請直接登入。";
+"settings.cloud.message.emailNotRegistered" = "該信箱尚未註冊。";
 "settings.cloud.message.signupVerificationSent" = "註冊成功！請至信箱完成帳號驗證。";
 "settings.cloud.message.verificationEmailResent" = "已重新寄送驗證信，請查看信箱。";
 "settings.cloud.message.resetEmailSent" = "已寄出重設密碼信件，請查看信箱。";

@@ -1,44 +1,60 @@
 # maimaid
 
-A modern, native iOS companion for maimai DX players. Track your scores, analyze your progress, and discover new challenges with ease.
+## Project Overview
 
-## Features
+`maimaid` is a native iOS application built around the maimai DX player ecosystem.  
+The project focuses on score management, song database workflows, progression tracking, and community-driven data collaboration, with a local-first architecture and optional cloud backup/restore.
 
-- **Score Tracker & Rating Analytics**: Real-time DX Rating calculation based on your best scores
-- **ML Scanner**: Quick score entry via machine learning powered score picture recognition.
-- **Randomizer**: A slot-machine style random song picker for when you can't decide what to play.
-- **Smart Recommendations**: Discovery engine based on your current rating and chart constants.
-- **Plate Progress**: Visualize your journey towards version-specific completion plates.
-- **Data Sync**: Seamlessly import your data from Diving Fish and LXNS.
+## Feature Modules
+
+- Multi-profile system with JP / INTL / CN server contexts
+- Score records, play history, and B35/B15 (B50) calculation
+- B50 visualization and export rendering
+- Song library search, filtering, favorites, and multi-density grid browsing
+- CoreML + Vision-based score-screen and song-select image recognition
+- Random picker, rating recommendations, plate progress, and dan references
+- Diving Fish / LXNS import and auto-upload integration
+- Supabase auth, cloud backup/restore, and scheduled background backup
+- Community alias submission, dedupe, voting, and approved-alias sync
 
 ## Tech Stack
 
-- **UI Framework**: SwiftUI
-- **Persistence**: SwiftData
-- **Machine Learning**: YOLOv11 and CoreML
+- SwiftUI
+- SwiftData
+- CoreML + Vision
+- Supabase (Auth / PostgREST / Storage / Functions)
+- Yams (YAML parsing for dan data)
 
-## Getting Started
+## System Components
 
-### Prerequisites
+- Client layer: SwiftUI + SwiftData, local storage and business logic on-device
+- Data sync layer: configurable static-data refresh for songs, aliases, icons, dan, and stats
+- Cloud layer: Supabase for authentication, backup/restore, and community alias workflows
+- ML pipeline: on-device model inference for classification, detection, and OCR-assisted parsing
 
-- macOS with Xcode 15+
-- iOS 17.0+ (for SwiftData and modern SwiftUI features)
+## Repository Layout
 
-### Build
+- `maimaid/`: iOS app source (Views / Models / Services / Utils)
+- `supabase/migrations/`: database migrations and RPCs for community aliases
+- `supabase/functions/community-alias-submit/`: Edge Function for alias submission
+- `Config/`: build configuration and Supabase-related keys
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/shikochin/maimaid.git
-   ```
-2. Open `maimaid.xcodeproj` in Xcode.
-3. Select your target device/simulator and press `Cmd+R` to run.
+## Data Sources
 
-## Special Thanks
+- [Diving Fish](https://www.diving-fish.com/): score and statistics endpoints
+- [LXNS Coffee House](https://maimai.lxns.net/): aliases, icons, and account-related endpoints
+- [arcade-songs](https://arcade-songs.zetaraku.dev/): song metadata reference
 
-- **Diving Fish**: For the invaluable community data and API support.
-- **LXNS Coffee House**: For providing the song aliases and score APIs.
-- **maimai**: Developed by SEGA. All game assets and trademarks belong to their respective owners.
-- [**arcade-songs**](https://arcade-songs.zetaraku.dev/): Provided the song data.
+## Acknowledgements
+
+- [Diving Fish](https://www.diving-fish.com/): community data and API support
+- [LXNS Coffee House](https://maimai.lxns.net/): alias and API support
+- [arcade-songs](https://arcade-songs.zetaraku.dev/): song data reference
 - Google Antigravity.
-- Ultralytics Platform helped training model.
-- charaDiana assisted in labeling images.
+- Ultralytics Platform (model training support).
+- charaDiana (image labeling support).
+
+## Copyright
+
+`maimai` is developed by SEGA. All game assets and trademarks belong to their respective owners.  
+This project is a community tool and has no official affiliation with SEGA.

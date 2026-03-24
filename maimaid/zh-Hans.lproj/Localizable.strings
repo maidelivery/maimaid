@@ -526,6 +526,7 @@
 "settings.cloud.mode.signup" = "注册";
 "settings.cloud.email" = "电子邮件";
 "settings.cloud.password" = "密码";
+"settings.cloud.signup.passwordRequirement" = "密码至少 8 位，且必须包含大小写字母、数字和符号。";
 "settings.cloud.forgotPassword" = "忘记密码？";
 "settings.cloud.resendVerification" = "重新发送验证邮件";
 "settings.cloud.recovery.title" = "重置密码";
@@ -541,8 +542,11 @@
 "settings.cloud.message.authLinkSuccess" = "账号验证已完成，现在可以登录了。";
 "settings.cloud.message.recoveryLinkOpened" = "恢复链接已验证，请设置新密码。";
 "settings.cloud.message.passwordMismatch" = "两次输入的密码不一致。";
+"settings.cloud.message.passwordRequirementNotMet" = "密码不符合要求格式。";
 "settings.cloud.message.passwordUpdated" = "密码更新成功！";
 "settings.cloud.message.emailRateLimited" = "每分钟最多只能发送一封验证邮件，请稍后再试。";
+"settings.cloud.message.emailAlreadyRegistered" = "该邮箱已注册，请直接登录。";
+"settings.cloud.message.emailNotRegistered" = "该邮箱尚未注册。";
 "settings.cloud.message.signupVerificationSent" = "注册成功！请查收邮箱并完成验证。";
 "settings.cloud.message.verificationEmailResent" = "验证邮件已发送，请查收邮箱。";
 "settings.cloud.message.resetEmailSent" = "重置密码邮件已发送，请查收邮箱。";
