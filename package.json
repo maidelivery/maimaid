@@ -1,0 +1,31 @@
+{
+  "name": "maimaid-monorepo",
+  "private": true,
+  "packageManager": "pnpm@10.20.0",
+  "scripts": {
+    "nx": "nx",
+    "graph": "nx graph",
+    "list:ios": "nx run ios:list",
+    "clean:ios": "nx run ios:clean",
+    "build:ios": "nx run ios:build",
+    "doctor:db": "nx run db:doctor",
+    "status:db": "nx run db:status",
+    "migrate:db": "nx run db:migrate",
+    "reset:db": "nx run db:reset",
+    "dev:web": "nx run community-alias-admin:vite:dev",
+    "build:web": "nx run community-alias-admin:vite:build",
+    "preview:web": "nx run community-alias-admin:vite:preview",
+    "typecheck:web": "nx run community-alias-admin:typecheck",
+    "check-env:web": "nx run \"community-alias-admin:check:env\"",
+    "deploy:web": "nx run community-alias-admin:deploy"
+  },
+  "devDependencies": {
+    "@nx/vite": "22.6.1",
+    "@nx/web": "22.6.1",
+    "@vitest/ui": "~4.0.0",
+    "jiti": "2.4.2",
+    "nx": "22.6.1",
+    "vite": "^7.0.0",
+    "vitest": "~4.0.0"
+  }
+}

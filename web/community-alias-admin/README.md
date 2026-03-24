@@ -1,6 +1,6 @@
-# 社区别名管理系统（TypeScript + MUI + bun）
+# 社区别名管理系统（TypeScript + MUI + pnpm）
 
-这是基于 `React + TypeScript + MUI + bun + Supabase JS` 的社区别名后台。
+这是基于 `React + TypeScript + MUI + pnpm + Supabase JS` 的社区别名后台。
 
 ## 功能
 
@@ -16,17 +16,35 @@
 
 ## 本地开发
 
+推荐在仓库根目录执行（Nx + pnpm workspace）：
+
+```bash
+cd /path/to/maimaid
+pnpm install
+pnpm run dev:web
+```
+
+也可以在当前目录单独运行：
+
 ```bash
 cd web/community-alias-admin
-bun install
-bun run dev
+pnpm run dev
 ```
 
 ## 构建
 
+根目录：
+
+```bash
+cd /path/to/maimaid
+pnpm run build:web
+```
+
+当前目录：
+
 ```bash
 cd web/community-alias-admin
-bun run build
+pnpm run build
 ```
 
 曲库检索优先动态拉取：
@@ -48,16 +66,16 @@ bun run build
 已附带：
 
 - `wrangler.toml`
-- `bun run deploy`
+- `pnpm run deploy`
 - SPA 回退规则 `public/_redirects`
 
 首次部署：
 
 ```bash
 cd web/community-alias-admin
-bun install
-bun run cf:create
-bun run deploy
+pnpm install
+pnpm run cf:create
+pnpm run deploy
 ```
 
 默认 Pages 项目名：

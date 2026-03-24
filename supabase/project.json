@@ -1,0 +1,38 @@
+{
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "name": "db",
+  "projectType": "application",
+  "targets": {
+    "doctor": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "supabase",
+        "command": "if command -v supabase >/dev/null 2>&1; then supabase --version; else echo 'supabase CLI not found. Install from https://supabase.com/docs/guides/cli'; fi"
+      }
+    },
+    "status": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "supabase",
+        "command": "command -v supabase >/dev/null 2>&1 || { echo 'supabase CLI not found. Install from https://supabase.com/docs/guides/cli'; exit 1; }; supabase status"
+      }
+    },
+    "migrate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "supabase",
+        "command": "command -v supabase >/dev/null 2>&1 || { echo 'supabase CLI not found. Install from https://supabase.com/docs/guides/cli'; exit 1; }; supabase db push"
+      }
+    },
+    "reset": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "supabase",
+        "command": "command -v supabase >/dev/null 2>&1 || { echo 'supabase CLI not found. Install from https://supabase.com/docs/guides/cli'; exit 1; }; supabase db reset"
+      }
+    }
+  },
+  "tags": [
+    "platform:supabase"
+  ]
+}

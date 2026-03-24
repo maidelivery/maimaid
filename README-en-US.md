@@ -34,10 +34,38 @@ The project focuses on score management, song database workflows, progression tr
 
 ## Repository Layout
 
-- `maimaid/`: iOS app source (Views / Models / Services / Utils)
+- `ios/maimaid/`: iOS app source (Views / Models / Services / Utils)
+- `ios/maimaid.xcodeproj/`: iOS Xcode project
+- `ios/Config/`: iOS build configuration (including Supabase keys)
 - `supabase/migrations/`: database migrations and RPCs for community aliases
 - `supabase/functions/community-alias-submit/`: Edge Function for alias submission
-- `Config/`: build configuration and Supabase-related keys
+- `web/community-alias-admin/`: community alias admin frontend (React + MUI)
+
+## Monorepo Workflow (Nx + pnpm Workspace)
+
+- The repository root uses `pnpm workspace` for frontend packages (currently `web/*`)
+- Nx orchestrates frontend tasks from the root
+- iOS targets require Xcode command line tools
+- Supabase targets require Supabase CLI (and Docker for local container commands)
+
+```bash
+pnpm install
+pnpm run dev:web
+pnpm run build:web
+pnpm run typecheck:web
+pnpm run check-env:web
+pnpm run list:ios
+pnpm run build:ios
+pnpm run doctor:db
+pnpm run migrate:db
+```
+
+## GitHub Actions (IPA on Every Push)
+
+- Workflow: `.github/workflows/build-ipa.yml`
+- Trigger: every `push` (plus manual `workflow_dispatch`)
+- Artifact: `maimaid-ipa-<commit_sha>` containing `maimaid.ipa`
+- Current mode is unsigned archive build (`CODE_SIGNING_ALLOWED=NO`) for CI artifact verification
 
 ## Data Sources
 

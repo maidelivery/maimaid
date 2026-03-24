@@ -3,14 +3,14 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "packageManager": "bun@1.3.2",
+  "packageManager": "pnpm@10.20.0",
   "scripts": {
     "dev": "vite",
-    "check:env": "bun -e \"if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY) { console.error('Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY'); process.exit(1); }\"",
+    "check:env": "node -e \"if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY) { console.error('Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY'); process.exit(1); }\"",
     "build": "vite build",
     "preview": "vite preview",
     "cf:create": "wrangler pages project create maimaid-community-alias-admin --production-branch main",
-    "deploy": "bun run check:env && bun run build && wrangler pages deploy dist --project-name maimaid-community-alias-admin"
+    "deploy": "pnpm run check:env && pnpm run build && wrangler pages deploy dist --project-name maimaid-community-alias-admin"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

@@ -1,0 +1,54 @@
+name: Build maimaid IPA
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks
+
+      - name: Resolve Swift packages
+        run: |
+          xcodebuild \
+            -project ios/maimaid.xcodeproj \
+            -scheme maimaid \
+            -resolvePackageDependencies
+
+      - name: Archive app (unsigned)
+        env:
+          ARCHIVE_PATH: ${{ runner.temp }}/maimaid.xcarchive
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project ios/maimaid.xcodeproj \
+            -scheme maimaid \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            CODE_SIGNING_ALLOWED=NO \
+            archive \
+            -archivePath "$ARCHIVE_PATH"
+          APP_PATH="$ARCHIVE_PATH/Products/Applications/maimaid.app"
+          test -d "$APP_PATH"
+          rm -rf build/Payload
+          mkdir -p build/Payload
+          cp -R "$APP_PATH" build/Payload/maimaid.app
+          cd build
+          /usr/bin/zip -qry maimaid.ipa Payload
+          ls -lh maimaid.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: maimaid-ipa-${{ github.sha }}
+          path: build/maimaid.ipa
+          if-no-files-found: error
