@@ -598,6 +598,7 @@
 "community.alias.section.board" = "公示投票";
 "community.alias.section.submit.placeholder" = "提交一个社区别名（投稿后立即公示）";
 "community.alias.section.submit.action" = "投稿";
+"community.alias.section.dailyQuota %lld %lld" = "今日投稿：%lld/%lld";
 "community.alias.section.loginHint" = "登录云端账号后可投稿并参与投票。";
 "community.alias.section.unconfiguredHint" = "未配置 Supabase，社区投稿功能不可用。";
 "community.alias.section.mySubmissions" = "我的投稿";
@@ -610,7 +611,7 @@
 "community.alias.submit.quotaExceeded" = "今日投稿次数已达上限（5次）。";
 "community.alias.submit.loginRequired" = "请先登录云端账号再投稿。";
 "community.alias.submit.invalidRequest" = "投稿格式无效，请检查输入内容。";
-"community.alias.board.title" = "社区别名公示";
+"community.alias.board.title" = "社区别名投票";
 "community.alias.board.config.title" = "未配置 Supabase";
 "community.alias.board.config.message" = "请先在配置中填写 Supabase URL/Key，然后重启应用或重新进入页面。";
 "community.alias.board.login.title" = "需要登录";

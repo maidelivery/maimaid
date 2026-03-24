@@ -40,6 +40,21 @@ struct SongDetailView: View {
     }
 }
 
+private struct CommunityQuotaShakeEffect: GeometryEffect {
+    var amount: CGFloat = 12
+    var shakesPerUnit: CGFloat = 4
+    var animatableData: CGFloat
+
+    func effectValue(size: CGSize) -> ProjectionTransform {
+        ProjectionTransform(
+            CGAffineTransform(
+                translationX: amount * sin(animatableData * .pi * shakesPerUnit),
+                y: 0
+            )
+        )
+    }
+}
+
 struct SongDetailContent: View {
     let song: Song
     @Binding var selectedType: String
@@ -56,6 +71,10 @@ struct SongDetailContent: View {
     @State private var isSubmittingCommunityAlias = false
     @State private var myCommunityCandidates: [CommunityAliasMyCandidate] = []
     @State private var approvedCommunityAliases: [CommunityAliasCache] = []
+    @State private var communityAliasDailyUsedCount = 0
+    @State private var communityQuotaShakePhase: CGFloat = 0
+    @State private var isCommunityQuotaBarFlashing = false
+    private let communityAliasDailyQuotaLimit = 5
 
     private struct DisplayAlias: Identifiable {
         let text: String
@@ -94,6 +113,17 @@ struct SongDetailContent: View {
         }
 
         return merged
+    }
+
+    private var communityAliasDailyUsageProgress: Double {
+        guard communityAliasDailyQuotaLimit > 0 else { return 0 }
+        return min(max(Double(communityAliasDailyUsedCount) / Double(communityAliasDailyQuotaLimit), 0), 1)
+    }
+
+    private var communityAliasDailyUsageColor: Color {
+        // Hue 0.33 ~= green, 0.00 = red.
+        let hue = 0.33 * (1 - communityAliasDailyUsageProgress)
+        return Color(hue: hue, saturation: 0.82, brightness: 0.92)
     }
     
     private var filteredSheets: [Sheet] {
@@ -143,6 +173,7 @@ struct SongDetailContent: View {
                 .padding(.bottom, 40)
             }
         }
+        .modifier(CommunityQuotaShakeEffect(animatableData: communityQuotaShakePhase))
         .background(ambientBackground)
         .navigationTitle(currentTitle)
         .navigationBarTitleDisplayMode(.inline)
@@ -258,11 +289,23 @@ struct SongDetailContent: View {
         )
         approvedCommunityAliases = (try? modelContext.fetch(descriptor)) ?? []
         myCommunityCandidates = await communityAliasService.fetchMySongCandidates(songIdentifier: songIdentifier, limit: 30)
+
+        if supabaseManager.isAuthenticated {
+            if let dailyCount = await communityAliasService.fetchMyDailySubmissionCount() {
+                communityAliasDailyUsedCount = min(max(dailyCount, 0), communityAliasDailyQuotaLimit)
+            }
+        } else {
+            communityAliasDailyUsedCount = 0
+        }
     }
 
     private func submitCommunityAlias() async {
         let text = communityAliasDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        if communityAliasDailyUsedCount >= communityAliasDailyQuotaLimit {
+            triggerCommunityQuotaLimitFeedback()
+            return
+        }
 
         isSubmittingCommunityAlias = true
         defer { isSubmittingCommunityAlias = false }
@@ -273,6 +316,12 @@ struct SongDetailContent: View {
         case .created:
             communityAliasDraft = ""
             showToast(message: String(localized: "community.alias.submit.success"))
+            if let quotaRemaining = result.quotaRemaining {
+                let used = communityAliasDailyQuotaLimit - quotaRemaining
+                communityAliasDailyUsedCount = min(max(used, 0), communityAliasDailyQuotaLimit)
+            } else {
+                communityAliasDailyUsedCount = min(communityAliasDailyQuotaLimit, communityAliasDailyUsedCount + 1)
+            }
         case .rejectedDuplicate:
             let suggestions = result.similarAliases?.prefix(3).joined(separator: " / ") ?? ""
             if suggestions.isEmpty {
@@ -281,7 +330,8 @@ struct SongDetailContent: View {
                 showToast(message: String(localized: "community.alias.submit.duplicateWithSuggestions \(suggestions)"))
             }
         case .quotaExceeded:
-            showToast(message: String(localized: "community.alias.submit.quotaExceeded"))
+            communityAliasDailyUsedCount = communityAliasDailyQuotaLimit
+            triggerCommunityQuotaLimitFeedback()
         case .unauthenticated:
             showToast(message: result.message.isEmpty ? String(localized: "community.alias.submit.loginRequired") : result.message)
         case .invalidRequest:
@@ -291,6 +341,32 @@ struct SongDetailContent: View {
         }
 
         await refreshCommunityAliasState()
+    }
+
+    private func triggerCommunityQuotaLimitFeedback() {
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+
+        withAnimation(.linear(duration: 0.42)) {
+            communityQuotaShakePhase += 1
+        }
+
+        Task {
+            await flashCommunityQuotaBar()
+        }
+    }
+
+    @MainActor
+    private func flashCommunityQuotaBar() async {
+        for _ in 0..<3 {
+            withAnimation(.easeInOut(duration: 0.1)) {
+                isCommunityQuotaBarFlashing = true
+            }
+            try? await Task.sleep(nanoseconds: 110_000_000)
+            withAnimation(.easeInOut(duration: 0.1)) {
+                isCommunityQuotaBarFlashing = false
+            }
+            try? await Task.sleep(nanoseconds: 110_000_000)
+        }
     }
     
     // MARK: - Ambient Background
@@ -454,6 +530,40 @@ struct SongDetailContent: View {
 
             if supabaseManager.isConfigured {
                 if supabaseManager.isAuthenticated {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
+                            Text(String(localized: "community.alias.section.dailyQuota \(communityAliasDailyUsedCount) \(communityAliasDailyQuotaLimit)"))
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                        }
+
+                        GeometryReader { proxy in
+                            ZStack(alignment: .leading) {
+                                Capsule()
+                                    .fill(Color.secondary.opacity(0.18))
+
+                                Capsule()
+                                    .fill(communityAliasDailyUsageColor)
+                                    .frame(
+                                        width: max(
+                                            0,
+                                            proxy.size.width * communityAliasDailyUsageProgress
+                                        )
+                                    )
+                                    .overlay {
+                                        if isCommunityQuotaBarFlashing {
+                                            Capsule()
+                                                .fill(.white.opacity(0.55))
+                                        }
+                                    }
+                            }
+                        }
+                        .frame(height: 8)
+                        .opacity(isCommunityQuotaBarFlashing ? 0.45 : 1)
+                        .animation(.easeInOut(duration: 0.22), value: communityAliasDailyUsedCount)
+                    }
+
                     HStack(spacing: 8) {
                         TextField(String(localized: "community.alias.section.submit.placeholder"), text: $communityAliasDraft)
                             .textInputAutocapitalization(.never)
@@ -477,7 +587,10 @@ struct SongDetailContent: View {
                             }
                         }
                         .buttonStyle(.borderedProminent)
-                        .disabled(communityAliasDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSubmittingCommunityAlias)
+                        .disabled(
+                            communityAliasDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                || isSubmittingCommunityAlias
+                        )
                     }
                 } else {
                     Text("community.alias.section.loginHint")

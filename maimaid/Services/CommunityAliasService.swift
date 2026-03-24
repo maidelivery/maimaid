@@ -151,6 +151,10 @@ nonisolated private struct CommunityAliasMySongCandidatesParams: Codable, Sendab
     let p_limit: Int
 }
 
+nonisolated private struct CommunityAliasDailyCountParams: Codable, Sendable {
+    let p_local_date: String
+}
+
 nonisolated private struct CommunityAliasVoteParams: Codable, Sendable {
     let p_candidate_id: UUID
     let p_vote: Int
@@ -361,6 +365,28 @@ final class CommunityAliasService {
         } catch {
             print("CommunityAliasService.fetchMySongCandidates failed: \(error)")
             return []
+        }
+    }
+
+    func fetchMyDailySubmissionCount(localDate: Date = Date()) async -> Int? {
+        guard let client = manager.client else { return nil }
+        guard await resolveAccessToken(client: client) != nil else { return nil }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        do {
+            let params = CommunityAliasDailyCountParams(p_local_date: formatter.string(from: localDate))
+            let count: Int = try await client
+                .rpc("community_alias_count_daily_creations", params: params)
+                .execute()
+                .value
+            return max(0, count)
+        } catch {
+            print("CommunityAliasService.fetchMyDailySubmissionCount failed: \(error)")
+            return nil
         }
     }
 

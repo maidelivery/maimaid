@@ -598,6 +598,7 @@
 "community.alias.section.board" = "Voting Board";
 "community.alias.section.submit.placeholder" = "Submit a community alias (goes public for voting immediately)";
 "community.alias.section.submit.action" = "Submit";
+"community.alias.section.dailyQuota %lld %lld" = "Today's submissions: %lld/%lld";
 "community.alias.section.loginHint" = "Sign in to submit and vote on community aliases.";
 "community.alias.section.unconfiguredHint" = "Supabase is not configured. Community alias submission is unavailable.";
 "community.alias.section.mySubmissions" = "My Submissions";
@@ -610,7 +611,7 @@
 "community.alias.submit.quotaExceeded" = "Daily submission limit reached (5).";
 "community.alias.submit.loginRequired" = "Please sign in to your cloud account before submitting.";
 "community.alias.submit.invalidRequest" = "Invalid submission format. Please check your input.";
-"community.alias.board.title" = "Community Alias Board";
+"community.alias.board.title" = "Community Alias Voting";
 "community.alias.board.config.title" = "Supabase Not Configured";
 "community.alias.board.config.message" = "Fill in Supabase URL/Key in configuration, then restart the app or reopen this page.";
 "community.alias.board.login.title" = "Login Required";

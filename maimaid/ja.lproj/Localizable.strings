@@ -598,6 +598,7 @@
 "community.alias.section.board" = "公開投票";
 "community.alias.section.submit.placeholder" = "コミュニティ別名を投稿（投稿後すぐ公開投票）";
 "community.alias.section.submit.action" = "投稿";
+"community.alias.section.dailyQuota %lld %lld" = "本日の投稿: %lld/%lld";
 "community.alias.section.loginHint" = "クラウドアカウントでログインすると投稿と投票ができます。";
 "community.alias.section.unconfiguredHint" = "Supabase が未設定のため、コミュニティ投稿は利用できません。";
 "community.alias.section.mySubmissions" = "自分の投稿";
@@ -610,7 +611,7 @@
 "community.alias.submit.quotaExceeded" = "本日の投稿上限（5件）に達しました。";
 "community.alias.submit.loginRequired" = "投稿するにはクラウドアカウントにログインしてください。";
 "community.alias.submit.invalidRequest" = "投稿形式が無効です。入力内容を確認してください。";
-"community.alias.board.title" = "コミュニティ別名公開";
+"community.alias.board.title" = "コミュニティ別名投票";
 "community.alias.board.config.title" = "Supabase 未設定";
 "community.alias.board.config.message" = "設定で Supabase URL/Key を入力し、アプリを再起動するかこの画面を開き直してください。";
 "community.alias.board.login.title" = "ログインが必要";
