@@ -4,6 +4,7 @@ const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   HOST: z.string().min(1).default("0.0.0.0"),
   PORT: z.coerce.number().int().positive().default(8787),
+  APP_PUBLIC_URL: z.string().url().optional(),
   DATABASE_URL: z.string().min(1),
   JWT_ISSUER: z.string().min(1).default("maimaid-backend"),
   JWT_ACCESS_SECRET: z.string().min(16),

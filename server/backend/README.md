@@ -62,6 +62,8 @@ This repo now includes a ready-to-run local stack:
 cp server/backend/.env.docker.example server/backend/.env.docker
 ```
 
+Optional (recommended for local secrets): create `server/backend/.env.docker.local` for overrides such as `RESEND_API_KEY`.
+
 2. Start stack:
 
 ```bash
@@ -101,6 +103,7 @@ At repository root:
 See `server/backend/.env.example`:
 
 - Network: `HOST`, `PORT`
+- Public URL: `APP_PUBLIC_URL` (used to build email verification links)
 - Auth: `JWT_*`
 - Database: `DATABASE_URL`
 - Catalog source: `CATALOG_SOURCE_URL` (default points to cloudfront `data.json`)
@@ -112,6 +115,8 @@ See `server/backend/.env.example`:
 - Canonical:
   - `GET /health`
   - `POST /v1/auth/*`
+  - `GET /v1/auth/verify-email?token=...`
+  - `GET /v1/auth/password-reset?token=...`
   - `GET/POST/PATCH /v1/profiles/*`
   - `GET/POST /v1/catalog/*`
   - `GET/POST /v1/scores/*`

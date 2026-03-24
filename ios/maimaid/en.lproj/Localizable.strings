@@ -540,13 +540,16 @@
 "settings.cloud.message.loginSuccess" = "Login successful!";
 "settings.cloud.message.signupSuccess" = "Signup successful!";
 "settings.cloud.message.authLinkSuccess" = "Account verification completed. You can now sign in.";
+"settings.cloud.message.authLinkFailed" = "Verification link is invalid or expired.";
 "settings.cloud.message.recoveryLinkOpened" = "Recovery link verified. Please set a new password.";
+"settings.cloud.message.recoveryLinkInvalid" = "Password reset link is invalid or expired.";
 "settings.cloud.message.passwordMismatch" = "The two passwords do not match.";
 "settings.cloud.message.passwordRequirementNotMet" = "Password does not meet the required format.";
 "settings.cloud.message.passwordUpdated" = "Password updated successfully!";
 "settings.cloud.message.emailRateLimited" = "You can request only one auth email per minute.";
 "settings.cloud.message.emailAlreadyRegistered" = "This email is already registered. Please sign in instead.";
 "settings.cloud.message.emailNotRegistered" = "This email is not registered.";
+"settings.cloud.message.emailInvalidFormat" = "Please enter a valid email address.";
 "settings.cloud.message.signupVerificationSent" = "Signup successful! Check your email to verify your account.";
 "settings.cloud.message.verificationEmailResent" = "Verification email sent. Please check your inbox.";
 "settings.cloud.message.resetEmailSent" = "Password reset email sent. Please check your inbox.";

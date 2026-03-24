@@ -540,13 +540,16 @@
 "settings.cloud.message.loginSuccess" = "登录成功！";
 "settings.cloud.message.signupSuccess" = "注册成功！";
 "settings.cloud.message.authLinkSuccess" = "账号验证已完成，现在可以登录了。";
+"settings.cloud.message.authLinkFailed" = "验证链接无效或已过期。";
 "settings.cloud.message.recoveryLinkOpened" = "恢复链接已验证，请设置新密码。";
+"settings.cloud.message.recoveryLinkInvalid" = "重置密码链接无效或已过期。";
 "settings.cloud.message.passwordMismatch" = "两次输入的密码不一致。";
 "settings.cloud.message.passwordRequirementNotMet" = "密码不符合要求格式。";
 "settings.cloud.message.passwordUpdated" = "密码更新成功！";
 "settings.cloud.message.emailRateLimited" = "每分钟最多只能发送一封验证邮件，请稍后再试。";
 "settings.cloud.message.emailAlreadyRegistered" = "该邮箱已注册，请直接登录。";
 "settings.cloud.message.emailNotRegistered" = "该邮箱尚未注册。";
+"settings.cloud.message.emailInvalidFormat" = "请输入有效的邮箱地址。";
 "settings.cloud.message.signupVerificationSent" = "注册成功！请查收邮箱并完成验证。";
 "settings.cloud.message.verificationEmailResent" = "验证邮件已发送，请查收邮箱。";
 "settings.cloud.message.resetEmailSent" = "重置密码邮件已发送，请查收邮箱。";

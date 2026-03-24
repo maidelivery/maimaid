@@ -359,7 +359,7 @@ enum BackendCloudSyncService {
             throw BackendAPIError.badResponse
         }
         guard (200...299).contains(httpResponse.statusCode) else {
-            throw BackendAPIError(statusCode: httpResponse.statusCode, message: "Avatar upload failed.")
+            throw BackendAPIError(statusCode: httpResponse.statusCode, code: nil, message: "Avatar upload failed.")
         }
     }
 

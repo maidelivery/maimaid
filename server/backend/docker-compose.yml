@@ -51,7 +51,10 @@ services:
       context: .
       dockerfile: Dockerfile
     env_file:
-      - .env.docker
+      - path: .env.docker
+        required: true
+      - path: .env.docker.local
+        required: false
     depends_on:
       postgres:
         condition: service_healthy

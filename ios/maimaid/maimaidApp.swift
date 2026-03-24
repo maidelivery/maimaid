@@ -33,6 +33,9 @@ struct maimaidApp: App {
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                .onOpenURL { url in
+                    BackendSessionManager.shared.handleAuthRedirect(url)
+                }
         }
         .modelContainer(sharedModelContainer)
         .backgroundTask(.appRefresh(StaticDataAutoUpdate.taskIdentifier)) {

@@ -8,19 +8,27 @@ enum BackendAuthenticationMode {
 
 struct BackendAPIError: LocalizedError {
     let statusCode: Int?
+    let code: String?
     let message: String
 
     var errorDescription: String? { message }
 
-    static let unconfigured = BackendAPIError(statusCode: nil, message: String(localized: "settings.cloud.config.error.unconfigured"))
-    static let unauthorized = BackendAPIError(statusCode: 401, message: String(localized: "community.alias.submit.loginRequired"))
-    static let badResponse = BackendAPIError(statusCode: nil, message: "Invalid server response.")
+    static let unconfigured = BackendAPIError(
+        statusCode: nil,
+        code: nil,
+        message: String(localized: "settings.cloud.config.error.unconfigured")
+    )
+    static let unauthorized = BackendAPIError(
+        statusCode: 401,
+        code: "unauthorized",
+        message: String(localized: "community.alias.submit.loginRequired")
+    )
+    static let badResponse = BackendAPIError(statusCode: nil, code: nil, message: "Invalid server response.")
 }
 
 private struct BackendErrorPayload: Decodable {
     let code: String?
     let message: String?
-    let details: String?
 }
 
 enum BackendAPIClient {
@@ -157,7 +165,29 @@ enum BackendAPIClient {
 
     private static func errorFrom(statusCode: Int, data: Data) -> BackendAPIError {
         let payload = try? decoder.decode(BackendErrorPayload.self, from: data)
-        let message = payload?.message ?? "HTTP \(statusCode)"
-        return BackendAPIError(statusCode: statusCode, message: message)
+        let fallbackMessage = payload?.message ?? "HTTP \(statusCode)"
+        let localizedMessage = localizedAuthMessage(code: payload?.code) ?? fallbackMessage
+        return BackendAPIError(statusCode: statusCode, code: payload?.code, message: localizedMessage)
+    }
+
+    private static func localizedAuthMessage(code: String?) -> String? {
+        switch code {
+        case "email_rate_limited":
+            return String(localized: "settings.cloud.message.emailRateLimited")
+        case "email_exists":
+            return String(localized: "settings.cloud.message.emailAlreadyRegistered")
+        case "email_not_registered":
+            return String(localized: "settings.cloud.message.emailNotRegistered")
+        case "email_not_verified":
+            return String(localized: "settings.cloud.message.signupVerificationSent")
+        case "invalid_email":
+            return String(localized: "settings.cloud.message.emailInvalidFormat")
+        case "invalid_password":
+            return String(localized: "settings.cloud.message.passwordRequirementNotMet")
+        case "invalid_reset_token":
+            return String(localized: "settings.cloud.message.recoveryLinkInvalid")
+        default:
+            return nil
+        }
     }
 }

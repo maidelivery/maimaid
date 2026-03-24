@@ -539,13 +539,16 @@
 "settings.cloud.message.loginSuccess" = "ログインしました。";
 "settings.cloud.message.signupSuccess" = "登録が完了しました。";
 "settings.cloud.message.authLinkSuccess" = "アカウント認証が完了しました。これでサインインできるようになりました。";
+"settings.cloud.message.authLinkFailed" = "認証リンクが無効か期限切れです。";
 "settings.cloud.message.recoveryLinkOpened" = "リカバリリンクが確認されました。新しいパスワードを設定してください。";
+"settings.cloud.message.recoveryLinkInvalid" = "パスワードリセットリンクが無効か期限切れです。";
 "settings.cloud.message.passwordMismatch" = "2 つのパスワードが一致しません。";
 "settings.cloud.message.passwordRequirementNotMet" = "パスワードの形式要件を満たしていません。";
 "settings.cloud.message.passwordUpdated" = "パスワードが正常に更新されました。";
 "settings.cloud.message.emailRateLimited" = "1 分あたり 1 つの認証メールのみをリクエストできます。";
 "settings.cloud.message.emailAlreadyRegistered" = "このメールアドレスは既に登録されています。ログインしてください。";
 "settings.cloud.message.emailNotRegistered" = "このメールアドレスはまだ登録されていません。";
+"settings.cloud.message.emailInvalidFormat" = "有効なメールアドレスを入力してください。";
 "settings.cloud.message.signupVerificationSent" = "登録が完了しました。メールを確認してアカウントを認証してください。";
 "settings.cloud.message.verificationEmailResent" = "確認メールが送信されました。受信箱をご確認ください。";
 "settings.cloud.message.resetEmailSent" = "パスワードリセットメールを送信しました。受信箱をご確認ください。";
