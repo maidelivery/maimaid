@@ -7,3 +7,10 @@ node_modules/
 vite.config.*.timestamp*
 
 server/backend/dist/
+
+# Xcode user-local files
+**/xcuserdata/
+**/*.xcuserstate
+
+# Xcode build artifacts
+DerivedData/
