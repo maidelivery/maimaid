@@ -131,7 +131,7 @@ final class B50CacheService: ObservableObject {
             latestVersion = nil
         }
         
-        let input = allSongs.toCalculationInput(
+        let input = await allSongs.toCalculationInput(
             userProfileId: profileId,
             server: server,
             preloadedScores: snapshot.scoreMap,

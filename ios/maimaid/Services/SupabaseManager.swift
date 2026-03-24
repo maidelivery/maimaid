@@ -288,7 +288,7 @@ final class SupabaseManager {
         let scoreFetch = FetchDescriptor<Score>()
         let scores = try context.fetch(scoreFetch)
         
-        let activeProfileId = ScoreService.shared.currentActiveProfileId(context: context)
+        let activeProfileId = await ScoreService.shared.currentActiveProfileId(context: context)
         if let activeProfileId {
             var didBackfillProfileId = false
             
@@ -304,7 +304,7 @@ final class SupabaseManager {
             
             if didBackfillProfileId {
                 try? context.save()
-                ScoreService.shared.notifyScoresChanged(for: activeProfileId)
+                await ScoreService.shared.notifyScoresChanged(for: activeProfileId)
             }
         }
         

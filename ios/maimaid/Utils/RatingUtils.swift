@@ -407,30 +407,49 @@ extension Array where Element == Song {
         server: GameServer?,
         preloadedScores: [String: Score],
         useFitDiff: Bool = false
-    ) -> RatingUtils.CalculationInput {
-        let songsData = self.map { song in
-            RatingUtils.SongCalculationData(
-                songId: song.songId,
-                songIdentifier: song.songIdentifier,
-                title: song.title,
-                artist: song.artist,
-                imageName: song.imageName,
-                version: song.version,
-                category: song.category,
-                isLocked: song.isLocked,
-                sheets: song.sheets.map { sheet in
+    ) async -> RatingUtils.CalculationInput {
+        var songsData: [RatingUtils.SongCalculationData] = []
+        songsData.reserveCapacity(count)
+
+        for song in self {
+            var sheetsData: [RatingUtils.SheetCalculationData] = []
+            sheetsData.reserveCapacity(song.sheets.count)
+
+            for sheet in song.sheets {
+                let fitDiffValue: Double?
+                if useFitDiff {
+                    fitDiffValue = await ChartStatsService.shared.getStat(for: sheet)?.fit_diff
+                } else {
+                    fitDiffValue = nil
+                }
+
+                sheetsData.append(
                     RatingUtils.SheetCalculationData(
                         songIdentifier: sheet.songIdentifier,
                         type: sheet.type,
                         difficulty: sheet.difficulty,
                         version: sheet.version,
                         internalLevelValue: sheet.internalLevelValue ?? sheet.levelValue,
-                        fitDiffValue: useFitDiff ? ChartStatsService.shared.getStat(for: sheet)?.fit_diff : nil,
+                        fitDiffValue: fitDiffValue,
                         regionJp: sheet.regionJp,
                         regionIntl: sheet.regionIntl,
                         regionCn: sheet.regionCn
                     )
-                }
+                )
+            }
+
+            songsData.append(
+                RatingUtils.SongCalculationData(
+                    songId: song.songId,
+                    songIdentifier: song.songIdentifier,
+                    title: song.title,
+                    artist: song.artist,
+                    imageName: song.imageName,
+                    version: song.version,
+                    category: song.category,
+                    isLocked: song.isLocked,
+                    sheets: sheetsData
+                )
             )
         }
         
@@ -459,8 +478,8 @@ extension Array where Element == Song {
 extension RatingUtils {
     /// 🔴 推荐使用：通过 ScoreService 获取成绩映射
     /// 确保成绩获取严格在当前用户作用域下
-    static func fetchScoreMap(context: ModelContext) -> [String: Score] {
-        return ScoreService.shared.scoreMap(context: context)
+    static func fetchScoreMap(context: ModelContext) async -> [String: Score] {
+        await ScoreService.shared.scoreMap(context: context)
     }
     
     // 保留旧方法用于迁移兼容，但标记为废弃

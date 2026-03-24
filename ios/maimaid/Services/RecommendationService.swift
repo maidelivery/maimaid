@@ -128,7 +128,7 @@ class RecommendationService {
             let scoreMap = ScoreService.shared.scoreMap(context: modelContext)
             let profileId = profile?.id
             
-            let input = songs.toCalculationInput(userProfileId: profileId, server: serverContext, preloadedScores: scoreMap)
+            let input = await songs.toCalculationInput(userProfileId: profileId, server: serverContext, preloadedScores: scoreMap)
             
             let b50 = await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: latestVersion)
             let b15Threshold = b50.b15.last?.rating ?? 0

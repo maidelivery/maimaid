@@ -198,8 +198,8 @@ struct HomeView: View {
         let profileId = activeProfile?.id
         let server = activeProfile.flatMap { GameServer(rawValue: $0.server) }
         
-        let scoreMap = RatingUtils.fetchScoreMap(context: modelContext)
-        let input = songs.toCalculationInput(userProfileId: profileId, server: server, preloadedScores: scoreMap)
+        let scoreMap = await RatingUtils.fetchScoreMap(context: modelContext)
+        let input = await songs.toCalculationInput(userProfileId: profileId, server: server, preloadedScores: scoreMap)
         let serverVersion = activeServerLatestVersion
         let result = await RatingUtils.calculateB50(input: input, b35Count: 35, b15Count: 15, latestVersion: serverVersion)
         self.standardB50Total = result.total
@@ -209,8 +209,8 @@ struct HomeView: View {
         let profileId = activeProfile?.id
         let server = activeProfile.flatMap { GameServer(rawValue: $0.server) }
         
-        let scoreMap = RatingUtils.fetchScoreMap(context: modelContext)
-        let input = songs.toCalculationInput(userProfileId: profileId, server: server, preloadedScores: scoreMap)
+        let scoreMap = await RatingUtils.fetchScoreMap(context: modelContext)
+        let input = await songs.toCalculationInput(userProfileId: profileId, server: server, preloadedScores: scoreMap)
         
         let b35Limit = activeProfile?.b35Count ?? config?.b35Count ?? 35
         let b15Limit = activeProfile?.b15Count ?? config?.b15Count ?? 15

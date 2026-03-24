@@ -12,6 +12,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest
+
       - name: Show toolchain
         run: |
           xcodebuild -version
@@ -31,9 +36,12 @@ jobs:
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
           set -euo pipefail
+          mkdir -p build
+          LOG_PATH="$PWD/build/archive.log"
+          RESULT_BUNDLE_PATH="$PWD/build/maimaid.xcresult"
           : "${SUPABASE_URL:?Missing GitHub Secret SUPABASE_URL}"
           : "${SUPABASE_PUBLISHABLE_KEY:?Missing GitHub Secret SUPABASE_PUBLISHABLE_KEY}"
-          xcodebuild \
+          if ! xcodebuild \
             -project ios/maimaid.xcodeproj \
             -scheme maimaid \
             -configuration Release \
@@ -42,7 +50,12 @@ jobs:
             SUPABASE_URL="$SUPABASE_URL" \
             SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
             archive \
-            -archivePath "$ARCHIVE_PATH"
+            -archivePath "$ARCHIVE_PATH" \
+            -resultBundlePath "$RESULT_BUNDLE_PATH" 2>&1 | tee "$LOG_PATH"; then
+            echo "Archive failed. Extracting error lines:"
+            grep -nE "error:|fatal error:|FAILED|failure" "$LOG_PATH" || true
+            exit 1
+          fi
           APP_PATH="$ARCHIVE_PATH/Products/Applications/maimaid.app"
           test -d "$APP_PATH"
           rm -rf build/Payload
@@ -58,3 +71,13 @@ jobs:
           name: maimaid-ipa-${{ github.sha }}
           path: build/maimaid.ipa
           if-no-files-found: error
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maimaid-build-diagnostics-${{ github.sha }}
+          path: |
+            build/archive.log
+            build/maimaid.xcresult
+          if-no-files-found: warn
