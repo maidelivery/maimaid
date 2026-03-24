@@ -7,12 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		370E0E4B2F65C18C0066B825 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 370E0E4A2F65C18C0066B825 /* Supabase */; };
-		370E0E4D2F65C3500066B825 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 370E0E4C2F65C3500066B825 /* Auth */; };
-		370E0E4F2F65C3500066B825 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 370E0E4E2F65C3500066B825 /* Functions */; };
-		370E0E512F65C3500066B825 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 370E0E502F65C3500066B825 /* PostgREST */; };
-		370E0E532F65C3500066B825 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 370E0E522F65C3500066B825 /* Realtime */; };
-		370E0E552F65C3500066B825 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 370E0E542F65C3500066B825 /* Storage */; };
 		3728607A2F604BC70028E788 /* maimaid v1.41n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 372860792F604BC70028E788 /* maimaid v1.41n.mlpackage */; };
 		373DA3D92F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */; };
 		373DA3E52F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */; };
@@ -55,13 +49,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				370E0E552F65C3500066B825 /* Storage in Frameworks */,
-				370E0E512F65C3500066B825 /* PostgREST in Frameworks */,
-				370E0E4F2F65C3500066B825 /* Functions in Frameworks */,
-				370E0E4D2F65C3500066B825 /* Auth in Frameworks */,
 				37438C7F2F697ADB0055D6BD /* Yams in Frameworks */,
-				370E0E532F65C3500066B825 /* Realtime in Frameworks */,
-				370E0E4B2F65C18C0066B825 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -117,12 +105,6 @@
 			);
 			name = maimaid;
 			packageProductDependencies = (
-				370E0E4A2F65C18C0066B825 /* Supabase */,
-				370E0E4C2F65C3500066B825 /* Auth */,
-				370E0E4E2F65C3500066B825 /* Functions */,
-				370E0E502F65C3500066B825 /* PostgREST */,
-				370E0E522F65C3500066B825 /* Realtime */,
-				370E0E542F65C3500066B825 /* Storage */,
 				37438C7E2F697ADB0055D6BD /* Yams */,
 			);
 			productName = maimaid;
@@ -157,7 +139,6 @@
 			mainGroup = 375868E02F4C78EB006316F5;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				370E0E3E2F65BB320066B825 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				37438C7D2F697ADB0055D6BD /* XCRemoteSwiftPackageReference "Yams" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -217,8 +198,6 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera is required for scanning score images";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Needed to save captured score images to your photo gallery";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Allows you to select score images to analyze and save captured results to albums.";
-				INFOPLIST_KEY_SUPABASE_PUBLISHABLE_KEY = "$(SUPABASE_PUBLISHABLE_KEY)";
-				INFOPLIST_KEY_SUPABASE_URL = "$(SUPABASE_URL)";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -273,8 +252,6 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera is required for scanning score images";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Needed to save captured score images to your photo gallery";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Allows you to select score images to analyze and save captured results to albums.";
-				INFOPLIST_KEY_SUPABASE_PUBLISHABLE_KEY = "$(SUPABASE_PUBLISHABLE_KEY)";
-				INFOPLIST_KEY_SUPABASE_URL = "$(SUPABASE_URL)";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -447,14 +424,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		370E0E3E2F65BB320066B825 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/supabase/supabase-swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.5.1;
-			};
-		};
 		37438C7D2F697ADB0055D6BD /* XCRemoteSwiftPackageReference "Yams" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/jpsim/Yams";
@@ -466,36 +435,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		370E0E4A2F65C18C0066B825 /* Supabase */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 370E0E3E2F65BB320066B825 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = Supabase;
-		};
-		370E0E4C2F65C3500066B825 /* Auth */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 370E0E3E2F65BB320066B825 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = Auth;
-		};
-		370E0E4E2F65C3500066B825 /* Functions */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 370E0E3E2F65BB320066B825 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = Functions;
-		};
-		370E0E502F65C3500066B825 /* PostgREST */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 370E0E3E2F65BB320066B825 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = PostgREST;
-		};
-		370E0E522F65C3500066B825 /* Realtime */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 370E0E3E2F65BB320066B825 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = Realtime;
-		};
-		370E0E542F65C3500066B825 /* Storage */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 370E0E3E2F65BB320066B825 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = Storage;
-		};
 		37438C7E2F697ADB0055D6BD /* Yams */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 37438C7D2F697ADB0055D6BD /* XCRemoteSwiftPackageReference "Yams" */;

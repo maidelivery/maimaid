@@ -38,7 +38,7 @@ struct SettingsView: View {
                         settingsRowLabel(icon: "arrow.down.circle.fill", iconColor: .blue, title: "update.title")
                     }
                     NavigationLink {
-                        SupabaseAuthView()
+                        BackendAuthView()
                     } label: {
                         settingsRowLabel(icon: "cloud.fill", iconColor: .indigo, title: "settings.cloud.title")
                     }

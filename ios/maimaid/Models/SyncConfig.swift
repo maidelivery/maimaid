@@ -6,7 +6,8 @@ final class SyncConfig {
     // Sync Settings
     var isAutoUploadEnabled: Bool = false
     var backgroundSyncInterval: Int = 0 // 0 means disabled, otherwise in hours
-    var supabaseBackupInterval: Int = 0 // 0 means disabled, otherwise in hours
+    @Attribute(originalName: "supabaseBackupInterval")
+    var cloudBackupInterval: Int = 0 // 0 means disabled, otherwise in hours
     
     // Theme Settings
     var themeRawValue: Int = 0 // 0: System, 1: Light, 2: Dark
@@ -15,7 +16,8 @@ final class SyncConfig {
     var lastImportDateDF: Date?
     var lastImportDateLXNS: Date?
     var lastStaticDataUpdateDate: Date?
-    var lastSupabaseBackupDate: Date?
+    @Attribute(originalName: "lastSupabaseBackupDate")
+    var lastCloudBackupDate: Date?
     
     // Legacy fields — kept for migration, will be read once to create default UserProfile
     var userName: String?
@@ -38,11 +40,11 @@ final class SyncConfig {
     
     init(isAutoUploadEnabled: Bool = false,
          backgroundSyncInterval: Int = 0,
-         supabaseBackupInterval: Int = 0,
+         cloudBackupInterval: Int = 0,
          themeRawValue: Int = 0) {
         self.isAutoUploadEnabled = isAutoUploadEnabled
         self.backgroundSyncInterval = backgroundSyncInterval
-        self.supabaseBackupInterval = supabaseBackupInterval
+        self.cloudBackupInterval = cloudBackupInterval
         self.themeRawValue = themeRawValue
     }
 }

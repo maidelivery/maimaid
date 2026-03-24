@@ -5,7 +5,7 @@ struct CommunityAliasVotingBoardView: View {
     @Query private var songs: [Song]
 
     private let service = CommunityAliasService.shared
-    @State private var supabaseManager = SupabaseManager.shared
+    @State private var backendSessionManager = BackendSessionManager.shared
     @State private var items: [CommunityAliasVotingBoardItem] = []
     @State private var isLoading = false
     @State private var inFlightVoteCandidateId: UUID?
@@ -50,9 +50,9 @@ struct CommunityAliasVotingBoardView: View {
 
     var body: some View {
         List {
-            if !supabaseManager.isConfigured {
+            if !backendSessionManager.isConfigured {
                 configurationHintSection
-            } else if !supabaseManager.isAuthenticated {
+            } else if !backendSessionManager.isAuthenticated {
                 loginHintSection
             } else if items.isEmpty && !isLoading {
                 emptyStateSection
@@ -106,7 +106,7 @@ struct CommunityAliasVotingBoardView: View {
 
                 Button {
                     Task {
-                        await supabaseManager.checkSession()
+                        await backendSessionManager.checkSession()
                         await reloadBoard()
                     }
                 } label: {
@@ -263,11 +263,11 @@ struct CommunityAliasVotingBoardView: View {
     }
 
     private func reloadBoard() async {
-        guard supabaseManager.isConfigured else { return }
-        if !supabaseManager.isAuthenticated {
-            await supabaseManager.checkSession()
+        guard backendSessionManager.isConfigured else { return }
+        if !backendSessionManager.isAuthenticated {
+            await backendSessionManager.checkSession()
         }
-        guard supabaseManager.isAuthenticated else {
+        guard backendSessionManager.isAuthenticated else {
             items = []
             return
         }
@@ -278,7 +278,7 @@ struct CommunityAliasVotingBoardView: View {
     }
 
     private func submitVote(candidateId: UUID, support: Bool) async {
-        guard supabaseManager.isAuthenticated else {
+        guard backendSessionManager.isAuthenticated else {
             showTip(String(localized: "community.alias.board.tip.loginRequired"))
             return
         }

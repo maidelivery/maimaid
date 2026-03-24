@@ -13,7 +13,7 @@ struct AvatarImageView: View {
     var body: some View {
         avatarContent
             .frame(width: size, height: size)
-            .clipShape(Circle())
+            .clipShape(.circle)
     }
 
     @ViewBuilder
@@ -27,26 +27,22 @@ struct AvatarImageView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill)
         } else if let remoteURL {
-            AsyncImage(url: remoteURL) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                ZStack {
-                    Circle()
-                        .fill(placeholderBackground)
-                    ProgressView()
+            AsyncImage(url: remoteURL) { phase in
+                switch phase {
+                case .empty:
+                    placeholderView(showsProgress: true)
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                case .failure:
+                    placeholderView(showsProgress: false)
+                @unknown default:
+                    placeholderView(showsProgress: false)
                 }
             }
         } else {
-            ZStack {
-                Circle()
-                    .fill(placeholderBackground)
-
-                Image(systemName: placeholderSystemName)
-                    .font(.system(size: size * 0.4))
-                    .foregroundStyle(placeholderTint)
-            }
+            placeholderView(showsProgress: false)
         }
     }
 
@@ -66,6 +62,22 @@ struct AvatarImageView: View {
 
         guard let fileName else { return nil }
         return Int(fileName)
+    }
+
+    @ViewBuilder
+    private func placeholderView(showsProgress: Bool) -> some View {
+        ZStack {
+            Circle()
+                .fill(placeholderBackground)
+
+            if showsProgress {
+                ProgressView()
+            } else {
+                Image(systemName: placeholderSystemName)
+                    .font(.system(size: size * 0.4))
+                    .foregroundStyle(placeholderTint)
+            }
+        }
     }
 }
 

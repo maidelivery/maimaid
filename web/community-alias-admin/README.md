@@ -1,6 +1,6 @@
 # 社区别名管理系统（TypeScript + MUI + pnpm）
 
-这是基于 `React + TypeScript + MUI + pnpm + Supabase JS` 的社区别名后台。
+这是基于 `React + TypeScript + MUI + pnpm + 自建后端 JWT` 的社区别名后台。
 
 ## 功能
 
@@ -56,10 +56,9 @@ pnpm run build
 
 必填：
 
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+- `VITE_BACKEND_URL`（例如 `http://localhost:8787`）
 
-页面不会提供 Supabase URL / Key 手动输入入口，缺失环境变量时会直接阻断访问。
+页面不会提供后端地址手动输入入口，缺失环境变量时会直接阻断访问。
 
 ## Cloudflare Pages
 

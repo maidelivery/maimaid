@@ -1,0 +1,404 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  active
+  disabled
+}
+
+enum GameServer {
+  jp
+  intl
+  usa
+  cn
+}
+
+enum BindingProvider {
+  df
+  lxns
+}
+
+enum SnapshotStatus {
+  pending
+  applied
+  failed
+}
+
+enum AliasStatus {
+  approved
+  imported
+  proposed
+}
+
+enum CandidateStatus {
+  voting
+  approved
+  rejected
+}
+
+enum ImportProvider {
+  df
+  lxns
+  manual
+}
+
+enum ImportStatus {
+  pending
+  success
+  failed
+}
+
+model User {
+  id                     String                   @id @default(uuid()) @db.Uuid
+  email                  String                   @unique
+  passwordHash           String
+  status                 UserStatus               @default(active)
+  isAdmin                Boolean                  @default(false)
+  emailVerifiedAt        DateTime?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  profiles               Profile[]
+  refreshTokens          RefreshToken[]
+  emailVerificationToken EmailVerificationToken[]
+  passwordResetToken     PasswordResetToken[]
+  communityVotes         CommunityAliasVote[]
+  communityCandidates    CommunityAliasCandidate[] @relation("CandidateSubmitter")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model EmailVerificationToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model Profile {
+  id               String           @id @default(uuid()) @db.Uuid
+  userId           String           @db.Uuid
+  name             String
+  server           GameServer       @default(jp)
+  avatarUrl        String?
+  avatarObjectKey  String?
+  isActive         Boolean          @default(false)
+  dfUsername       String           @default("")
+  dfImportToken    String           @default("")
+  lxnsRefreshToken String           @default("")
+  lxnsClientId     String           @default("cfb7ef40-bc0f-4e3a-8258-9e5f52cd7338")
+  playerRating     Int              @default(0)
+  plate            String?
+  lastImportDateDf DateTime?
+  lastImportDateLxns DateTime?
+  b35Count         Int              @default(35)
+  b15Count         Int              @default(15)
+  b35RecLimit      Int              @default(10)
+  b15RecLimit      Int              @default(10)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bindings         ProfileBinding[]
+  bestScores       BestScore[]
+  playRecords      PlayRecord[]
+  importRuns       ImportRun[]
+
+  @@index([userId])
+  @@index([userId, isActive])
+  @@index([dfImportToken])
+  @@map("profiles")
+}
+
+model ProfileBinding {
+  id               String          @id @default(uuid()) @db.Uuid
+  profileId        String          @db.Uuid
+  provider         BindingProvider
+  externalUserId   String?
+  externalUsername String?
+  credentialJson   Json?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  profile          Profile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, provider])
+  @@index([provider, externalUserId])
+  @@map("profile_bindings")
+}
+
+model CatalogSnapshot {
+  id          BigInt         @id @default(autoincrement())
+  source      String
+  sourceUrl   String
+  etag        String?
+  payloadHash String
+  status      SnapshotStatus @default(pending)
+  metadataJson Json?
+  payloadJson Json
+  fetchedAt   DateTime       @default(now())
+  activatedAt DateTime?
+  songs       Song[]
+
+  @@unique([source, payloadHash])
+  @@index([source, status, fetchedAt])
+  @@map("catalog_snapshots")
+}
+
+model Song {
+  songIdentifier String          @id
+  songId         Int             @default(0)
+  category       String
+  title          String
+  artist         String
+  imageName      String
+  version        String?
+  releaseDate    DateTime?
+  sortOrder      Int             @default(0)
+  bpm            Float?
+  isNew          Boolean         @default(false)
+  isLocked       Boolean         @default(false)
+  comment        String?
+  searchKeywords String?
+  disabled       Boolean         @default(false)
+  snapshotId     BigInt?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  snapshot       CatalogSnapshot? @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
+  sheets         Sheet[]
+  aliases        Alias[]
+
+  @@index([snapshotId])
+  @@index([songId])
+  @@index([title])
+  @@map("songs")
+}
+
+model Sheet {
+  id                 BigInt     @id @default(autoincrement())
+  songIdentifier     String
+  songId             Int        @default(0)
+  chartType          String
+  difficulty         String
+  version            String?
+  level              String
+  levelValue         Decimal?   @db.Decimal(5, 2)
+  internalLevel      String?
+  internalLevelValue Decimal?   @db.Decimal(5, 2)
+  noteDesigner       String?
+  tap                Int?
+  hold               Int?
+  slide              Int?
+  touch              Int?
+  breakCount         Int?
+  total              Int?
+  regionJp           Boolean    @default(true)
+  regionIntl         Boolean    @default(false)
+  regionUsa          Boolean    @default(false)
+  regionCn           Boolean    @default(false)
+  isSpecial          Boolean    @default(false)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  song               Song       @relation(fields: [songIdentifier], references: [songIdentifier], onDelete: Cascade)
+  bestScores         BestScore[]
+  playRecords        PlayRecord[]
+
+  @@unique([songIdentifier, chartType, difficulty])
+  @@index([songId])
+  @@index([chartType, difficulty])
+  @@map("sheets")
+}
+
+model Alias {
+  id             BigInt      @id @default(autoincrement())
+  songIdentifier String
+  aliasText      String
+  aliasNorm      String
+  source         String
+  status         AliasStatus @default(approved)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  song           Song        @relation(fields: [songIdentifier], references: [songIdentifier], onDelete: Cascade)
+
+  @@unique([songIdentifier, aliasNorm, source])
+  @@index([songIdentifier, status])
+  @@map("aliases")
+}
+
+model Icon {
+  id              Int       @id
+  name            String
+  descriptionText String
+  genre           String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("icons")
+}
+
+model BestScore {
+  id            String    @id @default(uuid()) @db.Uuid
+  profileId     String    @db.Uuid
+  sheetId       BigInt
+  achievements  Decimal   @db.Decimal(7, 4)
+  rank          String
+  dxScore       Int       @default(0)
+  fc            String?
+  fs            String?
+  achievedAt    DateTime
+  source        String
+  sourcePayload Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  profile       Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  sheet         Sheet     @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, sheetId])
+  @@index([profileId, updatedAt])
+  @@map("best_scores")
+}
+
+model PlayRecord {
+  id            String   @id @default(uuid()) @db.Uuid
+  profileId     String   @db.Uuid
+  sheetId       BigInt
+  achievements  Decimal  @db.Decimal(7, 4)
+  rank          String
+  dxScore       Int      @default(0)
+  fc            String?
+  fs            String?
+  playTime      DateTime
+  source        String
+  sourcePayload Json?
+  createdAt     DateTime @default(now())
+  profile       Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  sheet         Sheet    @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, playTime])
+  @@map("play_records")
+}
+
+model ImportRun {
+  id          String          @id @default(uuid()) @db.Uuid
+  profileId   String          @db.Uuid
+  provider    ImportProvider
+  status      ImportStatus    @default(pending)
+  startedAt   DateTime        @default(now())
+  finishedAt  DateTime?
+  summaryJson Json?
+  errorMessage String?
+  profile     Profile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  payloads    ImportRawPayload[]
+
+  @@index([profileId, startedAt])
+  @@map("import_runs")
+}
+
+model ImportRawPayload {
+  id          String    @id @default(uuid()) @db.Uuid
+  importRunId String    @db.Uuid
+  payloadType String
+  payloadJson Json
+  createdAt   DateTime  @default(now())
+  importRun   ImportRun @relation(fields: [importRunId], references: [id], onDelete: Cascade)
+
+  @@index([importRunId])
+  @@map("import_raw_payloads")
+}
+
+model CommunityAliasCandidate {
+  id                   String                 @id @default(uuid()) @db.Uuid
+  songIdentifier       String
+  aliasText            String
+  aliasNorm            String
+  submitterId          String                 @db.Uuid
+  status               CandidateStatus        @default(voting)
+  voteOpenAt           DateTime?
+  voteCloseAt          DateTime?
+  approvedAt           DateTime?
+  rejectedAt           DateTime?
+  submittedLocalDate   DateTime               @db.Date
+  submittedTzOffsetMin Int
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  submitter            User                   @relation("CandidateSubmitter", fields: [submitterId], references: [id], onDelete: Cascade)
+  votes                CommunityAliasVote[]
+
+  @@index([songIdentifier, status])
+  @@index([voteCloseAt])
+  @@unique([songIdentifier, aliasNorm, status], map: "uq_community_alias_candidates_song_norm_status")
+  @@map("community_alias_candidates")
+}
+
+model CommunityAliasVote {
+  id          String                 @id @default(uuid()) @db.Uuid
+  candidateId String                 @db.Uuid
+  voterId     String                 @db.Uuid
+  vote        Int
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  candidate   CommunityAliasCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  voter       User                   @relation(fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, voterId])
+  @@index([candidateId])
+  @@index([voterId])
+  @@map("community_alias_votes")
+}
+
+model JobQueue {
+  id         BigInt    @id @default(autoincrement())
+  jobType    String
+  payload    Json      @default("{}")
+  status     String    @default("pending")
+  scheduledAt DateTime @default(now())
+  startedAt  DateTime?
+  finishedAt DateTime?
+  error      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([status, scheduledAt])
+  @@map("job_queue")
+}

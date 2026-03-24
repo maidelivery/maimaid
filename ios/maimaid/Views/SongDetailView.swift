@@ -65,7 +65,7 @@ struct SongDetailContent: View {
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     @State private var statsService = ChartStatsService.shared
     private let communityAliasService = CommunityAliasService.shared
-    @State private var supabaseManager = SupabaseManager.shared
+    @State private var backendSessionManager = BackendSessionManager.shared
     @State private var extractedDominantUIColor: UIColor? = nil
     @State private var communityAliasDraft = ""
     @State private var isSubmittingCommunityAlias = false
@@ -210,7 +210,7 @@ struct SongDetailContent: View {
             await statsService.fetchStats()
             await refreshCommunityAliasState()
         }
-        .onChange(of: supabaseManager.isAuthenticated) { _, _ in
+        .onChange(of: backendSessionManager.isAuthenticated) { _, _ in
             Task {
                 await refreshCommunityAliasState()
             }
@@ -290,7 +290,7 @@ struct SongDetailContent: View {
         approvedCommunityAliases = (try? modelContext.fetch(descriptor)) ?? []
         myCommunityCandidates = await communityAliasService.fetchMySongCandidates(songIdentifier: songIdentifier, limit: 30)
 
-        if supabaseManager.isAuthenticated {
+        if backendSessionManager.isAuthenticated {
             if let dailyCount = await communityAliasService.fetchMyDailySubmissionCount() {
                 communityAliasDailyUsedCount = min(max(dailyCount, 0), communityAliasDailyQuotaLimit)
             }
@@ -361,11 +361,11 @@ struct SongDetailContent: View {
             withAnimation(.easeInOut(duration: 0.1)) {
                 isCommunityQuotaBarFlashing = true
             }
-            try? await Task.sleep(nanoseconds: 110_000_000)
+            try? await Task.sleep(for: .milliseconds(110))
             withAnimation(.easeInOut(duration: 0.1)) {
                 isCommunityQuotaBarFlashing = false
             }
-            try? await Task.sleep(nanoseconds: 110_000_000)
+            try? await Task.sleep(for: .milliseconds(110))
         }
     }
     
@@ -528,8 +528,8 @@ struct SongDetailContent: View {
                 .buttonStyle(.plain)
             }
 
-            if supabaseManager.isConfigured {
-                if supabaseManager.isAuthenticated {
+            if backendSessionManager.isConfigured {
+                if backendSessionManager.isAuthenticated {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 8) {
                             Text(String(localized: "community.alias.section.dailyQuota \(communityAliasDailyUsedCount) \(communityAliasDailyQuotaLimit)"))

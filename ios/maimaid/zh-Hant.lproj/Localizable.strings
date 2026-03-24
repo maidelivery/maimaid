@@ -535,7 +535,7 @@
 "settings.cloud.recovery.confirmPassword" = "確認新密碼";
 "settings.cloud.recovery.updateButton" = "更新密碼";
 "settings.cloud.recovery.cancel" = "取消";
-"settings.cloud.privacy.hint" = "你的帳戶資訊僅用於登入時啟用雲端同步，資料會安全儲存在 Supabase。";
+"settings.cloud.privacy.hint" = "你的帳戶資訊僅用於登入時啟用雲端同步，資料會安全儲存在 Backend。";
 "settings.cloud.message.loginSuccess" = "登入成功！";
 "settings.cloud.message.signupSuccess" = "註冊成功！";
 "settings.cloud.message.authLinkSuccess" = "帳號驗證已完成，現在可以登入了。";
@@ -557,14 +557,12 @@
 "settings.cloud.autoBackup.interval" = "備份間隔";
 "settings.cloud.autoBackup.lastBackup" = "上次備份";
 "settings.cloud.autoBackup.never" = "從未";
-"settings.cloud.config.title" = "Supabase 未配置";
+"settings.cloud.config.title" = "Backend 未配置";
 "settings.cloud.config.subtitle" = "請在 `Config/Secrets.xcconfig` 中填寫雲端同步設定。";
 "settings.cloud.config.section" = "配置說明";
 "settings.cloud.config.step.copy" = "1. 複製 `Config/Secrets.example.xcconfig` 爲 `Config/Secrets.xcconfig`";
-"settings.cloud.config.step.fill" = "2. 填入 `SUPABASE_URL` 與 `SUPABASE_PUBLISHABLE_KEY`";
-"settings.cloud.config.error.unconfigured" = "Supabase 尚未配置。";
-"supabase.config.error.missingUrl" = "缺少 `SUPABASE_URL`。請在 `Config/Secrets.xcconfig` 或 Xcode Build Settings 中填寫。";
-"supabase.config.error.missingPublishableKey" = "缺少 `SUPABASE_PUBLISHABLE_KEY`。請在 `Config/Secrets.xcconfig` 或 Xcode Build Settings 中填寫。";
+"settings.cloud.config.step.fill" = "2. 填入 `BACKEND_URL` 與 `BACKEND_URL`";
+"settings.cloud.config.error.unconfigured" = "Backend 尚未配置。";
 "common.unknown" = "未知";
 "dan.detail.noRecord" = "暫無記錄";
 "dan.detail.missing" = "缺失";
@@ -604,7 +602,7 @@
 "community.alias.section.submit.action" = "投稿";
 "community.alias.section.dailyQuota %lld %lld" = "今日投稿：%lld/%lld";
 "community.alias.section.loginHint" = "登入雲端帳號後可投稿並參與投票。";
-"community.alias.section.unconfiguredHint" = "未配置 Supabase，社群投稿功能不可用。";
+"community.alias.section.unconfiguredHint" = "未配置 Backend，社群投稿功能不可用。";
 "community.alias.section.mySubmissions" = "我的投稿";
 "community.alias.status.voting" = "公示中";
 "community.alias.status.approved" = "已通過";
@@ -616,8 +614,8 @@
 "community.alias.submit.loginRequired" = "請先登入雲端帳號再投稿。";
 "community.alias.submit.invalidRequest" = "投稿格式無效，請檢查輸入內容。";
 "community.alias.board.title" = "社群別名投票";
-"community.alias.board.config.title" = "未配置 Supabase";
-"community.alias.board.config.message" = "請先在配置中填寫 Supabase URL/Key，然後重啟應用或重新進入頁面。";
+"community.alias.board.config.title" = "未配置 Backend";
+"community.alias.board.config.message" = "請先在配置中填寫 Backend URL/Key，然後重啟應用或重新進入頁面。";
 "community.alias.board.login.title" = "需要登入";
 "community.alias.board.login.message" = "登入後可參與社群別名投票。";
 "community.alias.board.login.refresh" = "已登入後點此刷新";
@@ -631,7 +629,7 @@
 "community.alias.board.tip.loginRequired" = "請先登入再投票";
 "community.alias.board.tip.voteFailedFallback" = "投票失敗，請稍後重試";
 "community.alias.board.tip.voteUpdated" = "投票已更新";
-"community.alias.service.submit.unconfigured" = "Supabase 未配置，無法投稿。";
+"community.alias.service.submit.unconfigured" = "Backend 未配置，無法投稿。";
 "community.alias.service.submit.sessionInvalid" = "登入狀態無效或已過期，請登出後重新登入。";
 "community.alias.service.submit.sessionExpiredRelogin" = "登入狀態已過期，請登出後重新登入。";
 "community.alias.service.submit.sessionExpiredRetry" = "登入狀態已過期，請重新登入後再投稿。";

@@ -536,7 +536,7 @@
 "settings.cloud.recovery.confirmPassword" = "Confirm New Password";
 "settings.cloud.recovery.updateButton" = "Update Password";
 "settings.cloud.recovery.cancel" = "Cancel";
-"settings.cloud.privacy.hint" = "Your account information is used to enable cloud sync when you sign in. Data is stored securely on Supabase.";
+"settings.cloud.privacy.hint" = "Your account information is used to enable cloud sync when you sign in. Data is stored securely on Backend.";
 "settings.cloud.message.loginSuccess" = "Login successful!";
 "settings.cloud.message.signupSuccess" = "Signup successful!";
 "settings.cloud.message.authLinkSuccess" = "Account verification completed. You can now sign in.";
@@ -558,14 +558,12 @@
 "settings.cloud.autoBackup.interval" = "Backup Interval";
 "settings.cloud.autoBackup.lastBackup" = "Last Backup";
 "settings.cloud.autoBackup.never" = "Never";
-"settings.cloud.config.title" = "Supabase Not Configured";
+"settings.cloud.config.title" = "Backend Not Configured";
 "settings.cloud.config.subtitle" = "Add cloud sync settings in `Config/Secrets.xcconfig`.";
 "settings.cloud.config.section" = "Configuration";
 "settings.cloud.config.step.copy" = "1. Copy `Config/Secrets.example.xcconfig` to `Config/Secrets.xcconfig`";
-"settings.cloud.config.step.fill" = "2. Fill in `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`";
-"settings.cloud.config.error.unconfigured" = "Supabase is not configured.";
-"supabase.config.error.missingUrl" = "Missing `SUPABASE_URL`. Fill `Config/Secrets.xcconfig` or Xcode build settings.";
-"supabase.config.error.missingPublishableKey" = "Missing `SUPABASE_PUBLISHABLE_KEY`. Fill `Config/Secrets.xcconfig` or Xcode build settings.";
+"settings.cloud.config.step.fill" = "2. Fill in `BACKEND_URL` and `BACKEND_URL`";
+"settings.cloud.config.error.unconfigured" = "Backend is not configured.";
 "common.unknown" = "Unknown";
 "dan.detail.noRecord" = "No Record";
 "dan.detail.missing" = "Missing";
@@ -604,7 +602,7 @@
 "community.alias.section.submit.action" = "Submit";
 "community.alias.section.dailyQuota %lld %lld" = "Today's submissions: %lld/%lld";
 "community.alias.section.loginHint" = "Sign in to submit and vote on community aliases.";
-"community.alias.section.unconfiguredHint" = "Supabase is not configured. Community alias submission is unavailable.";
+"community.alias.section.unconfiguredHint" = "Backend is not configured. Community alias submission is unavailable.";
 "community.alias.section.mySubmissions" = "My Submissions";
 "community.alias.status.voting" = "Voting";
 "community.alias.status.approved" = "Approved";
@@ -616,8 +614,8 @@
 "community.alias.submit.loginRequired" = "Please sign in to your cloud account before submitting.";
 "community.alias.submit.invalidRequest" = "Invalid submission format. Please check your input.";
 "community.alias.board.title" = "Community Alias Voting";
-"community.alias.board.config.title" = "Supabase Not Configured";
-"community.alias.board.config.message" = "Fill in Supabase URL/Key in configuration, then restart the app or reopen this page.";
+"community.alias.board.config.title" = "Backend Not Configured";
+"community.alias.board.config.message" = "Fill in Backend URL/Key in configuration, then restart the app or reopen this page.";
 "community.alias.board.login.title" = "Login Required";
 "community.alias.board.login.message" = "Sign in to participate in community alias voting.";
 "community.alias.board.login.refresh" = "Tap to refresh after login";
@@ -631,7 +629,7 @@
 "community.alias.board.tip.loginRequired" = "Please sign in before voting.";
 "community.alias.board.tip.voteFailedFallback" = "Vote failed. Please try again later.";
 "community.alias.board.tip.voteUpdated" = "Vote updated.";
-"community.alias.service.submit.unconfigured" = "Supabase is not configured, submission unavailable.";
+"community.alias.service.submit.unconfigured" = "Backend is not configured, submission unavailable.";
 "community.alias.service.submit.sessionInvalid" = "Login session is invalid or expired. Please sign out and sign in again.";
 "community.alias.service.submit.sessionExpiredRelogin" = "Login session has expired. Please sign out and sign in again.";
 "community.alias.service.submit.sessionExpiredRetry" = "Login session has expired. Please sign in again before submitting.";

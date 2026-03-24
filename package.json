@@ -17,7 +17,11 @@
     "preview:web": "nx run community-alias-admin:vite:preview",
     "typecheck:web": "nx run community-alias-admin:typecheck",
     "check-env:web": "nx run \"community-alias-admin:check:env\"",
-    "deploy:web": "nx run community-alias-admin:deploy"
+    "deploy:web": "nx run community-alias-admin:deploy",
+    "dev:server": "nx run backend:dev",
+    "build:server": "nx run backend:build",
+    "test:server": "nx run backend:test",
+    "migrate:server": "nx run backend:migrate"
   },
   "devDependencies": {
     "@nx/vite": "22.6.1",

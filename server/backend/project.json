@@ -1,0 +1,38 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "backend",
+  "projectType": "application",
+  "targets": {
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "server/backend",
+        "command": "pnpm run dev"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "server/backend",
+        "command": "pnpm run build"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "server/backend",
+        "command": "pnpm run test"
+      }
+    },
+    "migrate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "server/backend",
+        "command": "pnpm run migrate"
+      }
+    }
+  },
+  "tags": [
+    "platform:backend"
+  ]
+}

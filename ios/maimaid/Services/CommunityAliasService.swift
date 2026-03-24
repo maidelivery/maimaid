@@ -1,5 +1,4 @@
 import Foundation
-import Supabase
 import SwiftData
 
 nonisolated enum CommunityAliasSubmitStatus: String, Codable, Sendable {
@@ -17,14 +16,6 @@ nonisolated struct CommunityAliasSubmitCandidate: Codable, Sendable {
     let aliasText: String
     let status: String
     let createdAt: String
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case songIdentifier
-        case aliasText
-        case status
-        case createdAt
-    }
 }
 
 nonisolated struct CommunityAliasExistingCandidate: Codable, Identifiable, Sendable {
@@ -52,7 +43,7 @@ nonisolated struct CommunityAliasVotingBoardItem: Codable, Identifiable, Sendabl
     let candidateId: UUID
     let songIdentifier: String
     let aliasText: String
-    let submitterId: UUID
+    let submitterId: String
     let voteOpenAt: Date?
     let voteCloseAt: Date?
     let supportCount: Int
@@ -61,19 +52,6 @@ nonisolated struct CommunityAliasVotingBoardItem: Codable, Identifiable, Sendabl
     let createdAt: Date
 
     var id: UUID { candidateId }
-
-    enum CodingKeys: String, CodingKey {
-        case candidateId = "candidate_id"
-        case songIdentifier = "song_identifier"
-        case aliasText = "alias_text"
-        case submitterId = "submitter_id"
-        case voteOpenAt = "vote_open_at"
-        case voteCloseAt = "vote_close_at"
-        case supportCount = "support_count"
-        case opposeCount = "oppose_count"
-        case myVote = "my_vote"
-        case createdAt = "created_at"
-    }
 }
 
 nonisolated struct CommunityAliasMyCandidate: Codable, Identifiable, Sendable {
@@ -89,19 +67,6 @@ nonisolated struct CommunityAliasMyCandidate: Codable, Identifiable, Sendable {
     let updatedAt: Date
 
     var id: UUID { candidateId }
-
-    enum CodingKeys: String, CodingKey {
-        case candidateId = "candidate_id"
-        case songIdentifier = "song_identifier"
-        case aliasText = "alias_text"
-        case status
-        case voteOpenAt = "vote_open_at"
-        case voteCloseAt = "vote_close_at"
-        case supportCount = "support_count"
-        case opposeCount = "oppose_count"
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-    }
 }
 
 nonisolated struct CommunityAliasVoteResult: Codable, Sendable {
@@ -109,13 +74,6 @@ nonisolated struct CommunityAliasVoteResult: Codable, Sendable {
     let supportCount: Int
     let opposeCount: Int
     let myVote: Int
-
-    enum CodingKeys: String, CodingKey {
-        case candidateId = "candidate_id"
-        case supportCount = "support_count"
-        case opposeCount = "oppose_count"
-        case myVote = "my_vote"
-    }
 }
 
 nonisolated struct CommunityAliasApprovedSyncRow: Codable, Sendable {
@@ -124,50 +82,26 @@ nonisolated struct CommunityAliasApprovedSyncRow: Codable, Sendable {
     let aliasText: String
     let updatedAt: Date
     let approvedAt: Date?
-
-    enum CodingKeys: String, CodingKey {
-        case candidateId = "candidate_id"
-        case songIdentifier = "song_identifier"
-        case aliasText = "alias_text"
-        case updatedAt = "updated_at"
-        case approvedAt = "approved_at"
-    }
 }
 
-nonisolated private struct CommunityAliasSubmitAliasPayload: Codable, Sendable {
+private struct CommunityAliasSubmitPayload: Encodable {
     let songIdentifier: String
     let aliasText: String
     let deviceLocalDate: String
     let tzOffsetMinutes: Int
 }
 
-nonisolated private struct CommunityAliasVotingBoardParams: Codable, Sendable {
-    let p_limit: Int
-    let p_offset: Int
+private struct CommunityAliasVotePayload: Encodable {
+    let candidateId: String
+    let vote: Int
 }
 
-nonisolated private struct CommunityAliasMySongCandidatesParams: Codable, Sendable {
-    let p_song_identifier: String
-    let p_limit: Int
+private struct CommunityAliasRowsResponse<Row: Decodable>: Decodable {
+    let rows: [Row]
 }
 
-nonisolated private struct CommunityAliasDailyCountParams: Codable, Sendable {
-    let p_local_date: String
-}
-
-nonisolated private struct CommunityAliasVoteParams: Codable, Sendable {
-    let p_candidate_id: UUID
-    let p_vote: Int
-}
-
-nonisolated private struct CommunityAliasApprovedSyncParams: Codable, Sendable {
-    let p_since: Date?
-    let p_limit: Int
-}
-
-nonisolated private struct CommunityAliasEdgeErrorPayload: Decodable, Sendable {
-    let message: String?
-    let error: String?
+private struct CommunityAliasDailyCountResponse: Decodable {
+    let count: Int
 }
 
 @MainActor
@@ -176,63 +110,16 @@ final class CommunityAliasService {
 
     private init() {}
 
-    private var manager: SupabaseManager { SupabaseManager.shared }
     private(set) var lastVoteErrorMessage: String?
 
-    var isConfigured: Bool { manager.isConfigured }
-    var isAuthenticated: Bool { manager.isAuthenticated }
-
-    private func base64URLDecode(_ value: String) -> Data? {
-        var base64 = value
-            .replacingOccurrences(of: "-", with: "+")
-            .replacingOccurrences(of: "_", with: "/")
-        let remainder = base64.count % 4
-        if remainder > 0 {
-            base64 += String(repeating: "=", count: 4 - remainder)
-        }
-        return Data(base64Encoded: base64)
-    }
-
-    private func tokenIssuerHost(_ token: String) -> String? {
-        let segments = token.split(separator: ".")
-        guard segments.count >= 2 else { return nil }
-        guard let payloadData = base64URLDecode(String(segments[1])) else { return nil }
-        guard
-            let json = try? JSONSerialization.jsonObject(with: payloadData) as? [String: Any],
-            let issuer = json["iss"] as? String,
-            let host = URL(string: issuer)?.host
-        else {
-            return nil
-        }
-        return host
-    }
-
-    private func tokenMatchesCurrentProject(_ token: String) -> Bool {
-        guard let expectedHost = SupabaseConfig.projectURL?.host else { return true }
-        guard let issuerHost = tokenIssuerHost(token) else { return true }
-        return issuerHost == expectedHost
-    }
-
-    private func resolveAccessToken(client: SupabaseClient, forceRefresh: Bool = false) async -> String? {
-        if forceRefresh, let refreshed = try? await client.auth.refreshSession() {
-            await manager.checkSession()
-            return tokenMatchesCurrentProject(refreshed.accessToken) ? refreshed.accessToken : nil
-        }
-        if let refreshed = try? await client.auth.refreshSession() {
-            await manager.checkSession()
-            return tokenMatchesCurrentProject(refreshed.accessToken) ? refreshed.accessToken : nil
-        }
-        if let session = try? await client.auth.session {
-            return tokenMatchesCurrentProject(session.accessToken) ? session.accessToken : nil
-        }
-        return nil
-    }
+    var isConfigured: Bool { BackendSessionManager.shared.isConfigured }
+    var isAuthenticated: Bool { BackendSessionManager.shared.isAuthenticated }
 
     func submitAlias(songIdentifier: String, aliasText: String) async -> CommunityAliasSubmitResponse {
-        guard let client = manager.client else {
+        guard isConfigured else {
             return .init(
                 status: .error,
-                message: String(localized: "community.alias.service.submit.unconfigured"),
+                message: String(localized: "settings.cloud.config.error.unconfigured"),
                 candidate: nil,
                 existingCandidates: nil,
                 similarAliases: nil,
@@ -240,22 +127,10 @@ final class CommunityAliasService {
             )
         }
 
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd"
-
-        let payload = CommunityAliasSubmitAliasPayload(
-            songIdentifier: songIdentifier,
-            aliasText: aliasText,
-            deviceLocalDate: formatter.string(from: Date()),
-            tzOffsetMinutes: TimeZone.current.secondsFromGMT() / 60
-        )
-
-        guard let accessToken = await resolveAccessToken(client: client) else {
+        guard isAuthenticated else {
             return .init(
                 status: .unauthenticated,
-                message: String(localized: "community.alias.service.submit.sessionInvalid"),
+                message: String(localized: "community.alias.submit.loginRequired"),
                 candidate: nil,
                 existingCandidates: nil,
                 similarAliases: nil,
@@ -263,49 +138,33 @@ final class CommunityAliasService {
             )
         }
 
+        let localDate = Date.now.formatted(
+            .iso8601
+            .year()
+            .month()
+            .day()
+            .dateSeparator(.dash)
+        )
+
         do {
-            let response: CommunityAliasSubmitResponse = try await client.functions.invoke(
-                "community-alias-submit",
-                options: FunctionInvokeOptions(
-                    headers: ["Authorization": "Bearer \(accessToken)"],
-                    body: payload
-                )
+            let payload = CommunityAliasSubmitPayload(
+                songIdentifier: songIdentifier,
+                aliasText: aliasText,
+                deviceLocalDate: localDate,
+                tzOffsetMinutes: TimeZone.current.secondsFromGMT() / 60
+            )
+            let response: CommunityAliasSubmitResponse = try await BackendAPIClient.request(
+                path: "v1/community/aliases/submit",
+                method: "POST",
+                body: payload,
+                authentication: .required
             )
             return response
-        } catch {
-            if case let FunctionsError.httpError(code: code, data: data) = error, code == 401 {
-                // Auto-recover from stale/invalid JWT once by forcing a refresh and retry.
-                if let refreshedToken = await resolveAccessToken(client: client, forceRefresh: true) {
-                    do {
-                        let retried: CommunityAliasSubmitResponse = try await client.functions.invoke(
-                            "community-alias-submit",
-                            options: FunctionInvokeOptions(
-                                headers: ["Authorization": "Bearer \(refreshedToken)"],
-                                body: payload
-                            )
-                        )
-                        return retried
-                    } catch {
-                        if case let FunctionsError.httpError(code: retryCode, data: retryData) = error, retryCode == 401 {
-                            await manager.checkSession()
-                            let retryMessage = parseEdgeUnauthorizedMessage(data: retryData)
-                            return .init(
-                                status: .unauthenticated,
-                                message: retryMessage ?? String(localized: "community.alias.service.submit.sessionExpiredRelogin"),
-                                candidate: nil,
-                                existingCandidates: nil,
-                                similarAliases: nil,
-                                quotaRemaining: nil
-                            )
-                        }
-                    }
-                }
-
-                await manager.checkSession()
-                let message = parseEdgeUnauthorizedMessage(data: data)
+        } catch let apiError as BackendAPIError {
+            if apiError.statusCode == 401 {
                 return .init(
                     status: .unauthenticated,
-                    message: message ?? String(localized: "community.alias.service.submit.sessionExpiredRetry"),
+                    message: String(localized: "community.alias.submit.loginRequired"),
                     candidate: nil,
                     existingCandidates: nil,
                     similarAliases: nil,
@@ -315,7 +174,16 @@ final class CommunityAliasService {
 
             return .init(
                 status: .error,
-                message: String(localized: "community.alias.service.submit.requestFailed \(error.localizedDescription)"),
+                message: apiError.message,
+                candidate: nil,
+                existingCandidates: nil,
+                similarAliases: nil,
+                quotaRemaining: nil
+            )
+        } catch {
+            return .init(
+                status: .error,
+                message: error.localizedDescription,
                 candidate: nil,
                 existingCandidates: nil,
                 similarAliases: nil,
@@ -324,24 +192,17 @@ final class CommunityAliasService {
         }
     }
 
-    private func parseEdgeUnauthorizedMessage(data: Data) -> String? {
-        guard !data.isEmpty else { return nil }
-        guard let payload = try? JSONDecoder().decode(CommunityAliasEdgeErrorPayload.self, from: data) else {
-            return nil
-        }
-        return payload.message ?? payload.error
-    }
-
     func fetchVotingBoard(limit: Int = 120, offset: Int = 0) async -> [CommunityAliasVotingBoardItem] {
-        guard let client = manager.client else { return [] }
-
+        guard isConfigured else { return [] }
+        let safeLimit = max(1, min(limit, 200))
+        let safeOffset = max(0, offset)
         do {
-            let params = CommunityAliasVotingBoardParams(p_limit: max(1, limit), p_offset: max(0, offset))
-            let rows: [CommunityAliasVotingBoardItem] = try await client
-                .rpc("community_alias_get_voting_board", params: params)
-                .execute()
-                .value
-            return rows
+            let response: CommunityAliasRowsResponse<CommunityAliasVotingBoardItem> = try await BackendAPIClient.request(
+                path: "v1/community/aliases/voting-board?limit=\(safeLimit)&offset=\(safeOffset)",
+                method: "GET",
+                authentication: .optional
+            )
+            return response.rows
         } catch {
             print("CommunityAliasService.fetchVotingBoard failed: \(error)")
             return []
@@ -349,19 +210,16 @@ final class CommunityAliasService {
     }
 
     func fetchMySongCandidates(songIdentifier: String, limit: Int = 50) async -> [CommunityAliasMyCandidate] {
-        guard let client = manager.client else { return [] }
-        guard await resolveAccessToken(client: client) != nil else { return [] }
-
+        guard isConfigured, isAuthenticated else { return [] }
+        let safeLimit = max(1, min(limit, 200))
+        let escapedSongIdentifier = songIdentifier.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? songIdentifier
         do {
-            let params = CommunityAliasMySongCandidatesParams(
-                p_song_identifier: songIdentifier,
-                p_limit: max(1, limit)
+            let response: CommunityAliasRowsResponse<CommunityAliasMyCandidate> = try await BackendAPIClient.request(
+                path: "v1/community/aliases/my-candidates?songIdentifier=\(escapedSongIdentifier)&limit=\(safeLimit)",
+                method: "GET",
+                authentication: .required
             )
-            let rows: [CommunityAliasMyCandidate] = try await client
-                .rpc("community_alias_get_my_song_candidates", params: params)
-                .execute()
-                .value
-            return rows
+            return response.rows
         } catch {
             print("CommunityAliasService.fetchMySongCandidates failed: \(error)")
             return []
@@ -369,21 +227,21 @@ final class CommunityAliasService {
     }
 
     func fetchMyDailySubmissionCount(localDate: Date = Date()) async -> Int? {
-        guard let client = manager.client else { return nil }
-        guard await resolveAccessToken(client: client) != nil else { return nil }
-
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd"
-
+        guard isConfigured, isAuthenticated else { return nil }
+        let formattedDate = localDate.formatted(
+            .iso8601
+            .year()
+            .month()
+            .day()
+            .dateSeparator(.dash)
+        )
         do {
-            let params = CommunityAliasDailyCountParams(p_local_date: formatter.string(from: localDate))
-            let count: Int = try await client
-                .rpc("community_alias_count_daily_creations", params: params)
-                .execute()
-                .value
-            return max(0, count)
+            let response: CommunityAliasDailyCountResponse = try await BackendAPIClient.request(
+                path: "v1/community/aliases/daily-count?localDate=\(formattedDate)",
+                method: "GET",
+                authentication: .required
+            )
+            return max(0, response.count)
         } catch {
             print("CommunityAliasService.fetchMyDailySubmissionCount failed: \(error)")
             return nil
@@ -391,8 +249,7 @@ final class CommunityAliasService {
     }
 
     func vote(candidateId: UUID, support: Bool) async -> CommunityAliasVoteResult? {
-        guard let client = manager.client else { return nil }
-        guard await resolveAccessToken(client: client) != nil else {
+        guard isConfigured, isAuthenticated else {
             lastVoteErrorMessage = String(localized: "community.alias.service.vote.sessionInvalid")
             return nil
         }
@@ -400,148 +257,66 @@ final class CommunityAliasService {
         lastVoteErrorMessage = nil
 
         do {
-            let params = CommunityAliasVoteParams(p_candidate_id: candidateId, p_vote: support ? 1 : -1)
-            let response = try await client
-                .rpc("community_alias_vote", params: params)
-                .execute()
-
-            if let rows = try? JSONDecoder().decode([CommunityAliasVoteResult].self, from: response.data),
-               let first = rows.first {
-                return first
-            }
-
-            if let single = try? JSONDecoder().decode(CommunityAliasVoteResult.self, from: response.data) {
-                return single
-            }
-
-            if let text = String(data: response.data, encoding: .utf8),
-               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                lastVoteErrorMessage = String(localized: "community.alias.service.vote.responseAbnormal \(truncate(text, max: 120))")
-            } else {
-                lastVoteErrorMessage = String(localized: "community.alias.service.vote.emptyResponse")
-            }
+            let payload = CommunityAliasVotePayload(candidateId: candidateId.uuidString.lowercased(), vote: support ? 1 : -1)
+            let response: CommunityAliasVoteResult = try await BackendAPIClient.request(
+                path: "v1/community/aliases/vote",
+                method: "POST",
+                body: payload,
+                authentication: .required
+            )
+            return response
+        } catch let apiError as BackendAPIError {
+            lastVoteErrorMessage = apiError.message
             return nil
         } catch {
-            let message = mapVoteErrorMessage(error)
-            lastVoteErrorMessage = message
-            print("CommunityAliasService.vote failed: \(error)")
-            print("CommunityAliasService.vote failed detail: \(String(reflecting: error))")
+            lastVoteErrorMessage = error.localizedDescription
             return nil
         }
-    }
-
-    private func mapVoteErrorMessage(_ error: Error) -> String {
-        let rawParts = extractVoteErrorParts(error)
-        let raw = rawParts.joined(separator: " | ").lowercased()
-        if raw.contains("voting window is closed") {
-            return String(localized: "community.alias.service.vote.error.windowClosed")
-        }
-        if raw.contains("candidate is not in voting status") {
-            return String(localized: "community.alias.service.vote.error.notVoting")
-        }
-        if raw.contains("not authenticated") || raw.contains("jwt") || raw.contains("401") {
-            return String(localized: "community.alias.service.vote.error.authExpired")
-        }
-        if raw.contains("could not choose the best candidate function")
-            || raw.contains("does not exist")
-            || raw.contains("community_alias_vote(") {
-            return String(localized: "community.alias.service.vote.error.rpcSignature")
-        }
-        if raw.contains("candidate_id") && raw.contains("ambiguous") {
-            return String(localized: "community.alias.service.vote.error.rpcAmbiguous")
-        }
-        if raw.contains("permission denied") {
-            return String(localized: "community.alias.service.vote.error.permissionDenied")
-        }
-        if raw.contains("violates row-level security policy") || raw.contains("row-level security") {
-            return String(localized: "community.alias.service.vote.error.rls")
-        }
-
-        if let firstMeaningful = rawParts.first(where: { !$0.isEmpty && !$0.contains("operation couldn’t be completed") }) {
-            return String(localized: "community.alias.service.vote.error.detail \(truncate(firstMeaningful, max: 120))")
-        }
-        return String(localized: "community.alias.service.vote.error.generic")
-    }
-
-    private func extractVoteErrorParts(_ error: Error) -> [String] {
-        var parts: [String] = []
-        if let postgrest = error as? PostgrestError {
-            parts.append(postgrest.message)
-            if let detail = postgrest.detail, !detail.isEmpty {
-                parts.append(detail)
-            }
-            if let hint = postgrest.hint, !hint.isEmpty {
-                parts.append(hint)
-            }
-            if let code = postgrest.code, !code.isEmpty {
-                parts.append("code=\(code)")
-            }
-        }
-
-        let localized = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !localized.isEmpty {
-            parts.append(localized)
-        }
-
-        let debug = String(describing: error).trimmingCharacters(in: .whitespacesAndNewlines)
-        if !debug.isEmpty {
-            parts.append(debug)
-        }
-
-        var deduped: [String] = []
-        for part in parts {
-            if !deduped.contains(part) {
-                deduped.append(part)
-            }
-        }
-        return deduped
-    }
-
-    private func truncate(_ text: String, max: Int) -> String {
-        guard text.count > max else { return text }
-        let prefix = text.prefix(max)
-        return "\(prefix)…"
     }
 
     func syncApprovedAliasesIfNeeded(container: ModelContainer, minimumInterval: TimeInterval = 10 * 60) async {
         if let lastPoll = UserDefaults.app.communityAliasLastPollAt,
-           Date().timeIntervalSince(lastPoll) < minimumInterval {
+           Date.now.timeIntervalSince(lastPoll) < minimumInterval {
             return
         }
 
-        UserDefaults.app.communityAliasLastPollAt = Date()
+        UserDefaults.app.communityAliasLastPollAt = Date.now
         let context = ModelContext(container)
         await syncApprovedAliasesIntoSongs(modelContext: context)
     }
 
     func syncApprovedAliasesIntoSongs(modelContext: ModelContext, force: Bool = false) async {
-        guard let client = manager.client else { return }
+        guard isConfigured else { return }
 
         let rawSince = force ? nil : UserDefaults.app.communityAliasApprovedSyncAt
-        let now = Date()
+        let now = Date.now
         let since: Date?
         if let rawSince, rawSince > now.addingTimeInterval(5 * 60) {
-            // Recover from previous test/manual fast-forward that wrote future updated_at
-            // into local sync watermark and would otherwise block newer rows.
             UserDefaults.app.communityAliasApprovedSyncAt = nil
             since = nil
         } else {
             since = rawSince
         }
-        let params = CommunityAliasApprovedSyncParams(p_since: since, p_limit: 1000)
 
-        let rows: [CommunityAliasApprovedSyncRow]
+        let path: String
+        if let since {
+            let encoded = since.ISO8601Format().addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? since.ISO8601Format()
+            path = "v1/community/aliases/approved-sync?since=\(encoded)&limit=1000"
+        } else {
+            path = "v1/community/aliases/approved-sync?limit=1000"
+        }
+
+        let response: CommunityAliasRowsResponse<CommunityAliasApprovedSyncRow>
         do {
-            rows = try await client
-                .rpc("community_alias_sync_approved_since", params: params)
-                .execute()
-                .value
+            response = try await BackendAPIClient.request(path: path, method: "GET", authentication: .none)
         } catch {
             print("CommunityAliasService.syncApprovedAliasesIntoSongs failed: \(error)")
             return
         }
 
+        let rows = response.rows
         var didMutate = false
+
         if force {
             let remoteIdSet = Set(rows.map { $0.candidateId.uuidString })
             if reconcileApprovedCacheForForceSync(remoteIdSet: remoteIdSet, modelContext: modelContext) {
@@ -551,11 +326,7 @@ final class CommunityAliasService {
 
         guard !rows.isEmpty else {
             if didMutate {
-                do {
-                    try modelContext.save()
-                } catch {
-                    print("CommunityAliasService.sync save failed: \(error)")
-                }
+                try? modelContext.save()
             }
             return
         }
@@ -613,7 +384,6 @@ final class CommunityAliasService {
                 print("CommunityAliasService.sync save failed: \(error)")
             }
         } else if maxUpdatedAt != .distantPast {
-            // Even when nothing changed locally, keep incremental watermark moving.
             UserDefaults.app.communityAliasApprovedSyncAt = min(maxUpdatedAt, now)
         }
     }

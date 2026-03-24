@@ -33,18 +33,13 @@ struct maimaidApp: App {
     var body: some Scene {
         WindowGroup {
             MainTabView()
-                .onOpenURL { url in
-                    Task {
-                        await SupabaseManager.shared.handleAuthRedirect(url)
-                    }
-                }
         }
         .modelContainer(sharedModelContainer)
         .backgroundTask(.appRefresh(StaticDataAutoUpdate.taskIdentifier)) {
             await StaticDataAutoUpdate.handleBackgroundRefresh(container: sharedModelContainer)
         }
-        .backgroundTask(.appRefresh(SupabaseAutoBackup.taskIdentifier)) {
-            await SupabaseAutoBackup.handleBackgroundBackup(container: sharedModelContainer)
+        .backgroundTask(.appRefresh(BackendAutoBackup.taskIdentifier)) {
+            await BackendAutoBackup.handleBackgroundBackup(container: sharedModelContainer)
         }
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
@@ -54,7 +49,7 @@ struct maimaidApp: App {
                         container: sharedModelContainer,
                         reason: "scenePhase.active"
                     )
-                    await SupabaseAutoBackup.backupIfNeeded(
+                    await BackendAutoBackup.backupIfNeeded(
                         container: sharedModelContainer,
                         reason: "scenePhase.active"
                     )
@@ -65,7 +60,7 @@ struct maimaidApp: App {
             case .background:
                 Task {
                     await StaticDataAutoUpdate.scheduleNextRefresh(container: sharedModelContainer)
-                    await SupabaseAutoBackup.scheduleNextBackup(container: sharedModelContainer)
+                    await BackendAutoBackup.scheduleNextBackup(container: sharedModelContainer)
                 }
             default:
                 break
@@ -210,64 +205,64 @@ private extension UserDefaults {
     }
 }
 
-enum SupabaseAutoBackup {
-    static let taskIdentifier = "in.shikoch.maimaid.supabase-backup"
+enum BackendAutoBackup {
+    static let taskIdentifier = "in.shikoch.maimaid.backend-backup"
     private static let minimumLeadTime: TimeInterval = 15 * 60
     
     @MainActor
     static func backupIfNeeded(container: ModelContainer, reason: String) async {
         let context = ModelContext(container)
         guard let config = loadConfig(in: context) else { return }
-        guard config.supabaseBackupInterval > 0 else {
+        guard config.cloudBackupInterval > 0 else {
             cancelScheduledBackup()
             return
         }
-        guard SupabaseManager.shared.isConfigured else {
+        guard BackendSessionManager.shared.isConfigured else {
             cancelScheduledBackup()
             return
         }
         
-        await SupabaseManager.shared.checkSession()
-        guard SupabaseManager.shared.isAuthenticated else {
+        await BackendSessionManager.shared.checkSession()
+        guard BackendSessionManager.shared.isAuthenticated else {
             cancelScheduledBackup()
             return
         }
         guard isBackupDue(config: config) else { return }
         
-        print("SupabaseAutoBackup: foreground backup triggered (\(reason))")
+        print("BackendAutoBackup: foreground backup triggered (\(reason))")
         
         do {
-            try await SupabaseManager.shared.backupToCloud(context: context)
+            try await BackendCloudSyncService.backupToCloud(context: context)
         } catch {
-            print("SupabaseAutoBackup: foreground backup failed: \(error)")
+            print("BackendAutoBackup: foreground backup failed: \(error)")
         }
     }
     
     @MainActor
     static func handleBackgroundBackup(container: ModelContainer) async {
         let context = ModelContext(container)
-        guard let config = loadConfig(in: context), config.supabaseBackupInterval > 0 else {
+        guard let config = loadConfig(in: context), config.cloudBackupInterval > 0 else {
             cancelScheduledBackup()
             return
         }
-        guard SupabaseManager.shared.isConfigured else {
+        guard BackendSessionManager.shared.isConfigured else {
             cancelScheduledBackup()
             return
         }
         
-        await SupabaseManager.shared.checkSession()
-        guard SupabaseManager.shared.isAuthenticated else {
+        await BackendSessionManager.shared.checkSession()
+        guard BackendSessionManager.shared.isAuthenticated else {
             cancelScheduledBackup()
             return
         }
         
         if isBackupDue(config: config) {
-            print("SupabaseAutoBackup: background backup triggered")
+            print("BackendAutoBackup: background backup triggered")
             
             do {
-                try await SupabaseManager.shared.backupToCloud(context: context)
+                try await BackendCloudSyncService.backupToCloud(context: context)
             } catch {
-                print("SupabaseAutoBackup: background backup failed: \(error)")
+                print("BackendAutoBackup: background backup failed: \(error)")
             }
         }
         
@@ -277,17 +272,17 @@ enum SupabaseAutoBackup {
     @MainActor
     static func scheduleNextBackup(container: ModelContainer) async {
         let context = ModelContext(container)
-        guard let config = loadConfig(in: context), config.supabaseBackupInterval > 0 else {
+        guard let config = loadConfig(in: context), config.cloudBackupInterval > 0 else {
             cancelScheduledBackup()
             return
         }
-        guard SupabaseManager.shared.isConfigured else {
+        guard BackendSessionManager.shared.isConfigured else {
             cancelScheduledBackup()
             return
         }
         
-        await SupabaseManager.shared.checkSession()
-        guard SupabaseManager.shared.isAuthenticated else {
+        await BackendSessionManager.shared.checkSession()
+        guard BackendSessionManager.shared.isAuthenticated else {
             cancelScheduledBackup()
             return
         }
@@ -300,9 +295,9 @@ enum SupabaseAutoBackup {
         
         do {
             try BGTaskScheduler.shared.submit(request)
-            print("SupabaseAutoBackup: scheduled next backup for \(request.earliestBeginDate ?? Date())")
+            print("BackendAutoBackup: scheduled next backup for \(request.earliestBeginDate ?? Date())")
         } catch {
-            print("SupabaseAutoBackup: failed to schedule backup: \(error)")
+            print("BackendAutoBackup: failed to schedule backup: \(error)")
         }
     }
     
@@ -320,7 +315,7 @@ enum SupabaseAutoBackup {
     }
     
     private static func nextDueDate(for config: SyncConfig) -> Date {
-        let lastBackup = config.lastSupabaseBackupDate ?? .distantPast
-        return lastBackup.addingTimeInterval(TimeInterval(config.supabaseBackupInterval * 3600))
+        let lastBackup = config.lastCloudBackupDate ?? .distantPast
+        return lastBackup.addingTimeInterval(TimeInterval(config.cloudBackupInterval * 3600))
     }
 }

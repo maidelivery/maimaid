@@ -48,16 +48,16 @@ import { DateTimePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { zhCN as datePickerZhCN } from "@mui/x-date-pickers/locales";
-import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import dayjs, { type Dayjs } from "dayjs";
 import "dayjs/locale/zh-cn";
 import type { AdminContext, CandidateRecord, DashboardStats, FilterState, SongCatalogItem, ToastState } from "./types";
 
 const FILTER_STORAGE_KEY = "communityAliasAdmin.filters";
+const SESSION_STORAGE_KEY = "communityAliasAdmin.backendSession";
 const PAGE_SIZE = 20;
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL ?? "").trim();
-const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").trim();
-const HAS_SUPABASE_ENV = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+const RAW_BACKEND_URL = (import.meta.env.VITE_BACKEND_URL ?? "").trim();
+const BACKEND_URL = RAW_BACKEND_URL.replace(/\/+$/u, "");
+const HAS_BACKEND_ENV = Boolean(BACKEND_URL);
 const MAIMAI_REMOTE_DATA_URL = "https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json";
 const MAIMAI_LXNS_SONG_LIST_URL = "https://maimai.lxns.net/api/v0/maimai/song/list";
 const MAIMAI_COVER_BASE_URL = "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover";
@@ -86,6 +86,68 @@ const STATUS_OPTIONS = [
   { value: "approved", label: "已通过" },
   { value: "rejected", label: "已驳回" },
 ] as const;
+
+type BackendErrorResponse = {
+  code?: string;
+  message?: string;
+  details?: unknown;
+};
+
+type BackendAuthResponse = {
+  user: {
+    id: string;
+    email: string;
+    isAdmin: boolean;
+  };
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+};
+
+type BackendAdminContext = {
+  userId: string;
+  email: string;
+  isAdmin: boolean;
+};
+
+type BackendDashboardStats = {
+  totalCount: number;
+  votingCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  closingSoonCount: number;
+  expiredVotingCount: number;
+  todaySubmissions: number;
+};
+
+type BackendCandidateRecord = {
+  candidateId: string;
+  songIdentifier: string;
+  aliasText: string;
+  submitterId: string;
+  submitterEmail: string | null;
+  status: string;
+  voteOpenAt: string | null;
+  voteCloseAt: string | null;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  supportCount: number;
+  opposeCount: number;
+  totalCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type BackendSession = {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+  user: {
+    id: string;
+    email: string;
+    isAdmin: boolean;
+  };
+};
 
 function normalizeSearch(value: string): string {
   return value
@@ -119,6 +181,12 @@ function normalizeErrorMessage(error: unknown): string {
   }
   if (raw.includes("Invalid login credentials")) {
     return "邮箱或密码错误。";
+  }
+  if (raw.includes("Email or password is incorrect.")) {
+    return "邮箱或密码错误。";
+  }
+  if (raw.includes("Authentication required.")) {
+    return "请先登录管理员账号。";
   }
 
   return raw;
@@ -188,15 +256,92 @@ function parseInitialFilters(): FilterState {
   }
 }
 
+function toBackendSession(payload: BackendAuthResponse): BackendSession {
+  return {
+    accessToken: payload.accessToken,
+    refreshToken: payload.refreshToken,
+    expiresAt: Date.now() + payload.expiresIn * 1000,
+    user: payload.user,
+  };
+}
+
+function parseInitialSession(): BackendSession | null {
+  const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<BackendSession>;
+    if (
+      typeof parsed.accessToken !== "string"
+      || typeof parsed.refreshToken !== "string"
+      || typeof parsed.expiresAt !== "number"
+      || typeof parsed.user?.id !== "string"
+      || typeof parsed.user?.email !== "string"
+      || typeof parsed.user?.isAdmin !== "boolean"
+    ) {
+      return null;
+    }
+    return {
+      accessToken: parsed.accessToken,
+      refreshToken: parsed.refreshToken,
+      expiresAt: parsed.expiresAt,
+      user: parsed.user,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function mapAdminContext(payload: BackendAdminContext): AdminContext {
+  return {
+    user_id: payload.userId,
+    email: payload.email,
+    is_admin: payload.isAdmin,
+  };
+}
+
+function mapDashboardStats(payload: BackendDashboardStats): DashboardStats {
+  return {
+    total_count: payload.totalCount,
+    voting_count: payload.votingCount,
+    approved_count: payload.approvedCount,
+    rejected_count: payload.rejectedCount,
+    closing_soon_count: payload.closingSoonCount,
+    expired_voting_count: payload.expiredVotingCount,
+    today_submissions: payload.todaySubmissions,
+  };
+}
+
+function mapCandidateRecord(payload: BackendCandidateRecord): CandidateRecord {
+  return {
+    candidate_id: payload.candidateId,
+    song_identifier: payload.songIdentifier,
+    alias_text: payload.aliasText,
+    submitter_id: payload.submitterId,
+    submitter_email: payload.submitterEmail,
+    status: payload.status,
+    vote_open_at: payload.voteOpenAt,
+    vote_close_at: payload.voteCloseAt,
+    approved_at: payload.approvedAt,
+    rejected_at: payload.rejectedAt,
+    support_count: payload.supportCount,
+    oppose_count: payload.opposeCount,
+    total_count: payload.totalCount,
+    created_at: payload.createdAt,
+    updated_at: payload.updatedAt,
+  };
+}
+
 function App() {
-  const clientRef = useRef<SupabaseClient | null>(null);
-  const authSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
+  const sessionRef = useRef<BackendSession | null>(null);
 
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [filters, setFilters] = useState<FilterState>(parseInitialFilters);
   const [searchDraft, setSearchDraft] = useState<string>(parseInitialFilters().search);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<BackendSession | null>(null);
   const [adminContext, setAdminContext] = useState<AdminContext | null>(null);
   const [accessStatus, setAccessStatus] = useState<"loading" | "admin" | "forbidden" | "error">("loading");
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -218,7 +363,7 @@ function App() {
     message: "",
     severity: "info",
   });
-  const [isBootstrapping, setIsBootstrapping] = useState<boolean>(HAS_SUPABASE_ENV);
+  const [isBootstrapping, setIsBootstrapping] = useState<boolean>(HAS_BACKEND_ENV);
   const [isSigningIn, setIsSigningIn] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isRollingCycle, setIsRollingCycle] = useState<boolean>(false);
@@ -273,12 +418,6 @@ function App() {
     return row.submitter_email?.trim() || shortId(row.submitter_id);
   }, []);
 
-  const teardownClient = useCallback(() => {
-    authSubscriptionRef.current?.unsubscribe();
-    authSubscriptionRef.current = null;
-    clientRef.current = null;
-  }, []);
-
   const clearWorkspaceState = useCallback(() => {
     setStats(null);
     setItems([]);
@@ -288,30 +427,88 @@ function App() {
     setDeadlineValue(null);
   }, []);
 
-  const rpc = useCallback(
-    async <T,>(name: string, params: Record<string, unknown> = {}): Promise<T> => {
-      if (!clientRef.current) {
-        throw new Error("Supabase 客户端未初始化。");
+  const clearAuthState = useCallback(() => {
+    setSession(null);
+    setAdminContext(null);
+    setAccessStatus("loading");
+    clearWorkspaceState();
+  }, [clearWorkspaceState]);
+
+  const request = useCallback(
+    async <T,>(
+      path: string,
+      options?: {
+        method?: "GET" | "POST" | "PATCH";
+        body?: unknown;
+        auth?: boolean;
+        retryOnUnauthorized?: boolean;
+      },
+    ): Promise<T> => {
+      if (!HAS_BACKEND_ENV) {
+        throw new Error("缺少 VITE_BACKEND_URL。");
       }
 
-      const { data, error } = await clientRef.current.rpc(name, params);
-      if (error) {
-        throw error;
+      const auth = options?.auth ?? true;
+      const retryOnUnauthorized = options?.retryOnUnauthorized ?? true;
+      const endpoint = `${BACKEND_URL}${path.startsWith("/") ? path : `/${path}`}`;
+
+      const headers = new Headers({ "Content-Type": "application/json" });
+      if (auth && sessionRef.current?.accessToken) {
+        headers.set("Authorization", `Bearer ${sessionRef.current.accessToken}`);
       }
-      return data as T;
+
+      const response = await fetch(endpoint, {
+        method: options?.method ?? "GET",
+        headers,
+        body: options?.body === undefined ? undefined : JSON.stringify(options.body),
+      });
+
+      const parsePayload = async () => {
+        try {
+          return (await response.json()) as T | BackendErrorResponse;
+        } catch {
+          return null;
+        }
+      };
+
+      if (response.status === 401 && auth && retryOnUnauthorized && sessionRef.current?.refreshToken) {
+        const refreshResponse = await fetch(`${BACKEND_URL}/v1/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            refreshToken: sessionRef.current.refreshToken,
+          }),
+        });
+
+        if (refreshResponse.ok) {
+          const refreshPayload = (await refreshResponse.json()) as BackendAuthResponse;
+          setSession(toBackendSession(refreshPayload));
+          return request<T>(path, { ...options, retryOnUnauthorized: false });
+        }
+
+        clearAuthState();
+      }
+
+      const payload = await parsePayload();
+      if (!response.ok) {
+        const message = (payload as BackendErrorResponse | null)?.message ?? `HTTP ${response.status}`;
+        throw new Error(message);
+      }
+
+      return payload as T;
     },
-    [],
+    [clearAuthState],
   );
 
   const refreshWorkspace = useCallback(async () => {
-    if (!clientRef.current || !session) {
+    if (!session) {
       return;
     }
 
     setIsRefreshing(true);
     try {
-      const contextPayload = await rpc<AdminContext[] | AdminContext>("community_alias_admin_get_context");
-      const nextAdminContext = Array.isArray(contextPayload) ? (contextPayload[0] ?? null) : contextPayload;
+      const contextPayload = await request<BackendAdminContext>("/v1/admin/context");
+      const nextAdminContext = mapAdminContext(contextPayload);
       setAdminContext(nextAdminContext);
 
       if (!nextAdminContext?.is_admin) {
@@ -322,26 +519,30 @@ function App() {
 
       setAccessStatus("admin");
 
+      const query = new URLSearchParams({
+        status: filters.status,
+        sort: filters.sort,
+        limit: String(PAGE_SIZE),
+        offset: String(page * PAGE_SIZE),
+      });
+      if (filters.search.trim()) {
+        query.set("search", filters.search.trim());
+      }
+
       const [statsPayload, itemsPayload] = await Promise.all([
-        rpc<DashboardStats[] | DashboardStats>("community_alias_admin_dashboard_stats"),
-        rpc<CandidateRecord[]>("community_alias_admin_list_candidates", {
-          p_status: filters.status,
-          p_search: filters.search || null,
-          p_sort: filters.sort,
-          p_limit: PAGE_SIZE,
-          p_offset: page * PAGE_SIZE,
-        }),
+        request<BackendDashboardStats>("/v1/admin/dashboard"),
+        request<{ rows: BackendCandidateRecord[] }>(`/v1/admin/candidates?${query.toString()}`),
       ]);
 
-      const nextStats = Array.isArray(statsPayload) ? (statsPayload[0] ?? null) : statsPayload;
-      setStats(nextStats);
-      setItems(itemsPayload);
-      setTotalCount(itemsPayload[0]?.total_count ?? 0);
+      const mappedItems = itemsPayload.rows.map(mapCandidateRecord);
+      setStats(mapDashboardStats(statsPayload));
+      setItems(mappedItems);
+      setTotalCount(mappedItems[0]?.total_count ?? 0);
       setSelectedCandidateId((currentId) => {
-        if (currentId && itemsPayload.some((item) => item.candidate_id === currentId)) {
+        if (currentId && mappedItems.some((item) => item.candidate_id === currentId)) {
           return currentId;
         }
-        return itemsPayload[0]?.candidate_id ?? null;
+        return mappedItems[0]?.candidate_id ?? null;
       });
     } catch (error) {
       setAccessStatus("error");
@@ -349,7 +550,7 @@ function App() {
     } finally {
       setIsRefreshing(false);
     }
-  }, [clearWorkspaceState, filters.search, filters.sort, filters.status, page, rpc, session, showToast]);
+  }, [clearWorkspaceState, filters.search, filters.sort, filters.status, page, request, session, showToast]);
 
   useEffect(() => {
     localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(filters));
@@ -427,48 +628,26 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!HAS_SUPABASE_ENV) {
+    sessionRef.current = session;
+  }, [session]);
+
+  useEffect(() => {
+    if (session) {
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+    } else {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (!HAS_BACKEND_ENV) {
       setIsBootstrapping(false);
       return;
     }
 
-    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-      },
-    });
-
-    clientRef.current = client;
-    const { data } = client.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      if (!nextSession) {
-        setAdminContext(null);
-        setAccessStatus("loading");
-        clearWorkspaceState();
-      }
-    });
-    authSubscriptionRef.current = data.subscription;
-
-    void (async () => {
-      try {
-        const { data: sessionPayload, error } = await client.auth.getSession();
-        if (error) {
-          throw error;
-        }
-        setSession(sessionPayload.session ?? null);
-      } catch (error) {
-        showToast(normalizeErrorMessage(error), "error");
-      } finally {
-        setIsBootstrapping(false);
-      }
-    })();
-
-    return () => {
-      teardownClient();
-    };
-  }, [clearWorkspaceState, showToast, teardownClient]);
+    setSession(parseInitialSession());
+    setIsBootstrapping(false);
+  }, []);
 
   useEffect(() => {
     if (!session) {
@@ -487,8 +666,8 @@ function App() {
   }, [refreshWorkspace, session]);
 
   const handleSignIn = async () => {
-    if (!clientRef.current) {
-      showToast("系统初始化未完成，请稍后重试。", "error");
+    if (!HAS_BACKEND_ENV) {
+      showToast("请先配置 VITE_BACKEND_URL。", "error");
       return;
     }
     if (!email.trim() || !password) {
@@ -498,13 +677,15 @@ function App() {
 
     setIsSigningIn(true);
     try {
-      const { error } = await clientRef.current.auth.signInWithPassword({
-        email: email.trim(),
-        password,
+      const payload = await request<BackendAuthResponse>("/v1/auth/login", {
+        method: "POST",
+        auth: false,
+        body: {
+          email: email.trim(),
+          password,
+        },
       });
-      if (error) {
-        throw error;
-      }
+      setSession(toBackendSession(payload));
       setPassword("");
       showToast("登录成功。", "success");
     } catch (error) {
@@ -515,19 +696,23 @@ function App() {
   };
 
   const handleSignOut = async () => {
-    if (!clientRef.current) {
-      return;
+    const refreshToken = sessionRef.current?.refreshToken;
+    if (refreshToken) {
+      try {
+        await request<{ success: boolean }>("/v1/auth/logout", {
+          method: "POST",
+          auth: false,
+          retryOnUnauthorized: false,
+          body: { refreshToken },
+        });
+      } catch {
+        // ignore logout failures and clear local session anyway
+      }
     }
-    const { error } = await clientRef.current.auth.signOut();
-    if (error) {
-      showToast(normalizeErrorMessage(error), "error");
-      return;
-    }
+
     setEmail("");
     setPassword("");
-    setAdminContext(null);
-    setAccessStatus("loading");
-    clearWorkspaceState();
+    clearAuthState();
     showToast("已退出登录。", "success");
   };
 
@@ -547,8 +732,8 @@ function App() {
 
     setIsRollingCycle(true);
     try {
-      const result = await rpc<{ settled_count?: number }>("community_alias_admin_roll_cycle", { p_now: null });
-      showToast(`已完成结算，处理 ${Number(result?.settled_count ?? 0)} 条候选。`, "success");
+      const result = await request<{ settledCount: number }>("/v1/admin/roll-cycle", { method: "POST" });
+      showToast(`已完成结算，处理 ${Number(result?.settledCount ?? 0)} 条候选。`, "success");
       await refreshWorkspace();
     } catch (error) {
       showToast(normalizeErrorMessage(error), "error");
@@ -569,17 +754,19 @@ function App() {
 
     setIsCreating(true);
     try {
-      const payload = await rpc<CandidateRecord[] | CandidateRecord>("community_alias_admin_create_candidate", {
-        p_song_identifier: songIdentifierInput.trim(),
-        p_alias_text: aliasInput.trim(),
-        p_status: createStatus,
+      const payload = await request<{ candidate: { id: string; aliasText: string } }>("/v1/admin/candidates", {
+        method: "POST",
+        body: {
+          songIdentifier: songIdentifierInput.trim(),
+          aliasText: aliasInput.trim(),
+          status: createStatus === "voting" ? "voting" : "approved",
+        },
       });
 
-      const created = Array.isArray(payload) ? (payload[0] ?? null) : payload;
       setAliasInput("");
       setCreateHint("创建成功，列表已刷新。");
-      setSelectedCandidateId(created?.candidate_id ?? null);
-      showToast(`已创建候选：${created?.alias_text ?? aliasInput.trim()}`, "success");
+      setSelectedCandidateId(payload.candidate?.id ?? null);
+      showToast(`已创建候选：${payload.candidate?.aliasText ?? aliasInput.trim()}`, "success");
       await refreshWorkspace();
     } catch (error) {
       const message = normalizeErrorMessage(error);
@@ -607,9 +794,9 @@ function App() {
       return;
     }
     await handleDetailMutation(status, async () => {
-      await rpc("community_alias_admin_set_status", {
-        p_candidate_id: selectedCandidate.candidate_id,
-        p_status: status,
+      await request(`/v1/admin/candidates/${selectedCandidate.candidate_id}/status`, {
+        method: "PATCH",
+        body: { status },
       });
       showToast("状态更新成功。", "success");
     });
@@ -624,9 +811,9 @@ function App() {
       return;
     }
     await handleDetailMutation("deadline", async () => {
-      await rpc("community_alias_admin_update_vote_window", {
-        p_candidate_id: selectedCandidate.candidate_id,
-        p_vote_close_at: nextDeadline.toISOString(),
+      await request(`/v1/admin/candidates/${selectedCandidate.candidate_id}/vote-window`, {
+        method: "PATCH",
+        body: { voteCloseAt: nextDeadline.toISOString() },
       });
       showToast("投票截止时间已更新。", "success");
     });
@@ -717,12 +904,12 @@ function App() {
 
   let content: ReactNode;
 
-  if (!HAS_SUPABASE_ENV) {
+  if (!HAS_BACKEND_ENV) {
     content = (
       <FullscreenPanel
         icon={<WarningAmberRoundedIcon color="warning" />}
         title="环境变量未配置"
-        description="当前部署缺少 VITE_SUPABASE_URL 或 VITE_SUPABASE_ANON_KEY，无法启动管理后台。"
+        description="当前部署缺少 VITE_BACKEND_URL，无法启动管理后台。"
       />
     );
   } else if (isBootstrapping) {
@@ -787,7 +974,7 @@ function App() {
       <FullscreenPanel
         icon={<ShieldRoundedIcon color="warning" />}
         title="账号无管理员权限"
-        description="当前账号已登录，但不包含 community_alias_admin 权限 Claim。"
+        description="当前账号已登录，但后端判定为非管理员（isAdmin=false）。"
       >
         <Stack direction="row" spacing={1.5} sx={{ mt: 3 }}>
           <Button variant="outlined" startIcon={<RefreshRoundedIcon />} onClick={() => void refreshWorkspace()}>

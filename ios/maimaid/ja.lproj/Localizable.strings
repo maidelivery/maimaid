@@ -535,7 +535,7 @@
 "settings.cloud.recovery.confirmPassword" = "新しいパスワードを確認する";
 "settings.cloud.recovery.updateButton" = "パスワードを更新する";
 "settings.cloud.recovery.cancel" = "キャンセル";
-"settings.cloud.privacy.hint" = "アカウント情報は、サインイン時にクラウド同期を有効にするために使用されます。データは Supabase に安全に保存されます。";
+"settings.cloud.privacy.hint" = "アカウント情報は、サインイン時にクラウド同期を有効にするために使用されます。データは Backend に安全に保存されます。";
 "settings.cloud.message.loginSuccess" = "ログインしました。";
 "settings.cloud.message.signupSuccess" = "登録が完了しました。";
 "settings.cloud.message.authLinkSuccess" = "アカウント認証が完了しました。これでサインインできるようになりました。";
@@ -557,14 +557,12 @@
 "settings.cloud.autoBackup.interval" = "バックアップ間隔";
 "settings.cloud.autoBackup.lastBackup" = "最後のバックアップ";
 "settings.cloud.autoBackup.never" = "なし";
-"settings.cloud.config.title" = "Supabase が未設定です";
+"settings.cloud.config.title" = "Backend が未設定です";
 "settings.cloud.config.subtitle" = "`Config/Secrets.xcconfig` にクラウド同期設定を追加してください。";
 "settings.cloud.config.section" = "構成";
 "settings.cloud.config.step.copy" = "1. 「Config/Secrets.example.xcconfig」を「Config/Secrets.xcconfig」にコピーします。";
-"settings.cloud.config.step.fill" = "2.「SUPABASE_URL」と「SUPABASE_PUBLISHABLE_KEY」を入力します。";
-"settings.cloud.config.error.unconfigured" = "Supabase が構成されていません。";
-"supabase.config.error.missingUrl" = "`SUPABASE_URL` が未設定です。`Config/Secrets.xcconfig` または Xcode Build Settings を設定してください。";
-"supabase.config.error.missingPublishableKey" = "`SUPABASE_PUBLISHABLE_KEY` が未設定です。`Config/Secrets.xcconfig` または Xcode Build Settings を設定してください。";
+"settings.cloud.config.step.fill" = "2.「BACKEND_URL」と「BACKEND_URL」を入力します。";
+"settings.cloud.config.error.unconfigured" = "Backend が構成されていません。";
 "common.unknown" = "未知";
 "dan.detail.noRecord" = "記録なし";
 "dan.detail.missing" = "未達";
@@ -604,7 +602,7 @@
 "community.alias.section.submit.action" = "投稿";
 "community.alias.section.dailyQuota %lld %lld" = "本日の投稿: %lld/%lld";
 "community.alias.section.loginHint" = "クラウドアカウントでログインすると投稿と投票ができます。";
-"community.alias.section.unconfiguredHint" = "Supabase が未設定のため、コミュニティ投稿は利用できません。";
+"community.alias.section.unconfiguredHint" = "Backend が未設定のため、コミュニティ投稿は利用できません。";
 "community.alias.section.mySubmissions" = "自分の投稿";
 "community.alias.status.voting" = "投票中";
 "community.alias.status.approved" = "承認";
@@ -616,8 +614,8 @@
 "community.alias.submit.loginRequired" = "投稿するにはクラウドアカウントにログインしてください。";
 "community.alias.submit.invalidRequest" = "投稿形式が無効です。入力内容を確認してください。";
 "community.alias.board.title" = "コミュニティ別名投票";
-"community.alias.board.config.title" = "Supabase 未設定";
-"community.alias.board.config.message" = "設定で Supabase URL/Key を入力し、アプリを再起動するかこの画面を開き直してください。";
+"community.alias.board.config.title" = "Backend 未設定";
+"community.alias.board.config.message" = "設定で Backend URL/Key を入力し、アプリを再起動するかこの画面を開き直してください。";
 "community.alias.board.login.title" = "ログインが必要";
 "community.alias.board.login.message" = "ログイン後にコミュニティ別名投票へ参加できます。";
 "community.alias.board.login.refresh" = "ログイン後に更新";
@@ -631,7 +629,7 @@
 "community.alias.board.tip.loginRequired" = "投票するには先にログインしてください";
 "community.alias.board.tip.voteFailedFallback" = "投票に失敗しました。しばらくして再試行してください。";
 "community.alias.board.tip.voteUpdated" = "投票を更新しました";
-"community.alias.service.submit.unconfigured" = "Supabase が未設定のため投稿できません。";
+"community.alias.service.submit.unconfigured" = "Backend が未設定のため投稿できません。";
 "community.alias.service.submit.sessionInvalid" = "ログイン状態が無効または期限切れです。一度ログアウトして再ログインしてください。";
 "community.alias.service.submit.sessionExpiredRelogin" = "ログイン状態の有効期限が切れました。ログアウト後に再ログインしてください。";
 "community.alias.service.submit.sessionExpiredRetry" = "ログイン状態の有効期限が切れました。再ログイン後に投稿してください。";

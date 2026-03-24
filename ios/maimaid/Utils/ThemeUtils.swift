@@ -38,8 +38,7 @@ enum UserDefaultsKeys {
 enum BundleInfoKeys {
     static let shortVersion = "CFBundleShortVersionString"
     static let buildNumber = "CFBundleVersion"
-    static let supabaseURL = "SUPABASE_URL"
-    static let supabasePublishableKey = "SUPABASE_PUBLISHABLE_KEY"
+    static let backendURL = "BACKEND_URL"
 }
 
 enum AppInfo {

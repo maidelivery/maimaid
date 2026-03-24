@@ -6,7 +6,7 @@
   "packageManager": "pnpm@10.20.0",
   "scripts": {
     "dev": "vite",
-    "check:env": "node -e \"if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY) { console.error('Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY'); process.exit(1); }\"",
+    "check:env": "node -e \"if (!process.env.VITE_BACKEND_URL) { console.error('Missing VITE_BACKEND_URL'); process.exit(1); }\"",
     "build": "vite build",
     "preview": "vite preview",
     "cf:create": "wrangler pages project create maimaid-community-alias-admin --production-branch main",
@@ -19,7 +19,6 @@
     "@mui/material": "^7.3.2",
     "@mui/x-data-grid": "^8.14.1",
     "@mui/x-date-pickers": "^8.14.1",
-    "@supabase/supabase-js": "^2.49.8",
     "dayjs": "^1.11.18",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"

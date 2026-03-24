@@ -236,7 +236,14 @@ struct AvatarCropEditorView: View {
         let offsetScale = exportSize / guideDiameter
         let exportOffset = CGSize(width: offset.width * offsetScale, height: offset.height * offsetScale)
         
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: exportSize, height: exportSize))
+        let rendererFormat = UIGraphicsImageRendererFormat()
+        rendererFormat.scale = 1
+        rendererFormat.preferredRange = .standard
+        rendererFormat.opaque = false
+        let renderer = UIGraphicsImageRenderer(
+            size: CGSize(width: exportSize, height: exportSize),
+            format: rendererFormat
+        )
         let renderedImage = renderer.image { _ in
             let context = UIGraphicsGetCurrentContext()
             context?.setFillColor(UIColor.clear.cgColor)
