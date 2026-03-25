@@ -52,6 +52,13 @@ struct maimaidApp: App {
                         container: sharedModelContainer,
                         reason: "scenePhase.active"
                     )
+                    if BackendSessionManager.shared.isConfigured {
+                        await BackendSessionManager.shared.checkSession()
+                        if BackendSessionManager.shared.isAuthenticated {
+                            let context = ModelContext(sharedModelContainer)
+                            try? await BackendIncrementalSyncService.pullUpdates(context: context, force: false)
+                        }
+                    }
                     await BackendAutoBackup.backupIfNeeded(
                         container: sharedModelContainer,
                         reason: "scenePhase.active"
@@ -88,10 +95,6 @@ enum StaticDataAutoUpdate {
         }
         
         let options = configuredOptions()
-        guard options.hasEnabledWork else {
-            cancelScheduledRefresh()
-            return
-        }
         
         guard isRefreshDue(config: config) else { return }
         
@@ -118,10 +121,6 @@ enum StaticDataAutoUpdate {
         }
         
         let options = configuredOptions()
-        guard options.hasEnabledWork else {
-            cancelScheduledRefresh()
-            return
-        }
         
         if isRefreshDue(config: config) {
             print("StaticDataAutoUpdate: background refresh triggered")
@@ -145,10 +144,6 @@ enum StaticDataAutoUpdate {
         }
         
         let options = configuredOptions()
-        guard options.hasEnabledWork else {
-            cancelScheduledRefresh()
-            return
-        }
         
         let request = BGAppRefreshTaskRequest(identifier: taskIdentifier)
         let dueDate = nextDueDate(for: config)
@@ -183,28 +178,7 @@ enum StaticDataAutoUpdate {
     }
     
     private static func configuredOptions() -> MaimaiDataFetcher.SyncOptions {
-        let defaults = UserDefaults.app
-        return .init(
-            updateRemoteData: defaults.bool(forKey: AppStorageKeys.syncUpdateRemoteData, defaultValue: true),
-            updateAliases: defaults.bool(forKey: AppStorageKeys.syncUpdateAliases, defaultValue: true),
-            updateCovers: defaults.bool(forKey: AppStorageKeys.syncUpdateCovers, defaultValue: true),
-            updateIcons: defaults.bool(forKey: AppStorageKeys.syncUpdateIcons, defaultValue: true),
-            updateDanData: defaults.bool(forKey: AppStorageKeys.syncUpdateDanData, defaultValue: true),
-            updateChartStats: defaults.bool(forKey: AppStorageKeys.syncUpdateChartStats, defaultValue: true),
-            updateUtageChartStats: defaults.bool(forKey: AppStorageKeys.syncUpdateUtageChartStats, defaultValue: true)
-        )
-    }
-}
-
-private extension MaimaiDataFetcher.SyncOptions {
-    var hasEnabledWork: Bool {
-        updateRemoteData || updateAliases || updateCovers || updateIcons || updateDanData || updateChartStats || updateUtageChartStats
-    }
-}
-
-private extension UserDefaults {
-    func bool(forKey key: String, defaultValue: Bool) -> Bool {
-        object(forKey: key) as? Bool ?? defaultValue
+        .init()
     }
 }
 

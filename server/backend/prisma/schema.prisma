@@ -54,6 +54,11 @@ enum ImportStatus {
   failed
 }
 
+enum MfaChallengePurpose {
+  login
+  passkey_registration
+}
+
 model User {
   id                     String                   @id @default(uuid()) @db.Uuid
   email                  String                   @unique
@@ -69,6 +74,11 @@ model User {
   passwordResetToken     PasswordResetToken[]
   communityVotes         CommunityAliasVote[]
   communityCandidates    CommunityAliasCandidate[] @relation("CandidateSubmitter")
+  totpCredential         UserTotpCredential?
+  passkeyCredentials     UserPasskeyCredential[]
+  mfaChallenges          MfaChallenge[]
+  syncEvents             SyncEvent[]
+  syncMutations          SyncMutation[]
 
   @@map("users")
 }
@@ -312,11 +322,116 @@ model PlayRecord {
   source        String
   sourcePayload Json?
   createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   profile       Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
   sheet         Sheet    @relation(fields: [sheetId], references: [id], onDelete: Cascade)
 
   @@index([profileId, playTime])
   @@map("play_records")
+}
+
+model UserTotpCredential {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @unique @db.Uuid
+  secretBase32 String
+  enabledAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([enabledAt])
+  @@map("user_totp_credentials")
+}
+
+model UserPasskeyCredential {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  credentialId  String   @unique
+  publicKey     Bytes
+  counter       Int      @default(0)
+  transports    String[]
+  name          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_passkey_credentials")
+}
+
+model MfaChallenge {
+  id             String              @id @default(uuid()) @db.Uuid
+  userId         String              @db.Uuid
+  tokenHash      String              @unique
+  purpose        MfaChallengePurpose
+  channel        String
+  challenge      String?
+  passkeyAllowIds String[]
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  createdAt      DateTime            @default(now())
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose, createdAt])
+  @@index([expiresAt])
+  @@map("mfa_challenges")
+}
+
+model SyncEvent {
+  revision    BigInt   @id @default(autoincrement())
+  userId      String   @db.Uuid
+  profileId   String?  @db.Uuid
+  entityType  String
+  entityId    String
+  op          String
+  payloadJson Json?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revision])
+  @@index([profileId, revision])
+  @@map("sync_events")
+}
+
+model SyncMutation {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  idempotencyKey String
+  resultJson     Json
+  appliedAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey])
+  @@index([appliedAt])
+  @@map("sync_mutations")
+}
+
+model StaticSource {
+  id           String   @id @default(uuid()) @db.Uuid
+  category     String   @unique
+  activeUrl    String
+  fallbackUrls String[]
+  enabled      Boolean  @default(true)
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([enabled, category])
+  @@map("static_sources")
+}
+
+model StaticBundle {
+  id          BigInt   @id @default(autoincrement())
+  version     String   @unique
+  md5         String
+  payloadJson Json
+  sourceMeta  Json?
+  active      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  activatedAt DateTime?
+
+  @@index([active, createdAt])
+  @@map("static_bundles")
 }
 
 model ImportRun {

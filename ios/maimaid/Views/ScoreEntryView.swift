@@ -6,7 +6,6 @@ struct ScoreEntryView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Query private var configs: [SyncConfig]
     
     let sheet: Sheet
     
@@ -699,10 +698,12 @@ struct ScoreEntryView: View {
             context: modelContext
         )
         
-        if let config = configs.first {
-            Task {
-                await SyncManager.shared.uploadScoreIfNeeded(sheet: sheet, score: savedScore, config: config)
-            }
+        Task {
+            await SyncManager.shared.uploadScoreImmediately(
+                sheet: sheet,
+                score: savedScore,
+                context: modelContext
+            )
         }
         
         try? modelContext.save()

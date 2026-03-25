@@ -248,7 +248,11 @@ struct DivingFishImportView: View {
             totalRecords = result.fetchedCount
             progress = Double(result.fetchedCount)
 
-            try await BackendCloudSyncService.restoreFromCloud(context: modelContext)
+            try await BackendIncrementalSyncService.pullUpdates(
+                context: modelContext,
+                profileId: profile.id,
+                force: false
+            )
             profile.lastImportDateDF = Date()
             try modelContext.save()
 

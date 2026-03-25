@@ -18,6 +18,7 @@ final class SyncConfig {
     var lastStaticDataUpdateDate: Date?
     @Attribute(originalName: "lastSupabaseBackupDate")
     var lastCloudBackupDate: Date?
+    var lastSyncRevision: String = "0"
     
     // Legacy fields — kept for migration, will be read once to create default UserProfile
     var userName: String?

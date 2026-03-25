@@ -22,18 +22,21 @@
     "migrate": "prisma migrate deploy"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.5.0",
     "@aws-sdk/client-s3": "^3.908.0",
     "@aws-sdk/s3-request-presigner": "^3.908.0",
     "@hono/node-server": "^1.14.4",
+    "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
+    "@simplewebauthn/server": "^12.0.0",
     "bcryptjs": "^3.0.2",
     "hono": "^4.9.8",
     "jose": "^6.1.0",
+    "otpauth": "^9.4.1",
     "pg": "^8.17.0",
     "prisma": "^7.5.0",
     "reflect-metadata": "^0.2.2",
     "tsyringe": "^4.10.0",
+    "yaml": "^2.8.3",
     "zod": "^4.1.11"
   },
   "devDependencies": {

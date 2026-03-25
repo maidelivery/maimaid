@@ -11,6 +11,10 @@ const EnvSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(16),
   JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().positive().default(900),
   JWT_REFRESH_TTL_SECONDS: z.coerce.number().int().positive().default(60 * 60 * 24 * 30),
+  MFA_CHALLENGE_TTL_SECONDS: z.coerce.number().int().positive().default(300),
+  WEBAUTHN_RP_ID: z.string().optional(),
+  WEBAUTHN_RP_NAME: z.string().default("maimaid"),
+  WEBAUTHN_ORIGIN: z.string().url().optional(),
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().email().default("no-reply@example.com"),
   S3_ENDPOINT: z.string().optional(),
@@ -19,7 +23,8 @@ const EnvSchema = z.object({
   S3_BUCKET: z.string().min(1).default("maimaid-assets"),
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
-  CATALOG_SOURCE_URL: z.string().url().default("https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json")
+  CATALOG_SOURCE_URL: z.string().url().default("https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json"),
+  STATIC_SYNC_INTERVAL_HOURS: z.coerce.number().int().positive().default(6)
 });
 
 export type Env = z.infer<typeof EnvSchema>;

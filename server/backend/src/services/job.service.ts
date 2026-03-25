@@ -3,13 +3,15 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import { CatalogService } from "./catalog.service.js";
 import { CommunityAliasService } from "./community-alias.service.js";
+import { StaticBundleService } from "./static-bundle.service.js";
 
 @injectable()
 export class JobService {
   constructor(
     @inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
     @inject(TOKENS.CatalogService) private readonly catalogService: CatalogService,
-    @inject(TOKENS.CommunityAliasService) private readonly communityAliasService: CommunityAliasService
+    @inject(TOKENS.CommunityAliasService) private readonly communityAliasService: CommunityAliasService,
+    @inject(TOKENS.StaticBundleService) private readonly staticBundleService: StaticBundleService
   ) {}
 
   async enqueue(jobType: string, payload: Record<string, unknown> = {}) {
@@ -50,6 +52,8 @@ export class JobService {
           await this.catalogService.syncCatalog(false);
         } else if (job.jobType === "community_alias_roll_cycle") {
           await this.communityAliasService.rollCycle();
+        } else if (job.jobType === "static_bundle_build") {
+          await this.staticBundleService.buildBundle(false);
         }
         await this.prisma.jobQueue.update({
           where: { id: job.id },

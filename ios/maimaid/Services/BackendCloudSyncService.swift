@@ -258,7 +258,7 @@ enum BackendCloudSyncService {
         try context.save()
     }
 
-    private static func uploadAvatarIfNeeded(for profile: UserProfile) async throws -> String? {
+    static func uploadAvatarIfNeeded(for profile: UserProfile) async throws -> String? {
         guard let avatarData = profile.avatarData, !avatarData.isEmpty else {
             return profile.avatarUrl
         }
@@ -580,10 +580,16 @@ enum BackendCloudSyncService {
         var map: [String: Sheet] = [:]
         for sheet in sheets {
             let identifiers = candidateSongIdentifiers(for: sheet)
+            let chartTypeCandidates = normalizeChartTypeCandidates(sheet.type)
+            let difficultyCandidates = normalizeDifficultyCandidates(sheet.difficulty)
             for identifier in identifiers {
                 for separator in separators {
-                    let key = "\(identifier)\(separator)\(sheet.type)\(separator)\(sheet.difficulty)"
-                    map[key] = sheet
+                    for chartType in chartTypeCandidates {
+                        for difficulty in difficultyCandidates {
+                            let key = "\(identifier)\(separator)\(chartType)\(separator)\(difficulty)"
+                            map[key] = sheet
+                        }
+                    }
                 }
             }
         }
@@ -611,17 +617,72 @@ enum BackendCloudSyncService {
         guard let remote else {
             return nil
         }
-        let identifierCandidates = [remote.songIdentifier, String(remote.songId)].filter { !$0.isEmpty && $0 != "0" }
+        let identifierCandidates = [remote.songIdentifier, String(remote.songId)]
+            .flatMap { normalizeIdentifierCandidates($0) }
+            .filter { !$0.isEmpty && $0 != "0" }
+        let chartTypeCandidates = normalizeChartTypeCandidates(remote.chartType)
+        let difficultyCandidates = normalizeDifficultyCandidates(remote.difficulty)
 
         for identifier in identifierCandidates {
             for separator in ["_", "-"] {
-                let key = "\(identifier)\(separator)\(remote.chartType)\(separator)\(remote.difficulty)"
-                if let sheet = sheetMap[key] {
-                    return sheet
+                for chartType in chartTypeCandidates {
+                    for difficulty in difficultyCandidates {
+                        let key = "\(identifier)\(separator)\(chartType)\(separator)\(difficulty)"
+                        if let sheet = sheetMap[key] {
+                            return sheet
+                        }
+                    }
                 }
             }
         }
         return nil
+    }
+
+    private static func normalizeIdentifierCandidates(_ value: String) -> [String] {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return []
+        }
+        let lowercased = trimmed.lowercased()
+        if lowercased == trimmed {
+            return [trimmed]
+        }
+        return [trimmed, lowercased]
+    }
+
+    private static func normalizeChartTypeCandidates(_ value: String) -> [String] {
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if normalized == "standard" || normalized == "std" || normalized == "sd" {
+            return ["std", "standard"]
+        }
+        if normalized == "dx" {
+            return ["dx"]
+        }
+        if normalized == "utage" {
+            return ["utage"]
+        }
+        return normalized.isEmpty ? [] : [normalized]
+    }
+
+    private static func normalizeDifficultyCandidates(_ value: String) -> [String] {
+        let lowered = value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let normalized = lowered
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: ":", with: "")
+
+        if normalized == "remaster" {
+            return ["remaster", "re:master", "re_master"]
+        }
+        if normalized.isEmpty {
+            return []
+        }
+        if normalized == lowered {
+            return [normalized]
+        }
+        return [normalized, lowered]
     }
 
     private static func canonicalScoreSheetId(for sheet: Sheet) -> String {

@@ -54,11 +54,8 @@ communityV1Route.get("/aliases/my-candidates", authRequired, async (c) => {
     return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
   }
   const songIdentifier = c.req.query("songIdentifier");
-  if (!songIdentifier) {
-    return ok(c, { rows: [] });
-  }
   const limit = Number(c.req.query("limit") ?? 50);
-  const rows = await communityAliasService.fetchMySongCandidates(auth.userId, songIdentifier, limit);
+  const rows = await communityAliasService.fetchMyCandidates(auth.userId, limit, songIdentifier);
   return ok(c, { rows });
 });
 

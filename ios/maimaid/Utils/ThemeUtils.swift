@@ -33,6 +33,7 @@ enum UserDefaultsKeys {
     static let didShowOnboarding = "onboarding.didShowOnboarding"
     static let communityAliasApprovedSyncAt = "communityAlias.approvedSyncAt"
     static let communityAliasLastPollAt = "communityAlias.lastPollAt"
+    static let staticBundleMd5 = "static.bundle.md5"
 }
 
 enum BundleInfoKeys {
@@ -154,6 +155,17 @@ extension UserDefaults {
                 set(newValue, forKey: UserDefaultsKeys.communityAliasLastPollAt)
             } else {
                 removeObject(forKey: UserDefaultsKeys.communityAliasLastPollAt)
+            }
+        }
+    }
+
+    var staticBundleMd5: String? {
+        get { string(forKey: UserDefaultsKeys.staticBundleMd5) }
+        set {
+            if let newValue {
+                set(newValue, forKey: UserDefaultsKeys.staticBundleMd5)
+            } else {
+                removeObject(forKey: UserDefaultsKeys.staticBundleMd5)
             }
         }
     }

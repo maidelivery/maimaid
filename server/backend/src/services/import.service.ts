@@ -3,6 +3,7 @@ import { inject, injectable } from "tsyringe";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
 import { ScoreService } from "./score.service.js";
+import { SyncService } from "./sync.service.js";
 import { difficultyByLevelIndex, normalizeChartType, normalizeLxnsSongId } from "../utils/compat.js";
 
 type DivingFishRecord = {
@@ -92,7 +93,8 @@ export type TransformedImportResult = {
 export class ImportService {
   constructor(
     @inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
-    @inject(TOKENS.ScoreService) private readonly scoreService: ScoreService
+    @inject(TOKENS.ScoreService) private readonly scoreService: ScoreService,
+    @inject(TOKENS.SyncService) private readonly syncService: SyncService
   ) {}
 
   async transformFromDivingFish(input: { username?: string; qq?: string }): Promise<TransformedImportResult> {
@@ -326,6 +328,41 @@ export class ImportService {
           }
         }
       });
+      await this.syncService.recordEvent({
+        userId: input.userId,
+        profileId: input.profileId,
+        entityType: "import",
+        entityId: run.id,
+        op: "imported",
+        payload: {
+          provider: "df",
+          fetched: transformed.fetchedCount,
+          upserted: upsertResult.applied.length,
+          recordsInserted: recordResult.created.length
+        }
+      });
+      await this.syncService.recordEvent({
+        userId: input.userId,
+        profileId: input.profileId,
+        entityType: "best_scores",
+        entityId: input.profileId,
+        op: "bulk_upsert",
+        payload: {
+          source: "df_import",
+          count: upsertResult.applied.length
+        }
+      });
+      await this.syncService.recordEvent({
+        userId: input.userId,
+        profileId: input.profileId,
+        entityType: "play_records",
+        entityId: input.profileId,
+        op: "bulk_upsert",
+        payload: {
+          source: "df_import",
+          count: recordResult.created.length
+        }
+      });
 
       return {
         importRunId: run.id,
@@ -433,6 +470,41 @@ export class ImportService {
             skipped: upsertResult.skipped.length,
             recordsInserted: recordResult.created.length
           }
+        }
+      });
+      await this.syncService.recordEvent({
+        userId: input.userId,
+        profileId: input.profileId,
+        entityType: "import",
+        entityId: run.id,
+        op: "imported",
+        payload: {
+          provider: "lxns",
+          fetched: transformed.fetchedCount,
+          upserted: upsertResult.applied.length,
+          recordsInserted: recordResult.created.length
+        }
+      });
+      await this.syncService.recordEvent({
+        userId: input.userId,
+        profileId: input.profileId,
+        entityType: "best_scores",
+        entityId: input.profileId,
+        op: "bulk_upsert",
+        payload: {
+          source: "lxns_import",
+          count: upsertResult.applied.length
+        }
+      });
+      await this.syncService.recordEvent({
+        userId: input.userId,
+        profileId: input.profileId,
+        entityType: "play_records",
+        entityId: input.profileId,
+        op: "bulk_upsert",
+        payload: {
+          source: "lxns_import",
+          count: recordResult.created.length
         }
       });
 

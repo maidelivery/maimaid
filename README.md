@@ -40,7 +40,7 @@
 - `ios/Config/`：iOS 构建配置（含 Supabase 相关配置键）
 - `supabase/migrations/`：社区别名相关数据库迁移与 RPC
 - `supabase/functions/community-alias-submit/`：别名投稿 Edge Function
-- `web/community-alias-admin/`：社区别名管理后台（React + MUI）
+- `web/dashboard/`：统一管理面板（React + MUI）
 
 ## Monorepo 工作流（Nx + pnpm Workspace）
 

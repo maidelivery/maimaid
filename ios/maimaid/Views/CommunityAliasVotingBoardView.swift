@@ -10,6 +10,7 @@ struct CommunityAliasVotingBoardView: View {
     @State private var isLoading = false
     @State private var inFlightVoteCandidateId: UUID?
     @State private var tipMessage: String?
+    @State private var tipDismissTask: Task<Void, Never>?
 
     private struct SongVotingGroup: Identifiable {
         let songIdentifier: String
@@ -79,6 +80,10 @@ struct CommunityAliasVotingBoardView: View {
         }
         .task {
             await reloadBoard()
+        }
+        .onDisappear {
+            tipDismissTask?.cancel()
+            tipDismissTask = nil
         }
     }
 
@@ -237,8 +242,8 @@ struct CommunityAliasVotingBoardView: View {
                 Image(systemName: support ? (isSelected ? "hand.thumbsup.fill" : "hand.thumbsup") : (isSelected ? "hand.thumbsdown.fill" : "hand.thumbsdown"))
                 Text(
                     support
-                        ? String(localized: "community.alias.vote.support \(count)")
-                        : String(localized: "community.alias.vote.oppose \(count)")
+                        ? (isSelected ? String(localized: "community.alias.vote.cancelSupport \(count)") : String(localized: "community.alias.vote.support \(count)"))
+                        : (isSelected ? String(localized: "community.alias.vote.cancelOppose \(count)") : String(localized: "community.alias.vote.oppose \(count)"))
                 )
             }
             .font(.system(size: 12, weight: .semibold))
@@ -311,11 +316,14 @@ struct CommunityAliasVotingBoardView: View {
     }
 
     private func showTip(_ message: String) {
+        tipDismissTask?.cancel()
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             tipMessage = message
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+        tipDismissTask = Task {
+            try? await Task.sleep(for: .seconds(1.6))
+            guard !Task.isCancelled else { return }
             if tipMessage == message {
                 withAnimation {
                     tipMessage = nil

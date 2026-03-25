@@ -11,6 +11,8 @@ import { scoresV1Route } from "./routes/v1/scores.route.js";
 import { importsV1Route } from "./routes/v1/imports.route.js";
 import { communityV1Route } from "./routes/v1/community.route.js";
 import { adminV1Route } from "./routes/v1/admin.route.js";
+import { syncV1Route } from "./routes/v1/sync.route.js";
+import { staticV1Route } from "./routes/v1/static.route.js";
 import { jobsInternalRoute } from "./routes/internal/jobs.route.js";
 import type { AppEnv } from "./types/hono.js";
 
@@ -34,6 +36,8 @@ export const createApp = () => {
   app.route("/v1/import", importsV1Route);
   app.route("/v1/community", communityV1Route);
   app.route("/v1/admin", adminV1Route);
+  app.route("/v1/sync", syncV1Route);
+  app.route("/v1/static", staticV1Route);
   app.route("/internal/jobs", jobsInternalRoute);
 
   app.get("/", (c) =>

@@ -70,6 +70,12 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<{ user: User; tokens: TokenPair }> {
+    const user = await this.validateLoginCredentials(email, password);
+    const tokens = await this.issueTokensForUser(user);
+    return { user, tokens };
+  }
+
+  async validateLoginCredentials(email: string, password: string): Promise<User> {
     const normalized = this.normalizeEmail(email);
     const user = await this.prisma.user.findUnique({ where: { email: normalized } });
     if (!user || user.status !== "active") {
@@ -85,8 +91,21 @@ export class AuthService {
       throw new AppError(403, "email_not_verified", "Email is not verified. Please check your inbox.");
     }
 
-    const tokens = await this.issueTokenPair(user);
-    return { user, tokens };
+    return user;
+  }
+
+  async issueTokensForUser(user: User): Promise<TokenPair> {
+    return this.issueTokenPair(user);
+  }
+
+  async findActiveUserById(userId: string): Promise<User> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId }
+    });
+    if (!user || user.status !== "active") {
+      throw new AppError(401, "invalid_credentials", "User is not active.");
+    }
+    return user;
   }
 
   async resendVerification(email: string): Promise<{ verificationEmailSent: boolean }> {

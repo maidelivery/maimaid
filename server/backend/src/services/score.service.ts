@@ -35,6 +35,15 @@ export type PlayRecordInput = ScoreLocator & {
   sourcePayload?: unknown;
 };
 
+export type UpdateBestScoreInput = {
+  achievements?: number;
+  rank?: string;
+  dxScore?: number;
+  fc?: string | null;
+  fs?: string | null;
+  achievedAt?: string | Date;
+};
+
 const FC_ORDER = ["fc", "fcp", "ap", "app"];
 const FS_ORDER = ["sync", "fs", "fsp", "fsd", "fsdp"];
 
@@ -65,6 +74,103 @@ export class ScoreService {
       orderBy: [{ playTime: "desc" }],
       take: limit
     });
+  }
+
+  async updateBestScore(scoreId: string, userId: string, input: UpdateBestScoreInput) {
+    const existing = await this.prisma.bestScore.findFirst({
+      where: {
+        id: scoreId,
+        profile: {
+          userId
+        }
+      },
+      include: {
+        sheet: {
+          include: { song: true }
+        }
+      }
+    });
+    if (!existing) {
+      throw new AppError(404, "score_not_found", "Score not found.");
+    }
+
+    const achievements =
+      input.achievements !== undefined
+        ? this.normalizeAchievements(input.achievements)
+        : existing.achievements.toNumber();
+    const rank = input.rank?.trim() || this.rankByAchievements(achievements);
+    const dxScore = input.dxScore !== undefined ? this.normalizeDxScore(input.dxScore) : existing.dxScore;
+    const fc = input.fc !== undefined ? this.normalizeFc(input.fc) : existing.fc;
+    const fs = input.fs !== undefined ? this.normalizeFs(input.fs) : existing.fs;
+    const achievedAt =
+      input.achievedAt !== undefined ? this.normalizeDate(input.achievedAt) ?? existing.achievedAt : existing.achievedAt;
+
+    return this.prisma.bestScore.update({
+      where: { id: existing.id },
+      data: {
+        achievements,
+        rank,
+        dxScore,
+        fc,
+        fs,
+        achievedAt
+      },
+      include: {
+        sheet: {
+          include: { song: true }
+        }
+      }
+    });
+  }
+
+  async deleteBestScore(scoreId: string, userId: string) {
+    const existing = await this.prisma.bestScore.findFirst({
+      where: {
+        id: scoreId,
+        profile: {
+          userId
+        }
+      },
+      select: {
+        id: true,
+        profileId: true
+      }
+    });
+    if (!existing) {
+      throw new AppError(404, "score_not_found", "Score not found.");
+    }
+    await this.prisma.bestScore.delete({
+      where: { id: existing.id }
+    });
+    return {
+      deleted: true,
+      profileId: existing.profileId
+    };
+  }
+
+  async deletePlayRecord(recordId: string, userId: string) {
+    const existing = await this.prisma.playRecord.findFirst({
+      where: {
+        id: recordId,
+        profile: {
+          userId
+        }
+      },
+      select: {
+        id: true,
+        profileId: true
+      }
+    });
+    if (!existing) {
+      throw new AppError(404, "play_record_not_found", "Play record not found.");
+    }
+    await this.prisma.playRecord.delete({
+      where: { id: existing.id }
+    });
+    return {
+      deleted: true,
+      profileId: existing.profileId
+    };
   }
 
   async bulkUpsertBestScores(profileId: string, scores: UpsertScoreInput[], source: string) {
@@ -168,6 +274,23 @@ export class ScoreService {
       const fc = this.normalizeFc(record.fc);
       const fs = this.normalizeFs(record.fs);
       const playTime = this.normalizeDate(record.playTime) ?? new Date();
+
+      const duplicated = await this.prisma.playRecord.findFirst({
+        where: {
+          profileId,
+          sheetId: sheet.id,
+          playTime,
+          achievements,
+          dxScore,
+          fc,
+          fs
+        },
+        select: { id: true }
+      });
+      if (duplicated) {
+        skipped.push({ reason: "duplicated_play_record", locator: record });
+        continue;
+      }
 
       await this.prisma.playRecord.create({
         data: {

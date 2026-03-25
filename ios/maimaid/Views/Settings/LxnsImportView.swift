@@ -387,7 +387,11 @@ struct LxnsImportView: View {
             progress = Double(result.fetchedCount)
             importStatus = String(localized: "import.status.processing \(totalRecords)")
 
-            try await BackendCloudSyncService.restoreFromCloud(context: modelContext)
+            try await BackendIncrementalSyncService.pullUpdates(
+                context: modelContext,
+                profileId: profile.id,
+                force: false
+            )
             profile.lastImportDateLXNS = Date()
             try modelContext.save()
 

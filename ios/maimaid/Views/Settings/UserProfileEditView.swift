@@ -170,6 +170,7 @@ struct UserProfileEditView: View {
     }
     
     private func save() {
+        let targetProfile: UserProfile
         if let profile = existingProfile {
             // Update existing
             profile.name = name.trimmingCharacters(in: .whitespaces)
@@ -182,6 +183,7 @@ struct UserProfileEditView: View {
             profile.b15Count = max(1, b15Count)
             profile.avatarData = selectedImageData
             profile.avatarUrl = avatarUrl
+            targetProfile = profile
         } else {
             // Create new
             let isFirstProfile = profiles.isEmpty
@@ -200,7 +202,14 @@ struct UserProfileEditView: View {
                 b15Count: max(1, b15Count)
             )
             modelContext.insert(profile)
+            targetProfile = profile
         }
         try? modelContext.save()
+
+        if BackendSessionManager.shared.isAuthenticated {
+            Task {
+                try? await BackendIncrementalSyncService.pushProfileUpdate(profile: targetProfile, clientUpdatedAt: nil)
+            }
+        }
     }
 }

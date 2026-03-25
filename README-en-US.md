@@ -39,7 +39,7 @@ The project focuses on score management, song database workflows, progression tr
 - `ios/Config/`: iOS build configuration (including Supabase keys)
 - `supabase/migrations/`: database migrations and RPCs for community aliases
 - `supabase/functions/community-alias-submit/`: Edge Function for alias submission
-- `web/community-alias-admin/`: community alias admin frontend (React + MUI)
+- `web/dashboard/`: unified dashboard frontend (React + MUI)
 
 ## Monorepo Workflow (Nx + pnpm Workspace)
 

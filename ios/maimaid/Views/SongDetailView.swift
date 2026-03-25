@@ -1560,6 +1560,9 @@ struct SheetCardView: View {
         }
         
         try? modelContext.save()
+        Task {
+            await SyncManager.shared.syncCloudSnapshotIfNeeded(context: modelContext)
+        }
     }
     
     @ViewBuilder

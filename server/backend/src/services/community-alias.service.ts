@@ -125,12 +125,17 @@ export class CommunityAliasService {
     });
   }
 
-  async fetchMySongCandidates(userId: string, songIdentifier: string, limit: number) {
+  async fetchMyCandidates(userId: string, limit: number, songIdentifier?: string) {
+    const where: Prisma.CommunityAliasCandidateWhereInput = {
+      submitterId: userId
+    };
+    const normalizedSongIdentifier = songIdentifier?.trim();
+    if (normalizedSongIdentifier) {
+      where.songIdentifier = normalizedSongIdentifier;
+    }
+
     const rows = await this.prisma.communityAliasCandidate.findMany({
-      where: {
-        submitterId: userId,
-        songIdentifier
-      },
+      where,
       include: {
         votes: true
       },
@@ -184,22 +189,44 @@ export class CommunityAliasService {
       throw new AppError(400, "voting_window_closed", "Voting window is closed.");
     }
 
-    await this.prisma.communityAliasVote.upsert({
+    const existingVote = await this.prisma.communityAliasVote.findUnique({
       where: {
         candidateId_voterId: {
           candidateId,
           voterId: userId
         }
-      },
-      create: {
-        candidateId,
-        voterId: userId,
-        vote
-      },
-      update: {
-        vote
       }
     });
+
+    let myVote: number | null = vote;
+    if (existingVote && existingVote.vote === vote) {
+      await this.prisma.communityAliasVote.delete({
+        where: {
+          candidateId_voterId: {
+            candidateId,
+            voterId: userId
+          }
+        }
+      });
+      myVote = null;
+    } else {
+      await this.prisma.communityAliasVote.upsert({
+        where: {
+          candidateId_voterId: {
+            candidateId,
+            voterId: userId
+          }
+        },
+        create: {
+          candidateId,
+          voterId: userId,
+          vote
+        },
+        update: {
+          vote
+        }
+      });
+    }
 
     const votes = await this.prisma.communityAliasVote.findMany({
       where: { candidateId }
@@ -208,7 +235,7 @@ export class CommunityAliasService {
       candidateId,
       supportCount: votes.filter((item) => item.vote === 1).length,
       opposeCount: votes.filter((item) => item.vote === -1).length,
-      myVote: vote
+      myVote
     };
   }
 

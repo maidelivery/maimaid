@@ -4,6 +4,8 @@ import { di } from "../../di/container.js";
 import { TOKENS } from "../../di/tokens.js";
 import { adminRequired } from "../../middleware/auth.js";
 import type { CommunityAliasService } from "../../services/community-alias.service.js";
+import type { AdminUserService } from "../../services/admin-user.service.js";
+import type { StaticBundleService } from "../../services/static-bundle.service.js";
 import { ok } from "../../http/response.js";
 import type { AppEnv } from "../../types/hono.js";
 
@@ -19,6 +21,51 @@ const setStatusSchema = z.object({
 
 const voteWindowSchema = z.object({
   voteCloseAt: z.string().datetime()
+});
+
+const listUsersQuerySchema = z.object({
+  limit: z
+    .string()
+    .optional()
+    .transform((value) => {
+      const parsed = Number(value ?? 30);
+      if (!Number.isFinite(parsed)) return 30;
+      return Math.max(1, Math.min(200, Math.trunc(parsed)));
+    }),
+  offset: z
+    .string()
+    .optional()
+    .transform((value) => {
+      const parsed = Number(value ?? 0);
+      if (!Number.isFinite(parsed)) return 0;
+      return Math.max(0, Math.trunc(parsed));
+    })
+});
+
+const createUserSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8)
+});
+
+const staticSourceCreateSchema = z.object({
+  category: z.string().min(1),
+  activeUrl: z.string().url(),
+  fallbackUrls: z.array(z.string().url()).default([]),
+  enabled: z.boolean().default(true),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional()
+});
+
+const staticSourcePatchSchema = z
+  .object({
+    activeUrl: z.string().url().optional(),
+    fallbackUrls: z.array(z.string().url()).optional(),
+    enabled: z.boolean().optional(),
+    metadata: z.record(z.string(), z.unknown()).nullable().optional()
+  })
+  .refine((value) => Object.keys(value).length > 0, "No field to update.");
+
+const bundleBuildSchema = z.object({
+  force: z.boolean().default(false)
 });
 
 export const adminV1Route = new Hono<AppEnv>();
@@ -97,4 +144,81 @@ adminV1Route.post("/roll-cycle", async (c) => {
   const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
   const result = await communityAliasService.rollCycle();
   return ok(c, result);
+});
+
+adminV1Route.get("/users", async (c) => {
+  const adminUserService = di.resolve<AdminUserService>(TOKENS.AdminUserService);
+  const query = listUsersQuerySchema.parse(c.req.query());
+  const result = await adminUserService.listUsers({
+    limit: query.limit,
+    offset: query.offset
+  });
+  return ok(c, result);
+});
+
+adminV1Route.post("/users", async (c) => {
+  const adminUserService = di.resolve<AdminUserService>(TOKENS.AdminUserService);
+  const body = createUserSchema.parse(await c.req.json());
+  const user = await adminUserService.createUser(body);
+  return ok(c, { user }, 201);
+});
+
+adminV1Route.delete("/users/:userId", async (c) => {
+  const adminUserService = di.resolve<AdminUserService>(TOKENS.AdminUserService);
+  const userId = c.req.param("userId");
+  const result = await adminUserService.deleteUser(userId);
+  return ok(c, result);
+});
+
+adminV1Route.get("/static-sources", async (c) => {
+  const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+  const sources = await staticBundleService.listSources();
+  return ok(c, { sources });
+});
+
+adminV1Route.post("/static-sources", async (c) => {
+  const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+  const body = staticSourceCreateSchema.parse(await c.req.json());
+  const source = await staticBundleService.createSource({
+    category: body.category,
+    activeUrl: body.activeUrl,
+    fallbackUrls: body.fallbackUrls,
+    enabled: body.enabled,
+    metadata: body.metadata ?? null
+  });
+  return ok(c, { source }, 201);
+});
+
+adminV1Route.patch("/static-sources/:sourceId", async (c) => {
+  const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+  const sourceId = c.req.param("sourceId");
+  const body = staticSourcePatchSchema.parse(await c.req.json());
+  const patch: Parameters<StaticBundleService["updateSource"]>[1] = {};
+  if (body.activeUrl !== undefined) {
+    patch.activeUrl = body.activeUrl;
+  }
+  if (body.fallbackUrls !== undefined) {
+    patch.fallbackUrls = body.fallbackUrls;
+  }
+  if (body.enabled !== undefined) {
+    patch.enabled = body.enabled;
+  }
+  if (body.metadata !== undefined) {
+    patch.metadata = body.metadata;
+  }
+  const source = await staticBundleService.updateSource(sourceId, patch);
+  return ok(c, { source });
+});
+
+adminV1Route.post("/static-bundles/build", async (c) => {
+  const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+  const body = bundleBuildSchema.parse(await c.req.json());
+  const result = await staticBundleService.buildBundle(body.force);
+  return ok(c, result);
+});
+
+adminV1Route.get("/static-bundles", async (c) => {
+  const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+  const bundles = await staticBundleService.listBundles();
+  return ok(c, { bundles });
 });

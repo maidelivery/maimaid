@@ -10,7 +10,6 @@
 		3728607A2F604BC70028E788 /* maimaid v1.41n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 372860792F604BC70028E788 /* maimaid v1.41n.mlpackage */; };
 		373DA3D92F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */; };
 		373DA3E52F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */; };
-		37438C7F2F697ADB0055D6BD /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = 37438C7E2F697ADB0055D6BD /* Yams */; };
 		37C9CF1B2F4CE4DB002CBF7A /* maimaid.icon in Resources */ = {isa = PBXBuildFile; fileRef = 37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */; };
 /* End PBXBuildFile section */
 
@@ -49,7 +48,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				37438C7F2F697ADB0055D6BD /* Yams in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -105,7 +103,6 @@
 			);
 			name = maimaid;
 			packageProductDependencies = (
-				37438C7E2F697ADB0055D6BD /* Yams */,
 			);
 			productName = maimaid;
 			productReference = 37C9C3DD2F4CDAAB002CBF7A /* maimaid.app */;
@@ -139,7 +136,6 @@
 			mainGroup = 375868E02F4C78EB006316F5;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				37438C7D2F697ADB0055D6BD /* XCRemoteSwiftPackageReference "Yams" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 375868E02F4C78EB006316F5;
@@ -423,24 +419,6 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		37438C7D2F697ADB0055D6BD /* XCRemoteSwiftPackageReference "Yams" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/jpsim/Yams";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 6.2.1;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		37438C7E2F697ADB0055D6BD /* Yams */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 37438C7D2F697ADB0055D6BD /* XCRemoteSwiftPackageReference "Yams" */;
-			productName = Yams;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 375868E12F4C78EB006316F5 /* Project object */;
 }

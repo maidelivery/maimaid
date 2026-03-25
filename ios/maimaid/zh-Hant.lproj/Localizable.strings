@@ -393,7 +393,7 @@
 "data.sync.stage.fetchingRemoteData" = "取得彙總資料 (data.json)...";
 "data.sync.stage.fetchingAliases" = "取得歌曲別名與歌曲 ID...";
 "data.sync.stage.fetchingIcons" = "取得預設頭像...";
-"data.sync.stage.fetchingDanData" = "取得段位歌曲資料 (gallery.yaml)...";
+"data.sync.stage.fetchingDanData" = "同步段位歌曲資料...";
 "data.sync.stage.processingSongs" = "正在合併並分析資料...";
 "data.sync.stage.downloadingImages" = "正在併發下載歌曲封面...";
 "data.sync.stage.downloadingIcons" = "正在併發下載預設頭像...";
@@ -410,7 +410,7 @@
 "data.sync.status.fetchingData" = "下載遠程 data.json...";
 "data.sync.log.fetchedData %lld" = "成功下載資料，共 %lld 首歌曲";
 "data.sync.status.fetchingAliases" = "連接 LXNS API 取得別名...";
-"data.sync.status.fetchingDanData" = "下載段位 gallery.yaml...";
+"data.sync.status.fetchingDanData" = "處理段位資料...";
 "data.sync.status.fetchingIcons" = "取得預設頭像列表...";
 "data.sync.log.fetchedIcons %lld" = "成功取得 %lld 個預設頭像";
 "data.sync.log.fetchedDanData %lld" = "成功下載段位資料，共 %lld 個分類";
@@ -629,6 +629,8 @@
 "community.alias.board.deadline %@" = "截止 %@";
 "community.alias.vote.support %lld" = "支持 %lld";
 "community.alias.vote.oppose %lld" = "反對 %lld";
+"community.alias.vote.cancelSupport %lld" = "取消支持 %lld";
+"community.alias.vote.cancelOppose %lld" = "取消反對 %lld";
 "community.alias.board.tip.loginRequired" = "請先登入再投票";
 "community.alias.board.tip.voteFailedFallback" = "投票失敗，請稍後重試";
 "community.alias.board.tip.voteUpdated" = "投票已更新";

@@ -10,5 +10,9 @@ export const TOKENS = {
   CommunityAliasService: Symbol.for("CommunityAliasService"),
   AdminService: Symbol.for("AdminService"),
   StorageService: Symbol.for("StorageService"),
-  JobService: Symbol.for("JobService")
+  JobService: Symbol.for("JobService"),
+  MfaService: Symbol.for("MfaService"),
+  SyncService: Symbol.for("SyncService"),
+  StaticBundleService: Symbol.for("StaticBundleService"),
+  AdminUserService: Symbol.for("AdminUserService")
 } as const;

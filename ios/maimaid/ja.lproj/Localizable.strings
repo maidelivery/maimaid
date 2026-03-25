@@ -393,7 +393,7 @@
 "data.sync.stage.fetchingRemoteData" = "data.json を取得しています...";
 "data.sync.stage.fetchingAliases" = "エイリアスを取得しています...";
 "data.sync.stage.fetchingIcons" = "アイコンを取得しています...";
-"data.sync.stage.fetchingDanData" = "段位データを取得しています (gallery.yaml)...";
+"data.sync.stage.fetchingDanData" = "段位データを同期しています...";
 "data.sync.stage.processingSongs" = "データを分析中...";
 "data.sync.stage.downloadingImages" = "カバーをダウンロード中...";
 "data.sync.stage.downloadingIcons" = "アイコンをダウンロード中...";
@@ -410,7 +410,7 @@
 "data.sync.status.fetchingData" = "リモート データを取得しています...";
 "data.sync.log.fetchedData %lld" = "%lld 曲をフェッチしました";
 "data.sync.status.fetchingAliases" = "LXNS からエイリアスを取得しています...";
-"data.sync.status.fetchingDanData" = "gallery.yaml をダウンロード中...";
+"data.sync.status.fetchingDanData" = "段位データを処理中...";
 "data.sync.status.fetchingIcons" = "アイコンリストを取得中...";
 "data.sync.log.fetchedIcons %lld" = "LXNS から %lld アイコンを取得しました";
 "data.sync.log.fetchedDanData %lld" = "Dan データ、%lld カテゴリが正常にダウンロードされました";
@@ -629,6 +629,8 @@
 "community.alias.board.deadline %@" = "締切 %@";
 "community.alias.vote.support %lld" = "賛成 %lld";
 "community.alias.vote.oppose %lld" = "反対 %lld";
+"community.alias.vote.cancelSupport %lld" = "賛成を取り消す %lld";
+"community.alias.vote.cancelOppose %lld" = "反対を取り消す %lld";
 "community.alias.board.tip.loginRequired" = "投票するには先にログインしてください";
 "community.alias.board.tip.voteFailedFallback" = "投票に失敗しました。しばらくして再試行してください。";
 "community.alias.board.tip.voteUpdated" = "投票を更新しました";

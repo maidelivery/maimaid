@@ -73,7 +73,7 @@ nonisolated struct CommunityAliasVoteResult: Codable, Sendable {
     let candidateId: UUID
     let supportCount: Int
     let opposeCount: Int
-    let myVote: Int
+    let myVote: Int?
 }
 
 nonisolated struct CommunityAliasApprovedSyncRow: Codable, Sendable {

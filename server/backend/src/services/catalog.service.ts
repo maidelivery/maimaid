@@ -47,6 +47,22 @@ type RemoteSheet = {
   isSpecial?: boolean | null;
 };
 
+type LxnsAliasItem = {
+  song_id?: number | string;
+  aliases?: string[];
+};
+
+type CatalogAliasRow = {
+  id: string;
+  songIdentifier: string;
+  aliasText: string;
+  aliasNorm: string;
+  source: string;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 @injectable()
 export class CatalogService {
   constructor(
@@ -92,9 +108,53 @@ export class CatalogService {
     if (source !== undefined) {
       where.source = source;
     }
-    return this.prisma.alias.findMany({
+    const aliases = await this.prisma.alias.findMany({
       where,
       orderBy: [{ songIdentifier: "asc" }, { aliasText: "asc" }]
+    });
+
+    const baseRows: CatalogAliasRow[] = aliases.map((item) => ({
+      id: item.id.toString(),
+      songIdentifier: item.songIdentifier,
+      aliasText: item.aliasText,
+      aliasNorm: item.aliasNorm,
+      source: item.source,
+      status: item.status,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt
+    }));
+
+    const normalizedSource = source?.trim().toLowerCase();
+    const shouldIncludeLxns = !normalizedSource || normalizedSource === "lxns" || normalizedSource === "lxns_aliases";
+    if (!shouldIncludeLxns) {
+      return baseRows;
+    }
+
+    const songIdentifierByNameMap = await this.buildSongIdentifierByNameMap();
+    const lxnsRowsFromBundle = await this.listLxnsAliasesFromBundle(songIdentifier, songIdentifierByNameMap);
+    const lxnsRows =
+      lxnsRowsFromBundle.length > 0
+        ? lxnsRowsFromBundle
+        : await this.listLxnsAliasesFromRemote(songIdentifier, songIdentifierByNameMap);
+    if (lxnsRows.length === 0) {
+      return baseRows;
+    }
+
+    const existing = new Set(baseRows.map((item) => `${item.songIdentifier}:${item.aliasNorm}`));
+    const merged = [...baseRows];
+    for (const row of lxnsRows) {
+      const key = `${row.songIdentifier}:${row.aliasNorm}`;
+      if (existing.has(key)) {
+        continue;
+      }
+      existing.add(key);
+      merged.push(row);
+    }
+
+    return merged.sort((left, right) => {
+      const identifierDiff = left.songIdentifier.localeCompare(right.songIdentifier);
+      if (identifierDiff !== 0) return identifierDiff;
+      return left.aliasText.localeCompare(right.aliasText);
     });
   }
 
@@ -321,5 +381,305 @@ export class CatalogService {
       return "utage";
     }
     return lowercased;
+  }
+
+  private async listLxnsAliasesFromBundle(
+    songIdentifier: string | undefined,
+    songIdentifierByNameMap: Map<string, string>
+  ) {
+    const activeBundle = await this.prisma.staticBundle.findFirst({
+      where: { active: true },
+      orderBy: { createdAt: "desc" },
+      select: { payloadJson: true }
+    });
+    if (!activeBundle) {
+      return [];
+    }
+
+    const payload = activeBundle.payloadJson as Record<string, unknown>;
+    const resources = this.toRecord(payload.resources);
+    const lxnsPayload = resources ? (resources.lxns_aliases as unknown) : null;
+    const songIdNameMap = this.extractSongIdNameMap(resources ? resources.songid_json : null);
+    const rawItems = this.extractLxnsItems(lxnsPayload);
+    if (rawItems.length === 0) {
+      return [];
+    }
+    const knownSongIdentifiers = new Set(songIdentifierByNameMap.values());
+
+    const now = new Date();
+    const rows: CatalogAliasRow[] = [];
+    for (const item of rawItems) {
+      const candidateIdentifiers = this.resolveLxnsSongIdentifiers(item.song_id, songIdNameMap, songIdentifierByNameMap);
+      if (candidateIdentifiers.length === 0) {
+        continue;
+      }
+      const matchedIdentifier = songIdentifier
+        ? candidateIdentifiers.find((value) => value === songIdentifier)
+        : candidateIdentifiers.find((value) => knownSongIdentifiers.has(value)) ?? candidateIdentifiers[0];
+      if (!matchedIdentifier) {
+        continue;
+      }
+      const aliasList = Array.isArray(item.aliases) ? item.aliases : [];
+      for (const aliasTextRaw of aliasList) {
+        const aliasText = aliasTextRaw.trim();
+        const aliasNorm = this.normalizeAlias(aliasText);
+        if (!aliasText || !aliasNorm) {
+          continue;
+        }
+        rows.push({
+          id: `lxns:${matchedIdentifier}:${aliasNorm}`,
+          songIdentifier: matchedIdentifier,
+          aliasText,
+          aliasNorm,
+          source: "lxns",
+          status: "approved",
+          createdAt: now,
+          updatedAt: now
+        });
+      }
+    }
+    return rows;
+  }
+
+  private async listLxnsAliasesFromRemote(
+    songIdentifier: string | undefined,
+    songIdentifierByNameMap: Map<string, string>
+  ) {
+    try {
+      const source = await this.prisma.staticSource.findUnique({
+        where: { category: "lxns_aliases" },
+        select: { activeUrl: true, enabled: true }
+      });
+      const songIdNameMap = await this.loadSongIdNameMap();
+      const targetUrl = source?.enabled && source.activeUrl ? source.activeUrl : "https://maimai.lxns.net/api/v0/maimai/alias/list";
+      const response = await fetch(targetUrl, { method: "GET" });
+      if (!response.ok) {
+        return [];
+      }
+      const payload = (await response.json()) as unknown;
+      const rawItems = this.extractLxnsItems(payload);
+      if (rawItems.length === 0) {
+        return [];
+      }
+      const knownSongIdentifiers = new Set(songIdentifierByNameMap.values());
+      const now = new Date();
+      const rows: CatalogAliasRow[] = [];
+      for (const item of rawItems) {
+        const candidateIdentifiers = this.resolveLxnsSongIdentifiers(item.song_id, songIdNameMap, songIdentifierByNameMap);
+        if (candidateIdentifiers.length === 0) {
+          continue;
+        }
+        const matchedIdentifier = songIdentifier
+          ? candidateIdentifiers.find((value) => value === songIdentifier)
+          : candidateIdentifiers.find((value) => knownSongIdentifiers.has(value)) ?? candidateIdentifiers[0];
+        if (!matchedIdentifier) {
+          continue;
+        }
+        const aliasList = Array.isArray(item.aliases) ? item.aliases : [];
+        for (const aliasTextRaw of aliasList) {
+          const aliasText = aliasTextRaw.trim();
+          const aliasNorm = this.normalizeAlias(aliasText);
+          if (!aliasText || !aliasNorm) {
+            continue;
+          }
+          rows.push({
+            id: `lxns:${matchedIdentifier}:${aliasNorm}`,
+            songIdentifier: matchedIdentifier,
+            aliasText,
+            aliasNorm,
+            source: "lxns",
+            status: "approved",
+            createdAt: now,
+            updatedAt: now
+          });
+        }
+      }
+      return rows;
+    } catch {
+      return [];
+    }
+  }
+
+  private extractLxnsItems(value: unknown): LxnsAliasItem[] {
+    if (!value) {
+      return [];
+    }
+    if (Array.isArray(value)) {
+      return value.filter((item): item is LxnsAliasItem => this.isLxnsAliasItem(item));
+    }
+    const record = this.toRecord(value);
+    const aliases = record ? record.aliases : null;
+    if (!Array.isArray(aliases)) {
+      return [];
+    }
+    return aliases.filter((item): item is LxnsAliasItem => this.isLxnsAliasItem(item));
+  }
+
+  private isLxnsAliasItem(value: unknown): value is LxnsAliasItem {
+    return typeof value === "object" && value !== null;
+  }
+
+  private resolveLxnsSongIdentifiers(
+    songId: number | string | undefined,
+    songIdNameMap: Map<number, string>,
+    songIdentifierByNameMap: Map<string, string>
+  ) {
+    if (songId === undefined) {
+      return [];
+    }
+    const numericId = Number(songId);
+    if (!Number.isFinite(numericId)) {
+      const raw = String(songId).trim();
+      return raw ? [raw] : [];
+    }
+    const normalized = Math.trunc(numericId);
+    const numericCandidates = this.expandLxnsSongIdCandidates(normalized);
+    const candidates = new Set<string>();
+    for (const id of numericCandidates) {
+      candidates.add(String(id));
+    }
+
+    for (const id of numericCandidates) {
+      const songName = songIdNameMap.get(id);
+      if (!songName) {
+        continue;
+      }
+      const mappedIdentifier = songIdentifierByNameMap.get(this.normalizeSongName(songName));
+      if (mappedIdentifier) {
+        candidates.add(mappedIdentifier);
+      }
+    }
+    return Array.from(candidates);
+  }
+
+  private expandLxnsSongIdCandidates(songId: number) {
+    const candidates = new Set<number>();
+    if (!Number.isFinite(songId) || songId <= 0) {
+      return candidates;
+    }
+
+    candidates.add(songId);
+
+    // DX era compatibility:
+    // - LXNS may provide base ids (e.g. 1234)
+    // - local songid.json may use 10000 + base (e.g. 11234)
+    if (songId < 10000) {
+      candidates.add(songId + 10000);
+    }
+
+    // Some providers may return 10000+ ids; keep both forms.
+    if (songId > 10000 && songId < 100000) {
+      const baseId = songId % 10000;
+      if (baseId > 0) {
+        candidates.add(baseId);
+        candidates.add(baseId + 10000);
+      }
+    }
+
+    // Keep UTAGE ids as-is, but still attempt base fallbacks.
+    if (songId >= 100000) {
+      const baseId = songId % 100000;
+      if (baseId > 0) {
+        candidates.add(baseId);
+        if (baseId < 10000) {
+          candidates.add(baseId + 10000);
+        }
+      }
+    }
+
+    return candidates;
+  }
+
+  private normalizeAlias(value: string) {
+    return value.trim().toLocaleLowerCase().replace(/\s+/gu, "");
+  }
+
+  private normalizeSongName(value: string) {
+    return value.trim().toLocaleLowerCase().replace(/\s+/gu, "");
+  }
+
+  private toRecord(value: unknown) {
+    return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
+  }
+
+  private extractSongIdNameMap(value: unknown) {
+    const map = new Map<number, string>();
+    if (!Array.isArray(value)) {
+      return map;
+    }
+    for (const item of value) {
+      if (typeof item !== "object" || item === null) {
+        continue;
+      }
+      const row = item as Record<string, unknown>;
+      const id = Number(row.id);
+      const name = typeof row.name === "string" ? row.name.trim() : "";
+      if (!Number.isFinite(id) || !name) {
+        continue;
+      }
+      map.set(Math.trunc(id), name);
+    }
+    return map;
+  }
+
+  private async loadSongIdNameMap() {
+    const activeBundle = await this.prisma.staticBundle.findFirst({
+      where: { active: true },
+      orderBy: { createdAt: "desc" },
+      select: { payloadJson: true }
+    });
+    const payload = activeBundle?.payloadJson as Record<string, unknown> | undefined;
+    const resources = payload ? this.toRecord(payload.resources) : null;
+    const fromBundle = this.extractSongIdNameMap(resources ? resources.songid_json : null);
+    if (fromBundle.size > 0) {
+      return fromBundle;
+    }
+
+    try {
+      const source = await this.prisma.staticSource.findUnique({
+        where: { category: "songid_json" },
+        select: { activeUrl: true, enabled: true }
+      });
+      const targetUrl = source?.enabled && source.activeUrl ? source.activeUrl : "https://maimaid.shikoch.in/songid.json";
+      const response = await fetch(targetUrl, { method: "GET" });
+      if (!response.ok) {
+        return new Map<number, string>();
+      }
+      const parsed = (await response.json()) as unknown;
+      return this.extractSongIdNameMap(parsed);
+    } catch {
+      return new Map<number, string>();
+    }
+  }
+
+  private async buildSongIdentifierByNameMap() {
+    const [songs, aliases] = await Promise.all([
+      this.prisma.song.findMany({
+        select: {
+          songIdentifier: true,
+          title: true
+        }
+      }),
+      this.prisma.alias.findMany({
+        select: {
+          songIdentifier: true,
+          aliasText: true
+        }
+      })
+    ]);
+
+    const map = new Map<string, string>();
+    for (const song of songs) {
+      map.set(this.normalizeSongName(song.title), song.songIdentifier);
+      map.set(this.normalizeSongName(song.songIdentifier), song.songIdentifier);
+    }
+    for (const alias of aliases) {
+      const normalized = this.normalizeSongName(alias.aliasText);
+      if (!normalized || map.has(normalized)) {
+        continue;
+      }
+      map.set(normalized, alias.songIdentifier);
+    }
+    return map;
   }
 }

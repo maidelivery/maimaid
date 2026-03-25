@@ -2,7 +2,6 @@ import Foundation
 import OSLog
 import SwiftData
 import UIKit
-import Yams
 
 struct AliasListResponse: Decodable {
     let aliases: [AliasItem]
@@ -43,6 +42,38 @@ struct RemoteDataResponse: Decodable {
     let songs: [RemoteSong]
     let categories: [RemoteCategory]
     let versions: [RemoteVersion]
+}
+
+private struct BackendStaticManifestResponse: Decodable {
+    let version: String
+    let md5: String
+    let createdAt: Date?
+}
+
+private struct BackendStaticBundleResponse: Decodable {
+    let version: String
+    let md5: String
+    let payload: BackendStaticBundlePayload
+}
+
+private struct BackendStaticBundlePayload: Decodable {
+    let resources: BackendStaticBundleResources
+}
+
+private struct BackendStaticBundleResources: Decodable {
+    let dataJSON: RemoteDataResponse?
+    let songIDJSON: [SongIdItem]?
+    let utageNoteJSON: [UtageChartStatsItem]?
+    let lxnsAliases: AliasListResponse?
+    let danInfo: [DanCategory]?
+
+    enum CodingKeys: String, CodingKey {
+        case dataJSON = "data_json"
+        case songIDJSON = "songid_json"
+        case utageNoteJSON = "utage_note_json"
+        case lxnsAliases = "lxns_aliases"
+        case danInfo = "dan_info"
+    }
 }
 
 struct RemoteVersion: Codable {
@@ -206,8 +237,36 @@ class MaimaiDataFetcher {
     func forceSyncApprovedCommunityAliases(modelContext: ModelContext) async {
         await CommunityAliasService.shared.syncApprovedAliasesIntoSongs(modelContext: modelContext, force: true)
     }
+
+    private func fetchBackendStaticBundleIfNeeded(forceApply: Bool = false) async throws -> (bundle: BackendStaticBundleResponse?, isUpToDate: Bool) {
+        guard BackendSessionManager.shared.isConfigured else {
+            return (nil, false)
+        }
+
+        let manifest: BackendStaticManifestResponse = try await BackendAPIClient.request(
+            path: "v1/static/manifest",
+            method: "GET",
+            authentication: .none
+        )
+
+        if !forceApply, UserDefaults.app.staticBundleMd5 == manifest.md5 {
+            return (nil, true)
+        }
+
+        let encodedVersion = manifest.version.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? manifest.version
+        let bundle: BackendStaticBundleResponse = try await BackendAPIClient.request(
+            path: "v1/static/bundle/\(encodedVersion)",
+            method: "GET",
+            authentication: .none
+        )
+        return (bundle, false)
+    }
     
-    func fetchSongs(modelContext: ModelContext, options: SyncOptions = SyncOptions()) async throws {
+    func fetchSongs(
+        modelContext: ModelContext,
+        options: SyncOptions = SyncOptions(),
+        forceBundleApply: Bool = false
+    ) async throws {
         isSyncing = true
         progress = 0.0
         syncStartTime = Date()
@@ -218,21 +277,37 @@ class MaimaiDataFetcher {
         do {
             var remoteSongs: [RemoteSong] = []
             var aliasMap: [String: [String]] = [:]
+            var aliasMapByNormalizedTitle: [String: [String]] = [:]
             var hasFreshAliasSnapshot = false
             var titleToSongId: [String: Int] = [:]
+            var titleToSongIdByNormalized: [String: Int] = [:]
             var lxnsIcons: [LxnsPresetIcon] = []
             var nameToProviderIds: [String: [Int]] = [:]
+            var nameToProviderIdsByNormalized: [String: [Int]] = [:]
             var utageNotesById: [Int: Int] = [:]
             var utageNotesByKey: [String: [Int]] = [:]
+            let staticBundle = try? await fetchBackendStaticBundleIfNeeded(forceApply: forceBundleApply)
+            let bundleResources = staticBundle?.bundle?.payload.resources
+
+            if staticBundle?.isUpToDate == true {
+                updateStage(.completed, base: 1.0, message: "No static data update available.")
+                isSyncing = false
+                return
+            }
             
             // --- 阶段 1: 远程 data.json ---
             if options.updateRemoteData {
                 updateStage(.fetchingRemoteData, base: 0.1, message: String(localized: "data.sync.status.fetchingData"))
-                guard let url = URL(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json") else {
-                    throw URLError(.badURL)
+                let response: RemoteDataResponse
+                if let bundled = bundleResources?.dataJSON {
+                    response = bundled
+                } else {
+                    guard let url = URL(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json") else {
+                        throw URLError(.badURL)
+                    }
+                    let (data, _) = try await URLSession.shared.data(from: url)
+                    response = try JSONDecoder().decode(RemoteDataResponse.self, from: data)
                 }
-                let (data, _) = try await URLSession.shared.data(from: url)
-                let response = try JSONDecoder().decode(RemoteDataResponse.self, from: data)
                 remoteSongs = response.songs
                 log(String(localized: "data.sync.log.fetchedData \(remoteSongs.count)"))
                 
@@ -249,35 +324,80 @@ class MaimaiDataFetcher {
             // --- 阶段 2: Aliases & IDs ---
             if options.updateAliases {
                 updateStage(.fetchingAliases, base: 0.30, message: String(localized: "data.sync.status.fetchingAliases"))
-                if let aliasUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/alias/list"),
-                   let lxnsSongUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/song/list"),
-                   let providerIdUrl = URL(string: "https://maimaid.shikoch.in/songid.json") {
-                    
-                    async let aliasDataFetch = URLSession.shared.data(from: aliasUrl)
-                    async let lxnsSongDataFetch = URLSession.shared.data(from: lxnsSongUrl)
-                    async let providerIdDataFetch = URLSession.shared.data(from: providerIdUrl)
-                    
-                    if let (aliasData, _) = try? await aliasDataFetch,
-                       let (lxnsSongData, _) = try? await lxnsSongDataFetch {
-                        
-                        let aliasResponse = try? JSONDecoder().decode(AliasListResponse.self, from: aliasData)
-                        let lxnsSongResponse = try? JSONDecoder().decode(LxnsSongListResponse.self, from: lxnsSongData)
-                        
-                        if let aliasResponse = aliasResponse, let lxnsSongResponse = lxnsSongResponse {
-                            hasFreshAliasSnapshot = true
-                            var songIdToTitle: [Int: String] = [:]
-                            for lxnsSong in lxnsSongResponse.songs {
-                                songIdToTitle[lxnsSong.id] = lxnsSong.title
-                                titleToSongId[lxnsSong.title] = lxnsSong.id
-                            }
-                            for item in aliasResponse.aliases {
-                                if let title = songIdToTitle[item.song_id] {
-                                    aliasMap[title] = item.aliases
+                var aliasItems: [AliasItem] = []
+                var songIdToTitle: [Int: String] = [:]
+
+                if let bundledAliases = bundleResources?.lxnsAliases {
+                    aliasItems = bundledAliases.aliases
+                    for song in remoteSongs {
+                        if let id = Int(song.songId) {
+                            let rawTitle = song.title ?? ""
+                            let trimmed = rawTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                            let title = trimmed.isEmpty ? rawTitle : trimmed
+                            if !title.isEmpty {
+                                songIdToTitle[id] = title
+                                titleToSongId[title] = id
+                                let normalizedTitle = Self.normalizeSongLookupTitle(title)
+                                if titleToSongIdByNormalized[normalizedTitle] == nil {
+                                    titleToSongIdByNormalized[normalizedTitle] = id
                                 }
                             }
                         }
                     }
-                    
+
+                    let providerIds = bundleResources?.songIDJSON ?? []
+                    for item in providerIds {
+                        let rawName = item.name
+                        let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let trimmedName = trimmed.isEmpty ? rawName : trimmed
+                        guard !trimmedName.isEmpty else { continue }
+                        nameToProviderIds[trimmedName, default: []].append(item.id)
+                        let normalizedName = Self.normalizeSongLookupTitle(trimmedName)
+                        var normalizedIds = nameToProviderIdsByNormalized[normalizedName] ?? []
+                        if !normalizedIds.contains(item.id) {
+                            normalizedIds.append(item.id)
+                            nameToProviderIdsByNormalized[normalizedName] = normalizedIds
+                        }
+                        if songIdToTitle[item.id] == nil {
+                            songIdToTitle[item.id] = trimmedName
+                        }
+                        if titleToSongId[trimmedName] == nil {
+                            titleToSongId[trimmedName] = item.id
+                        }
+                        if titleToSongIdByNormalized[normalizedName] == nil {
+                            titleToSongIdByNormalized[normalizedName] = item.id
+                        }
+                    }
+                    log(String(localized: "data.sync.log.fetchedProviderIds \(providerIds.count)"))
+                } else if let aliasUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/alias/list"),
+                          let lxnsSongUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/song/list"),
+                          let providerIdUrl = URL(string: "https://maimaid.shikoch.in/songid.json") {
+
+                    async let aliasDataFetch = URLSession.shared.data(from: aliasUrl)
+                    async let lxnsSongDataFetch = URLSession.shared.data(from: lxnsSongUrl)
+                    async let providerIdDataFetch = URLSession.shared.data(from: providerIdUrl)
+
+                    if let (aliasData, _) = try? await aliasDataFetch,
+                       let (lxnsSongData, _) = try? await lxnsSongDataFetch {
+
+                        let aliasResponse = try? JSONDecoder().decode(AliasListResponse.self, from: aliasData)
+                        let lxnsSongResponse = try? JSONDecoder().decode(LxnsSongListResponse.self, from: lxnsSongData)
+
+                        if let aliasResponse = aliasResponse {
+                            aliasItems = aliasResponse.aliases
+                        }
+                        if let lxnsSongResponse = lxnsSongResponse {
+                            for lxnsSong in lxnsSongResponse.songs {
+                                songIdToTitle[lxnsSong.id] = lxnsSong.title
+                                titleToSongId[lxnsSong.title] = lxnsSong.id
+                                let normalizedTitle = Self.normalizeSongLookupTitle(lxnsSong.title)
+                                if titleToSongIdByNormalized[normalizedTitle] == nil {
+                                    titleToSongIdByNormalized[normalizedTitle] = lxnsSong.id
+                                }
+                            }
+                        }
+                    }
+
                     if let (providerIdData, _) = try? await providerIdDataFetch {
                         do {
                             let providerIds = try JSONDecoder().decode([SongIdItem].self, from: providerIdData)
@@ -285,11 +405,50 @@ class MaimaiDataFetcher {
                                 let rawName = item.name
                                 let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
                                 let trimmedName = trimmed.isEmpty ? rawName : trimmed
+                                guard !trimmedName.isEmpty else { continue }
                                 nameToProviderIds[trimmedName, default: []].append(item.id)
+                                let normalizedName = Self.normalizeSongLookupTitle(trimmedName)
+                                var normalizedIds = nameToProviderIdsByNormalized[normalizedName] ?? []
+                                if !normalizedIds.contains(item.id) {
+                                    normalizedIds.append(item.id)
+                                    nameToProviderIdsByNormalized[normalizedName] = normalizedIds
+                                }
+                                if songIdToTitle[item.id] == nil {
+                                    songIdToTitle[item.id] = trimmedName
+                                }
+                                if titleToSongId[trimmedName] == nil {
+                                    titleToSongId[trimmedName] = item.id
+                                }
+                                if titleToSongIdByNormalized[normalizedName] == nil {
+                                    titleToSongIdByNormalized[normalizedName] = item.id
+                                }
                             }
                             log(String(localized: "data.sync.log.fetchedProviderIds \(providerIds.count)"))
                         } catch {
                             log(String(localized: "data.sync.log.providerIdError \(error.localizedDescription)"))
+                        }
+                    }
+                }
+
+                if !aliasItems.isEmpty {
+                    hasFreshAliasSnapshot = true
+                    for item in aliasItems {
+                        let resolvedTitles = Self.resolveLxnsAliasTitles(songId: item.song_id, songIdToTitle: songIdToTitle)
+                        guard !resolvedTitles.isEmpty else { continue }
+
+                        for title in resolvedTitles {
+                            let normalizedTitle = Self.normalizeSongLookupTitle(title)
+                            var merged = aliasMapByNormalizedTitle[normalizedTitle] ?? aliasMap[title] ?? []
+                            var seen = Set(merged.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
+                            for alias in item.aliases {
+                                let normalized = alias.trimmingCharacters(in: .whitespacesAndNewlines)
+                                let key = normalized.lowercased()
+                                guard !normalized.isEmpty else { continue }
+                                guard seen.insert(key).inserted else { continue }
+                                merged.append(normalized)
+                            }
+                            aliasMap[title] = merged
+                            aliasMapByNormalizedTitle[normalizedTitle] = merged
                         }
                     }
                 }
@@ -309,29 +468,14 @@ class MaimaiDataFetcher {
             // --- Stage 3.5: Dan Data ---
             if options.updateDanData {
                 updateStage(.fetchingDanData, base: 0.50, message: String(localized: "data.sync.status.fetchingDanData"))
-                var danComponents = URLComponents(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/gallery.yaml")
-                danComponents?.queryItems = [URLQueryItem(name: "ts", value: String(Int(Date().timeIntervalSince1970)))]
-                
-                if let danUrl = danComponents?.url {
-                    var danRequest = URLRequest(url: danUrl, cachePolicy: .reloadIgnoringLocalCacheData)
-                    danRequest.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
-                    danRequest.setValue("no-cache", forHTTPHeaderField: "Pragma")
-                    
-                    let (data, _) = try await URLSession.shared.data(for: danRequest)
-                    if let yamlString = String(data: data, encoding: .utf8) {
-                        do {
-                            let decoder = YAMLDecoder()
-                            let decodedCategories = try decoder.decode([DanCategory].self, from: yamlString)
-                            let cleanedCategories = sanitizeDanCategories(decodedCategories)
-                            
-                            let danJsonData = try JSONEncoder().encode(cleanedCategories)
-                            let fileURL = getDanDataFileURL()
-                            try danJsonData.write(to: fileURL)
-                            log(String(localized: "data.sync.log.fetchedDanData \(cleanedCategories.count)"))
-                        } catch {
-                            log("Failed to parse Dan YAML: \(error)")
-                        }
-                    }
+                if let bundledDan = bundleResources?.danInfo {
+                    let cleanedCategories = sanitizeDanCategories(bundledDan)
+                    let danJsonData = try JSONEncoder().encode(cleanedCategories)
+                    let fileURL = getDanDataFileURL()
+                    try danJsonData.write(to: fileURL)
+                    log(String(localized: "data.sync.log.fetchedDanData \(cleanedCategories.count)"))
+                } else {
+                    log("Dan info is unavailable in backend static bundle; keeping existing local cache.")
                 }
             }
 
@@ -343,7 +487,11 @@ class MaimaiDataFetcher {
 
             if options.updateUtageChartStats {
                 updateStage(.fetchingUtageChartStats, base: 0.54, message: String(localized: "data.sync.status.fetchingUtageChartStats"))
-                if let utageStatsURL = URL(string: "https://maimaid.shikoch.in/utage_chart_stats.json") {
+                if let bundledStats = bundleResources?.utageNoteJSON {
+                    utageNotesById = Dictionary(uniqueKeysWithValues: bundledStats.map { ($0.id, $0.notes) })
+                    utageNotesByKey = Self.buildUtageNotesByKey(bundledStats)
+                    log(String(localized: "data.sync.log.fetchedUtageChartStats \(bundledStats.count)"))
+                } else if let utageStatsURL = URL(string: "https://maimaid.shikoch.in/utage_chart_stats.json") {
                     var request = URLRequest(url: utageStatsURL)
                     request.setValue("Mozilla/5.0 (maimaid)", forHTTPHeaderField: "User-Agent")
                     let (data, _) = try await URLSession.shared.data(for: request)
@@ -466,13 +614,14 @@ class MaimaiDataFetcher {
                     }
                     
                     if options.updateAliases {
-                        if let officialId = titleToSongId[song.title] {
+                        let normalizedSongTitle = Self.normalizeSongLookupTitle(song.title)
+                        if let officialId = titleToSongId[song.title] ?? titleToSongIdByNormalized[normalizedSongTitle] {
                             song.songId = officialId
                         }
                         if hasFreshAliasSnapshot {
                             // Full replace on each successful alias sync so stale local aliases
                             // (e.g. removed community aliases) do not survive future refreshes.
-                            let officialAliases = aliasMap[song.title] ?? []
+                            let officialAliases = aliasMap[song.title] ?? aliasMapByNormalizedTitle[normalizedSongTitle] ?? []
                             if officialAliases.isEmpty {
                                 song.aliases = []
                             } else {
@@ -487,7 +636,8 @@ class MaimaiDataFetcher {
                         
                         let trimmedSearch = song.title.trimmingCharacters(in: .whitespacesAndNewlines)
                         let searchTitle = trimmedSearch.isEmpty ? song.title : trimmedSearch
-                        if let possibleIds = nameToProviderIds[searchTitle] {
+                        let normalizedSearchTitle = Self.normalizeSongLookupTitle(searchTitle)
+                        if let possibleIds = nameToProviderIds[searchTitle] ?? nameToProviderIdsByNormalized[normalizedSearchTitle] {
                             let hasUtage = remoteSong.sheets.contains { $0.type.lowercased() == "utage" }
                             let hasDX = remoteSong.sheets.contains { $0.type.lowercased() == "dx" }
                             let hasStd = remoteSong.sheets.contains { $0.type.lowercased() == "std" }
@@ -540,7 +690,8 @@ class MaimaiDataFetcher {
                         
                         let trimmedSearchSheet = song.title.trimmingCharacters(in: .whitespacesAndNewlines)
                         let searchTitle = trimmedSearchSheet.isEmpty ? song.title : trimmedSearchSheet
-                        if let possibleIds = nameToProviderIds[searchTitle] {
+                        let normalizedSearchTitle = Self.normalizeSongLookupTitle(searchTitle)
+                        if let possibleIds = nameToProviderIds[searchTitle] ?? nameToProviderIdsByNormalized[normalizedSearchTitle] {
                             let type = remoteSheet.type.lowercased()
                             if type == "utage" {
                                 if let id = possibleIds.first(where: { $0 >= 100000 }) { sheet.songId = id }
@@ -629,7 +780,11 @@ class MaimaiDataFetcher {
                 
                 remoteSongs = []
                 aliasMap = [:]
+                aliasMapByNormalizedTitle = [:]
                 titleToSongId = [:]
+                titleToSongIdByNormalized = [:]
+                nameToProviderIds = [:]
+                nameToProviderIdsByNormalized = [:]
                 songsToProcess = []
                 existingSongMap = [:]
                 
@@ -752,6 +907,9 @@ class MaimaiDataFetcher {
                 let newConfig = SyncConfig()
                 newConfig.lastStaticDataUpdateDate = Date()
                 modelContext.insert(newConfig)
+            }
+            if let md5 = staticBundle?.bundle?.md5 {
+                UserDefaults.app.staticBundleMd5 = md5
             }
             try modelContext.save()
 
@@ -893,6 +1051,66 @@ class MaimaiDataFetcher {
             .lowercased()
 
         return stripped.replacingOccurrences(of: #"[[:space:]\[\]【】\(\)（）]+"#, with: "", options: .regularExpression)
+    }
+
+    private static func normalizeSongLookupTitle(_ raw: String) -> String {
+        raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+            .lowercased()
+            .replacingOccurrences(of: #"\s+"#, with: "", options: .regularExpression)
+    }
+
+    private static func resolveLxnsAliasTitles(songId: Int, songIdToTitle: [Int: String]) -> [String] {
+        var titles: [String] = []
+        var seen = Set<String>()
+        for candidateId in expandLxnsSongIdCandidates(songId) {
+            guard let title = songIdToTitle[candidateId] else { continue }
+            let normalizedTitle = normalizeSongLookupTitle(title)
+            guard !normalizedTitle.isEmpty else { continue }
+            guard seen.insert(normalizedTitle).inserted else { continue }
+            titles.append(title)
+        }
+        return titles
+    }
+
+    private static func expandLxnsSongIdCandidates(_ songId: Int) -> [Int] {
+        guard songId > 0 else {
+            return []
+        }
+
+        var candidates: [Int] = []
+        let appendCandidate: (Int) -> Void = { value in
+            guard value > 0 else { return }
+            guard !candidates.contains(value) else { return }
+            candidates.append(value)
+        }
+
+        appendCandidate(songId)
+
+        if songId < 10000 {
+            appendCandidate(songId + 10000)
+        }
+
+        if songId > 10000 && songId < 100000 {
+            let baseId = songId % 10000
+            if baseId > 0 {
+                appendCandidate(baseId)
+                appendCandidate(baseId + 10000)
+            }
+        }
+
+        if songId >= 100000 {
+            let baseId = songId % 100000
+            if baseId > 0 {
+                appendCandidate(baseId)
+                if baseId < 10000 {
+                    appendCandidate(baseId + 10000)
+                }
+            }
+        }
+
+        return candidates
     }
 
     private static func extractUtageKanji(from text: String) -> String? {

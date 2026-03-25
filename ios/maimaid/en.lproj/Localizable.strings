@@ -394,7 +394,7 @@
 "data.sync.stage.fetchingRemoteData" = "Fetching data.json...";
 "data.sync.stage.fetchingAliases" = "Fetching aliases...";
 "data.sync.stage.fetchingIcons" = "Fetching icons...";
-"data.sync.stage.fetchingDanData" = "Fetching Dan songs (gallery.yaml)...";
+"data.sync.stage.fetchingDanData" = "Syncing Dan songs...";
 "data.sync.stage.processingSongs" = "Analyzing data...";
 "data.sync.stage.downloadingImages" = "Downloading covers...";
 "data.sync.stage.downloadingIcons" = "Downloading icons...";
@@ -411,7 +411,7 @@
 "data.sync.status.fetchingData" = "Fetching remote data...";
 "data.sync.log.fetchedData %lld" = "Fetched %lld songs";
 "data.sync.status.fetchingAliases" = "Fetching aliases from LXNS...";
-"data.sync.status.fetchingDanData" = "Downloading gallery.yaml...";
+"data.sync.status.fetchingDanData" = "Processing Dan data...";
 "data.sync.status.fetchingIcons" = "Fetching icon list...";
 "data.sync.log.fetchedIcons %lld" = "Fetched %lld icons from LXNS";
 "data.sync.log.fetchedDanData %lld" = "Successfully downloaded Dan data, %lld categories";
@@ -629,6 +629,8 @@
 "community.alias.board.deadline %@" = "Ends %@";
 "community.alias.vote.support %lld" = "Support %lld";
 "community.alias.vote.oppose %lld" = "Oppose %lld";
+"community.alias.vote.cancelSupport %lld" = "Unvote support %lld";
+"community.alias.vote.cancelOppose %lld" = "Unvote oppose %lld";
 "community.alias.board.tip.loginRequired" = "Please sign in before voting.";
 "community.alias.board.tip.voteFailedFallback" = "Vote failed. Please try again later.";
 "community.alias.board.tip.voteUpdated" = "Vote updated.";
