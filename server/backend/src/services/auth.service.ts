@@ -180,15 +180,28 @@ export class AuthService {
     });
   }
 
-  async forgotPassword(email: string): Promise<void> {
+  async forgotPassword(email: string): Promise<{ resetEmailSent: boolean }> {
     const normalized = this.normalizeEmail(email);
     const user = await this.prisma.user.findUnique({ where: { email: normalized } });
     if (!user) {
-      return;
+      return { resetEmailSent: true };
     }
 
     const token = await this.createPasswordResetToken(user.id);
-    await this.sendResetPasswordEmail(user.email, token);
+    const resetEmailSent = await this.sendResetPasswordEmail(user.email, token);
+    return { resetEmailSent };
+  }
+
+  async findActiveVerifiedUserByEmail(email: string): Promise<User> {
+    const normalized = this.normalizeEmail(email);
+    const user = await this.prisma.user.findUnique({ where: { email: normalized } });
+    if (!user || user.status !== "active") {
+      throw new AppError(401, "invalid_credentials", "Email or password is incorrect.");
+    }
+    if (!user.emailVerifiedAt) {
+      throw new AppError(403, "email_not_verified", "Email is not verified. Please check your inbox.");
+    }
+    return user;
   }
 
   async validatePasswordResetToken(token: string): Promise<void> {
@@ -198,6 +211,17 @@ export class AuthService {
   async resetPassword(token: string, newPassword: string): Promise<void> {
     this.validatePassword(newPassword);
     const record = await this.getValidPasswordResetTokenRecord(token);
+    const user = await this.prisma.user.findUnique({
+      where: { id: record.userId }
+    });
+    if (!user) {
+      throw new AppError(404, "user_not_found", "User not found.");
+    }
+
+    const sameAsCurrent = await compare(newPassword, user.passwordHash);
+    if (sameAsCurrent) {
+      throw new AppError(400, "password_reused", "New password must be different from your current password.");
+    }
 
     const passwordHash = await hash(newPassword, 12);
     await this.prisma.$transaction([
@@ -280,10 +304,12 @@ export class AuthService {
     return this.sendEmail({
       to: email,
       subject: "maimaid email verification",
-      html:
-        `<p>Click the link below to verify your maimaid account:</p>` +
-        `<p><a href="${verifyUrl}">${verifyUrl}</a></p>` +
-        `<p>If this wasn’t you, ignore this message.</p>`,
+      html: this.renderAuthEmailTemplate({
+        title: "Verify your email",
+        description: "Confirm this email address to finish setting up your maimaid Dashboard account.",
+        buttonLabel: "Verify email",
+        actionUrl: verifyUrl
+      }),
       type: "verify"
     });
   }
@@ -295,10 +321,12 @@ export class AuthService {
     return this.sendEmail({
       to: email,
       subject: "maimaid password reset",
-      html:
-        `<p>Click the link below to reset your password:</p>` +
-        `<p><a href="${resetUrl}">${resetUrl}</a></p>` +
-        `<p>If this wasn’t you, ignore this message.</p>`,
+      html: this.renderAuthEmailTemplate({
+        title: "Reset your password",
+        description: "Use the link below to choose a new password for your maimaid Dashboard account.",
+        buttonLabel: "Reset password",
+        actionUrl: resetUrl
+      }),
       type: "reset"
     });
   }
@@ -327,6 +355,40 @@ export class AuthService {
     } catch {
       return false;
     }
+  }
+
+  private renderAuthEmailTemplate(input: {
+    title: string;
+    description: string;
+    buttonLabel: string;
+    actionUrl: string;
+  }): string {
+    const escapedUrl = input.actionUrl;
+    return (
+      "<!doctype html>" +
+      '<html lang="en">' +
+      "<head>" +
+      '<meta charset="utf-8" />' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1" />' +
+      `<title>${input.title}</title>` +
+      "</head>" +
+      '<body style="margin:0;padding:24px;background:#f4f4f5;color:#111827;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;">' +
+      '<table role="presentation" width="100%" cellspacing="0" cellpadding="0">' +
+      "<tr><td align=\"center\">" +
+      '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background:#ffffff;border:1px solid #e4e4e7;border-radius:12px;padding:24px;">' +
+      `<tr><td style="font-size:20px;line-height:1.3;font-weight:600;padding-bottom:12px;">${input.title}</td></tr>` +
+      `<tr><td style="font-size:14px;line-height:1.6;color:#3f3f46;padding-bottom:20px;">${input.description}</td></tr>` +
+      "<tr><td style=\"padding-bottom:16px;\">" +
+      `<a href="${escapedUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:10px 14px;border-radius:8px;">${input.buttonLabel}</a>` +
+      "</td></tr>" +
+      `<tr><td style="font-size:12px;line-height:1.6;color:#71717a;word-break:break-all;">If the button does not work, open this link:<br/><a href="${escapedUrl}" style="color:#2563eb;text-decoration:underline;">${escapedUrl}</a></td></tr>` +
+      '<tr><td style="font-size:12px;line-height:1.6;color:#a1a1aa;padding-top:16px;">If you did not request this email, you can ignore it.</td></tr>' +
+      "</table>" +
+      "</td></tr>" +
+      "</table>" +
+      "</body>" +
+      "</html>"
+    );
   }
 
   private async createEmailVerificationToken(userId: string, enforceRateLimit: boolean): Promise<string> {

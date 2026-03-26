@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { di } from "../../di/container.js";
 import { TOKENS } from "../../di/tokens.js";
@@ -53,6 +53,11 @@ const avatarUploadSchema = z.object({
 });
 
 export const profilesV1Route = new Hono<AppEnv>();
+
+function isWebClient(c: Context<AppEnv>) {
+  const client = c.req.header("x-maimaid-client");
+  return client?.trim().toLowerCase() === "web";
+}
 
 profilesV1Route.get("/:profileId/avatar", async (c) => {
   const profileService = di.resolve<ProfileService>(TOKENS.ProfileService);
@@ -125,7 +130,7 @@ profilesV1Route.post("/upsert", async (c) => {
     name: body.name,
     server: body.server
   };
-  if (body.isActive !== undefined) payload.isActive = body.isActive;
+  if (body.isActive !== undefined && !isWebClient(c)) payload.isActive = body.isActive;
   if (body.playerRating !== undefined) payload.playerRating = body.playerRating;
   if (body.plate !== undefined) payload.plate = body.plate;
   if (body.avatarUrl !== undefined) payload.avatarUrl = body.avatarUrl;
@@ -175,7 +180,7 @@ profilesV1Route.patch("/:profileId", async (c) => {
   const payload: Parameters<ProfileService["update"]>[2] = {};
   if (body.name !== undefined) payload.name = body.name;
   if (body.server !== undefined) payload.server = body.server;
-  if (body.isActive !== undefined) payload.isActive = body.isActive;
+  if (body.isActive !== undefined && !isWebClient(c)) payload.isActive = body.isActive;
   if (body.playerRating !== undefined) payload.playerRating = body.playerRating;
   if (body.plate !== undefined) payload.plate = body.plate;
   if (body.dfUsername !== undefined) payload.dfUsername = body.dfUsername;
@@ -185,6 +190,9 @@ profilesV1Route.patch("/:profileId", async (c) => {
   if (body.b15Count !== undefined) payload.b15Count = body.b15Count;
   if (body.b35RecLimit !== undefined) payload.b35RecLimit = body.b35RecLimit;
   if (body.b15RecLimit !== undefined) payload.b15RecLimit = body.b15RecLimit;
+  if (Object.keys(payload).length === 0 && body.isActive !== undefined && isWebClient(c)) {
+    return ok(c, { code: "forbidden", message: "Only app client can change active profile." }, 403);
+  }
   const profile = await profileService.update(auth.userId, profileId, payload);
   await syncService.recordEvent({
     userId: auth.userId,
@@ -197,6 +205,26 @@ profilesV1Route.patch("/:profileId", async (c) => {
     }
   });
   return ok(c, { profile });
+});
+
+profilesV1Route.delete("/:profileId", async (c) => {
+  const profileService = di.resolve<ProfileService>(TOKENS.ProfileService);
+  const syncService = di.resolve<SyncService>(TOKENS.SyncService);
+  const auth = c.get("auth");
+  if (!auth) {
+    return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+  }
+  const profileId = c.req.param("profileId");
+  const deleted = await profileService.remove(auth.userId, profileId);
+  await syncService.recordEvent({
+    userId: auth.userId,
+    profileId: deleted.id,
+    entityType: "profile",
+    entityId: deleted.id,
+    op: "delete",
+    payload: null
+  });
+  return ok(c, { profileId: deleted.id });
 });
 
 profilesV1Route.post("/:profileId/avatar/upload-url", async (c) => {

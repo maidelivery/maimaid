@@ -104,6 +104,7 @@ See `server/backend/.env.example`:
 
 - Network: `HOST`, `PORT`
 - Public URL: `APP_PUBLIC_URL` (used to build email verification links)
+- WebAuthn: `WEBAUTHN_ORIGIN`, `WEBAUTHN_RP_ID` (local dashboard with Next.js defaults to `http://localhost:3000`)
 - Auth: `JWT_*`
 - Database: `DATABASE_URL`
 - Catalog source: `CATALOG_SOURCE_URL` (default points to cloudfront `data.json`)

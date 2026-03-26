@@ -5,6 +5,10 @@ private struct BackendSyncPushResponse: Decodable {
     let latestRevision: String
 }
 
+private struct BackendProfileDeleteResponse: Decodable {
+    let profileId: String
+}
+
 private struct BackendSyncPullResponse: Decodable {
     let events: [BackendSyncEvent]
     let latestRevision: String
@@ -317,10 +321,63 @@ enum BackendIncrementalSyncService {
             authentication: .required
         )
 
+        try applyProfileDeleteEvents(response.events, context: context)
         try await applySnapshot(response.snapshot, context: context)
         config.lastSyncRevision = response.latestRevision
         try context.save()
         ScoreService.shared.invalidateAllCaches()
+    }
+
+    static func deleteProfile(profileId: UUID, context: ModelContext) async throws {
+        guard BackendSessionManager.shared.isAuthenticated else {
+            throw BackendAPIError.unauthorized
+        }
+        let escapedProfileId = profileId.uuidString.lowercased().addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
+            ?? profileId.uuidString.lowercased()
+        let _: BackendProfileDeleteResponse = try await BackendAPIClient.request(
+            path: "v1/profiles/\(escapedProfileId)",
+            method: "DELETE",
+            authentication: .required
+        )
+        try? await pullUpdates(context: context, profileId: profileId, force: false)
+    }
+
+    private static func applyProfileDeleteEvents(_ events: [BackendSyncEvent], context: ModelContext) throws {
+        let deletedProfileIds: Set<UUID> = Set(
+            events.compactMap { event -> UUID? in
+                guard event.entityType == "profile", event.op == "delete" else {
+                    return nil
+                }
+                if let profileId = event.profileId, let uuid = UUID(uuidString: profileId) {
+                    return uuid
+                }
+                return UUID(uuidString: event.entityId)
+            }
+        )
+
+        guard !deletedProfileIds.isEmpty else {
+            return
+        }
+
+        for profileId in deletedProfileIds {
+            let scoreDescriptor = FetchDescriptor<Score>(predicate: #Predicate { $0.userProfileId == profileId })
+            let recordDescriptor = FetchDescriptor<PlayRecord>(predicate: #Predicate { $0.userProfileId == profileId })
+            let profileDescriptor = FetchDescriptor<UserProfile>(predicate: #Predicate { $0.id == profileId })
+
+            if let scores = try? context.fetch(scoreDescriptor) {
+                for score in scores {
+                    context.delete(score)
+                }
+            }
+            if let records = try? context.fetch(recordDescriptor) {
+                for record in records {
+                    context.delete(record)
+                }
+            }
+            if let profile = (try? context.fetch(profileDescriptor))?.first {
+                context.delete(profile)
+            }
+        }
     }
 
     private static func applySnapshot(_ snapshot: BackendSyncSnapshot, context: ModelContext) async throws {
@@ -387,6 +444,13 @@ enum BackendIncrementalSyncService {
 
             if let avatarData = await downloadAvatarData(from: remote.avatarUrl) {
                 profile.avatarData = avatarData
+            }
+        }
+
+        if let syncedActiveProfileId = profilePairs.first(where: { $0.1.isActive })?.0 {
+            let allProfiles = try context.fetch(FetchDescriptor<UserProfile>())
+            for profile in allProfiles {
+                profile.isActive = (profile.id == syncedActiveProfileId)
             }
         }
 

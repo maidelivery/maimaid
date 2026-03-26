@@ -14,6 +14,11 @@ import {
 
 type LoginChannel = "web" | "app";
 type PasskeyTransport = "ble" | "cable" | "hybrid" | "internal" | "nfc" | "smart-card" | "usb";
+type DirectPasskeyChallenge = {
+  challenge: string;
+  channel: LoginChannel;
+  expiresAt: Date;
+};
 const PASSKEY_TRANSPORTS = new Set<PasskeyTransport>([
   "ble",
   "cable",
@@ -26,6 +31,8 @@ const PASSKEY_TRANSPORTS = new Set<PasskeyTransport>([
 
 @injectable()
 export class MfaService {
+  private readonly directPasskeyChallenges = new Map<string, DirectPasskeyChallenge>();
+
   constructor(
     @inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
     @inject(TOKENS.Env) private readonly env: Env
@@ -251,6 +258,37 @@ export class MfaService {
     return options as unknown as Record<string, unknown>;
   }
 
+  async startDirectPasskeyLogin(channel: LoginChannel): Promise<{ challengeToken: string; options: Record<string, unknown> }> {
+    this.cleanupExpiredDirectPasskeyChallenges();
+
+    const credentials = await this.prisma.userPasskeyCredential.findMany();
+    if (credentials.length === 0) {
+      throw new AppError(400, "passkey_not_configured", "No passkey is configured.");
+    }
+
+    const options = await generateAuthenticationOptions({
+      rpID: this.resolveRpId(),
+      userVerification: "preferred",
+      timeout: 60_000,
+      allowCredentials: credentials.map((item) => ({
+        id: item.credentialId,
+        transports: this.normalizeTransports(item.transports)
+      }))
+    });
+
+    const challengeToken = randomToken(36);
+    this.directPasskeyChallenges.set(challengeToken, {
+      challenge: options.challenge,
+      channel,
+      expiresAt: this.nextExpiry()
+    });
+
+    return {
+      challengeToken,
+      options: options as unknown as Record<string, unknown>
+    };
+  }
+
   async verifyTotpLogin(challengeToken: string, code: string) {
     const challenge = await this.findLoginChallenge(challengeToken);
     const user = await this.prisma.user.findUnique({
@@ -277,59 +315,48 @@ export class MfaService {
   }
 
   async verifyPasskeyLogin(challengeToken: string, response: unknown) {
-    const challenge = await this.findLoginChallenge(challengeToken);
-    if (!challenge.challenge) {
-      throw new AppError(400, "passkey_challenge_missing", "Passkey challenge was not initialized.");
-    }
+    const token = challengeToken.trim();
+    const tokenHash = sha256Hex(token);
+    const challenge = await this.prisma.mfaChallenge.findUnique({
+      where: { tokenHash }
+    });
 
-    const credentialId = this.extractCredentialId(response);
-    if (!credentialId || !challenge.passkeyAllowIds.includes(credentialId)) {
-      throw new AppError(400, "invalid_passkey_credential", "Passkey credential is not allowed.");
-    }
-
-    const credential = await this.prisma.userPasskeyCredential.findFirst({
-      where: {
-        userId: challenge.userId,
-        credentialId
+    if (challenge && challenge.purpose === "login") {
+      if (challenge.consumedAt || challenge.expiresAt <= new Date()) {
+        throw new AppError(400, "expired_mfa_challenge", "MFA challenge is expired.");
       }
-    });
-    if (!credential) {
-      throw new AppError(404, "passkey_not_found", "Passkey credential not found.");
-    }
-
-    const verification = await verifyAuthenticationResponse({
-      response: response as Parameters<typeof verifyAuthenticationResponse>[0]["response"],
-      expectedChallenge: challenge.challenge,
-      expectedOrigin: this.resolveExpectedOrigin(),
-      expectedRPID: this.resolveRpId(),
-      credential: {
-        id: credential.credentialId,
-        publicKey: new Uint8Array(credential.publicKey),
-        counter: credential.counter,
-        transports: this.normalizeTransports(credential.transports)
-      },
-      requireUserVerification: true
-    });
-
-    if (!verification.verified) {
-      throw new AppError(400, "passkey_login_failed", "Passkey verification failed.");
-    }
-
-    await this.prisma.userPasskeyCredential.update({
-      where: { id: credential.id },
-      data: {
-        counter: verification.authenticationInfo.newCounter
+      if (!challenge.challenge) {
+        throw new AppError(400, "passkey_challenge_missing", "Passkey challenge was not initialized.");
       }
-    });
-    await this.consumeChallenge(challenge.id);
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: challenge.userId }
-    });
-    if (!user) {
-      throw new AppError(404, "user_not_found", "User not found.");
+      const credentialId = this.extractCredentialId(response);
+      if (!credentialId || !challenge.passkeyAllowIds.includes(credentialId)) {
+        throw new AppError(400, "invalid_passkey_credential", "Passkey credential is not allowed.");
+      }
+
+      const credential = await this.prisma.userPasskeyCredential.findFirst({
+        where: {
+          userId: challenge.userId,
+          credentialId
+        }
+      });
+      if (!credential) {
+        throw new AppError(404, "passkey_not_found", "Passkey credential not found.");
+      }
+
+      await this.verifyPasskeyResponse(challenge.challenge, credential, response);
+      await this.consumeChallenge(challenge.id);
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: challenge.userId }
+      });
+      if (!user) {
+        throw new AppError(404, "user_not_found", "User not found.");
+      }
+      return user;
     }
-    return user;
+
+    return this.verifyDirectPasskeyLogin(token, response);
   }
 
   async shouldEnforceMfa(userId: string, channel: LoginChannel) {
@@ -405,5 +432,90 @@ export class MfaService {
 
   private normalizeTransports(input: string[]): PasskeyTransport[] {
     return input.filter((item): item is PasskeyTransport => PASSKEY_TRANSPORTS.has(item as PasskeyTransport));
+  }
+
+  private cleanupExpiredDirectPasskeyChallenges() {
+    const now = Date.now();
+    for (const [token, challenge] of this.directPasskeyChallenges.entries()) {
+      if (challenge.expiresAt.getTime() <= now) {
+        this.directPasskeyChallenges.delete(token);
+      }
+    }
+  }
+
+  private async verifyDirectPasskeyLogin(challengeToken: string, response: unknown) {
+    this.cleanupExpiredDirectPasskeyChallenges();
+
+    const challenge = this.directPasskeyChallenges.get(challengeToken);
+    if (!challenge) {
+      throw new AppError(400, "invalid_mfa_challenge", "MFA challenge is invalid.");
+    }
+    if (challenge.expiresAt <= new Date()) {
+      this.directPasskeyChallenges.delete(challengeToken);
+      throw new AppError(400, "expired_mfa_challenge", "MFA challenge is expired.");
+    }
+
+    const credentialId = this.extractCredentialId(response);
+    if (!credentialId) {
+      throw new AppError(400, "invalid_passkey_credential", "Passkey credential is not allowed.");
+    }
+
+    const credential = await this.prisma.userPasskeyCredential.findUnique({
+      where: { credentialId }
+    });
+    if (!credential) {
+      throw new AppError(404, "passkey_not_found", "Passkey credential not found.");
+    }
+
+    await this.verifyPasskeyResponse(challenge.challenge, credential, response);
+    this.directPasskeyChallenges.delete(challengeToken);
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: credential.userId }
+    });
+    if (!user || user.status !== "active") {
+      throw new AppError(401, "invalid_credentials", "Email or password is incorrect.");
+    }
+    if (!user.emailVerifiedAt) {
+      throw new AppError(403, "email_not_verified", "Email is not verified. Please check your inbox.");
+    }
+    return user;
+  }
+
+  private async verifyPasskeyResponse(
+    expectedChallenge: string,
+    credential: {
+      id: string;
+      credentialId: string;
+      publicKey: Uint8Array;
+      counter: number;
+      transports: string[];
+    },
+    response: unknown
+  ) {
+    const verification = await verifyAuthenticationResponse({
+      response: response as Parameters<typeof verifyAuthenticationResponse>[0]["response"],
+      expectedChallenge,
+      expectedOrigin: this.resolveExpectedOrigin(),
+      expectedRPID: this.resolveRpId(),
+      credential: {
+        id: credential.credentialId,
+        publicKey: new Uint8Array(credential.publicKey),
+        counter: credential.counter,
+        transports: this.normalizeTransports(credential.transports)
+      },
+      requireUserVerification: true
+    });
+
+    if (!verification.verified) {
+      throw new AppError(400, "passkey_login_failed", "Passkey verification failed.");
+    }
+
+    await this.prisma.userPasskeyCredential.update({
+      where: { id: credential.id },
+      data: {
+        counter: verification.authenticationInfo.newCounter
+      }
+    });
   }
 }

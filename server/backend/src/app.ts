@@ -24,7 +24,7 @@ export const createApp = () => {
     cors({
       origin: "*",
       allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowHeaders: ["Content-Type", "Authorization"]
+      allowHeaders: ["Content-Type", "Authorization", "X-Maimaid-Client"]
     })
   );
 

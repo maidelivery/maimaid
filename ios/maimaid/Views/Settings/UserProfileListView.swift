@@ -154,13 +154,34 @@ struct UserProfileListView: View {
         }
         try? modelContext.save()
         ScoreService.shared.notifyActiveProfileChanged()
+
+        if BackendSessionManager.shared.isAuthenticated {
+            Task {
+                try? await BackendIncrementalSyncService.pushProfileUpdate(profile: profile, clientUpdatedAt: nil)
+            }
+        }
     }
     
     private func deleteProfile(_ profile: UserProfile) {
         guard !profile.isActive else { return }
-        
+
         let profileId = profile.id
-        
+        if BackendSessionManager.shared.isAuthenticated {
+            Task {
+                do {
+                    try await BackendIncrementalSyncService.deleteProfile(profileId: profileId, context: modelContext)
+                } catch {
+                    return
+                }
+                removeProfileLocally(profileId)
+            }
+            return
+        }
+
+        removeProfileLocally(profileId)
+    }
+
+    private func removeProfileLocally(_ profileId: UUID) {
         // Delete associated scores
         let scoreDescriptor = FetchDescriptor<Score>(predicate: #Predicate { $0.userProfileId == profileId })
         if let scores = try? modelContext.fetch(scoreDescriptor) {
@@ -168,10 +189,20 @@ struct UserProfileListView: View {
                 modelContext.delete(score)
             }
         }
-        
-        modelContext.delete(profile)
+
+        let recordDescriptor = FetchDescriptor<PlayRecord>(predicate: #Predicate { $0.userProfileId == profileId })
+        if let records = try? modelContext.fetch(recordDescriptor) {
+            for record in records {
+                modelContext.delete(record)
+            }
+        }
+
+        let profileDescriptor = FetchDescriptor<UserProfile>(predicate: #Predicate { $0.id == profileId })
+        if let targetProfile = (try? modelContext.fetch(profileDescriptor))?.first {
+            modelContext.delete(targetProfile)
+        }
         try? modelContext.save()
-        
+
         ScoreService.shared.notifyScoresChanged(for: profileId)
         ScoreService.shared.notifyActiveProfileChanged()
     }

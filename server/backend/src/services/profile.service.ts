@@ -191,6 +191,24 @@ export class ProfileService {
     return updated;
   }
 
+  async remove(userId: string, profileId: string) {
+    const profile = await this.prisma.profile.findFirst({
+      where: { id: profileId, userId }
+    });
+    if (!profile) {
+      throw new AppError(404, "profile_not_found", "Profile not found.");
+    }
+    if (profile.isActive) {
+      throw new AppError(400, "active_profile_delete_forbidden", "Active profile cannot be deleted.");
+    }
+
+    await this.prisma.profile.delete({
+      where: { id: profileId }
+    });
+
+    return profile;
+  }
+
   async activeProfile(userId: string) {
     return this.prisma.profile.findFirst({
       where: { userId, isActive: true }

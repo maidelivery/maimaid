@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { di } from "../../di/container.js";
 import { TOKENS } from "../../di/tokens.js";
@@ -174,12 +174,18 @@ const mapPlayRecords = (records: PlayRecordBody[]) =>
 export const syncV1Route = new Hono<AppEnv>();
 syncV1Route.use("*", authRequired);
 
+function isWebClient(c: Context<AppEnv>) {
+  const client = c.req.header("x-maimaid-client");
+  return client?.trim().toLowerCase() === "web";
+}
+
 syncV1Route.post("/push", async (c) => {
   const auth = c.get("auth");
   if (!auth) {
     return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
   }
   const body = pushSchema.parse(await c.req.json());
+  const webClient = isWebClient(c);
   const syncService = di.resolve<SyncService>(TOKENS.SyncService);
   const profileService = di.resolve<ProfileService>(TOKENS.ProfileService);
   const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
@@ -241,7 +247,7 @@ syncV1Route.post("/push", async (c) => {
       name: item.name,
       server: item.server
     };
-    if (item.isActive !== undefined) payload.isActive = item.isActive;
+    if (item.isActive !== undefined && !webClient) payload.isActive = item.isActive;
     if (item.playerRating !== undefined) payload.playerRating = item.playerRating;
     if (item.plate !== undefined) payload.plate = item.plate;
     if (item.avatarUrl !== undefined) payload.avatarUrl = item.avatarUrl;
