@@ -2,6 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BACKEND_AUTH_URL</key>
+	<string>$(BACKEND_AUTH_URL)</string>
+	<key>BACKEND_URL</key>
+	<string>$(BACKEND_URL)</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>in.shikoch.maimaid.static-data-refresh</string>
+		<string>in.shikoch.maimaid.backend-backup</string>
+	</array>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>en</string>
@@ -20,13 +29,6 @@
 			</array>
 		</dict>
 	</array>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>in.shikoch.maimaid.static-data-refresh</string>
-		<string>in.shikoch.maimaid.backend-backup</string>
-	</array>
-	<key>BACKEND_URL</key>
-	<string>$(BACKEND_URL)</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

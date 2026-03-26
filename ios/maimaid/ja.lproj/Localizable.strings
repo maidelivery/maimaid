@@ -564,7 +564,7 @@
 "settings.cloud.config.subtitle" = "`Config/Secrets.xcconfig` にクラウド同期設定を追加してください。";
 "settings.cloud.config.section" = "構成";
 "settings.cloud.config.step.copy" = "1. 「Config/Secrets.example.xcconfig」を「Config/Secrets.xcconfig」にコピーします。";
-"settings.cloud.config.step.fill" = "2.「BACKEND_URL」と「BACKEND_URL」を入力します。";
+"settings.cloud.config.step.fill" = "2.「BACKEND_URL」と「BACKEND_AUTH_URL」を入力します。";
 "settings.cloud.config.error.unconfigured" = "Backend が構成されていません。";
 "common.unknown" = "未知";
 "dan.detail.noRecord" = "記録なし";

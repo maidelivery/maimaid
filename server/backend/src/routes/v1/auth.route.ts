@@ -60,6 +60,11 @@ const mfaTotpLoginSchema = z.object({
   code: z.string().min(6).max(8)
 });
 
+const mfaBackupCodeLoginSchema = z.object({
+  challengeToken: z.string().min(20),
+  code: z.string().trim().min(6).max(32)
+});
+
 const mfaPasskeyLoginSchema = z.object({
   challengeToken: z.string().min(20),
   response: z.unknown()
@@ -71,6 +76,10 @@ const mfaPasskeyStartSchema = z.object({
 
 const passkeyFinishSchema = z.object({
   response: z.unknown()
+});
+
+const passkeyRenameSchema = z.object({
+  name: z.string().trim().min(1).max(64)
 });
 
 const verifyEmailQuerySchema = z.object({
@@ -289,6 +298,48 @@ authV1Route.post("/mfa/passkey/register/finish", authRequired, async (c) => {
   return ok(c, result);
 });
 
+authV1Route.get("/mfa/backup-codes", authRequired, async (c) => {
+  const auth = c.get("auth");
+  if (!auth) {
+    return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+  }
+  const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
+  const result = await mfaService.getBackupCodeStatus(auth.userId);
+  return ok(c, result);
+});
+
+authV1Route.post("/mfa/backup-codes/regenerate", authRequired, async (c) => {
+  const auth = c.get("auth");
+  if (!auth) {
+    return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+  }
+  const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
+  const result = await mfaService.regenerateBackupCodes(auth.userId);
+  return ok(c, result);
+});
+
+authV1Route.get("/mfa/passkeys", authRequired, async (c) => {
+  const auth = c.get("auth");
+  if (!auth) {
+    return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+  }
+  const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
+  const result = await mfaService.listPasskeys(auth.userId);
+  return ok(c, result);
+});
+
+authV1Route.patch("/mfa/passkey/:credentialId", authRequired, async (c) => {
+  const auth = c.get("auth");
+  if (!auth) {
+    return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+  }
+  const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
+  const credentialId = c.req.param("credentialId");
+  const body = passkeyRenameSchema.parse(await c.req.json());
+  const result = await mfaService.renamePasskey(auth.userId, credentialId, body.name);
+  return ok(c, result);
+});
+
 authV1Route.delete("/mfa/passkey/:credentialId", authRequired, async (c) => {
   const auth = c.get("auth");
   if (!auth) {
@@ -312,6 +363,23 @@ authV1Route.post("/mfa/challenge/totp", async (c) => {
   const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
   const body = mfaTotpLoginSchema.parse(await c.req.json());
   const user = await mfaService.verifyTotpLogin(body.challengeToken, body.code);
+  const tokens = await authService.issueTokensForUser(user);
+  return ok(c, {
+    user: {
+      id: user.id,
+      email: user.email,
+      isAdmin: user.isAdmin
+    },
+    mfaRequired: false,
+    ...tokens
+  });
+});
+
+authV1Route.post("/mfa/challenge/backup-code", async (c) => {
+  const authService = di.resolve<AuthService>(TOKENS.AuthService);
+  const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
+  const body = mfaBackupCodeLoginSchema.parse(await c.req.json());
+  const user = await mfaService.verifyBackupCodeLogin(body.challengeToken, body.code);
   const tokens = await authService.issueTokensForUser(user);
   return ok(c, {
     user: {

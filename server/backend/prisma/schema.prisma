@@ -76,6 +76,7 @@ model User {
   communityCandidates    CommunityAliasCandidate[] @relation("CandidateSubmitter")
   totpCredential         UserTotpCredential?
   passkeyCredentials     UserPasskeyCredential[]
+  mfaBackupCodes         UserMfaBackupCode[]
   mfaChallenges          MfaChallenge[]
   syncEvents             SyncEvent[]
   syncMutations          SyncMutation[]
@@ -357,6 +358,19 @@ model UserPasskeyCredential {
 
   @@index([userId])
   @@map("user_passkey_credentials")
+}
+
+model UserMfaBackupCode {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  codeHash   String
+  createdAt  DateTime  @default(now())
+  consumedAt DateTime?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, codeHash])
+  @@index([userId, consumedAt])
+  @@map("user_mfa_backup_codes")
 }
 
 model MfaChallenge {

@@ -7,6 +7,33 @@ enum BackendConfig {
         }
         return URL(string: value)
     }
+
+    static var webAuthBaseURL: URL? {
+        if
+            let configured = AppInfo.configuredString(for: BundleInfoKeys.backendAuthURL),
+            let configuredURL = URL(string: configured)
+        {
+            return configuredURL
+        }
+
+        guard let baseURL else {
+            return nil
+        }
+
+        // Local default: backend runs on :8787, dashboard auth page runs on :3000.
+        if baseURL.port == 8787, let host = baseURL.host {
+            if host == "localhost" || host == "127.0.0.1" {
+                var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
+                components?.port = 3000
+                components?.query = nil
+                components?.fragment = nil
+                components?.path = "/"
+                return components?.url
+            }
+        }
+
+        return baseURL
+    }
     
     static func endpoint(_ path: String) -> URL? {
         guard let baseURL else {

@@ -565,7 +565,7 @@
 "settings.cloud.config.subtitle" = "请在 `Config/Secrets.xcconfig` 中填写云同步配置。";
 "settings.cloud.config.section" = "配置说明";
 "settings.cloud.config.step.copy" = "1. 复制 `Config/Secrets.example.xcconfig` 为 `Config/Secrets.xcconfig`";
-"settings.cloud.config.step.fill" = "2. 填入 `BACKEND_URL` 与 `BACKEND_URL`";
+"settings.cloud.config.step.fill" = "2. 填入 `BACKEND_URL` 与 `BACKEND_AUTH_URL`";
 "settings.cloud.config.error.unconfigured" = "Backend 尚未配置。";
 "common.unknown" = "未知";
 "dan.detail.noRecord" = "暂无记录";

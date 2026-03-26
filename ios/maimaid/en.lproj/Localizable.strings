@@ -565,7 +565,7 @@
 "settings.cloud.config.subtitle" = "Add cloud sync settings in `Config/Secrets.xcconfig`.";
 "settings.cloud.config.section" = "Configuration";
 "settings.cloud.config.step.copy" = "1. Copy `Config/Secrets.example.xcconfig` to `Config/Secrets.xcconfig`";
-"settings.cloud.config.step.fill" = "2. Fill in `BACKEND_URL` and `BACKEND_URL`";
+"settings.cloud.config.step.fill" = "2. Fill in `BACKEND_URL` and `BACKEND_AUTH_URL`";
 "settings.cloud.config.error.unconfigured" = "Backend is not configured.";
 "common.unknown" = "Unknown";
 "dan.detail.noRecord" = "No Record";

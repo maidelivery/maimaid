@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { inject, injectable } from "tsyringe";
 import type { PrismaClient, User } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
@@ -13,7 +14,20 @@ import {
 } from "@simplewebauthn/server";
 
 type LoginChannel = "web" | "app";
+type LoginMethods = {
+  totp: boolean;
+  passkey: boolean;
+  backupCode: boolean;
+};
 type PasskeyTransport = "ble" | "cable" | "hybrid" | "internal" | "nfc" | "smart-card" | "usb";
+type PasskeySummary = {
+  credentialId: string;
+  name: string | null;
+  transports: string[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 type DirectPasskeyChallenge = {
   challenge: string;
   channel: LoginChannel;
@@ -28,6 +42,8 @@ const PASSKEY_TRANSPORTS = new Set<PasskeyTransport>([
   "smart-card",
   "usb"
 ]);
+const BACKUP_CODE_COUNT = 10;
+const BACKUP_CODE_GROUP_SIZE = 4;
 
 @injectable()
 export class MfaService {
@@ -39,18 +55,25 @@ export class MfaService {
   ) {}
 
   async status(userId: string) {
-    const [totp, passkeys] = await Promise.all([
+    const [totp, passkeys, backupCodeCount] = await Promise.all([
       this.prisma.userTotpCredential.findUnique({
         where: { userId }
       }),
       this.prisma.userPasskeyCredential.count({
         where: { userId }
+      }),
+      this.prisma.userMfaBackupCode.count({
+        where: {
+          userId,
+          consumedAt: null
+        }
       })
     ]);
 
     return {
       totpEnabled: Boolean(totp?.enabledAt),
       passkeyCount: passkeys,
+      backupCodeCount,
       mfaEnabled: Boolean(totp?.enabledAt) || passkeys > 0
     };
   }
@@ -75,11 +98,12 @@ export class MfaService {
     };
   }
 
-  async listAvailableMethods(userId: string) {
+  async listAvailableMethods(userId: string): Promise<LoginMethods> {
     const status = await this.status(userId);
     return {
       totp: status.totpEnabled,
-      passkey: status.passkeyCount > 0
+      passkey: status.passkeyCount > 0,
+      backupCode: status.backupCodeCount > 0
     };
   }
 
@@ -131,10 +155,93 @@ export class MfaService {
   }
 
   async disableTotp(userId: string) {
-    await this.prisma.userTotpCredential.deleteMany({
-      where: { userId }
-    });
+    await this.prisma.$transaction([
+      this.prisma.userTotpCredential.deleteMany({
+        where: { userId }
+      }),
+      this.prisma.userMfaBackupCode.deleteMany({
+        where: { userId }
+      })
+    ]);
     return { disabled: true };
+  }
+
+  async getBackupCodeStatus(userId: string) {
+    const [activeCount, latest] = await Promise.all([
+      this.prisma.userMfaBackupCode.count({
+        where: {
+          userId,
+          consumedAt: null
+        }
+      }),
+      this.prisma.userMfaBackupCode.findFirst({
+        where: {
+          userId,
+          consumedAt: null
+        },
+        orderBy: {
+          createdAt: "desc"
+        },
+        select: {
+          createdAt: true
+        }
+      })
+    ]);
+
+    return {
+      activeCount,
+      latestGeneratedAt: latest?.createdAt.toISOString() ?? null
+    };
+  }
+
+  async regenerateBackupCodes(userId: string) {
+    const totp = await this.prisma.userTotpCredential.findUnique({
+      where: { userId },
+      select: {
+        enabledAt: true
+      }
+    });
+    if (!totp?.enabledAt) {
+      throw new AppError(400, "totp_not_enabled", "TOTP is not enabled.");
+    }
+
+    const codes = this.generateBackupCodes(BACKUP_CODE_COUNT);
+    const now = new Date();
+    await this.prisma.$transaction([
+      this.prisma.userMfaBackupCode.deleteMany({
+        where: { userId }
+      }),
+      this.prisma.userMfaBackupCode.createMany({
+        data: codes.map((code) => ({
+          userId,
+          codeHash: sha256Hex(this.normalizeBackupCode(code)),
+          createdAt: now
+        }))
+      })
+    ]);
+
+    return {
+      codes,
+      activeCount: codes.length,
+      generatedAt: now.toISOString()
+    };
+  }
+
+  async listPasskeys(userId: string) {
+    const rows = await this.prisma.userPasskeyCredential.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        credentialId: true,
+        name: true,
+        transports: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    return {
+      passkeys: rows.map((item) => this.serializePasskey(item))
+    };
   }
 
   async startPasskeyRegistration(user: User): Promise<Record<string, unknown>> {
@@ -200,13 +307,20 @@ export class MfaService {
       throw new AppError(400, "passkey_registration_failed", "Passkey registration failed.");
     }
 
-    await this.prisma.userPasskeyCredential.create({
+    const created = await this.prisma.userPasskeyCredential.create({
       data: {
         userId,
         credentialId: verification.registrationInfo.credential.id,
         publicKey: Buffer.from(verification.registrationInfo.credential.publicKey),
         counter: verification.registrationInfo.credential.counter,
         transports: verification.registrationInfo.credential.transports ?? []
+      },
+      select: {
+        credentialId: true,
+        name: true,
+        transports: true,
+        createdAt: true,
+        updatedAt: true
       }
     });
 
@@ -216,7 +330,50 @@ export class MfaService {
         consumedAt: new Date()
       }
     });
-    return { success: true };
+    return {
+      success: true,
+      passkey: this.serializePasskey(created)
+    };
+  }
+
+  async renamePasskey(userId: string, credentialId: string, name: string) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      throw new AppError(400, "invalid_passkey_name", "Passkey name is required.");
+    }
+
+    await this.prisma.userPasskeyCredential.updateMany({
+      where: {
+        userId,
+        credentialId
+      },
+      data: {
+        name: trimmedName
+      }
+    });
+
+    const updated = await this.prisma.userPasskeyCredential.findFirst({
+      where: {
+        userId,
+        credentialId
+      },
+      select: {
+        credentialId: true,
+        name: true,
+        transports: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    if (!updated) {
+      throw new AppError(404, "passkey_not_found", "Passkey credential not found.");
+    }
+
+    return {
+      updated: true,
+      passkey: this.serializePasskey(updated)
+    };
   }
 
   async removePasskey(userId: string, credentialId: string) {
@@ -308,6 +465,48 @@ export class MfaService {
     const valid = totp.validate({ token: code.trim(), window: 1 });
     if (valid === null) {
       throw new AppError(400, "invalid_totp_code", "TOTP code is invalid.");
+    }
+
+    await this.consumeChallenge(challenge.id);
+    return user;
+  }
+
+  async verifyBackupCodeLogin(challengeToken: string, code: string) {
+    const challenge = await this.findLoginChallenge(challengeToken);
+    const normalizedCode = this.normalizeBackupCode(code);
+    if (!normalizedCode) {
+      throw new AppError(400, "invalid_backup_code", "Backup code is invalid.");
+    }
+
+    const totp = await this.prisma.userTotpCredential.findUnique({
+      where: { userId: challenge.userId },
+      select: {
+        enabledAt: true
+      }
+    });
+    if (!totp?.enabledAt) {
+      throw new AppError(400, "totp_not_enabled", "TOTP is not enabled.");
+    }
+
+    const consumed = await this.prisma.userMfaBackupCode.updateMany({
+      where: {
+        userId: challenge.userId,
+        codeHash: sha256Hex(normalizedCode),
+        consumedAt: null
+      },
+      data: {
+        consumedAt: new Date()
+      }
+    });
+    if (consumed.count < 1) {
+      throw new AppError(400, "invalid_backup_code", "Backup code is invalid.");
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: challenge.userId }
+    });
+    if (!user) {
+      throw new AppError(404, "user_not_found", "User not found.");
     }
 
     await this.consumeChallenge(challenge.id);
@@ -432,6 +631,30 @@ export class MfaService {
 
   private normalizeTransports(input: string[]): PasskeyTransport[] {
     return input.filter((item): item is PasskeyTransport => PASSKEY_TRANSPORTS.has(item as PasskeyTransport));
+  }
+
+  private generateBackupCodes(count: number): string[] {
+    const values = new Set<string>();
+    while (values.size < count) {
+      const raw = randomBytes(BACKUP_CODE_GROUP_SIZE).toString("hex").toUpperCase();
+      const code = `${raw.slice(0, BACKUP_CODE_GROUP_SIZE)}-${raw.slice(BACKUP_CODE_GROUP_SIZE, BACKUP_CODE_GROUP_SIZE * 2)}`;
+      values.add(code);
+    }
+    return Array.from(values);
+  }
+
+  private normalizeBackupCode(code: string) {
+    return code.trim().toUpperCase().replace(/[^A-Z0-9]/gu, "");
+  }
+
+  private serializePasskey(input: PasskeySummary) {
+    return {
+      credentialId: input.credentialId,
+      name: input.name,
+      transports: input.transports,
+      createdAt: input.createdAt.toISOString(),
+      updatedAt: input.updatedAt.toISOString()
+    };
   }
 
   private cleanupExpiredDirectPasskeyChallenges() {

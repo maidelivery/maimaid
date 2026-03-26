@@ -157,6 +157,11 @@ final class BackendSessionManager {
         let code = value(of: "code", from: url)?.lowercased()
         let token = value(of: "token", from: url)
 
+        if type == "session" {
+            handleSessionRedirect(result: result, from: url)
+            return
+        }
+
         if type == "recovery" {
             if result == "success", let token, token.count >= 20 {
                 passwordResetToken = token
@@ -399,5 +404,52 @@ final class BackendSessionManager {
             .queryItems?
             .first(where: { $0.name == name })?
             .value
+    }
+
+    private func handleSessionRedirect(result: String?, from url: URL) {
+        guard result == "success" else {
+            pendingMessage = "settings.cloud.message.authLinkFailed"
+            pendingMessageIsError = true
+            return
+        }
+
+        guard
+            let accessToken = value(of: "accessToken", from: url),
+            let refreshToken = value(of: "refreshToken", from: url),
+            let expiresInValue = value(of: "expiresIn", from: url),
+            let expiresIn = Int(expiresInValue),
+            expiresIn > 0,
+            let userId = value(of: "userId", from: url),
+            let userEmail = value(of: "email", from: url)
+        else {
+            pendingMessage = "settings.cloud.message.authLinkFailed"
+            pendingMessageIsError = true
+            return
+        }
+
+        let isAdmin = boolValue(from: value(of: "isAdmin", from: url)) ?? false
+        let payload = BackendAuthPayload(
+            user: BackendAuthUser(id: userId, email: userEmail, isAdmin: isAdmin),
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            expiresIn: expiresIn
+        )
+        applyAuthPayload(payload)
+        pendingMessage = "settings.cloud.message.loginSuccess"
+        pendingMessageIsError = false
+    }
+
+    private func boolValue(from value: String?) -> Bool? {
+        guard let value else {
+            return nil
+        }
+        switch value.lowercased() {
+        case "1", "true", "yes":
+            return true
+        case "0", "false", "no":
+            return false
+        default:
+            return nil
+        }
     }
 }

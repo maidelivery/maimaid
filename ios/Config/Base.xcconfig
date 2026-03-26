@@ -1,4 +1,5 @@
 // Shared build settings for local secrets.
 BACKEND_URL =
+BACKEND_AUTH_URL =
 
 #include? "Secrets.xcconfig"

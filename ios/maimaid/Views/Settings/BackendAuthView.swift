@@ -1,70 +1,50 @@
+import AuthenticationServices
 import SwiftData
 import SwiftUI
+import UIKit
+
+@MainActor
+private final class BackendWebAuthPresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow) ?? ASPresentationAnchor()
+    }
+}
 
 struct BackendAuthView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var configs: [SyncConfig]
 
     @State private var sessionManager = BackendSessionManager.shared
-    @State private var email = ""
-    @State private var password = ""
     @State private var newPassword = ""
-    @State private var isSignUpMode = false
+    @State private var webAuthenticationSession: ASWebAuthenticationSession?
 
-    @State private var isLoading = false
-    @State private var isSendingPasswordReset = false
-    @State private var isSendingVerification = false
+    @State private var isOpeningWebAuth = false
+    @State private var isSigningOut = false
     @State private var isUpdatingRecoveryPassword = false
     @State private var isSyncing = false
 
     @State private var toastMessage: String?
     @State private var isErrorToast = false
-    @State private var now = Date()
-    @State private var lastAuthEmailSentAt = UserDefaults.app.object(forKey: Self.authEmailLastSentAtKey) as? Date
-    @FocusState private var focusedField: Field?
 
-    private static let authEmailLastSentAtKey = "backend.auth.email.lastSentAt"
+    private let webAuthPresentationContextProvider = BackendWebAuthPresentationContextProvider()
 
-    private enum Field {
-        case email
-        case password
-        case newPassword
+    private enum WebAuthMode: String {
+        case login
+        case register
+        case forgot
     }
 
     private var config: SyncConfig? { configs.first }
 
     private var isBusy: Bool {
-        isLoading || isSendingPasswordReset || isSendingVerification || isUpdatingRecoveryPassword || isSyncing
-    }
-
-    private var sanitizedEmail: String {
-        email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    }
-
-    private var emailCooldownRemainingSeconds: Int {
-        guard let lastAuthEmailSentAt else { return 0 }
-        let remaining = Int(ceil(lastAuthEmailSentAt.addingTimeInterval(60).timeIntervalSince(now)))
-        return max(0, remaining)
-    }
-
-    private var isEmailRateLimited: Bool {
-        emailCooldownRemainingSeconds > 0
-    }
-
-    private var isSignUpPasswordValid: Bool {
-        meetsPasswordRequirement(password)
-    }
-
-    private var showSignUpPasswordRequirementAsError: Bool {
-        isSignUpMode && !password.isEmpty && !isSignUpPasswordValid
+        isOpeningWebAuth || isSigningOut || isUpdatingRecoveryPassword || isSyncing
     }
 
     private var showRecoveryPasswordRequirementAsError: Bool {
         !newPassword.isEmpty && !meetsPasswordRequirement(newPassword)
-    }
-
-    private var canSendForgotPassword: Bool {
-        !sanitizedEmail.isEmpty && !isBusy
     }
 
     var body: some View {
@@ -77,7 +57,7 @@ struct BackendAuthView: View {
                 } else if sessionManager.isPasswordRecoveryFlow {
                     passwordRecoveryContent
                 } else {
-                    authenticationContent
+                    webAuthenticationContent
                 }
             }
             .listStyle(.insetGrouped)
@@ -91,14 +71,10 @@ struct BackendAuthView: View {
                     .zIndex(1)
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: isSignUpMode)
         .navigationTitle("settings.cloud.title")
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await sessionManager.checkSession()
-        }
-        .task {
-            await runClockLoop()
         }
         .onAppear {
             consumePendingAuthMessageIfNeeded()
@@ -207,11 +183,10 @@ struct BackendAuthView: View {
 
             Section {
                 Button("settings.cloud.logout", role: .destructive) {
-                    focusedField = nil
                     Task {
-                        isLoading = true
+                        isSigningOut = true
                         await sessionManager.logout()
-                        isLoading = false
+                        isSigningOut = false
                         BackendAutoBackup.cancelScheduledBackup()
                     }
                 }
@@ -220,14 +195,14 @@ struct BackendAuthView: View {
         }
     }
 
-    private var authenticationContent: some View {
+    private var webAuthenticationContent: some View {
         Group {
             Section {
                 accountSummaryCard(
-                    icon: "cloud.fill",
+                    icon: "person.badge.key.fill",
                     iconTint: .blue,
-                    title: String(localized: isSignUpMode ? "settings.cloud.signup.title" : "settings.cloud.login.title"),
-                    subtitle: String(localized: isSignUpMode ? "settings.cloud.signup.subtitle" : "settings.cloud.login.subtitle")
+                    title: String(localized: "settings.cloud.login.title"),
+                    subtitle: String(localized: "settings.cloud.login.subtitle")
                 )
             }
             .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
@@ -235,114 +210,33 @@ struct BackendAuthView: View {
             .listSectionSeparator(.hidden)
 
             Section {
-                Picker("", selection: $isSignUpMode) {
-                    Text("settings.cloud.mode.login").tag(false)
-                    Text("settings.cloud.mode.signup").tag(true)
+                actionRow(
+                    title: "settings.cloud.login.button",
+                    icon: "person.crop.circle.badge.checkmark",
+                    tint: .blue
+                ) {
+                    startWebAuth(.login)
                 }
-                .pickerStyle(.segmented)
-            }
 
-            Section {
-                credentialField(
-                    title: "settings.cloud.email",
-                    text: $email,
-                    icon: "envelope.fill",
-                    field: .email,
-                    isSecure: false
-                )
+                actionRow(
+                    title: "settings.cloud.signup.button",
+                    icon: "person.badge.plus.fill",
+                    tint: .green
+                ) {
+                    startWebAuth(.register)
+                }
 
-                credentialField(
-                    title: "settings.cloud.password",
-                    text: $password,
-                    icon: "lock.fill",
-                    field: .password,
-                    isSecure: true
-                )
+                actionRow(
+                    title: "settings.cloud.forgotPassword",
+                    icon: "key.fill",
+                    tint: .orange
+                ) {
+                    startWebAuth(.forgot)
+                }
             } footer: {
-                if isSignUpMode {
-                    Text("settings.cloud.signup.passwordRequirement")
-                        .font(.footnote)
-                        .foregroundStyle(showSignUpPasswordRequirementAsError ? .red : .secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                } else {
-                    Button("settings.cloud.forgotPassword") {
-                        focusedField = nil
-                        Task { await sendPasswordResetEmail() }
-                    }
-                    .buttonStyle(.plain)
+                Text("settings.cloud.signup.subtitle")
                     .font(.footnote)
-                    .foregroundStyle(
-                        canSendForgotPassword
-                            ? AnyShapeStyle(.tint)
-                            : AnyShapeStyle(.secondary)
-                    )
-                    .disabled(!canSendForgotPassword)
-                }
-            }
-
-            Section {
-                Button {
-                    focusedField = nil
-                    Task {
-                        if isSignUpMode {
-                            await signUp()
-                        } else {
-                            await signIn()
-                        }
-                    }
-                } label: {
-                    HStack {
-                        Spacer()
-                        if isLoading {
-                            ProgressView()
-                                .tint(.white)
-                        } else {
-                            Text(isSignUpMode ? "settings.cloud.signup.button" : "settings.cloud.login.button")
-                                .bold()
-                        }
-                        Spacer()
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(
-                    sanitizedEmail.isEmpty
-                        || password.isEmpty
-                        || isBusy
-                        || (isSignUpMode && isEmailRateLimited)
-                        || (isSignUpMode && !isSignUpPasswordValid)
-                )
-                .listRowBackground(Color.clear)
-            }
-            .listSectionSeparator(.hidden)
-
-            if isSignUpMode {
-                Section {
-                    Button {
-                        focusedField = nil
-                        Task { await resendVerificationEmail() }
-                    } label: {
-                        HStack {
-                            Text("settings.cloud.resendVerification")
-                            Spacer()
-                            if isSendingVerification {
-                                ProgressView()
-                                    .controlSize(.small)
-                            }
-                        }
-                    }
-                    .disabled(sanitizedEmail.isEmpty || isBusy)
-                }
-                .listSectionSeparator(.hidden)
-            }
-
-            if isEmailRateLimited {
-                Section {
-                    Text("\(String(localized: "settings.cloud.message.emailRateLimited")) (\(emailCooldownRemainingSeconds)s)")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -362,13 +256,17 @@ struct BackendAuthView: View {
             .listSectionSeparator(.hidden)
 
             Section {
-                credentialField(
-                    title: "settings.cloud.recovery.newPassword",
-                    text: $newPassword,
-                    icon: "lock.rotation",
-                    field: .newPassword,
-                    isSecure: true
-                )
+                HStack {
+                    settingsIcon(icon: "lock.rotation", tint: .gray)
+                    SecureField("settings.cloud.recovery.newPassword", text: $newPassword)
+                        .textContentType(.newPassword)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .onSubmit {
+                            Task { await completePasswordRecovery() }
+                        }
+                }
+                .padding(.vertical, 2)
             } header: {
                 Text("settings.cloud.recovery.section")
             } footer: {
@@ -381,7 +279,6 @@ struct BackendAuthView: View {
 
             Section {
                 Button("settings.cloud.recovery.updateButton") {
-                    focusedField = nil
                     Task { await completePasswordRecovery() }
                 }
                 .disabled(newPassword.isEmpty || isBusy)
@@ -390,58 +287,12 @@ struct BackendAuthView: View {
 
             Section {
                 Button("settings.cloud.recovery.cancel", role: .cancel) {
-                    focusedField = nil
                     newPassword = ""
                     sessionManager.clearPasswordRecoveryFlow()
                 }
                 .disabled(isBusy)
             }
         }
-    }
-
-    private func credentialField(
-        title: String,
-        text: Binding<String>,
-        icon: String,
-        field: Field,
-        isSecure: Bool
-    ) -> some View {
-        HStack {
-            settingsIcon(icon: icon, tint: .gray)
-            Group {
-                if isSecure {
-                    SecureField(LocalizedStringKey(title), text: text)
-                        .textContentType(.password)
-                } else {
-                    TextField(LocalizedStringKey(title), text: text)
-                        .keyboardType(field == .email ? .emailAddress : .default)
-                        .textContentType(field == .email ? .emailAddress : .none)
-                }
-            }
-            .focused($focusedField, equals: field)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .submitLabel(field == .email ? .next : .go)
-            .onSubmit {
-                switch field {
-                case .email:
-                    focusedField = .password
-                case .password:
-                    focusedField = nil
-                    Task {
-                        if isSignUpMode {
-                            await signUp()
-                        } else {
-                            await signIn()
-                        }
-                    }
-                case .newPassword:
-                    focusedField = nil
-                    Task { await completePasswordRecovery() }
-                }
-            }
-        }
-        .padding(.vertical, 2)
     }
 
     private func accountSummaryCard(icon: String, iconTint: Color, title: String, subtitle: String) -> some View {
@@ -549,66 +400,6 @@ struct BackendAuthView: View {
         return hasLowercase && hasUppercase && hasDigit && hasSymbol
     }
 
-    private func isValidEmailFormat(_ value: String) -> Bool {
-        let emailPattern = #"^[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}$"#
-        return value.range(
-            of: emailPattern,
-            options: [.regularExpression, .caseInsensitive]
-        ) != nil
-    }
-
-    private func canSendAuthEmailNow() -> Bool {
-        guard !isEmailRateLimited else {
-            showToast(message: "settings.cloud.message.emailRateLimited", error: true)
-            return false
-        }
-        return true
-    }
-
-    private func markAuthEmailSentNow() {
-        let sentAt = Date()
-        lastAuthEmailSentAt = sentAt
-        now = sentAt
-        UserDefaults.app.set(sentAt, forKey: Self.authEmailLastSentAtKey)
-    }
-
-    @MainActor
-    private func validateEmailRegistrationState(requiresExistingAccount: Bool) async -> Bool {
-        guard isValidEmailFormat(sanitizedEmail) else {
-            showToast(message: "settings.cloud.message.emailInvalidFormat", error: true)
-            return false
-        }
-
-        do {
-            let exists = try await sessionManager.emailExists(sanitizedEmail)
-            guard exists == requiresExistingAccount else {
-                showToast(
-                    message: requiresExistingAccount
-                        ? "settings.cloud.message.emailNotRegistered"
-                        : "settings.cloud.message.emailAlreadyRegistered",
-                    error: true
-                )
-                return false
-            }
-            return true
-        } catch {
-            showToast(message: error.localizedDescription, error: true)
-            return false
-        }
-    }
-
-    @MainActor
-    private func runClockLoop() async {
-        while !Task.isCancelled {
-            now = Date()
-            do {
-                try await Task.sleep(for: .seconds(1))
-            } catch {
-                break
-            }
-        }
-    }
-
     @MainActor
     private func showToast(message: String, error: Bool = false) {
         isErrorToast = error
@@ -630,93 +421,77 @@ struct BackendAuthView: View {
             return
         }
 
+        if pending == "settings.cloud.message.loginSuccess", sessionManager.isAuthenticated {
+            Task {
+                await BackendAutoBackup.scheduleNextBackup(container: modelContext.container)
+            }
+        }
+
         let isError = sessionManager.pendingMessageIsError
         sessionManager.clearPendingMessage()
         showToast(message: pending, error: isError)
     }
 
     @MainActor
-    private func signIn() async {
-        guard !sanitizedEmail.isEmpty, !password.isEmpty else { return }
-        guard isValidEmailFormat(sanitizedEmail) else {
-            showToast(message: "settings.cloud.message.emailInvalidFormat", error: true)
+    private func startWebAuth(_ mode: WebAuthMode) {
+        guard !isBusy else { return }
+        guard let authURL = buildWebAuthURL(mode: mode) else {
+            showToast(message: "settings.cloud.config.error.unconfigured", error: true)
             return
         }
 
-        isLoading = true
-        defer { isLoading = false }
+        isOpeningWebAuth = true
 
-        do {
-            try await sessionManager.login(email: sanitizedEmail, password: password)
-            showToast(message: "settings.cloud.message.loginSuccess")
-            await BackendAutoBackup.scheduleNextBackup(container: modelContext.container)
-        } catch {
-            showToast(message: error.localizedDescription, error: true)
-        }
-    }
+        let session = ASWebAuthenticationSession(url: authURL, callbackURLScheme: "maimaid") { callbackURL, error in
+            Task { @MainActor in
+                isOpeningWebAuth = false
+                webAuthenticationSession = nil
 
-    @MainActor
-    private func signUp() async {
-        guard !sanitizedEmail.isEmpty, !password.isEmpty else { return }
-        guard isSignUpPasswordValid else {
-            showToast(message: "settings.cloud.message.passwordRequirementNotMet", error: true)
-            return
-        }
-        guard await validateEmailRegistrationState(requiresExistingAccount: false) else { return }
-        guard canSendAuthEmailNow() else { return }
+                if let callbackURL {
+                    sessionManager.handleAuthRedirect(callbackURL)
+                    consumePendingAuthMessageIfNeeded()
+                    return
+                }
 
-        isLoading = true
-        defer { isLoading = false }
+                if let authError = error as? ASWebAuthenticationSessionError,
+                    authError.code == .canceledLogin {
+                    return
+                }
 
-        do {
-            let emailSent = try await sessionManager.register(email: sanitizedEmail, password: password)
-            if emailSent {
-                markAuthEmailSentNow()
+                showToast(message: "settings.cloud.message.authLinkFailed", error: true)
             }
-            showToast(
-                message: emailSent ? "settings.cloud.message.signupVerificationSent" : "settings.cloud.message.signupSuccess"
-            )
-            password = ""
-            isSignUpMode = false
-        } catch {
-            showToast(message: error.localizedDescription, error: true)
+        }
+
+        session.presentationContextProvider = webAuthPresentationContextProvider
+        session.prefersEphemeralWebBrowserSession = false
+
+        webAuthenticationSession = session
+
+        guard session.start() else {
+            isOpeningWebAuth = false
+            webAuthenticationSession = nil
+            showToast(message: "settings.cloud.message.authLinkFailed", error: true)
+            return
         }
     }
 
-    @MainActor
-    private func resendVerificationEmail() async {
-        guard !sanitizedEmail.isEmpty else { return }
-        guard await validateEmailRegistrationState(requiresExistingAccount: true) else { return }
-        guard canSendAuthEmailNow() else { return }
-
-        isSendingVerification = true
-        defer { isSendingVerification = false }
-
-        do {
-            _ = try await sessionManager.resendVerification(email: sanitizedEmail)
-            markAuthEmailSentNow()
-            showToast(message: "settings.cloud.message.verificationEmailResent")
-        } catch {
-            showToast(message: error.localizedDescription, error: true)
+    private func buildWebAuthURL(mode: WebAuthMode) -> URL? {
+        guard let baseURL = BackendConfig.webAuthBaseURL else {
+            return nil
         }
-    }
-
-    @MainActor
-    private func sendPasswordResetEmail() async {
-        guard !sanitizedEmail.isEmpty else { return }
-        guard await validateEmailRegistrationState(requiresExistingAccount: true) else { return }
-        guard canSendAuthEmailNow() else { return }
-
-        isSendingPasswordReset = true
-        defer { isSendingPasswordReset = false }
-
-        do {
-            try await sessionManager.forgotPassword(email: sanitizedEmail)
-            markAuthEmailSentNow()
-            showToast(message: "settings.cloud.message.resetEmailSent")
-        } catch {
-            showToast(message: error.localizedDescription, error: true)
+        guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
+            return nil
         }
+
+        var queryItems = components.queryItems ?? []
+        queryItems.removeAll { item in
+            item.name == "authMode" || item.name == "redirect_uri" || item.name == "client"
+        }
+        queryItems.append(URLQueryItem(name: "authMode", value: mode.rawValue))
+        queryItems.append(URLQueryItem(name: "redirect_uri", value: "maimaid://auth/callback"))
+        queryItems.append(URLQueryItem(name: "client", value: "ios"))
+        components.queryItems = queryItems
+        return components.url
     }
 
     @MainActor
