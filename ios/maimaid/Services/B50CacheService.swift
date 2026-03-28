@@ -1,15 +1,15 @@
 import Foundation
 import SwiftData
 import SwiftUI
-import Combine
 
 @MainActor
-final class B50CacheService: ObservableObject {
+@Observable
+final class B50CacheService {
     static let shared = B50CacheService()
-    
-    @Published var b50Result: (total: Int, b35: [RatingUtils.RatingEntry], b15: [RatingUtils.RatingEntry]) = (0, [], [])
-    @Published var isLoading = false
-    @Published var isFirstLoad = true
+
+    var b50Result: (total: Int, b35: [RatingUtils.RatingEntry], b15: [RatingUtils.RatingEntry]) = (0, [], [])
+    var isLoading = false
+    var isFirstLoad = true
     
     private var lastCalculationParams: String = ""
     private var songMap: [String: Song] = [:]

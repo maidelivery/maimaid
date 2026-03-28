@@ -12,6 +12,7 @@ export const TOKENS = {
   StorageService: Symbol.for("StorageService"),
   JobService: Symbol.for("JobService"),
   MfaService: Symbol.for("MfaService"),
+  RateLimitService: Symbol.for("RateLimitService"),
   SyncService: Symbol.for("SyncService"),
   StaticBundleService: Symbol.for("StaticBundleService"),
   AdminUserService: Symbol.for("AdminUserService")

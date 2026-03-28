@@ -8,6 +8,8 @@ import type { SyncService } from "../../services/sync.service.js";
 import { ok } from "../../http/response.js";
 import type { AppEnv } from "../../types/hono.js";
 
+const BULK_ARRAY_MAX = 10_000;
+
 const scoreEntrySchema = z.object({
   sheetId: z
     .union([z.bigint(), z.number().int(), z.string().regex(/^\d+$/)])
@@ -34,7 +36,7 @@ const playRecordSchema = scoreEntrySchema.extend({
 
 const bulkScoreSchema = z.object({
   profileId: z.string().uuid(),
-  scores: z.array(scoreEntrySchema).min(1)
+  scores: z.array(scoreEntrySchema).min(1).max(BULK_ARRAY_MAX)
 });
 
 const overwriteScoreSchema = z.object({
@@ -44,7 +46,7 @@ const overwriteScoreSchema = z.object({
 
 const bulkRecordSchema = z.object({
   profileId: z.string().uuid(),
-  records: z.array(playRecordSchema).min(1)
+  records: z.array(playRecordSchema).min(1).max(BULK_ARRAY_MAX)
 });
 
 const overwriteRecordSchema = z.object({

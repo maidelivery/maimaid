@@ -659,3 +659,20 @@
 "data.sync.status.fetchingUtageChartStats" = "Fetching utage note totals...";
 "data.sync.log.fetchedUtageChartStats %lld" = "Fetched utage note totals: %lld entries";
 "data.sync.log.mergedUtageChartStats %lld" = "Merged utage note totals: updated %lld charts";
+
+// MARK: - Backend Account Resolution
+"settings.cloud.logout.options.title" = "Sign Out Options";
+"settings.cloud.logout.options.message" = "Choose whether local profiles and scores should be kept on this device.";
+"settings.cloud.logout.option.keepLocal" = "Keep local data";
+"settings.cloud.logout.option.clearLocal" = "Clear local data";
+"settings.cloud.logout.option.cancel" = "Cancel";
+"settings.cloud.logout.clearLocal.success" = "Local data cleared.";
+"settings.cloud.resolution.title" = "Resolve account data conflict";
+"settings.cloud.resolution.section.actions" = "Choose sync behavior";
+"settings.cloud.resolution.message.current" = "Current account";
+"settings.cloud.resolution.message.owner" = "Local data owner";
+"settings.cloud.resolution.option.merge" = "Merge local and cloud";
+"settings.cloud.resolution.option.overwriteCloud" = "Use local to overwrite cloud";
+"settings.cloud.resolution.option.overwriteLocal" = "Use cloud to overwrite local";
+"settings.cloud.resolution.processing" = "Applying selected strategy...";
+"settings.cloud.resolution.success" = "Conflict resolved.";

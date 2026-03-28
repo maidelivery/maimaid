@@ -16,6 +16,7 @@ import { MfaService } from "../services/mfa.service.js";
 import { SyncService } from "../services/sync.service.js";
 import { StaticBundleService } from "../services/static-bundle.service.js";
 import { AdminUserService } from "../services/admin-user.service.js";
+import { RateLimitService } from "../services/rate-limit.service.js";
 
 const env = getEnv();
 const prisma = getPrismaClient();
@@ -32,6 +33,7 @@ container.registerSingleton(TOKENS.ImportService, ImportService);
 container.registerSingleton(TOKENS.CommunityAliasService, CommunityAliasService);
 container.registerSingleton(TOKENS.JobService, JobService);
 container.registerSingleton(TOKENS.MfaService, MfaService);
+container.registerSingleton(TOKENS.RateLimitService, RateLimitService);
 container.registerSingleton(TOKENS.SyncService, SyncService);
 container.registerSingleton(TOKENS.StaticBundleService, StaticBundleService);
 container.registerSingleton(TOKENS.AdminUserService, AdminUserService);

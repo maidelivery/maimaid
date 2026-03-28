@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { di } from "../../di/container.js";
 import { TOKENS } from "../../di/tokens.js";
@@ -6,6 +6,7 @@ import { authOptional, authRequired } from "../../middleware/auth.js";
 import type { CommunityAliasService } from "../../services/community-alias.service.js";
 import { ok } from "../../http/response.js";
 import type { AppEnv } from "../../types/hono.js";
+import type { RateLimitService } from "../../services/rate-limit.service.js";
 
 const submitSchema = z.object({
   songIdentifier: z.string().min(1),
@@ -20,6 +21,51 @@ const voteSchema = z.object({
 });
 
 export const communityV1Route = new Hono<AppEnv>();
+const COMMUNITY_RATE_LIMIT = {
+  approvedSyncIp: { bucket: "community.approved_sync.ip", limit: 120, windowSeconds: 60 }
+} as const;
+
+const resolveClientIp = (c: Context<AppEnv>): string => {
+  const cfConnectingIp = c.req.header("cf-connecting-ip")?.trim();
+  if (cfConnectingIp) {
+    return cfConnectingIp;
+  }
+
+  const xForwardedFor = c.req.header("x-forwarded-for");
+  if (xForwardedFor) {
+    const first = xForwardedFor
+      .split(",")
+      .map((item) => item.trim())
+      .find((item) => item.length > 0);
+    if (first) {
+      return first;
+    }
+  }
+
+  const realIp = c.req.header("x-real-ip")?.trim();
+  if (realIp) {
+    return realIp;
+  }
+
+  return "unknown";
+};
+
+const enforceRateLimit = async (
+  input: {
+    bucket: string;
+    key: string;
+    limit: number;
+    windowSeconds: number;
+  }
+) => {
+  const rateLimitService = di.resolve<RateLimitService>(TOKENS.RateLimitService);
+  await rateLimitService.consume({
+    bucket: input.bucket,
+    key: input.key,
+    limit: input.limit,
+    windowSeconds: input.windowSeconds
+  });
+};
 
 communityV1Route.post("/aliases/submit", authRequired, async (c) => {
   const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
@@ -83,6 +129,10 @@ communityV1Route.post("/aliases/vote", authRequired, async (c) => {
 
 communityV1Route.get("/aliases/approved-sync", async (c) => {
   const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
+  await enforceRateLimit({
+    ...COMMUNITY_RATE_LIMIT.approvedSyncIp,
+    key: resolveClientIp(c)
+  });
   const sinceQuery = c.req.query("since");
   const since = sinceQuery ? new Date(sinceQuery) : null;
   const limit = Number(c.req.query("limit") ?? 1000);

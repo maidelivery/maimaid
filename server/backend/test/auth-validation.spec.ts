@@ -13,6 +13,11 @@ describe("auth password validation", () => {
     expect(isPasswordComplexEnough("ALLUPPERCASE123!")).toBe(false);
     expect(isPasswordComplexEnough("NoDigits!!")).toBe(false);
     expect(isPasswordComplexEnough("NoSymbols1234")).toBe(false);
+    expect(isPasswordComplexEnough(`Aa1!${"x".repeat(200)}`)).toBe(false);
+  });
+
+  it("enforces max length 128", () => {
+    expect(isPasswordComplexEnough(`Aa1!${"x".repeat(124)}`)).toBe(true);
+    expect(isPasswordComplexEnough(`Aa1!${"x".repeat(125)}`)).toBe(false);
   });
 });
-

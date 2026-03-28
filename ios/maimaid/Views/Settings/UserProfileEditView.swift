@@ -70,10 +70,10 @@ struct UserProfileEditView: View {
                 // Show detected latest version for selected server
                 HStack {
                     Text("userProfile.latestVersion")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Spacer()
                     Text(ThemeUtils.versionAbbreviation(detectedLatestVersion))
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                         .font(.subheadline.bold())
                 }
             }

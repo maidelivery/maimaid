@@ -56,7 +56,15 @@ struct maimaidApp: App {
                         await BackendSessionManager.shared.checkSession()
                         if BackendSessionManager.shared.isAuthenticated {
                             let context = ModelContext(sharedModelContainer)
-                            try? await BackendIncrementalSyncService.pullUpdates(context: context, force: false)
+                            if let userId = BackendSessionManager.shared.currentUser?.id {
+                                let conflictState = AccountDataResolutionCoordinator.shared.detectConflictAfterAuth(
+                                    context: context,
+                                    currentUserId: userId
+                                )
+                                if !conflictState.requiresResolution {
+                                    try? await BackendIncrementalSyncService.pullUpdates(context: context, force: false)
+                                }
+                            }
                         }
                     }
                     await BackendAutoBackup.backupIfNeeded(
@@ -204,6 +212,17 @@ enum BackendAutoBackup {
             cancelScheduledBackup()
             return
         }
+        guard let userId = BackendSessionManager.shared.currentUser?.id else {
+            cancelScheduledBackup()
+            return
+        }
+        guard !AccountDataResolutionCoordinator.shared.hasPendingResolution(
+            context: context,
+            currentUserId: userId
+        ) else {
+            cancelScheduledBackup()
+            return
+        }
         guard isBackupDue(config: config) else { return }
         
         print("BackendAutoBackup: foreground backup triggered (\(reason))")
@@ -229,6 +248,17 @@ enum BackendAutoBackup {
         
         await BackendSessionManager.shared.checkSession()
         guard BackendSessionManager.shared.isAuthenticated else {
+            cancelScheduledBackup()
+            return
+        }
+        guard let userId = BackendSessionManager.shared.currentUser?.id else {
+            cancelScheduledBackup()
+            return
+        }
+        guard !AccountDataResolutionCoordinator.shared.hasPendingResolution(
+            context: context,
+            currentUserId: userId
+        ) else {
             cancelScheduledBackup()
             return
         }
@@ -260,6 +290,17 @@ enum BackendAutoBackup {
         
         await BackendSessionManager.shared.checkSession()
         guard BackendSessionManager.shared.isAuthenticated else {
+            cancelScheduledBackup()
+            return
+        }
+        guard let userId = BackendSessionManager.shared.currentUser?.id else {
+            cancelScheduledBackup()
+            return
+        }
+        guard !AccountDataResolutionCoordinator.shared.hasPendingResolution(
+            context: context,
+            currentUserId: userId
+        ) else {
             cancelScheduledBackup()
             return
         }

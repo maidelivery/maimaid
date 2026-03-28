@@ -26,6 +26,7 @@ export class JwtService {
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
       .setSubject(payload.sub)
       .setIssuer(this.env.JWT_ISSUER)
+      .setAudience(this.env.JWT_AUDIENCE)
       .setIssuedAt()
       .setExpirationTime(`${this.env.JWT_ACCESS_TTL_SECONDS}s`)
       .sign(this.accessSecret());
@@ -34,7 +35,8 @@ export class JwtService {
   async verifyAccessToken(token: string): Promise<AccessTokenPayload> {
     try {
       const { payload } = await jwtVerify(token, this.accessSecret(), {
-        issuer: this.env.JWT_ISSUER
+        issuer: this.env.JWT_ISSUER,
+        audience: this.env.JWT_AUDIENCE
       });
 
       return {

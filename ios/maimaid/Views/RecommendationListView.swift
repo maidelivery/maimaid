@@ -102,7 +102,7 @@ struct RecommendationListView: View {
                     ProgressView()
                     Text("rec.loading")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(.systemGroupedBackground))
@@ -202,15 +202,15 @@ struct RecommendationRow: View {
                         let rank = RatingUtils.calculateRank(achievement: rate)
                         Text(rank)
                             .font(.system(size: 11, weight: .black, design: .rounded))
-                            .foregroundColor(RatingUtils.colorForRank(rank))
+                            .foregroundStyle(RatingUtils.colorForRank(rank))
                         
-                        Text(String(format: "%.2f%%", rate))
+                        Text("\(rate, format: .number.precision(.fractionLength(2)))%")
                             .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     } else {
                         Text("rec.status.notPlayed")
                             .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 
@@ -228,11 +228,11 @@ struct RecommendationRow: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text("+\(result.potentialGain)")
                     .font(.system(size: 18, weight: .black, design: .rounded))
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                 
                 Text("rec.afterRank \(result.targetRank)")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             .fixedSize()
         }

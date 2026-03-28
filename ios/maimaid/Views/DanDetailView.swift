@@ -105,7 +105,7 @@ struct DanSectionCard: View {
                 HStack(spacing: 8) {
                     Text(title)
                         .font(.system(size: 22, weight: .black, design: .rounded))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
@@ -264,12 +264,12 @@ struct DanRequirementPills: View {
             if let icon {
                 Image(systemName: icon)
                     .font(.system(size: 8, weight: .bold))
-                    .foregroundColor(tint)
+                    .foregroundStyle(tint)
             }
             
             Text(text)
                 .font(.system(size: 9, weight: .bold, design: .rounded))
-                .foregroundColor(tint)
+                .foregroundStyle(tint)
         }
         .lineLimit(1)
         .padding(.horizontal, 7)
@@ -325,13 +325,13 @@ struct DanSongRowEnhanced: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(song.title)
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                         .lineLimit(1)
                     
                     HStack(spacing: 5) {
                         Text(ref.type.uppercased() == "STD" ? "STD" : ref.type.uppercased())
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
                             .background(
@@ -341,18 +341,18 @@ struct DanSongRowEnhanced: View {
                         
                         Text(difficultyDisplayName(ref.difficulty))
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(diffColor)
+                            .foregroundStyle(diffColor)
                         
                         if let sheet = matchingSheet {
                             Text("Lv.\(sheet.internalLevel ?? sheet.level)")
                                 .font(.system(size: 12, weight: .semibold, design: .rounded))
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         
                         if let desc = description, !desc.isEmpty {
                             Text(desc)
                                 .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(.blue)
+                                .foregroundStyle(.blue)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
                                 .background(Color.blue.opacity(0.12), in: Capsule())
@@ -364,21 +364,21 @@ struct DanSongRowEnhanced: View {
                 
                 VStack(alignment: .trailing, spacing: 6) {
                     if let sheet = matchingSheet, let score = score(for: sheet) {
-                        Text(String(format: "%.4f%%", score.rate))
+                        Text("\(score.rate, format: .number.precision(.fractionLength(4)))%")
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 5)
                             .background(diffColor.opacity(0.12), in: Capsule())
                     } else {
                         Text("dan.detail.noRecord")
                             .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     
                     Image(systemName: "chevron.right")
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.secondary.opacity(0.5))
+                        .foregroundStyle(.secondary.opacity(0.5))
                 }
             }
             .padding(11)
@@ -427,19 +427,19 @@ struct DanSongPlaceholder: View {
                 
                 Image(systemName: "questionmark")
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.secondary.opacity(0.5))
+                    .foregroundStyle(.secondary.opacity(0.5))
             }
             
             VStack(alignment: .leading, spacing: 6) {
                 Text(ref.title)
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
                 
                 HStack(spacing: 5) {
                     Text(ref.type.uppercased())
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
                         .background(
@@ -449,12 +449,12 @@ struct DanSongPlaceholder: View {
                     
                     Text(displayDifficultyName(ref.difficulty))
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(diffColor.opacity(0.8))
+                        .foregroundStyle(diffColor.opacity(0.8))
                     
                     if let desc = description, !desc.isEmpty {
                         Text(desc)
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
                             .background(Color.blue.opacity(0.12), in: Capsule())
@@ -466,7 +466,7 @@ struct DanSongPlaceholder: View {
             
             Text("dan.detail.missing")
                 .font(.system(size: 9, weight: .medium))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .padding(11)
         .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 15))

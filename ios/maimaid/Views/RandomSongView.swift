@@ -86,7 +86,7 @@ struct RandomSongView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("random.results")
                             .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .padding(.horizontal, 24)
                             .padding(.bottom, 8)
                         
@@ -117,7 +117,7 @@ struct RandomSongView: View {
                     showFilterSheet = true
                 } label: {
                     Image(systemName: "line.3.horizontal.decrease.circle")
-                        .foregroundColor(filterSettings == FilterSettings() ? Color.primary : Color.blue)
+                        .foregroundStyle(filterSettings == FilterSettings() ? Color.primary : Color.blue)
                 }
             }
         }
@@ -232,10 +232,10 @@ struct SlotColumn: View {
                     VStack {
                         Image(systemName: "questionmark.circle.fill")
                             .font(.system(size: 40))
-                            .foregroundColor(.gray.opacity(0.3))
+                            .foregroundStyle(.gray.opacity(0.3))
                         Text("random.ready")
                             .font(.caption.bold())
-                            .foregroundColor(.gray.opacity(0.4))
+                            .foregroundStyle(.gray.opacity(0.4))
                     }
                     .frame(height: slotHeight)
                     .frame(maxWidth: .infinity)

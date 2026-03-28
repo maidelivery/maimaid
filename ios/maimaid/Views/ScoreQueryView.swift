@@ -239,14 +239,16 @@ struct ScoreQueryView: View {
                 }
                 
                 if let anchorID = anchorID {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(50))
                         withAnimation(.easeOut(duration: 0.2)) {
                             self.zoomAnchorEntryID = anchorID
                         }
                     }
                 }
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+
+                Task {
+                    try? await Task.sleep(for: .milliseconds(300))
                     navigationDisabled = false
                 }
             }
@@ -387,11 +389,11 @@ struct ScoreQueryView: View {
         VStack(spacing: 4) {
             Text("\(value)")
                 .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
                 .contentTransition(.numericText())
             Text(label)
                 .font(.system(size: 10, weight: .medium))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -649,7 +651,7 @@ struct ScoreQueryView: View {
                 HStack {
                     Text("^[\(filteredEntries.count) \(String(localized: "scoreQuery.results"))](inflect: true)")
                         .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     
                     Spacer()
                     
@@ -740,7 +742,7 @@ struct ScoreQueryView: View {
         case .rank:
             Text(entry.rank)
                 .font(.system(size: intCols > 5 ? 7 : 9, weight: .black, design: .rounded))
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .padding(.horizontal, 3)
                 .padding(.vertical, 1)
                 .background(RatingUtils.colorForRank(entry.rank), in: RoundedRectangle(cornerRadius: 3))
@@ -748,7 +750,7 @@ struct ScoreQueryView: View {
             if let fc = entry.fc, !fc.isEmpty {
                 Text(ThemeUtils.normalizeFC(fc))
                     .font(.system(size: intCols > 5 ? 7 : 9, weight: .black, design: .rounded))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 3)
                     .padding(.vertical, 1)
                     .background(ThemeUtils.fcColor(fc), in: RoundedRectangle(cornerRadius: 3))
@@ -757,7 +759,7 @@ struct ScoreQueryView: View {
             if let fs = entry.fs, !fs.isEmpty {
                 Text(ThemeUtils.normalizeFS(fs))
                     .font(.system(size: intCols > 5 ? 7 : 9, weight: .black, design: .rounded))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 3)
                     .padding(.vertical, 1)
                     .background(ThemeUtils.fsColor(fs), in: RoundedRectangle(cornerRadius: 3))
@@ -794,23 +796,23 @@ struct ScoreQueryView: View {
                 Text(entry.songTitle)
                     .font(.system(size: 14, weight: .semibold))
                     .lineLimit(1)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 
                 HStack(spacing: 4) {
-                    Text(String(format: "%.4f%%", entry.achievement))
+                    Text("\(entry.achievement, format: .number.precision(.fractionLength(4)))%")
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     
                     if let fc = entry.fc, !fc.isEmpty {
                         Text(ThemeUtils.normalizeFC(fc))
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(ThemeUtils.fcColor(fc))
+                            .foregroundStyle(ThemeUtils.fcColor(fc))
                     }
                     
                     if let fs = entry.fs, !fs.isEmpty {
                         Text(ThemeUtils.normalizeFS(fs))
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(ThemeUtils.fsColor(fs))
+                            .foregroundStyle(ThemeUtils.fsColor(fs))
                     }
                 }
             }
@@ -821,11 +823,11 @@ struct ScoreQueryView: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text(entry.rank)
                     .font(.system(size: 13, weight: .black, design: .rounded))
-                    .foregroundColor(RatingUtils.colorForRank(entry.rank))
+                    .foregroundStyle(RatingUtils.colorForRank(entry.rank))
                 
                 Text("\(entry.rating)")
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 8)
@@ -1069,7 +1071,7 @@ struct ScoreQueryView: View {
     
     private func constantKey(for level: Double) -> String {
         let normalized = (level * 10).rounded(.towardZero) / 10
-        return String(format: "%.1f", normalized)
+        return normalized.formatted(.number.precision(.fractionLength(1)))
     }
     
     private func exportBucketBaseLevel(for level: Double) -> Int {

@@ -93,17 +93,17 @@ private struct LinkCard: View {
                     
                     Image(systemName: link.icon)
                         .font(.system(size: 22))
-                        .foregroundColor(link.color)
+                        .foregroundStyle(link.color)
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(link.title)
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                     
                     Text(link.subtitle)
                         .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                 }
@@ -112,7 +112,7 @@ private struct LinkCard: View {
                 
                 Image(systemName: "arrow.up.right")
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.secondary.opacity(0.3))
+                    .foregroundStyle(.secondary.opacity(0.3))
             }
             .padding(16)
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))

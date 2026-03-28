@@ -506,7 +506,7 @@ struct ScoreEntryView: View {
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.green)
                             
-                            Text("\(String(format: "%.4f", rate))%")
+                            Text("\(rate, format: .number.precision(.fractionLength(4)))%")
                                 .font(.headline.bold())
                                 .monospacedDigit()
                                 .foregroundStyle(.primary)
@@ -564,7 +564,7 @@ struct ScoreEntryView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 
-                Text("\(String(format: "%.4f", score.rate))% · \(score.rank)")
+                Text("\(score.rate, format: .number.precision(.fractionLength(4)))% · \(score.rank)")
                     .font(.headline.bold())
                     .monospacedDigit()
                     .foregroundStyle(.primary)

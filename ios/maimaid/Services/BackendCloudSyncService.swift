@@ -2,6 +2,61 @@ import Foundation
 import SwiftData
 import UIKit
 
+struct CloudSnapshot {
+    let profiles: [CloudSnapshotProfile]
+    let scoresByProfileId: [UUID: [CloudSnapshotScore]]
+    let recordsByProfileId: [UUID: [CloudSnapshotPlayRecord]]
+}
+
+struct CloudSnapshotProfile: Identifiable {
+    let id: UUID
+    let name: String
+    let server: String
+    let avatarUrl: String?
+    let isActive: Bool
+    let playerRating: Int
+    let plate: String?
+    let dfUsername: String
+    let dfImportToken: String
+    let lxnsRefreshToken: String
+    let b35Count: Int
+    let b15Count: Int
+    let b35RecLimit: Int
+    let b15RecLimit: Int
+    let createdAt: Date
+    let lastImportDateDf: Date?
+    let lastImportDateLxns: Date?
+}
+
+struct CloudSnapshotSheet {
+    let songIdentifier: String
+    let songId: Int
+    let chartType: String
+    let difficulty: String
+}
+
+struct CloudSnapshotScore {
+    let profileId: UUID
+    let achievements: Double
+    let rank: String
+    let dxScore: Int
+    let fc: String?
+    let fs: String?
+    let achievedAt: Date
+    let sheet: CloudSnapshotSheet?
+}
+
+struct CloudSnapshotPlayRecord {
+    let profileId: UUID
+    let achievements: Double
+    let rank: String
+    let dxScore: Int
+    let fc: String?
+    let fs: String?
+    let playTime: Date
+    let sheet: CloudSnapshotSheet?
+}
+
 private struct BackendProfilesResponse: Decodable {
     let profiles: [BackendRemoteProfile]
 }
@@ -256,6 +311,70 @@ enum BackendCloudSyncService {
         let config = ensureSyncConfig(context: context)
         config.lastCloudBackupDate = Date.now
         try context.save()
+    }
+
+    static func fetchCloudSnapshot() async throws -> CloudSnapshot {
+        guard BackendSessionManager.shared.isAuthenticated else {
+            throw BackendAPIError.unauthorized
+        }
+
+        let profileResponse: BackendProfilesResponse = try await BackendAPIClient.request(
+            path: "v1/profiles",
+            method: "GET",
+            authentication: .required
+        )
+
+        var profiles: [CloudSnapshotProfile] = []
+        var scoresByProfileId: [UUID: [CloudSnapshotScore]] = [:]
+        var recordsByProfileId: [UUID: [CloudSnapshotPlayRecord]] = [:]
+
+        for remote in profileResponse.profiles {
+            guard let profileId = UUID(uuidString: remote.id) else { continue }
+            profiles.append(
+                CloudSnapshotProfile(
+                    id: profileId,
+                    name: remote.name,
+                    server: remote.server,
+                    avatarUrl: remote.avatarUrl,
+                    isActive: remote.isActive,
+                    playerRating: remote.playerRating,
+                    plate: remote.plate,
+                    dfUsername: remote.dfUsername,
+                    dfImportToken: remote.dfImportToken,
+                    lxnsRefreshToken: remote.lxnsRefreshToken,
+                    b35Count: remote.b35Count,
+                    b15Count: remote.b15Count,
+                    b35RecLimit: remote.b35RecLimit,
+                    b15RecLimit: remote.b15RecLimit,
+                    createdAt: remote.createdAt,
+                    lastImportDateDf: remote.lastImportDateDf,
+                    lastImportDateLxns: remote.lastImportDateLxns
+                )
+            )
+
+            let escapedProfileId = remote.id.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? remote.id
+
+            let scoresResponse: BackendScoresResponse = try await BackendAPIClient.request(
+                path: "v1/scores?profileId=\(escapedProfileId)",
+                method: "GET",
+                authentication: .required
+            )
+
+            let recordsResponse: BackendPlayRecordsResponse = try await BackendAPIClient.request(
+                path: "v1/scores/play-records?profileId=\(escapedProfileId)&limit=5000",
+                method: "GET",
+                authentication: .required
+            )
+
+            scoresByProfileId[profileId] = scoresResponse.scores.compactMap { mapRemoteScore($0) }
+            recordsByProfileId[profileId] = recordsResponse.records.compactMap { mapRemoteRecord($0) }
+        }
+
+        return CloudSnapshot(
+            profiles: profiles,
+            scoresByProfileId: scoresByProfileId,
+            recordsByProfileId: recordsByProfileId
+        )
     }
 
     static func uploadAvatarIfNeeded(for profile: UserProfile) async throws -> String? {
@@ -683,6 +802,50 @@ enum BackendCloudSyncService {
             return [normalized]
         }
         return [normalized, lowered]
+    }
+
+    private static func mapRemoteSheet(_ sheet: BackendRemoteSheet?) -> CloudSnapshotSheet? {
+        guard let sheet else {
+            return nil
+        }
+        return CloudSnapshotSheet(
+            songIdentifier: sheet.songIdentifier,
+            songId: sheet.songId,
+            chartType: sheet.chartType,
+            difficulty: sheet.difficulty
+        )
+    }
+
+    private static func mapRemoteScore(_ remoteScore: BackendRemoteScore) -> CloudSnapshotScore? {
+        guard let profileId = UUID(uuidString: remoteScore.profileId) else {
+            return nil
+        }
+        return CloudSnapshotScore(
+            profileId: profileId,
+            achievements: remoteScore.achievements.value,
+            rank: remoteScore.rank,
+            dxScore: remoteScore.dxScore,
+            fc: remoteScore.fc,
+            fs: remoteScore.fs,
+            achievedAt: remoteScore.achievedAt,
+            sheet: mapRemoteSheet(remoteScore.sheet)
+        )
+    }
+
+    private static func mapRemoteRecord(_ remoteRecord: BackendRemotePlayRecord) -> CloudSnapshotPlayRecord? {
+        guard let profileId = UUID(uuidString: remoteRecord.profileId) else {
+            return nil
+        }
+        return CloudSnapshotPlayRecord(
+            profileId: profileId,
+            achievements: remoteRecord.achievements.value,
+            rank: remoteRecord.rank,
+            dxScore: remoteRecord.dxScore,
+            fc: remoteRecord.fc,
+            fs: remoteRecord.fs,
+            playTime: remoteRecord.playTime,
+            sheet: mapRemoteSheet(remoteRecord.sheet)
+        )
     }
 
     private static func canonicalScoreSheetId(for sheet: Sheet) -> String {

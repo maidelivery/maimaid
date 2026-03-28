@@ -15,14 +15,27 @@ import { syncV1Route } from "./routes/v1/sync.route.js";
 import { staticV1Route } from "./routes/v1/static.route.js";
 import { jobsInternalRoute } from "./routes/internal/jobs.route.js";
 import type { AppEnv } from "./types/hono.js";
+import { getEnv } from "./env.js";
 
 export const createApp = () => {
+  const env = getEnv();
+  const corsAllowedOrigins = env.CORS_ALLOWED_ORIGINS.split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
   const app = new Hono<AppEnv>();
 
   app.use(
     "*",
     cors({
-      origin: "*",
+      origin: (origin) => {
+        if (!origin) {
+          return null;
+        }
+        if (corsAllowedOrigins.includes(origin)) {
+          return origin;
+        }
+        return null;
+      },
       allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowHeaders: ["Content-Type", "Authorization", "X-Maimaid-Client"]
     })
@@ -81,10 +94,16 @@ export const createApp = () => {
       );
     }
 
+    console.error("[internal_error]", {
+      method: c.req.method,
+      url: c.req.url,
+      error
+    });
+
     return c.json(
       {
         code: "internal_error",
-        message: error instanceof Error ? error.message : "Unknown error"
+        message: env.NODE_ENV === "production" ? "Internal error." : error instanceof Error ? error.message : "Unknown error"
       },
       500
     );

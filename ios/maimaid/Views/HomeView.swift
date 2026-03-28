@@ -167,12 +167,12 @@ struct HomeView: View {
         guard !hasComputedStandardB50 || fingerprint != lastStandardB50Fingerprint else { return }
         
         // Small delay to avoid computing during navigation animations
-        try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
-        
+        try? await Task.sleep(for: .milliseconds(100))
+
         // Re-check after sleep in case we navigated away
         let currentFingerprint = standardB50Fingerprint()
         guard currentFingerprint == fingerprint else { return }
-        
+
         await updateStandardB50()
         lastStandardB50Fingerprint = fingerprint
         hasComputedStandardB50 = true
@@ -183,8 +183,8 @@ struct HomeView: View {
         guard !hasComputedB50 || fingerprint != lastB50Fingerprint else { return }
         
         // Small delay to avoid computing during navigation animations
-        try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
-        
+        try? await Task.sleep(for: .milliseconds(100))
+
         // Re-check after sleep in case we navigated away
         let currentFingerprint = b50Fingerprint()
         guard currentFingerprint == fingerprint else { return }
@@ -234,21 +234,21 @@ struct HomeView: View {
             HStack {
                 Image(systemName: "trophy.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("home.bestTable.button.title \(totalB50Count)")
                         .font(.system(size: 16, weight: .bold))
                     Text("home.bestTable.button.subtitle \(currentB35Count) \(currentB15Count)")
                         .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 
                 Spacer()
                 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.secondary.opacity(0.5))
+                    .foregroundStyle(.secondary.opacity(0.5))
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
@@ -281,6 +281,7 @@ struct HomeView: View {
                     gradient: [Color.orange, Color.red]
                 )
             }
+            .buttonStyle(.plain)
             
             NavigationLink(destination: ScoreQueryView()) {
                 functionCard(
@@ -340,7 +341,7 @@ struct HomeView: View {
     private var ratingBadge: some View {
         Text("\(displayRating)")
             .font(.system(size: 10, weight: .black, design: .rounded))
-            .foregroundColor(.white)
+            .foregroundStyle(.white)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(ThemeUtils.ratingColor(displayRating), in: Capsule())
@@ -385,13 +386,13 @@ struct HomeView: View {
                     HStack(spacing: 6) {
                         Text(activeProfile?.name ?? String(localized: "home.profile.unbound"))
                             .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                         
                         // Server badge
                         if let profile = activeProfile, let server = GameServer(rawValue: profile.server) {
                             Text(server.displayName)
                                 .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
                                 .background(serverColor(server), in: RoundedRectangle(cornerRadius: 4))
@@ -401,11 +402,11 @@ struct HomeView: View {
                     if let plate = activeProfile?.plate, !plate.isEmpty {
                         Text(plate)
                             .font(.system(size: 12))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     } else {
                         Text("home.profile.editHint")
                             .font(.system(size: 12))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 
@@ -413,7 +414,7 @@ struct HomeView: View {
                 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.secondary.opacity(0.3))
+                    .foregroundStyle(.secondary.opacity(0.3))
             }
             .padding(16)
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
@@ -446,11 +447,11 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 
                 Text(subtitle)
                     .font(.system(size: 12))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
         }

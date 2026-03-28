@@ -98,7 +98,7 @@ struct UserProfileListView: View {
                     Image(systemName: "person.crop.circle.fill")
                         .resizable()
                         .frame(width: 48, height: 48)
-                        .foregroundColor(.blue.opacity(0.6))
+                        .foregroundStyle(.blue.opacity(0.6))
                 }
             }
             
@@ -109,7 +109,7 @@ struct UserProfileListView: View {
                     
                     if profile.isActive {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
+                            .foregroundStyle(.green)
                             .font(.caption)
                     }
                 }
@@ -123,12 +123,12 @@ struct UserProfileListView: View {
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(serverColor(server).opacity(0.15))
-                        .foregroundColor(serverColor(server))
+                        .foregroundStyle(serverColor(server))
                         .clipShape(Capsule())
                     
                     Text(ThemeUtils.versionAbbreviation(version))
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             
@@ -137,7 +137,7 @@ struct UserProfileListView: View {
             if profile.isActive {
                 Text("userProfile.active")
                     .font(.caption2)
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(Color.green.opacity(0.1))

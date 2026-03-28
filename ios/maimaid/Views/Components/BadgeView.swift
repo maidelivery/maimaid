@@ -13,7 +13,7 @@ struct BadgeView: View {
             .padding(.horizontal, 5)
             .padding(.vertical, 2)
             .background(background)
-            .foregroundColor(foreground)
+            .foregroundStyle(foreground)
             .cornerRadius(4)
     }
 }

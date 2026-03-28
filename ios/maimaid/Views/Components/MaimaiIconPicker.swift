@@ -51,7 +51,7 @@ struct MaimaiIconPicker: View {
                             Text(icon.name)
                                 .font(.system(size: 10))
                                 .lineLimit(1)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                         }
                     }
                     .buttonStyle(.plain)

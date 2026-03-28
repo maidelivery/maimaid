@@ -27,10 +27,6 @@ private struct BackendRegisterPayload: Codable {
     let verificationEmailSent: Bool
 }
 
-private struct BackendEmailExistsPayload: Codable {
-    let exists: Bool
-}
-
 private struct BackendResendVerificationPayload: Codable {
     let verificationEmailSent: Bool
 }
@@ -47,6 +43,10 @@ private struct BackendMePayload: Codable {
 
 private struct BackendRefreshRequest: Encodable {
     let refreshToken: String
+}
+
+private struct BackendSessionExchangeRequest: Encodable {
+    let sessionCode: String
 }
 
 private struct KeychainTokenStore {
@@ -158,7 +158,9 @@ final class BackendSessionManager {
         let token = value(of: "token", from: url)
 
         if type == "session" {
-            handleSessionRedirect(result: result, from: url)
+            Task { @MainActor in
+                await handleSessionRedirect(result: result, from: url)
+            }
             return
         }
 
@@ -273,16 +275,6 @@ final class BackendSessionManager {
             authentication: .none
         )
         return payload.verificationEmailSent
-    }
-
-    func emailExists(_ email: String) async throws -> Bool {
-        let encoded = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let payload: BackendEmailExistsPayload = try await BackendAPIClient.request(
-            path: "v1/auth/email-exists?email=\(encoded)",
-            method: "GET",
-            authentication: .none
-        )
-        return payload.exists
     }
 
     func forgotPassword(email: String) async throws {
@@ -406,11 +398,30 @@ final class BackendSessionManager {
             .value
     }
 
-    private func handleSessionRedirect(result: String?, from url: URL) {
+    private func handleSessionRedirect(result: String?, from url: URL) async {
         guard result == "success" else {
             pendingMessage = "settings.cloud.message.authLinkFailed"
             pendingMessageIsError = true
             return
+        }
+
+        if let sessionCode = value(of: "sessionCode", from: url), sessionCode.count >= 20 {
+            do {
+                let payload: BackendAuthPayload = try await BackendAPIClient.request(
+                    path: "v1/auth/session/exchange",
+                    method: "POST",
+                    body: BackendSessionExchangeRequest(sessionCode: sessionCode),
+                    authentication: .none
+                )
+                applyAuthPayload(payload)
+                pendingMessage = "settings.cloud.message.loginSuccess"
+                pendingMessageIsError = false
+                return
+            } catch {
+                pendingMessage = "settings.cloud.message.authLinkFailed"
+                pendingMessageIsError = true
+                return
+            }
         }
 
         guard

@@ -57,7 +57,7 @@ struct SettingsView: View {
                             settingsRowLabel(icon: "snowflake", iconColor: .cyan, title: "settings.data.importLxns")
                             Spacer()
                             if let c = config, !c.lxnsRefreshToken.isEmpty {
-                                Text("settings.data.bound").font(.caption).foregroundColor(.green)
+                                Text("settings.data.bound").font(.caption).foregroundStyle(.green)
                             }
                         }
                     }
@@ -122,7 +122,7 @@ struct SettingsView: View {
             Spacer()
             Text(value)
                 .font(.system(size: 15))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
     }
     
@@ -130,7 +130,7 @@ struct SettingsView: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 14))
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .frame(width: 28, height: 28)
                 .background(iconColor, in: RoundedRectangle(cornerRadius: 6))
             

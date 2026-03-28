@@ -67,7 +67,7 @@ struct MarqueeText: View {
         Text(text)
             .font(font)
             .fontWeight(fontWeight)
-            .foregroundColor(color)
+            .foregroundStyle(color)
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: false)
     }

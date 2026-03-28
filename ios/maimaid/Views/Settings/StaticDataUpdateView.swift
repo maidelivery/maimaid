@@ -68,22 +68,27 @@ struct StaticDataUpdateView: View {
                     }
                     .padding(.vertical, 4)
                 } else {
-                    Button(actionButtonTitle) {
+                    actionRow(
+                        title: actionButtonTitle,
+                        icon: primaryActionIcon,
+                        tint: primaryActionTint,
+                        disabled: isSyncing
+                    ) {
                         Task {
                             await runFullUpdate()
                         }
                     }
-                    .buttonStyle(.plain)
-                    .tint(.accentColor)
 
-                    Button("重新检查更新") {
+                    actionRow(
+                        title: "重新检查更新",
+                        icon: "magnifyingglass",
+                        tint: .green,
+                        disabled: isSyncing
+                    ) {
                         Task {
                             await checkForUpdate()
                         }
                     }
-                    .buttonStyle(.plain)
-                    .tint(.accentColor)
-                    .disabled(isSyncing)
                 }
 
                 if let syncErrorMessage, !syncErrorMessage.isEmpty {
@@ -277,6 +282,58 @@ struct StaticDataUpdateView: View {
         default:
             "立即更新"
         }
+    }
+
+    private var primaryActionIcon: String {
+        switch updateState {
+        case .available:
+            "arrow.down.circle"
+        case .upToDate:
+            "arrow.clockwise.circle"
+        default:
+            "arrow.triangle.2.circlepath"
+        }
+    }
+
+    private var primaryActionTint: Color {
+        switch updateState {
+        case .available:
+            .blue
+        case .upToDate:
+            .orange
+        default:
+            .blue
+        }
+    }
+
+    private func actionRow(
+        title: String,
+        icon: String,
+        tint: Color,
+        disabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 28, height: 28)
+                    .background(tint, in: .rect(cornerRadius: 8))
+
+                Text(title)
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Image(systemName: "arrow.up.forward.app")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(tint)
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .opacity(disabled ? 0.6 : 1)
     }
 }
 

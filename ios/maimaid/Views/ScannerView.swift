@@ -362,7 +362,7 @@ struct ScannerView: View {
                                 .tint(.white)
                             Text("scanner.processing")
                                 .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
@@ -373,7 +373,7 @@ struct ScannerView: View {
                     if let feedback = photoImportFeedback {
                         Text(feedback)
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
                             .background(.ultraThinMaterial, in: Capsule())
@@ -795,7 +795,7 @@ struct ScannerView: View {
             PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                 Image(systemName: "photo.on.rectangle.angled")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(10)
                     .background(.ultraThinMaterial, in: Circle())
             }
@@ -812,7 +812,10 @@ struct ScannerView: View {
         guard !isSavingPhoto else { return }
         UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
         withAnimation(.easeOut(duration: 0.1)) { showFlashOverlay = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { withAnimation(.easeIn(duration: 0.2)) { self.showFlashOverlay = false } }
+        Task {
+            try? await Task.sleep(for: .milliseconds(100))
+            withAnimation(.easeIn(duration: 0.2)) { self.showFlashOverlay = false }
+        }
         isSavingPhoto = true
         NotificationCenter.default.post(name: NSNotification.Name("TakeScannerPhoto"), object: nil)
     }

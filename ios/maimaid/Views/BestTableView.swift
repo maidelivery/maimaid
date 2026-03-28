@@ -9,7 +9,7 @@ struct BestTableView: View {
     @Query private var configs: [SyncConfig]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     
-    @StateObject private var cache = B50CacheService.shared
+    @State private var cache = B50CacheService.shared
     
     private var activeProfile: UserProfile? { activeProfiles.first }
     
@@ -64,7 +64,7 @@ struct BestTableView: View {
                     VStack(alignment: .leading) {
                         Text("bestTable.rating")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Text("\(cache.b50Result.total)")
                             .font(.system(size: 34, weight: .black, design: .rounded))
                             .foregroundStyle(ThemeUtils.ratingGradient(cache.b50Result.total))
@@ -76,7 +76,7 @@ struct BestTableView: View {
                         Text("bestTable.new.count \(b15Sum)")
                     }
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 8)
             }
@@ -89,10 +89,10 @@ struct BestTableView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("bestTable.settings.version.current")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                             Text(versionDisplayName)
                                 .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(overriddenVersion != nil ? .orange : .primary)
+                                .foregroundStyle(overriddenVersion != nil ? .orange : .primary)
                         }
                         
                         Spacer()
@@ -103,17 +103,17 @@ struct BestTableView: View {
                             } label: {
                                 Text("bestTable.settings.version.reset")
                                     .font(.caption)
-                                    .foregroundColor(.red)
+                                    .foregroundStyle(.red)
                             }
                             .buttonStyle(.plain)
                         }
                         
                         Image(systemName: "chevron.right")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
             }
 
             Section("bestTable.settings.capacity") {
@@ -126,7 +126,7 @@ struct BestTableView: View {
                     VStack {
                         Image(systemName: "plus")
                             .font(.caption.bold())
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     
                     capacityInput(title: "bestTable.settings.new", value: Binding(
@@ -138,10 +138,10 @@ struct BestTableView: View {
                         .frame(height: 30)
                     
                     VStack(alignment: .center, spacing: 4) {
-                        Text("bestTable.settings.total").font(.caption2).foregroundColor(.secondary)
+                        Text("bestTable.settings.total").font(.caption2).foregroundStyle(.secondary)
                         Text("\(currentB35Count + currentB15Count)")
                             .font(.system(.body, design: .rounded).bold())
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -159,7 +159,7 @@ struct BestTableView: View {
                     }
                 } else if cache.b50Result.b15.isEmpty {
                     Text("bestTable.empty")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 } else {
                     ForEach(cache.b50Result.b15) { entry in
                         if let song = cache.getSong(identifier: entry.songIdentifier) {
@@ -181,7 +181,7 @@ struct BestTableView: View {
                     }
                 } else if cache.b50Result.b35.isEmpty {
                     Text("bestTable.empty")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 } else {
                     ForEach(cache.b50Result.b35) { entry in
                         if let song = cache.getSong(identifier: entry.songIdentifier) {
@@ -262,7 +262,7 @@ struct BestTableView: View {
     private func scheduleCalculation(delayNanoseconds: UInt64 = 120_000_000) {
         calculationTask?.cancel()
         calculationTask = Task {
-            try? await Task.sleep(nanoseconds: delayNanoseconds)
+            try? await Task.sleep(for: .nanoseconds(delayNanoseconds))
             guard !Task.isCancelled, isVisible else { return }
             await performCalculation()
         }
@@ -326,7 +326,7 @@ struct BestTableView: View {
     
     private func capacityInput(title: LocalizedStringKey, value: Binding<Int>) -> some View {
         VStack(alignment: .center, spacing: 6) {
-            Text(title).font(.caption2).foregroundColor(.secondary)
+            Text(title).font(.caption2).foregroundStyle(.secondary)
             
             TextField("", text: Binding(
                 get: { String(value.wrappedValue) },
@@ -382,11 +382,11 @@ struct BestTableView: View {
                     let rank = RatingUtils.calculateRank(achievement: entry.achievement)
                     Text(rank)
                         .font(.system(size: 13, weight: .black, design: .rounded))
-                        .foregroundColor(RatingUtils.colorForRank(rank))
+                        .foregroundStyle(RatingUtils.colorForRank(rank))
                     
-                    Text(String(format: "%.4f%%", entry.achievement))
+                    Text("\(entry.achievement, format: .number.precision(.fractionLength(4)))%")
                         .font(.system(size: 12, design: .monospaced))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     
                     if entry.dxScore > 0 {
                         HStack(spacing: 2) {
@@ -396,7 +396,7 @@ struct BestTableView: View {
                                 .font(.system(size: 10, weight: .bold, design: .monospaced))
                         }
                         .fixedSize()
-                        .foregroundColor(.yellow)
+                        .foregroundStyle(.yellow)
                     }
                 }
                 
@@ -420,10 +420,10 @@ struct BestTableView: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text("\(entry.rating)")
                     .font(.system(size: 18, weight: .black, design: .rounded))
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                 Text("bestTable.base \(entry.level, specifier: "%.1f")")
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             .fixedSize()
         }
@@ -450,11 +450,11 @@ struct VersionPickerSheet: View {
                     } label: {
                         HStack {
                             Text("bestTable.settings.version.auto")
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             Spacer()
                             if tempSelection == nil {
                                 Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
+                                    .foregroundStyle(.blue)
                             }
                         }
                     }
@@ -472,15 +472,15 @@ struct VersionPickerSheet: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(ThemeUtils.versionAbbreviation(version))
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
                                     Text(version)
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                                 Spacer()
                                 if tempSelection == version {
                                     Image(systemName: "checkmark")
-                                        .foregroundColor(.blue)
+                                        .foregroundStyle(.blue)
                                 }
                             }
                         }

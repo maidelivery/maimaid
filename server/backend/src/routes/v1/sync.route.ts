@@ -10,6 +10,8 @@ import type { ProfileService } from "../../services/profile.service.js";
 import type { ScoreService } from "../../services/score.service.js";
 import type { PrismaClient } from "@prisma/client";
 
+const BULK_ARRAY_MAX = 10_000;
+
 const scoreEntrySchema = z.object({
   sheetId: z
     .union([z.bigint(), z.number().int(), z.string().regex(/^\d+$/)])
@@ -57,22 +59,25 @@ const pushSchema = z.object({
         clientUpdatedAt: z.coerce.date().optional()
       })
     )
+    .max(BULK_ARRAY_MAX)
     .default([]),
   scoreUpserts: z
     .array(
       z.object({
         profileId: z.string().uuid(),
-        scores: z.array(scoreEntrySchema).min(1)
+        scores: z.array(scoreEntrySchema).min(1).max(BULK_ARRAY_MAX)
       })
     )
+    .max(BULK_ARRAY_MAX)
     .default([]),
   playRecordUpserts: z
     .array(
       z.object({
         profileId: z.string().uuid(),
-        records: z.array(playRecordSchema).min(1)
+        records: z.array(playRecordSchema).min(1).max(BULK_ARRAY_MAX)
       })
     )
+    .max(BULK_ARRAY_MAX)
     .default([])
 });
 

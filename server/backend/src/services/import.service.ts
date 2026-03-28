@@ -14,6 +14,8 @@ type DivingFishRecord = {
   fc?: string | null;
   fs?: string | null;
   dx_score?: number | null;
+  dxScore?: number | null;
+  song_id?: number | null;
 };
 
 type DivingFishResponse = {
@@ -25,6 +27,15 @@ type DivingFishResponse = {
     dx?: DivingFishRecord[];
     sd?: DivingFishRecord[];
   };
+  message?: string;
+};
+
+type DivingFishRecordsResponse = {
+  username?: string;
+  nickname?: string;
+  rating?: number;
+  plate?: string | null;
+  records?: DivingFishRecord[];
   message?: string;
 };
 
@@ -60,6 +71,17 @@ type LxnsPlayerResponse = {
   } | null;
 };
 
+type LxnsTokenData = {
+  access_token?: string;
+  refresh_token?: string;
+};
+
+type LxnsTokenResponse = {
+  success?: boolean;
+  data?: LxnsTokenData | null;
+  message?: string;
+};
+
 export type TransformedImportRecord = {
   source: "df" | "lxns";
   sheetKey: string | null;
@@ -89,15 +111,117 @@ export type TransformedImportResult = {
   records: TransformedImportRecord[];
 };
 
+type CatalogMappingInput = {
+  songId: number | null;
+  title: string;
+  chartType: "standard" | "dx" | "utage";
+  difficulty: string;
+};
+
+type CatalogMappingResult = {
+  songIdentifier: string | null;
+  songId: number | null;
+  sheetKey: string | null;
+};
+
+type CatalogSheetCandidate = {
+  songIdentifier: string;
+  chartType: string;
+  difficulty: string;
+  songId: number;
+  song: {
+    songId: number;
+    title: string;
+  } | null;
+};
+
 @injectable()
 export class ImportService {
+  private readonly lxnsClientId = "cfb7ef40-bc0f-4e3a-8258-9e5f52cd7338";
+  private readonly lxnsRedirectUri = "urn:ietf:wg:oauth:2.0:oob";
+
   constructor(
     @inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
     @inject(TOKENS.ScoreService) private readonly scoreService: ScoreService,
     @inject(TOKENS.SyncService) private readonly syncService: SyncService
   ) {}
 
-  async transformFromDivingFish(input: { username?: string; qq?: string }): Promise<TransformedImportResult> {
+  async transformFromDivingFish(input: {
+    username?: string;
+    qq?: string;
+    importToken?: string;
+  }): Promise<TransformedImportResult> {
+    const importToken = input.importToken?.trim();
+    if (importToken) {
+      const response = await fetch("https://www.diving-fish.com/api/maimaidxprober/player/records", {
+        method: "GET",
+        headers: {
+          "Import-Token": importToken
+        }
+      });
+      const payload = (await response.json()) as DivingFishRecordsResponse;
+      if (!response.ok || !Array.isArray(payload.records)) {
+        throw new AppError(400, "df_import_failed", payload.message ?? "Failed to import from Diving Fish.");
+      }
+
+      const normalizedRecords = payload.records.map((record) => {
+        const backendChartType = this.normalizeBackendChartType(record.type);
+        const difficulty = difficultyByLevelIndex(record.level_index) ?? "basic";
+        const normalizedSongId =
+          typeof record.song_id === "number" && Number.isFinite(record.song_id) ? normalizeLxnsSongId(record.song_id) : null;
+        return {
+          record,
+          backendChartType,
+          difficulty,
+          normalizedSongId
+        };
+      });
+      const mappings = await this.resolveCatalogMappings(
+        normalizedRecords.map((item) => ({
+          songId: item.normalizedSongId,
+          title: item.record.title,
+          chartType: item.backendChartType,
+          difficulty: item.difficulty
+        }))
+      );
+
+      const transformed: TransformedImportRecord[] = normalizedRecords.map((item, index) => {
+        const mapped = mappings[index] ?? {
+          songIdentifier: null,
+          songId: item.normalizedSongId,
+          sheetKey: null
+        };
+        return {
+          source: "df",
+          sheetKey: mapped.sheetKey,
+          songIdentifier: mapped.songIdentifier,
+          songId: mapped.songId ?? item.normalizedSongId,
+          title: item.record.title,
+          chartType: this.toAppChartType(item.backendChartType),
+          difficulty: item.difficulty,
+          levelIndex: item.record.level_index,
+          achievements: item.record.achievements,
+          rank: this.rankByAchievements(item.record.achievements),
+          dxScore: item.record.dxScore ?? item.record.dx_score ?? 0,
+          fc: this.normalizeProgress(item.record.fc),
+          fs: this.normalizeProgress(item.record.fs),
+          playTime: null
+        };
+      });
+
+      return {
+        provider: "df",
+        fetchedCount: payload.records.length,
+        mappedCount: transformed.filter((item) => item.sheetKey !== null).length,
+        player: {
+          name: payload.nickname ?? payload.username ?? input.username ?? input.qq ?? null,
+          rating: typeof payload.rating === "number" ? payload.rating : null,
+          plate: payload.plate ?? null
+        },
+        records: transformed
+      };
+    }
+
     const requestBody: Record<string, unknown> = {};
     if (input.qq) {
       requestBody.qq = input.qq;
@@ -119,35 +243,47 @@ export class ImportService {
     }
 
     const allRecords = [...(payload.charts.dx ?? []), ...(payload.charts.sd ?? [])];
-    const transformed: TransformedImportRecord[] = [];
-
-    for (const record of allRecords) {
+    const normalizedRecords = allRecords.map((record) => {
       const backendChartType = this.normalizeBackendChartType(record.type);
       const difficulty = difficultyByLevelIndex(record.level_index) ?? "basic";
-      const mapped = await this.resolveCatalogMapping({
-        songId: null,
-        title: record.title,
-        chartType: backendChartType,
+      return {
+        record,
+        backendChartType,
         difficulty
-      });
+      };
+    });
+    const mappings = await this.resolveCatalogMappings(
+      normalizedRecords.map((item) => ({
+        songId: null,
+        title: item.record.title,
+        chartType: item.backendChartType,
+        difficulty: item.difficulty
+      }))
+    );
 
-      transformed.push({
+    const transformed: TransformedImportRecord[] = normalizedRecords.map((item, index) => {
+      const mapped = mappings[index] ?? {
+        songIdentifier: null,
+        songId: null,
+        sheetKey: null
+      };
+      return {
         source: "df",
         sheetKey: mapped.sheetKey,
         songIdentifier: mapped.songIdentifier,
         songId: mapped.songId,
-        title: record.title,
-        chartType: this.toAppChartType(backendChartType),
-        difficulty,
-        levelIndex: record.level_index,
-        achievements: record.achievements,
-        rank: this.rankByAchievements(record.achievements),
-        dxScore: record.dx_score ?? 0,
-        fc: this.normalizeProgress(record.fc),
-        fs: this.normalizeProgress(record.fs),
+        title: item.record.title,
+        chartType: this.toAppChartType(item.backendChartType),
+        difficulty: item.difficulty,
+        levelIndex: item.record.level_index,
+        achievements: item.record.achievements,
+        rank: this.rankByAchievements(item.record.achievements),
+        dxScore: item.record.dx_score ?? 0,
+        fc: this.normalizeProgress(item.record.fc),
+        fs: this.normalizeProgress(item.record.fs),
         playTime: null
-      });
-    }
+      };
+    });
 
     return {
       provider: "df",
@@ -195,35 +331,49 @@ export class ImportService {
       }
     }
 
-    const transformed: TransformedImportRecord[] = [];
-    for (const score of scoresPayload.data) {
+    const normalizedScores = scoresPayload.data.map((score) => {
       const normalizedSongId = normalizeLxnsSongId(score.id);
       const backendChartType = this.normalizeBackendChartType(score.type);
       const difficulty = difficultyByLevelIndex(score.level_index) ?? "basic";
-      const mapped = await this.resolveCatalogMapping({
-        songId: normalizedSongId,
-        title: score.song_name,
-        chartType: backendChartType,
+      return {
+        score,
+        normalizedSongId,
+        backendChartType,
         difficulty
-      });
+      };
+    });
+    const mappings = await this.resolveCatalogMappings(
+      normalizedScores.map((item) => ({
+        songId: item.normalizedSongId,
+        title: item.score.song_name,
+        chartType: item.backendChartType,
+        difficulty: item.difficulty
+      }))
+    );
 
-      transformed.push({
+    const transformed: TransformedImportRecord[] = normalizedScores.map((item, index) => {
+      const mapped = mappings[index] ?? {
+        songIdentifier: null,
+        songId: item.normalizedSongId,
+        sheetKey: null
+      };
+      return {
         source: "lxns",
         sheetKey: mapped.sheetKey,
         songIdentifier: mapped.songIdentifier,
-        songId: mapped.songId ?? normalizedSongId,
-        title: score.song_name,
-        chartType: this.toAppChartType(backendChartType),
-        difficulty,
-        levelIndex: score.level_index,
-        achievements: score.achievements,
-        rank: this.rankByAchievements(score.achievements),
-        dxScore: score.dx_score,
-        fc: this.normalizeProgress(score.fc),
-        fs: this.normalizeProgress(score.fs),
-        playTime: score.play_time ?? null
-      });
-    }
+        songId: mapped.songId ?? item.normalizedSongId,
+        title: item.score.song_name,
+        chartType: this.toAppChartType(item.backendChartType),
+        difficulty: item.difficulty,
+        levelIndex: item.score.level_index,
+        achievements: item.score.achievements,
+        rank: this.rankByAchievements(item.score.achievements),
+        dxScore: item.score.dx_score,
+        fc: this.normalizeProgress(item.score.fc),
+        fs: this.normalizeProgress(item.score.fs),
+        playTime: item.score.play_time ?? null
+      };
+    });
 
     return {
       provider: "lxns",
@@ -239,6 +389,7 @@ export class ImportService {
     profileId: string;
     username?: string;
     qq?: string;
+    importToken?: string;
   }) {
     await this.scoreService.requireProfileOwnership(input.profileId, input.userId);
     const run = await this.prisma.importRun.create({
@@ -256,6 +407,9 @@ export class ImportService {
       }
       if (input.qq !== undefined) {
         transformInput.qq = input.qq;
+      }
+      if (input.importToken !== undefined) {
+        transformInput.importToken = input.importToken;
       }
       const transformed = await this.transformFromDivingFish(transformInput);
       const mapped = transformed.records.map((record) => {
@@ -381,6 +535,41 @@ export class ImportService {
       });
       throw error;
     }
+  }
+
+  async exchangeLxnsAuthorizationCode(input: { code: string; codeVerifier: string }) {
+    const code = input.code.trim();
+    const codeVerifier = input.codeVerifier.trim();
+    if (!code || !codeVerifier) {
+      throw new AppError(400, "invalid_request", "LXNS authorization code and code verifier are required.");
+    }
+
+    const body = new URLSearchParams({
+      grant_type: "authorization_code",
+      client_id: this.lxnsClientId,
+      redirect_uri: this.lxnsRedirectUri,
+      code,
+      code_verifier: codeVerifier
+    });
+
+    const response = await fetch("https://maimai.lxns.net/api/v0/oauth/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: body.toString()
+    });
+    const payload = (await response.json()) as LxnsTokenResponse;
+    const accessToken = payload.data?.access_token?.trim() ?? "";
+    const refreshToken = payload.data?.refresh_token?.trim() ?? "";
+    if (!response.ok || !accessToken || !refreshToken) {
+      throw new AppError(400, "lxns_oauth_failed", payload.message ?? "Failed to exchange LXNS authorization code.");
+    }
+
+    return {
+      accessToken,
+      refreshToken
+    };
   }
 
   async importFromLxns(input: {
@@ -553,28 +742,26 @@ export class ImportService {
     return normalized;
   }
 
-  private async resolveCatalogMapping(input: {
-    songId: number | null;
-    title: string;
-    chartType: "standard" | "dx" | "utage";
-    difficulty: string;
-  }): Promise<{ songIdentifier: string | null; songId: number | null; sheetKey: string | null }> {
-    let sheet = null as
-      | {
-          songIdentifier: string;
-          chartType: string;
-          difficulty: string;
-          songId: number;
-          song: { songId: number } | null;
-        }
-      | null;
+  private async resolveCatalogMappings(inputs: CatalogMappingInput[]): Promise<CatalogMappingResult[]> {
+    if (inputs.length === 0) {
+      return [];
+    }
 
-    if (input.songId && input.songId > 0) {
-      sheet = await this.prisma.sheet.findFirst({
+    const songIds = Array.from(new Set(inputs.map((item) => item.songId).filter((item): item is number => Boolean(item && item > 0))));
+    const chartTypes = Array.from(new Set(inputs.map((item) => item.chartType)));
+    const difficulties = Array.from(new Set(inputs.map((item) => item.difficulty)));
+
+    const bySongIdKey = new Map<string, CatalogSheetCandidate>();
+    if (songIds.length > 0) {
+      const sheetsBySongId = await this.prisma.sheet.findMany({
         where: {
-          chartType: input.chartType,
-          difficulty: input.difficulty,
-          OR: [{ songId: input.songId }, { song: { songId: input.songId } }]
+          chartType: {
+            in: chartTypes
+          },
+          difficulty: {
+            in: difficulties
+          },
+          OR: [{ songId: { in: songIds } }, { song: { songId: { in: songIds } } }]
         },
         select: {
           songIdentifier: true,
@@ -583,20 +770,63 @@ export class ImportService {
           songId: true,
           song: {
             select: {
-              songId: true
+              songId: true,
+              title: true
             }
           }
         }
       });
+
+      for (const sheet of sheetsBySongId) {
+        const resolvedSongId = sheet.song?.songId && sheet.song.songId > 0 ? sheet.song.songId : sheet.songId;
+        if (!resolvedSongId || resolvedSongId <= 0) {
+          continue;
+        }
+        const key = this.catalogSongIdKey(resolvedSongId, this.normalizeBackendChartType(sheet.chartType), sheet.difficulty);
+        if (!bySongIdKey.has(key)) {
+          bySongIdKey.set(key, sheet);
+        }
+      }
     }
 
-    if (!sheet) {
-      sheet = await this.prisma.sheet.findFirst({
+    const resolved: Array<CatalogMappingResult | null> = new Array(inputs.length).fill(null);
+    const unresolvedIndexes: number[] = [];
+    for (const [index, input] of inputs.entries()) {
+      if (input.songId && input.songId > 0) {
+        const key = this.catalogSongIdKey(input.songId, input.chartType, input.difficulty);
+        const matched = bySongIdKey.get(key);
+        if (matched) {
+          resolved[index] = this.buildCatalogMappingResult(matched, input.songId);
+          continue;
+        }
+      }
+      unresolvedIndexes.push(index);
+    }
+
+    if (unresolvedIndexes.length > 0) {
+      const unresolvedInputs: CatalogMappingInput[] = [];
+      for (const index of unresolvedIndexes) {
+        const input = inputs[index];
+        if (input) {
+          unresolvedInputs.push(input);
+        }
+      }
+      const unresolvedTitles = Array.from(new Set(unresolvedInputs.map((item) => item.title)));
+      const unresolvedChartTypes = Array.from(new Set(unresolvedInputs.map((item) => item.chartType)));
+      const unresolvedDifficulties = Array.from(new Set(unresolvedInputs.map((item) => item.difficulty)));
+
+      const sheetsByTitle = await this.prisma.sheet.findMany({
         where: {
-          chartType: input.chartType,
-          difficulty: input.difficulty,
+          chartType: {
+            in: unresolvedChartTypes
+          },
+          difficulty: {
+            in: unresolvedDifficulties
+          },
           song: {
-            title: input.title
+            title: {
+              in: unresolvedTitles
+            }
           }
         },
         select: {
@@ -606,26 +836,68 @@ export class ImportService {
           songId: true,
           song: {
             select: {
-              songId: true
+              songId: true,
+              title: true
             }
           }
         }
       });
+
+      const byTitleKey = new Map<string, CatalogSheetCandidate>();
+      for (const sheet of sheetsByTitle) {
+        const title = sheet.song?.title;
+        if (!title) {
+          continue;
+        }
+        const key = this.catalogTitleKey(title, this.normalizeBackendChartType(sheet.chartType), sheet.difficulty);
+        if (!byTitleKey.has(key)) {
+          byTitleKey.set(key, sheet);
+        }
+      }
+
+      for (const index of unresolvedIndexes) {
+        const input = inputs[index];
+        if (!input) {
+          continue;
+        }
+        const byTitle = byTitleKey.get(this.catalogTitleKey(input.title, input.chartType, input.difficulty));
+        resolved[index] = byTitle
+          ? this.buildCatalogMappingResult(byTitle, input.songId)
+          : {
+              songIdentifier: null,
+              songId: input.songId,
+              sheetKey: null
+            };
+      }
     }
 
-    if (!sheet) {
+    return resolved.map((item, index) => {
+      if (item) {
+        return item;
+      }
+      const input = inputs[index];
       return {
         songIdentifier: null,
-        songId: input.songId,
+        songId: input ? input.songId : null,
         sheetKey: null
       };
-    }
+    });
+  }
 
+  private catalogSongIdKey(songId: number, chartType: "standard" | "dx" | "utage", difficulty: string) {
+    return `${songId}:${chartType}:${difficulty}`;
+  }
+
+  private catalogTitleKey(title: string, chartType: "standard" | "dx" | "utage", difficulty: string) {
+    return `${title}:${chartType}:${difficulty}`;
+  }
+
+  private buildCatalogMappingResult(sheet: CatalogSheetCandidate, fallbackSongId: number | null): CatalogMappingResult {
     const appType = this.toAppChartType(this.normalizeBackendChartType(sheet.chartType));
     const resolvedSongId = sheet.song?.songId && sheet.song.songId > 0 ? sheet.song.songId : sheet.songId;
     return {
       songIdentifier: sheet.songIdentifier,
-      songId: resolvedSongId > 0 ? resolvedSongId : input.songId,
+      songId: resolvedSongId > 0 ? resolvedSongId : fallbackSongId,
       sheetKey: `${sheet.songIdentifier}_${appType}_${sheet.difficulty}`
     };
   }

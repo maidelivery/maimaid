@@ -58,7 +58,7 @@ struct SongRowView: View {
                     if let version = song.version {
                         Text(ThemeUtils.versionAbbreviation(version))
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
                             .background(

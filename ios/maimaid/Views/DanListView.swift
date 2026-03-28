@@ -53,11 +53,11 @@ struct DanListView: View {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(category.title)
                                             .font(.system(size: 16, weight: .bold, design: .rounded))
-                                            .foregroundColor(.primary)
+                                            .foregroundStyle(.primary)
                                         
                                         Text(String(localized: "dan.list.sections \(category.sections.count)"))
                                             .font(.system(size: 12))
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
                                 .padding(.vertical, 4)
@@ -66,7 +66,7 @@ struct DanListView: View {
                     } header: {
                         Text(ThemeUtils.versionAbbreviation(group.version))
                             .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                     }
                 }
             }

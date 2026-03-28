@@ -448,7 +448,7 @@ struct SongsView: View {
                         }
                     } label: {
                         Image(systemName: isGridView ? "list.bullet" : "square.grid.2x2")
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                             .contentTransition(.symbolEffect(.replace))
                     }
                 }
@@ -475,7 +475,7 @@ struct SongsView: View {
                         }
                     } label: {
                         Image(systemName: "arrow.up.arrow.down")
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                     }
                 }
                 
@@ -484,7 +484,7 @@ struct SongsView: View {
                         showFilterSheet = true
                     } label: {
                         Image(systemName: "line.3.horizontal.decrease.circle")
-                            .foregroundColor(filterSettings == FilterSettings() ? Color.primary : Color.blue)
+                            .foregroundStyle(filterSettings == FilterSettings() ? Color.primary : Color.blue)
                     }
                 }
             }
@@ -671,7 +671,7 @@ private struct SongGridCell: View {
                     if isUtage {
                         Text("宴")
                             .font(.system(size: utageFontSize, weight: .black))
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 2)
                     } else {
                         let prioritizedSheets: [Sheet] = {

@@ -185,7 +185,7 @@ struct SongDetailContent: View {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 } label: {
                     Image(systemName: song.isFavorite ? "star.fill" : "star")
-                        .foregroundColor(song.isFavorite ? .yellow : .primary)
+                        .foregroundStyle(song.isFavorite ? .yellow : .primary)
                 }
             }
         }
@@ -196,7 +196,7 @@ struct SongDetailContent: View {
             if let message = toastMessage {
                 Text(message)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(.black.opacity(0.8), in: Capsule())
@@ -254,13 +254,14 @@ struct SongDetailContent: View {
         // Haptic feedback
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
-        
+
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             toastMessage = message
         }
-        
+
         // Hide toast after delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
             if toastMessage == message {
                 withAnimation {
                     toastMessage = nil
@@ -468,11 +469,11 @@ struct SongDetailContent: View {
                     HStack(spacing: 6) {
                         Image(systemName: "tag.fill")
                             .font(.system(size: 8))
-                            .foregroundColor(.secondary.opacity(0.4))
+                            .foregroundStyle(.secondary.opacity(0.4))
                         
                         Text(keywords.replacingOccurrences(of: ",", with: " · "))
                             .font(.system(size: 10))
-                            .foregroundColor(.secondary.opacity(0.6))
+                            .foregroundStyle(.secondary.opacity(0.6))
                     }
                     .padding(.top, 2)
                 }
@@ -712,21 +713,21 @@ struct SongDetailContent: View {
         HStack(spacing: 5) {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             if let label = label {
                 HStack(spacing: 2) {
                     Text(value)
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                     Text(label)
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             } else {
                 Text(value)
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
             }
         }
@@ -767,7 +768,7 @@ struct SongDetailContent: View {
                     Text("song.detail.lock.required")
                         .font(.system(size: 11, weight: .semibold))
                 }
-                .foregroundColor(.orange)
+                .foregroundStyle(.orange)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(.orange.opacity(0.12), in: Capsule())
@@ -778,7 +779,7 @@ struct SongDetailContent: View {
                     Text("song.detail.lock.notRequired")
                         .font(.system(size: 11, weight: .semibold))
                 }
-                .foregroundColor(.green)
+                .foregroundStyle(.green)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(.green.opacity(0.12), in: Capsule())
@@ -802,7 +803,7 @@ struct SongDetailContent: View {
             
             Text(label)
                 .font(.system(size: 9, weight: .medium))
-                .foregroundColor(available ? .primary : .secondary.opacity(0.4))
+                .foregroundStyle(available ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary.opacity(0.4)))
         }
     }
     
@@ -814,7 +815,7 @@ struct SongDetailContent: View {
         return HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             externalLinkButton(
                 icon: "play.rectangle.fill",
@@ -850,7 +851,7 @@ struct SongDetailContent: View {
                 Text(label)
                     .font(.system(size: 11, weight: .bold))
             }
-            .foregroundColor(color)
+            .foregroundStyle(color)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(color.opacity(0.1), in: Capsule())
@@ -979,17 +980,17 @@ struct SheetCardView: View {
                             if sheet.difficulty.lowercased() == "remaster" {
                                 Text("RE: MASTER")
                                     .font(.system(size: 13, weight: .bold, design: .rounded))
-                                    .foregroundColor(diffColor)
+                                    .foregroundStyle(diffColor)
                             } else {
                                 Text(sheet.difficulty.uppercased())
                                     .font(.system(size: 13, weight: .bold, design: .rounded))
-                                    .foregroundColor(diffColor)
+                                    .foregroundStyle(diffColor)
                             }
                         
                         if let designer = sheet.noteDesigner, !designer.isEmpty {
                             Text(designer)
                                 .font(.system(size: 11))
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         }
                         
@@ -1000,19 +1001,19 @@ struct SheetCardView: View {
                     // Score badge (if exists)
                     if let score = ScoreService.shared.score(for: sheet, context: modelContext) {
                         VStack(alignment: .trailing, spacing: 1) {
-                            Text(String(format: "%.4f%%", score.rate))
+                            Text("\(score.rate, format: .number.precision(.fractionLength(4)))%")
                                 .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                                 // add here
                             HStack(spacing: 4) {
                                 Text(RatingUtils.calculateRank(achievement: score.rate))
                                     .font(.system(size: 10, weight: .black, design: .rounded))
-                                    .foregroundColor(diffColor)
+                                    .foregroundStyle(diffColor)
                                 
                                 if let fc = score.fc, !fc.isEmpty {
                                     Text(ThemeUtils.normalizeFC(fc))
                                         .font(.system(size: 8, weight: .bold, design: .rounded))
-                                        .foregroundColor(.white)
+                                        .foregroundStyle(.white)
                                         .padding(.horizontal, 4)
                                         .padding(.vertical, 1)
                                         .background(ThemeUtils.fcColor(fc), in: RoundedRectangle(cornerRadius: 3))
@@ -1021,7 +1022,7 @@ struct SheetCardView: View {
                                 if let fs = score.fs, !fs.isEmpty {
                                     Text(ThemeUtils.normalizeFS(fs))
                                         .font(.system(size: 8, weight: .bold, design: .rounded))
-                                        .foregroundColor(.white)
+                                        .foregroundStyle(.white)
                                         .padding(.horizontal, 4)
                                         .padding(.vertical, 1)
                                         .background(ThemeUtils.fsColor(fs), in: RoundedRectangle(cornerRadius: 3))
@@ -1033,13 +1034,13 @@ struct SheetCardView: View {
                     // Level
                     Text(sheet.internalLevel ?? sheet.level)
                         .font(.system(size: 28, weight: .black, design: .rounded))
-                        .foregroundColor(diffColor.opacity(0.85))
+                        .foregroundStyle(diffColor.opacity(0.85))
                         .frame(minWidth: 44)
                     
                     // Expand chevron
                     Image(systemName: "chevron.down")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.secondary.opacity(0.4))
+                        .foregroundStyle(.secondary.opacity(0.4))
                         .rotationEffect(.degrees(isExpanded ? 180 : 0))
                 }
                 .padding(.leading, 12)
@@ -1184,7 +1185,7 @@ struct SheetCardView: View {
                     Text("song.detail.action.record")
                         .font(.system(size: 13, weight: .semibold))
                 }
-                .foregroundColor(diffColor)
+                .foregroundStyle(diffColor)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .background(diffColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
@@ -1205,11 +1206,11 @@ struct SheetCardView: View {
                     HStack {
                         Text("song.detail.section.notes")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.secondary.opacity(0.4))
+                            .foregroundStyle(.secondary.opacity(0.4))
                             .rotationEffect(.degrees(isNotesExpanded ? 90 : 0))
                     }
                     .padding(.horizontal, 20)
@@ -1228,12 +1229,12 @@ struct SheetCardView: View {
         HStack(alignment: .firstTextBaseline) {
             Text(label)
                 .font(.system(size: 11))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .frame(width: 80, alignment: .leading)
             
             Text(value)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
@@ -1258,11 +1259,11 @@ struct SheetCardView: View {
                 HStack {
                     Text("song.detail.section.rating")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.secondary.opacity(0.4))
+                        .foregroundStyle(.secondary.opacity(0.4))
                         .rotationEffect(.degrees(isRatingExpanded ? 90 : 0))
                 }
                 .padding(.horizontal, 20)
@@ -1281,7 +1282,7 @@ struct SheetCardView: View {
                             .frame(width: 40, alignment: .trailing)
                     }
                     .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 4)
                     
@@ -1297,25 +1298,25 @@ struct SheetCardView: View {
                             HStack(spacing: 6) {
                                 Text(rank)
                                     .font(.system(size: 11, weight: .black, design: .rounded))
-                                    .foregroundColor(RatingUtils.colorForRank(rank))
+                                    .foregroundStyle(RatingUtils.colorForRank(rank))
                                     .frame(width: 36, alignment: .leading)
                                 
-                                Text(String(format: "%.4f%%", ach))
+                                Text("\(ach, format: .number.precision(.fractionLength(4)))%")
                                     .font(.system(size: 11, design: .monospaced))
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
                             }
                             
                             Spacer()
                             
                             Text("\(rating)")
                                 .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                                 .frame(width: 50, alignment: .trailing)
                             
                             if delta > 0 {
                                 Text("↑\(delta)")
                                     .font(.system(size: 9, weight: .medium, design: .monospaced))
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                                     .frame(width: 40, alignment: .trailing)
                             } else {
                                 Text("")
@@ -1363,11 +1364,11 @@ struct SheetCardView: View {
                 HStack {
                     Text("song.detail.section.history")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.secondary.opacity(0.4))
+                        .foregroundStyle(.secondary.opacity(0.4))
                         .rotationEffect(.degrees(isHistoryExpanded ? 90 : 0))
                 }
                 .padding(.horizontal, 20)
@@ -1399,10 +1400,10 @@ struct SheetCardView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(record.playDate.formatted(.dateTime.year(.twoDigits).month(.defaultDigits).day(.defaultDigits)))
                                     .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
                                 Text(record.playDate, style: .time)
                                     .font(.system(size: 9))
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                             .frame(width: 70, alignment: .leading)
                             
@@ -1411,20 +1412,20 @@ struct SheetCardView: View {
                                 HStack(spacing: 4) {
                                     Text(record.rank)
                                         .font(.system(size: 11, weight: .black, design: .rounded))
-                                        .foregroundColor(RatingUtils.colorForRank(record.rank))
-                                    Text(String(format: "%.4f%%", record.rate))
+                                        .foregroundStyle(RatingUtils.colorForRank(record.rank))
+                                    Text("\(record.rate, format: .number.precision(.fractionLength(4)))%")
                                         .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
                                 }
                                 
                                 if record.dxScore > 0 {
                                     HStack(spacing: 2) {
                                         Image(systemName: "star.fill")
                                             .font(.system(size: 8))
-                                            .foregroundColor(.yellow)
+                                            .foregroundStyle(.yellow)
                                         Text("\(record.dxScore)")
                                             .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
                             }
@@ -1437,7 +1438,7 @@ struct SheetCardView: View {
                                     if let fc = record.fc, !fc.isEmpty {
                                         Text(ThemeUtils.normalizeFC(fc))
                                             .font(.system(size: 8, weight: .bold, design: .rounded))
-                                            .foregroundColor(.white)
+                                            .foregroundStyle(.white)
                                             .padding(.horizontal, 4)
                                             .padding(.vertical, 1)
                                             .background(ThemeUtils.fcColor(fc), in: RoundedRectangle(cornerRadius: 3))
@@ -1446,7 +1447,7 @@ struct SheetCardView: View {
                                     if let fs = record.fs, !fs.isEmpty {
                                         Text(ThemeUtils.normalizeFS(fs))
                                             .font(.system(size: 8, weight: .bold, design: .rounded))
-                                            .foregroundColor(.white)
+                                            .foregroundStyle(.white)
                                             .padding(.horizontal, 4)
                                             .padding(.vertical, 1)
                                             .background(ThemeUtils.fsColor(fs), in: RoundedRectangle(cornerRadius: 3))
@@ -1459,7 +1460,7 @@ struct SheetCardView: View {
                                     } label: {
                                         Image(systemName: "trash")
                                             .font(.system(size: 10))
-                                            .foregroundColor(.red.opacity(0.6))
+                                            .foregroundStyle(.red.opacity(0.6))
                                     }
                                 }
                             }
@@ -1491,7 +1492,7 @@ struct SheetCardView: View {
                             } label: {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(historyPage > 1 ? diffColor : .secondary.opacity(0.3))
+                                    .foregroundStyle(historyPage > 1 ? AnyShapeStyle(diffColor) : AnyShapeStyle(.secondary.opacity(0.3)))
                                     .padding(8)
                             }
                             .disabled(historyPage <= 1)
@@ -1505,7 +1506,7 @@ struct SheetCardView: View {
                             } label: {
                                 Text("\(validPage) / \(totalPages)")
                                     .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 6)
                                     .background(Color.primary.opacity(0.05), in: Capsule())
@@ -1516,7 +1517,7 @@ struct SheetCardView: View {
                             } label: {
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(historyPage < totalPages ? diffColor : .secondary.opacity(0.3))
+                                    .foregroundStyle(historyPage < totalPages ? AnyShapeStyle(diffColor) : AnyShapeStyle(.secondary.opacity(0.3)))
                                     .padding(8)
                             }
                             .disabled(historyPage >= totalPages)
@@ -1585,7 +1586,7 @@ struct SheetCardView: View {
                 HStack(spacing: 8) {
                     Text(item.0)
                         .font(.system(size: 9, weight: .black))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .frame(width: 40, alignment: .leading)
                     
                     // Progress bar
@@ -1603,12 +1604,12 @@ struct SheetCardView: View {
                     
                     Text("\(count)")
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                         .frame(width: 40, alignment: .trailing)
                     
                     Text("\(Int(percent * 100))%")
                         .font(.system(size: 9, weight: .medium, design: .monospaced))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .frame(width: 30, alignment: .trailing)
                 }
                 .padding(.horizontal, 20)
@@ -1643,11 +1644,11 @@ struct FaultToleranceCalculatorView: View {
             HStack {
                 Text("song.detail.calculator.title")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 Spacer()
                 Text("song.detail.calculator.hint")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(diffColor)
+                    .foregroundStyle(diffColor)
             }
             .padding(.horizontal, 20)
             
@@ -1666,7 +1667,7 @@ struct FaultToleranceCalculatorView: View {
                                     targetAchievement == target.threshold ? diffColor : Color.primary.opacity(0.05),
                                     in: Capsule()
                                 )
-                                .foregroundColor(targetAchievement == target.threshold ? .white : .primary)
+                                .foregroundStyle(targetAchievement == target.threshold ? .white : .primary)
                         }
                     }
                 }
@@ -1718,15 +1719,15 @@ struct FaultToleranceCalculatorView: View {
         VStack(spacing: 4) {
             Text(title)
                 .font(.system(size: 8, weight: .black))
-                .foregroundColor(color.opacity(0.8))
+                .foregroundStyle(color.opacity(0.8))
             
             Text("\(value)")
                 .font(.system(size: 16, weight: .bold, design: .monospaced))
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
             
             Text("song.detail.tolerance.limit")
                 .font(.system(size: 8))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)

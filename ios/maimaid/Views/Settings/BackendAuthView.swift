@@ -25,6 +25,9 @@ struct BackendAuthView: View {
     @State private var isSigningOut = false
     @State private var isUpdatingRecoveryPassword = false
     @State private var isSyncing = false
+    @State private var isResolvingAccountConflict = false
+    @State private var showingLogoutOptions = false
+    @State private var conflictState: AccountConflictState?
 
     @State private var toastMessage: String?
     @State private var isErrorToast = false
@@ -40,7 +43,7 @@ struct BackendAuthView: View {
     private var config: SyncConfig? { configs.first }
 
     private var isBusy: Bool {
-        isOpeningWebAuth || isSigningOut || isUpdatingRecoveryPassword || isSyncing
+        isOpeningWebAuth || isSigningOut || isUpdatingRecoveryPassword || isSyncing || isResolvingAccountConflict
     }
 
     private var showRecoveryPasswordRequirementAsError: Bool {
@@ -75,12 +78,29 @@ struct BackendAuthView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await sessionManager.checkSession()
+            await evaluateAccountConflictIfNeeded()
         }
         .onAppear {
             consumePendingAuthMessageIfNeeded()
         }
         .onChange(of: sessionManager.pendingMessage) { _, _ in
             consumePendingAuthMessageIfNeeded()
+        }
+        .onChange(of: sessionManager.isAuthenticated) { _, _ in
+            Task {
+                await evaluateAccountConflictIfNeeded()
+            }
+        }
+        .sheet(item: $conflictState) { state in
+            AccountConflictResolutionSheet(
+                state: state,
+                isApplying: isResolvingAccountConflict
+            ) { option in
+                Task {
+                    await applyAccountResolution(option)
+                }
+            }
+            .interactiveDismissDisabled(true)
         }
     }
 
@@ -183,12 +203,25 @@ struct BackendAuthView: View {
 
             Section {
                 Button("settings.cloud.logout", role: .destructive) {
-                    Task {
-                        isSigningOut = true
-                        await sessionManager.logout()
-                        isSigningOut = false
-                        BackendAutoBackup.cancelScheduledBackup()
+                    showingLogoutOptions = true
+                }
+                .confirmationDialog(
+                    "settings.cloud.logout.options.title",
+                    isPresented: $showingLogoutOptions
+                ) {
+                    Button("settings.cloud.logout.option.keepLocal") {
+                        Task {
+                            await performLogout(clearLocalData: false)
+                        }
                     }
+                    Button("settings.cloud.logout.option.clearLocal", role: .destructive) {
+                        Task {
+                            await performLogout(clearLocalData: true)
+                        }
+                    }
+                    Button("settings.cloud.logout.option.cancel", role: .cancel) {}
+                } message: {
+                    Text("settings.cloud.logout.options.message")
                 }
                 .disabled(isBusy)
             }
@@ -423,13 +456,72 @@ struct BackendAuthView: View {
 
         if pending == "settings.cloud.message.loginSuccess", sessionManager.isAuthenticated {
             Task {
-                await BackendAutoBackup.scheduleNextBackup(container: modelContext.container)
+                await evaluateAccountConflictIfNeeded()
             }
         }
 
         let isError = sessionManager.pendingMessageIsError
         sessionManager.clearPendingMessage()
         showToast(message: pending, error: isError)
+    }
+
+    @MainActor
+    private func evaluateAccountConflictIfNeeded() async {
+        guard sessionManager.isAuthenticated, let userId = sessionManager.currentUser?.id else {
+            conflictState = nil
+            return
+        }
+
+        let state = AccountDataResolutionCoordinator.shared.detectConflictAfterAuth(
+            context: modelContext,
+            currentUserId: userId
+        )
+        if state.requiresResolution {
+            conflictState = state
+            return
+        }
+
+        conflictState = nil
+        await BackendAutoBackup.scheduleNextBackup(container: modelContext.container)
+    }
+
+    @MainActor
+    private func applyAccountResolution(_ option: AccountResolutionOption) async {
+        guard !isResolvingAccountConflict else { return }
+        isResolvingAccountConflict = true
+        defer { isResolvingAccountConflict = false }
+
+        do {
+            try await AccountDataResolutionCoordinator.shared.applyResolution(option, context: modelContext)
+            conflictState = nil
+            showToast(message: "settings.cloud.resolution.success")
+            await BackendAutoBackup.scheduleNextBackup(container: modelContext.container)
+        } catch {
+            showToast(message: error.localizedDescription, error: true)
+        }
+    }
+
+    @MainActor
+    private func performLogout(clearLocalData: Bool) async {
+        guard !isSigningOut else { return }
+        isSigningOut = true
+        defer { isSigningOut = false }
+
+        await sessionManager.logout()
+        conflictState = nil
+
+        if clearLocalData {
+            do {
+                try AccountDataResolutionCoordinator.shared.clearLocalUserData(context: modelContext)
+                showToast(message: "settings.cloud.logout.clearLocal.success")
+            } catch {
+                showToast(message: error.localizedDescription, error: true)
+            }
+        } else {
+            AccountDataResolutionCoordinator.shared.clearPendingResolutionState(context: modelContext)
+        }
+
+        BackendAutoBackup.cancelScheduledBackup()
     }
 
     @MainActor
@@ -547,5 +639,102 @@ struct BackendAuthView: View {
         } catch {
             showToast(message: "settings.cloud.message.restoreFailed", error: true)
         }
+    }
+}
+
+private struct AccountConflictResolutionSheet: View {
+    let state: AccountConflictState
+    let isApplying: Bool
+    let onSelect: (AccountResolutionOption) -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    VStack(alignment: .leading) {
+                        Text("settings.cloud.resolution.message.current")
+                            .font(.subheadline)
+                        Text(verbatim: state.currentUserId)
+                            .font(.footnote.monospaced())
+                            .foregroundStyle(.secondary)
+                        Text("settings.cloud.resolution.message.owner")
+                            .font(.subheadline)
+                        Text(verbatim: state.ownerUserId ?? "-")
+                            .font(.footnote.monospaced())
+                            .foregroundStyle(.secondary)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                } header: {
+                    Text("settings.cloud.resolution.title")
+                }
+
+                Section("settings.cloud.resolution.section.actions") {
+                    actionRow(
+                        title: "settings.cloud.resolution.option.merge",
+                        icon: "arrow.triangle.merge",
+                        tint: .blue
+                    ) {
+                        onSelect(.mergeLocalAndCloud)
+                    }
+
+                    actionRow(
+                        title: "settings.cloud.resolution.option.overwriteCloud",
+                        icon: "icloud.and.arrow.up",
+                        tint: .orange
+                    ) {
+                        onSelect(.overwriteCloudWithLocal)
+                    }
+
+                    actionRow(
+                        title: "settings.cloud.resolution.option.overwriteLocal",
+                        icon: "iphone.and.arrow.forward",
+                        tint: .green
+                    ) {
+                        onSelect(.overwriteLocalWithCloud)
+                    }
+                }
+
+                if isApplying {
+                    Section {
+                        HStack {
+                            ProgressView()
+                            Text("settings.cloud.resolution.processing")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("settings.cloud.resolution.title")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private func actionRow(
+        title: String,
+        icon: String,
+        tint: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 28, height: 28)
+                    .background(tint, in: .rect(cornerRadius: 8))
+
+                Text(LocalizedStringKey(title))
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Image(systemName: "arrow.up.forward.app")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(tint)
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(isApplying)
+        .opacity(isApplying ? 0.6 : 1)
     }
 }

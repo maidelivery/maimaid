@@ -70,12 +70,12 @@ struct B50ExportView: View {
                     if let name = userName, !name.isEmpty {
                         Text(name)
                             .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(primaryColor)
+                            .foregroundStyle(primaryColor)
                     }
                     
                     Text(String(localized: "bestTable.rating"))
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(secondaryColor)
+                        .foregroundStyle(secondaryColor)
                 }
                 
                 Spacer()
@@ -88,7 +88,7 @@ struct B50ExportView: View {
                     if useFitDiff {
                         Text(String(localized: "bestTable.export.fitDiff.rating"))
                             .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                     }
                 }
             }
@@ -119,10 +119,10 @@ struct B50ExportView: View {
                 .frame(width: 8, height: 8)
             Text(label)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(secondaryColor)
+                .foregroundStyle(secondaryColor)
             Text(value)
                 .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundColor(color)
+                .foregroundStyle(color)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -137,10 +137,10 @@ struct B50ExportView: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(title)
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(primaryColor)
+                    .foregroundStyle(primaryColor)
                 Text(subtitle)
                     .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundColor(accentColor)
+                    .foregroundStyle(accentColor)
                 Spacer()
             }
             .padding(.horizontal, sectionPadding)
@@ -198,7 +198,7 @@ struct B50ExportView: View {
                         .overlay(
                             Image(systemName: "music.note")
                                 .font(.system(size: 14))
-                                .foregroundColor(subtleColor)
+                                .foregroundStyle(subtleColor)
                         )
                 }
                 
@@ -207,7 +207,7 @@ struct B50ExportView: View {
                 if entry.songId > 0 {
                     Text("#\(String(entry.songId))")
                         .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 3)
                         .padding(.vertical, 0.5)
                         .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 2))
@@ -220,7 +220,7 @@ struct B50ExportView: View {
                 // Row 1: Title
                 Text(entry.songTitle)
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(primaryColor)
+                    .foregroundStyle(primaryColor)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -229,11 +229,11 @@ struct B50ExportView: View {
                 HStack(spacing: 4) {
                     Text(rank)
                         .font(.system(size: 12, weight: .black, design: .rounded))
-                        .foregroundColor(RatingUtils.colorForRank(rank))
+                        .foregroundStyle(RatingUtils.colorForRank(rank))
                     
-                    Text(String(format: "%.4f%%", entry.achievement))
+                    Text("\(entry.achievement, format: .number.precision(.fractionLength(4)))%")
                         .font(.system(size: 9, design: .monospaced))
-                        .foregroundColor(secondaryColor)
+                        .foregroundStyle(secondaryColor)
                     
                     Spacer()
                     
@@ -244,24 +244,24 @@ struct B50ExportView: View {
                             Image(systemName: "star.fill")
                                 .font(.system(size: 8))
                         }
-                        .foregroundColor(.yellow)
+                        .foregroundStyle(.yellow)
                     }
                 }
                 
                 // Row 3: Level -> Rating + DX Score
                 HStack(spacing: 4) {
                     HStack(spacing: 2) {
-                        Text(String(format: "%.1f", entry.level))
+                        Text("\(entry.level, format: .number.precision(.fractionLength(1)))")
                             .font(.system(size: 9, weight: .bold, design: .rounded))
-                            .foregroundColor(diffColor)
+                            .foregroundStyle(diffColor)
                         
                         Image(systemName: "arrow.right")
                             .font(.system(size: 5))
-                            .foregroundColor(subtleColor)
+                            .foregroundStyle(subtleColor)
                         
                         Text("\(entry.rating)")
                             .font(.system(size: 9, weight: .black, design: .rounded))
-                            .foregroundColor(colorScheme == .dark ? Color(hex: "#FFD700") : Color(hex: "#C5A000"))
+                            .foregroundStyle(colorScheme == .dark ? Color(hex: "#FFD700") : Color(hex: "#C5A000"))
                     }
                     
                     Spacer()
@@ -269,7 +269,7 @@ struct B50ExportView: View {
                     if entry.maxDxScore > 0 {
                         Text("\(entry.dxScore)/\(entry.maxDxScore)")
                             .font(.system(size: 8, weight: .medium, design: .monospaced))
-                            .foregroundColor(secondaryColor)
+                            .foregroundStyle(secondaryColor)
                     }
                 }
                 
@@ -313,7 +313,7 @@ struct B50ExportView: View {
     private func exportBadge(text: String, color: Color) -> some View {
         Text(text)
             .font(.system(size: 7, weight: .heavy))
-            .foregroundColor(.white)
+            .foregroundStyle(.white)
             .padding(.horizontal, 4)
             .padding(.vertical, 1.5)
             .background(color, in: RoundedRectangle(cornerRadius: 2))
@@ -337,17 +337,17 @@ struct B50ExportView: View {
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)
                             .background(Color.orange.opacity(0.2), in: RoundedRectangle(cornerRadius: 3))
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                     }
                 }
-                .foregroundColor(secondaryColor)
+                .foregroundStyle(secondaryColor)
             }
             
             HStack {
                 Spacer()
                 Text(String(localized: "bestTable.export.watermark"))
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(subtleColor)
+                    .foregroundStyle(subtleColor)
                 Spacer()
             }
         }

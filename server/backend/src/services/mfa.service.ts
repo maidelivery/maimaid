@@ -27,12 +27,6 @@ type PasskeySummary = {
   createdAt: Date;
   updatedAt: Date;
 };
-
-type DirectPasskeyChallenge = {
-  challenge: string;
-  channel: LoginChannel;
-  expiresAt: Date;
-};
 const PASSKEY_TRANSPORTS = new Set<PasskeyTransport>([
   "ble",
   "cable",
@@ -47,8 +41,6 @@ const BACKUP_CODE_GROUP_SIZE = 4;
 
 @injectable()
 export class MfaService {
-  private readonly directPasskeyChallenges = new Map<string, DirectPasskeyChallenge>();
-
   constructor(
     @inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
     @inject(TOKENS.Env) private readonly env: Env
@@ -416,7 +408,7 @@ export class MfaService {
   }
 
   async startDirectPasskeyLogin(channel: LoginChannel): Promise<{ challengeToken: string; options: Record<string, unknown> }> {
-    this.cleanupExpiredDirectPasskeyChallenges();
+    await this.cleanupExpiredDirectPasskeyChallenges();
 
     const credentials = await this.prisma.userPasskeyCredential.findMany();
     if (credentials.length === 0) {
@@ -434,10 +426,13 @@ export class MfaService {
     });
 
     const challengeToken = randomToken(36);
-    this.directPasskeyChallenges.set(challengeToken, {
-      challenge: options.challenge,
-      channel,
-      expiresAt: this.nextExpiry()
+    await this.prisma.directPasskeyChallenge.create({
+      data: {
+        tokenHash: sha256Hex(challengeToken),
+        challenge: options.challenge,
+        channel,
+        expiresAt: this.nextExpiry()
+      }
     });
 
     return {
@@ -558,10 +553,7 @@ export class MfaService {
     return this.verifyDirectPasskeyLogin(token, response);
   }
 
-  async shouldEnforceMfa(userId: string, channel: LoginChannel) {
-    if (channel !== "web") {
-      return false;
-    }
+  async shouldEnforceMfa(userId: string) {
     const status = await this.status(userId);
     return status.mfaEnabled;
   }
@@ -657,26 +649,66 @@ export class MfaService {
     };
   }
 
-  private cleanupExpiredDirectPasskeyChallenges() {
-    const now = Date.now();
-    for (const [token, challenge] of this.directPasskeyChallenges.entries()) {
-      if (challenge.expiresAt.getTime() <= now) {
-        this.directPasskeyChallenges.delete(token);
+  private async cleanupExpiredDirectPasskeyChallenges() {
+    await this.prisma.directPasskeyChallenge.deleteMany({
+      where: {
+        OR: [
+          {
+            expiresAt: {
+              lte: new Date()
+            }
+          },
+          {
+            consumedAt: {
+              not: null
+            }
+          }
+        ]
       }
+    });
+  }
+
+  private async findDirectPasskeyChallenge(challengeToken: string) {
+    const token = challengeToken.trim();
+    if (!token) {
+      throw new AppError(400, "invalid_mfa_challenge", "MFA challenge is invalid.");
+    }
+
+    const challenge = await this.prisma.directPasskeyChallenge.findUnique({
+      where: {
+        tokenHash: sha256Hex(token)
+      }
+    });
+    if (!challenge || challenge.consumedAt) {
+      throw new AppError(400, "invalid_mfa_challenge", "MFA challenge is invalid.");
+    }
+    if (challenge.expiresAt <= new Date()) {
+      throw new AppError(400, "expired_mfa_challenge", "MFA challenge is expired.");
+    }
+    return challenge;
+  }
+
+  private async consumeDirectPasskeyChallenge(challengeId: string) {
+    const consumed = await this.prisma.directPasskeyChallenge.updateMany({
+      where: {
+        id: challengeId,
+        consumedAt: null,
+        expiresAt: {
+          gt: new Date()
+        }
+      },
+      data: {
+        consumedAt: new Date()
+      }
+    });
+    if (consumed.count !== 1) {
+      throw new AppError(400, "invalid_mfa_challenge", "MFA challenge is invalid.");
     }
   }
 
   private async verifyDirectPasskeyLogin(challengeToken: string, response: unknown) {
-    this.cleanupExpiredDirectPasskeyChallenges();
-
-    const challenge = this.directPasskeyChallenges.get(challengeToken);
-    if (!challenge) {
-      throw new AppError(400, "invalid_mfa_challenge", "MFA challenge is invalid.");
-    }
-    if (challenge.expiresAt <= new Date()) {
-      this.directPasskeyChallenges.delete(challengeToken);
-      throw new AppError(400, "expired_mfa_challenge", "MFA challenge is expired.");
-    }
+    await this.cleanupExpiredDirectPasskeyChallenges();
+    const challenge = await this.findDirectPasskeyChallenge(challengeToken);
 
     const credentialId = this.extractCredentialId(response);
     if (!credentialId) {
@@ -691,7 +723,7 @@ export class MfaService {
     }
 
     await this.verifyPasskeyResponse(challenge.challenge, credential, response);
-    this.directPasskeyChallenges.delete(challengeToken);
+    await this.consumeDirectPasskeyChallenge(challenge.id);
 
     const user = await this.prisma.user.findUnique({
       where: { id: credential.userId }

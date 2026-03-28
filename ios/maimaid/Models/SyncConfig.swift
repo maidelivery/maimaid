@@ -19,6 +19,9 @@ final class SyncConfig {
     @Attribute(originalName: "lastSupabaseBackupDate")
     var lastCloudBackupDate: Date?
     var lastSyncRevision: String = "0"
+    var localDataOwnerUserId: String?
+    var pendingResolutionForUserId: String?
+    var pendingResolutionDetectedAt: Date?
     
     // Legacy fields — kept for migration, will be read once to create default UserProfile
     var userName: String?

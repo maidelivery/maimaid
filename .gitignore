@@ -15,3 +15,5 @@ server/backend/.env.docker.local
 
 # Xcode build artifacts
 DerivedData/
+
+.playwright-cli/

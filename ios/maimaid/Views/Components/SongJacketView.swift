@@ -128,7 +128,7 @@ struct SongJacketView: View {
                     Color.primary.opacity(0.05)
                     if !useThumbnail {
                         Image(systemName: "music.note")
-                            .foregroundColor(.secondary.opacity(0.3))
+                            .foregroundStyle(.secondary.opacity(0.3))
                     }
                 }
             }

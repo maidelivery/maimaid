@@ -659,3 +659,20 @@
 "data.sync.status.fetchingUtageChartStats" = "正在下载宴谱音符总数…";
 "data.sync.log.fetchedUtageChartStats %lld" = "宴谱音符总数已下载：%lld 条";
 "data.sync.log.mergedUtageChartStats %lld" = "宴谱音符总数合并完成：更新 %lld 张谱面";
+
+// MARK: - Backend Account Resolution
+"settings.cloud.logout.options.title" = "退出登录选项";
+"settings.cloud.logout.options.message" = "请选择是否保留本机上的 profile 与成绩数据。";
+"settings.cloud.logout.option.keepLocal" = "保留本地数据";
+"settings.cloud.logout.option.clearLocal" = "清空本地数据";
+"settings.cloud.logout.option.cancel" = "取消";
+"settings.cloud.logout.clearLocal.success" = "本地数据已清空。";
+"settings.cloud.resolution.title" = "处理账号数据冲突";
+"settings.cloud.resolution.section.actions" = "请选择同步策略";
+"settings.cloud.resolution.message.current" = "当前登录账号";
+"settings.cloud.resolution.message.owner" = "本地数据归属账号";
+"settings.cloud.resolution.option.merge" = "合并本地与云端";
+"settings.cloud.resolution.option.overwriteCloud" = "用本地覆盖云端";
+"settings.cloud.resolution.option.overwriteLocal" = "用云端覆盖本地";
+"settings.cloud.resolution.processing" = "正在执行所选策略...";
+"settings.cloud.resolution.success" = "冲突处理完成。";

@@ -78,6 +78,7 @@ model User {
   passkeyCredentials     UserPasskeyCredential[]
   mfaBackupCodes         UserMfaBackupCode[]
   mfaChallenges          MfaChallenge[]
+  authSessionCodes       AuthSessionCode[]
   syncEvents             SyncEvent[]
   syncMutations          SyncMutation[]
 
@@ -389,6 +390,48 @@ model MfaChallenge {
   @@index([userId, purpose, createdAt])
   @@index([expiresAt])
   @@map("mfa_challenges")
+}
+
+model AuthSessionCode {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  codeHash   String   @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("auth_session_codes")
+}
+
+model DirectPasskeyChallenge {
+  id         String   @id @default(uuid()) @db.Uuid
+  tokenHash  String   @unique
+  challenge  String
+  channel    String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([expiresAt])
+  @@map("direct_passkey_challenges")
+}
+
+model RateLimitCounter {
+  id          String   @id @default(uuid()) @db.Uuid
+  bucket      String
+  keyHash     String
+  windowStart DateTime
+  windowEnd   DateTime
+  count       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([bucket, keyHash, windowStart])
+  @@index([windowEnd])
+  @@map("rate_limit_counters")
 }
 
 model SyncEvent {

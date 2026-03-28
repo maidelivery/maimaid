@@ -21,7 +21,7 @@ struct FilterView: View {
                         HStack {
                             Label("filter.favorites", systemImage: settings.showFavoritesOnly ? "star.fill" : "star")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             Spacer()
                             Toggle("", isOn: $settings.showFavoritesOnly)
                                 .labelsHidden()
@@ -30,7 +30,7 @@ struct FilterView: View {
                         HStack {
                             Label("filter.hideDeleted", systemImage: settings.hideDeletedSongs ? "eye.slash.fill" : "eye.slash")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             Spacer()
                             Toggle("", isOn: $settings.hideDeletedSongs)
                                 .labelsHidden()
@@ -58,11 +58,11 @@ struct FilterView: View {
                                 HStack {
                                     Text("filter.levelRange")
                                         .font(.system(size: 11, weight: .bold))
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                     Spacer()
                                     Text("\(settings.minLevel, specifier: "%.1f") - \(settings.maxLevel, specifier: "%.1f")")
                                         .font(.system(.subheadline, design: .monospaced, weight: .bold))
-                                        .foregroundColor(settings.selectedDifficulties.isEmpty ? .secondary : .blue)
+                                        .foregroundStyle(settings.selectedDifficulties.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.blue))
                                 }
                                 
                                 RangeSlider(minValue: $settings.minLevel, maxValue: $settings.maxLevel, range: 1.0...15.0, step: 0.1, isActive: !settings.selectedDifficulties.isEmpty)
@@ -72,7 +72,7 @@ struct FilterView: View {
                         
                         Text("filter.levelRange.hint")
                             .font(.system(size: 10))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .padding(.horizontal, 4)
                     }
                     
@@ -153,7 +153,7 @@ struct FilterView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .padding(.leading, 4)
             
             content()
@@ -285,7 +285,7 @@ struct FilterChip: View {
                 .font(.system(size: 13, weight: .semibold))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundStyle(isSelected ? .white : .primary)
                 .background(
                     isSelected ? color : Color.primary.opacity(0.06),
                     in: Capsule()

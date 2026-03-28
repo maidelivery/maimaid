@@ -23,7 +23,7 @@ struct ScannerDebugOverlayView: View {
                         
                         Text(box.label)
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 2)
                             .background(Color.green)
                             .position(x: x + w / 2, y: max(10, y - 8))

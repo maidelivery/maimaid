@@ -67,7 +67,7 @@ struct CommunityAliasVotingBoardView: View {
             if let tipMessage {
                 Text(tipMessage)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(.black.opacity(0.82), in: Capsule())
