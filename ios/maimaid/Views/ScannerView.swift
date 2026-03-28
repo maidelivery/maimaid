@@ -812,7 +812,7 @@ struct ScannerView: View {
         guard !isSavingPhoto else { return }
         UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
         withAnimation(.easeOut(duration: 0.1)) { showFlashOverlay = true }
-        Task {
+        Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(100))
             withAnimation(.easeIn(duration: 0.2)) { self.showFlashOverlay = false }
         }

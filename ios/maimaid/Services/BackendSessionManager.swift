@@ -58,6 +58,7 @@ private struct KeychainTokenStore {
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
             kSecAttrAccount: account,
+            kSecAttrSynchronizable: kCFBooleanFalse as Any,
             kSecReturnData: true,
             kSecMatchLimit: kSecMatchLimitOne
         ]
@@ -78,11 +79,14 @@ private struct KeychainTokenStore {
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
-            kSecAttrAccount: account
+            kSecAttrAccount: account,
+            kSecAttrSynchronizable: kCFBooleanFalse as Any
         ]
 
         let update: [CFString: Any] = [
-            kSecValueData: data
+            kSecValueData: data,
+            kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            kSecAttrSynchronizable: kCFBooleanFalse as Any
         ]
 
         let status = SecItemUpdate(query as CFDictionary, update as CFDictionary)
@@ -91,7 +95,9 @@ private struct KeychainTokenStore {
                 kSecClass: kSecClassGenericPassword,
                 kSecAttrService: service,
                 kSecAttrAccount: account,
-                kSecValueData: data
+                kSecValueData: data,
+                kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+                kSecAttrSynchronizable: kCFBooleanFalse as Any
             ]
             SecItemAdd(insert as CFDictionary, nil)
         }
@@ -101,7 +107,8 @@ private struct KeychainTokenStore {
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
-            kSecAttrAccount: account
+            kSecAttrAccount: account,
+            kSecAttrSynchronizable: kCFBooleanFalse as Any
         ]
         SecItemDelete(query as CFDictionary)
     }
@@ -424,43 +431,7 @@ final class BackendSessionManager {
             }
         }
 
-        guard
-            let accessToken = value(of: "accessToken", from: url),
-            let refreshToken = value(of: "refreshToken", from: url),
-            let expiresInValue = value(of: "expiresIn", from: url),
-            let expiresIn = Int(expiresInValue),
-            expiresIn > 0,
-            let userId = value(of: "userId", from: url),
-            let userEmail = value(of: "email", from: url)
-        else {
-            pendingMessage = "settings.cloud.message.authLinkFailed"
-            pendingMessageIsError = true
-            return
-        }
-
-        let isAdmin = boolValue(from: value(of: "isAdmin", from: url)) ?? false
-        let payload = BackendAuthPayload(
-            user: BackendAuthUser(id: userId, email: userEmail, isAdmin: isAdmin),
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            expiresIn: expiresIn
-        )
-        applyAuthPayload(payload)
-        pendingMessage = "settings.cloud.message.loginSuccess"
-        pendingMessageIsError = false
-    }
-
-    private func boolValue(from value: String?) -> Bool? {
-        guard let value else {
-            return nil
-        }
-        switch value.lowercased() {
-        case "1", "true", "yes":
-            return true
-        case "0", "false", "no":
-            return false
-        default:
-            return nil
-        }
+        pendingMessage = "settings.cloud.message.authLinkFailed"
+        pendingMessageIsError = true
     }
 }

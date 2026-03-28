@@ -5,7 +5,8 @@ import ImageIO
 
 /// In-memory cache for downsampled song jacket thumbnails.
 /// Uses ImageIO to decode at target size directly, avoiding full-resolution decode.
-final class ThumbnailCache: @unchecked Sendable {
+@MainActor
+final class ThumbnailCache {
     static let shared = ThumbnailCache()
     
     /// Target pixel size for thumbnails. 200px covers up to ~9 columns on most devices
@@ -53,8 +54,9 @@ final class ThumbnailCache: @unchecked Sendable {
         let clean = imageName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty else { return nil }
         
-        let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
-        let coverURL = paths[0].appendingPathComponent("Covers").appendingPathComponent(clean)
+        let coverURL = URL.documentsDirectory
+            .appending(path: "Covers", directoryHint: .isDirectory)
+            .appending(path: clean)
         
         if FileManager.default.fileExists(atPath: coverURL.path) {
             return coverURL
@@ -101,7 +103,7 @@ struct SongJacketView: View {
     var size: CGFloat = 60
     var cornerRadius: CGFloat = 12
     /// When true, uses the downsampled thumbnail cache for better grid scrolling performance.
-    var useThumbnail: Bool = false
+    var useThumbnail: Bool = true
     
     var body: some View {
         Group {
@@ -134,7 +136,7 @@ struct SongJacketView: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        .clipShape(.rect(cornerRadius: cornerRadius))
         .overlay(
             RoundedRectangle(cornerRadius: cornerRadius)
                 .stroke(Color.primary.opacity(0.1), lineWidth: useThumbnail ? 0.5 : 1)

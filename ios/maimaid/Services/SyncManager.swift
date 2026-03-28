@@ -94,8 +94,8 @@ class SyncManager {
         return (try? context.fetch(allProfiles))?.first
     }
     
-    func refreshLxnsToken(profile: UserProfile) async -> String? {
-        switch await refreshLxnsTokenResult(profile: profile) {
+    func refreshLxnsToken(profileId: UUID) async -> String? {
+        switch await refreshLxnsTokenResult(profileId: profileId) {
         case .success(let accessToken):
             return accessToken
         case .expired, .failed:
@@ -103,7 +103,12 @@ class SyncManager {
         }
     }
 
-    func refreshLxnsTokenResult(profile: UserProfile) async -> LxnsTokenRefreshResult {
+    func refreshLxnsTokenResult(profileId: UUID) async -> LxnsTokenRefreshResult {
+        let credentials = ProfileCredentialStore.shared.credentials(for: profileId)
+        let refreshToken = credentials.lxnsRefreshToken.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !refreshToken.isEmpty else {
+            return .expired
+        }
         guard let url = URL(string: "https://maimai.lxns.net/api/v0/oauth/token") else { return .failed }
         
         var request = URLRequest(url: url)
@@ -112,8 +117,8 @@ class SyncManager {
         
         let bodyString = [
             "grant_type": "refresh_token",
-            "client_id": profile.lxnsClientId,
-            "refresh_token": profile.lxnsRefreshToken
+            "client_id": LxnsOAuthConfiguration.clientId,
+            "refresh_token": refreshToken
         ].compactMap { key, value in
             let encodedValue = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
             return "\(key)=\(encodedValue)"
@@ -132,8 +137,7 @@ class SyncManager {
                 // If 400 (Invalid Refresh Token), clear the token
                 if http.statusCode == 400 {
                     print("SyncManager: [LXNS] 检测到无效 Refresh Token，正在清除凭据。")
-                    profile.lxnsRefreshToken = ""
-                    try? profile.modelContext?.save()
+                    ProfileCredentialStore.shared.setLxnsRefreshToken("", for: profileId)
                     return .expired
                 }
                 return .failed
@@ -143,8 +147,7 @@ class SyncManager {
             let tokenResponse = try decoder.decode(LxnsTokenResponse.self, from: data)
             
             if let newData = tokenResponse.data {
-                profile.lxnsRefreshToken = newData.refresh_token
-                try? profile.modelContext?.save()
+                ProfileCredentialStore.shared.setLxnsRefreshToken(newData.refresh_token, for: profileId)
                 return .success(newData.access_token)
             }
         } catch {

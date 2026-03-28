@@ -289,7 +289,8 @@ struct DanSongRowEnhanced: View {
     let ref: DanSheetRef
     let description: String?
     let scoreCache: [String: Score]
-    
+    @Environment(\.colorScheme) private var colorScheme
+
     private var matchingSheet: Sheet? {
         song.sheets.first {
             !$0.type.lowercased().contains("utage") &&
@@ -297,9 +298,9 @@ struct DanSongRowEnhanced: View {
             $0.difficulty.lowercased() == ref.difficulty.lowercased()
         }
     }
-    
+
     private var diffColor: Color {
-        ThemeUtils.colorForDifficulty(ref.difficulty, ref.type)
+        ThemeUtils.colorForDifficulty(ref.difficulty, ref.type, colorScheme)
     }
     
     private func score(for sheet: Sheet) -> Score? {
@@ -408,9 +409,10 @@ struct DanSongRowEnhanced: View {
 struct DanSongPlaceholder: View {
     let ref: DanSheetRef
     let description: String?
-    
+    @Environment(\.colorScheme) private var colorScheme
+
     private var diffColor: Color {
-        ThemeUtils.colorForDifficulty(ref.difficulty, ref.type)
+        ThemeUtils.colorForDifficulty(ref.difficulty, ref.type, colorScheme)
     }
     
     var body: some View {

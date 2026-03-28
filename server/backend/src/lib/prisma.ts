@@ -20,7 +20,7 @@ const getPool = (): Pool => {
 
 export const getPrismaClient = (): PrismaClient => {
   if (!globalThis.__maimaid_prisma__) {
-    const adapter = new PrismaPg(getPool());
+    const adapter = new PrismaPg(getPool() as unknown as ConstructorParameters<typeof PrismaPg>[0]);
     globalThis.__maimaid_prisma__ = new PrismaClient({ adapter });
   }
   return globalThis.__maimaid_prisma__;

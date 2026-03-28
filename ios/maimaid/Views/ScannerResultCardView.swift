@@ -9,6 +9,7 @@ struct ScannerResultCardView: View, Equatable {
     let resolvedSheet: Sheet?
     let onScoreEntryTap: () -> Void
     let onResetTap: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
     
     static func == (lhs: ScannerResultCardView, rhs: ScannerResultCardView) -> Bool {
         lhs.song.songIdentifier == rhs.song.songIdentifier &&
@@ -56,7 +57,7 @@ struct ScannerResultCardView: View, Equatable {
                 })
                 let chartType = recognizedType ?? sheet?.type ?? "dx"
                 let diff = recognizedDifficulty ?? sheet?.difficulty ?? "master"
-                let diffColor = ThemeUtils.colorForDifficulty(diff, chartType)
+                let diffColor = ThemeUtils.colorForDifficulty(diff, chartType, colorScheme)
                 VStack(spacing: 0) {
                     HStack(spacing: 0) {
                         RoundedRectangle(cornerRadius: 2).fill(diffColor).frame(width: 4).padding(.vertical, 4)
@@ -68,7 +69,7 @@ struct ScannerResultCardView: View, Equatable {
                                     Text(chartType.uppercased() == "STD" ? String(localized: "scanner.chart.std") : chartType.uppercased())
                                         .font(.system(size: 8, weight: .black))
                                         .padding(.horizontal, 4).padding(.vertical, 1)
-                                        .background(ThemeUtils.badgeColorForChartType(chartType))
+                                        .background(ThemeUtils.badgeColorForChartType(chartType, colorScheme))
                                         .foregroundStyle(.white).cornerRadius(3)
                                     Text(song.title).font(.system(size: 12, weight: .bold)).foregroundStyle(.primary).lineLimit(1)
                                 }

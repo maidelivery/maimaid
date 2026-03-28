@@ -39,8 +39,6 @@ private struct BackendSyncRemoteProfile: Codable {
     let playerRating: Int
     let plate: String?
     let dfUsername: String
-    let dfImportToken: String
-    let lxnsRefreshToken: String
     let b35Count: Int
     let b15Count: Int
     let b35RecLimit: Int
@@ -84,30 +82,6 @@ private struct BackendSyncRemotePlayRecord: Decodable {
     let sheet: BackendSyncRemoteSheet?
 }
 
-private struct BackendSyncFlexibleDouble: Decodable {
-    let value: Double
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if let number = try? container.decode(Double.self) {
-            value = number
-            return
-        }
-        if let intValue = try? container.decode(Int.self) {
-            value = Double(intValue)
-            return
-        }
-        if let string = try? container.decode(String.self), let parsed = Double(string) {
-            value = parsed
-            return
-        }
-        throw DecodingError.typeMismatch(
-            Double.self,
-            .init(codingPath: decoder.codingPath, debugDescription: "Expected numeric value.")
-        )
-    }
-}
-
 private struct BackendSyncProfileUpsertPayload: Encodable {
     let profileId: String
     let name: String
@@ -117,8 +91,6 @@ private struct BackendSyncProfileUpsertPayload: Encodable {
     let plate: String?
     let avatarUrl: String?
     let dfUsername: String
-    let dfImportToken: String
-    let lxnsRefreshToken: String
     let b35Count: Int
     let b15Count: Int
     let b35RecLimit: Int
@@ -267,8 +239,6 @@ enum BackendIncrementalSyncService {
                     plate: profile.plate,
                     avatarUrl: resolvedAvatarURL,
                     dfUsername: profile.dfUsername,
-                    dfImportToken: profile.dfImportToken,
-                    lxnsRefreshToken: profile.lxnsRefreshToken,
                     b35Count: profile.b35Count,
                     b15Count: profile.b15Count,
                     b35RecLimit: profile.b35RecLimit,
@@ -323,6 +293,7 @@ enum BackendIncrementalSyncService {
 
         try applyProfileDeleteEvents(response.events, context: context)
         try await applySnapshot(response.snapshot, context: context)
+        ScoreService.shared.repairDetachedRecordsIfNeeded(context: context, force: true)
         config.lastSyncRevision = response.latestRevision
         try context.save()
         ScoreService.shared.invalidateAllCaches()
@@ -408,8 +379,6 @@ enum BackendIncrementalSyncService {
                 existing.playerRating = remote.playerRating
                 existing.plate = remote.plate
                 existing.dfUsername = remote.dfUsername
-                existing.dfImportToken = remote.dfImportToken
-                existing.lxnsRefreshToken = remote.lxnsRefreshToken
                 existing.b35Count = remote.b35Count
                 existing.b15Count = remote.b15Count
                 existing.b35RecLimit = remote.b35RecLimit
@@ -427,8 +396,6 @@ enum BackendIncrementalSyncService {
                     isActive: remote.isActive,
                     createdAt: remote.createdAt,
                     dfUsername: remote.dfUsername,
-                    dfImportToken: remote.dfImportToken,
-                    lxnsRefreshToken: remote.lxnsRefreshToken,
                     playerRating: remote.playerRating,
                     plate: remote.plate,
                     lastImportDateDF: remote.lastImportDateDf,
@@ -442,7 +409,7 @@ enum BackendIncrementalSyncService {
                 profile = created
             }
 
-            if let avatarData = await downloadAvatarData(from: remote.avatarUrl) {
+            if let avatarData = await BackendSyncShared.downloadAvatarData(from: remote.avatarUrl) {
                 profile.avatarData = avatarData
             }
         }
@@ -454,34 +421,56 @@ enum BackendIncrementalSyncService {
             }
         }
 
-        let localScores = try context.fetch(FetchDescriptor<Score>())
-        for score in localScores {
-            if let userProfileId = score.userProfileId, profileIds.contains(userProfileId) {
+        for profileId in profileIds {
+            let scoreDescriptor = FetchDescriptor<Score>(
+                predicate: #Predicate<Score> { $0.userProfileId == profileId }
+            )
+            let recordDescriptor = FetchDescriptor<PlayRecord>(
+                predicate: #Predicate<PlayRecord> { $0.userProfileId == profileId }
+            )
+            let localScores = try context.fetch(scoreDescriptor)
+            for score in localScores {
                 context.delete(score)
             }
-        }
-        let localRecords = try context.fetch(FetchDescriptor<PlayRecord>())
-        for record in localRecords {
-            if let userProfileId = record.userProfileId, profileIds.contains(userProfileId) {
+            let localRecords = try context.fetch(recordDescriptor)
+            for record in localRecords {
                 context.delete(record)
             }
         }
 
         let sheets = try context.fetch(FetchDescriptor<Sheet>())
-        let scoreSheetMap = buildSheetMap(for: sheets, separators: ["_", "-"])
-        let recordSheetMap = buildSheetMap(for: sheets, separators: ["-", "_"])
+        let scoreSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["_", "-"])
+        let recordSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["-", "_"])
 
         let resolvedRecords = snapshot.records.compactMap { remoteRecord -> (UUID, Sheet, BackendSyncRemotePlayRecord)? in
             guard let profileId = UUID(uuidString: remoteRecord.profileId) else { return nil }
             guard profileIds.contains(profileId) else { return nil }
-            guard let sheet = resolveSheet(for: remoteRecord.sheet, sheetMap: recordSheetMap) else { return nil }
+            guard
+                let remoteSheet = remoteRecord.sheet,
+                let sheet = BackendSyncShared.resolveSheet(
+                    songIdentifier: remoteSheet.songIdentifier,
+                    songId: remoteSheet.songId,
+                    chartType: remoteSheet.chartType,
+                    difficulty: remoteSheet.difficulty,
+                    sheetMap: recordSheetMap
+                )
+            else { return nil }
             return (profileId, sheet, remoteRecord)
         }
 
         let resolvedScores = snapshot.scores.compactMap { remoteScore -> (UUID, Sheet, BackendSyncRemoteScore)? in
             guard let profileId = UUID(uuidString: remoteScore.profileId) else { return nil }
             guard profileIds.contains(profileId) else { return nil }
-            guard let sheet = resolveSheet(for: remoteScore.sheet, sheetMap: scoreSheetMap) else { return nil }
+            guard
+                let remoteSheet = remoteScore.sheet,
+                let sheet = BackendSyncShared.resolveSheet(
+                    songIdentifier: remoteSheet.songIdentifier,
+                    songId: remoteSheet.songId,
+                    chartType: remoteSheet.chartType,
+                    difficulty: remoteSheet.difficulty,
+                    sheetMap: scoreSheetMap
+                )
+            else { return nil }
             return (profileId, sheet, remoteScore)
         }
 
@@ -502,7 +491,7 @@ enum BackendIncrementalSyncService {
 
         for (profileId, sheet, remoteRecord) in resolvedRecords {
             let playRecord = PlayRecord(
-                sheetId: "\(sheet.songIdentifier)-\(sheet.type)-\(sheet.difficulty)",
+                sheetId: BackendSyncShared.canonicalRecordSheetId(for: sheet),
                 rate: remoteRecord.achievements.value,
                 rank: remoteRecord.rank,
                 dxScore: remoteRecord.dxScore,
@@ -521,7 +510,7 @@ enum BackendIncrementalSyncService {
 
         for (profileId, sheet, remoteScore) in resolvedScores {
             let score = Score(
-                sheetId: "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)",
+                sheetId: BackendSyncShared.canonicalScoreSheetId(for: sheet),
                 rate: remoteScore.achievements.value,
                 rank: remoteScore.rank,
                 dxScore: remoteScore.dxScore,
@@ -543,137 +532,5 @@ enum BackendIncrementalSyncService {
         let config = SyncConfig()
         context.insert(config)
         return config
-    }
-
-    private static func buildSheetMap(for sheets: [Sheet], separators: [String]) -> [String: Sheet] {
-        var map: [String: Sheet] = [:]
-        for sheet in sheets {
-            let identifiers = candidateSongIdentifiers(for: sheet)
-            let chartTypeCandidates = normalizeChartTypeCandidates(sheet.type)
-            let difficultyCandidates = normalizeDifficultyCandidates(sheet.difficulty)
-            for identifier in identifiers {
-                for separator in separators {
-                    for chartType in chartTypeCandidates {
-                        for difficulty in difficultyCandidates {
-                            let key = "\(identifier)\(separator)\(chartType)\(separator)\(difficulty)"
-                            map[key] = sheet
-                        }
-                    }
-                }
-            }
-        }
-        return map
-    }
-
-    private static func candidateSongIdentifiers(for sheet: Sheet) -> Set<String> {
-        var ids: Set<String> = []
-        if !sheet.songIdentifier.isEmpty {
-            ids.insert(sheet.songIdentifier)
-        }
-        if sheet.songId > 0 {
-            ids.insert(String(sheet.songId))
-        }
-        if let song = sheet.song {
-            ids.insert(song.songIdentifier)
-            if song.songId > 0 {
-                ids.insert(String(song.songId))
-            }
-        }
-        return ids
-    }
-
-    private static func resolveSheet(for remote: BackendSyncRemoteSheet?, sheetMap: [String: Sheet]) -> Sheet? {
-        guard let remote else {
-            return nil
-        }
-        let identifierCandidates = [remote.songIdentifier, String(remote.songId)]
-            .flatMap { normalizeIdentifierCandidates($0) }
-            .filter { !$0.isEmpty && $0 != "0" }
-        let chartTypeCandidates = normalizeChartTypeCandidates(remote.chartType)
-        let difficultyCandidates = normalizeDifficultyCandidates(remote.difficulty)
-
-        for identifier in identifierCandidates {
-            for separator in ["_", "-"] {
-                for chartType in chartTypeCandidates {
-                    for difficulty in difficultyCandidates {
-                        let key = "\(identifier)\(separator)\(chartType)\(separator)\(difficulty)"
-                        if let sheet = sheetMap[key] {
-                            return sheet
-                        }
-                    }
-                }
-            }
-        }
-        return nil
-    }
-
-    private static func normalizeIdentifierCandidates(_ value: String) -> [String] {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            return []
-        }
-        let lowercased = trimmed.lowercased()
-        if lowercased == trimmed {
-            return [trimmed]
-        }
-        return [trimmed, lowercased]
-    }
-
-    private static func normalizeChartTypeCandidates(_ value: String) -> [String] {
-        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if normalized == "standard" || normalized == "std" || normalized == "sd" {
-            return ["std", "standard"]
-        }
-        if normalized == "dx" {
-            return ["dx"]
-        }
-        if normalized == "utage" {
-            return ["utage"]
-        }
-        return normalized.isEmpty ? [] : [normalized]
-    }
-
-    private static func normalizeDifficultyCandidates(_ value: String) -> [String] {
-        let lowered = value
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-        let normalized = lowered
-            .replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "_", with: "")
-            .replacingOccurrences(of: ":", with: "")
-
-        if normalized == "remaster" {
-            return ["remaster", "re:master", "re_master"]
-        }
-        if normalized.isEmpty {
-            return []
-        }
-        if normalized == lowered {
-            return [normalized]
-        }
-        return [normalized, lowered]
-    }
-
-    private static func downloadAvatarData(from avatarURLString: String?) async -> Data? {
-        guard let avatarURLString, let avatarURL = URL(string: avatarURLString) else {
-            return nil
-        }
-
-        var request = URLRequest(url: avatarURL)
-        request.httpMethod = "GET"
-        request.timeoutInterval = 30
-
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse else {
-                return nil
-            }
-            guard (200...299).contains(httpResponse.statusCode), !data.isEmpty else {
-                return nil
-            }
-            return data
-        } catch {
-            return nil
-        }
     }
 }

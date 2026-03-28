@@ -5,6 +5,7 @@ struct SongRowView: View {
     let song: Song
     var scoreCache: [String: Score] = [:]
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     
     private var highestSheet: Sheet? {
@@ -14,15 +15,15 @@ struct SongRowView: View {
     }
     
     private var accentColor: Color {
-        guard let sheet = highestSheet else { return Color(light: Color(hex: "#ec48e9"), dark: Color(hex: "#bb38b9")) }
-        return ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
+        guard let sheet = highestSheet else { return ThemeUtils.utageColor(colorScheme) }
+        return ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type, colorScheme)
     }
-    
+
     private var versionBadgeColor: Color {
         if song.sheets.contains(where: { $0.type.lowercased() == "utage" }) ||
             song.category.lowercased().contains("utage") ||
             song.category.contains("宴") {
-            return Color(light: Color(hex: "#ec48e9"), dark: Color(hex: "#bb38b9"))
+            return ThemeUtils.utageColor(colorScheme)
         }
         
         return song.sheets.contains(where: { $0.type.lowercased() == "dx" }) ? .orange : .blue
@@ -107,9 +108,10 @@ struct SongRowView: View {
     struct ScoreProgressDot: View {
         let sheet: Sheet
         let context: ModelContext
-        
+        @Environment(\.colorScheme) private var colorScheme
+
         private var color: Color {
-            ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
+            ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type, colorScheme)
         }
         
         var body: some View {
@@ -136,9 +138,10 @@ struct SongRowView: View {
 struct ScoreProgressDotOptimized: View {
     let sheet: Sheet
     let scoreCache: [String: Score]
-    
+    @Environment(\.colorScheme) private var colorScheme
+
     private var color: Color {
-        ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
+        ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type, colorScheme)
     }
     
     private var sheetId: String {

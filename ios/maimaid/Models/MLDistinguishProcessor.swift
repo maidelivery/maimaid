@@ -9,7 +9,6 @@ nonisolated final class MLDistinguishProcessor {
     
     // The compiled CoreML model
     private let visionModel: VNCoreMLModel?
-    private let processingQueue = DispatchQueue(label: "com.shiko.maimaid.ml.distinguish", qos: .userInitiated)
     
     private init() {
         self.visionModel = Self.loadModel()
@@ -47,13 +46,7 @@ nonisolated final class MLDistinguishProcessor {
     /// Classifies an image into .score, .choose, or .unknown
     func classify(_ image: UIImage) async -> MaimaiImageType {
         let normalizedImage = await MainActor.run { image.normalized() }
-        let visionModel = self.visionModel
-        
-        return await withCheckedContinuation { continuation in
-            processingQueue.async {
-                continuation.resume(returning: Self.classifySynchronously(normalizedImage, visionModel: visionModel))
-            }
-        }
+        return Self.classifySynchronously(normalizedImage, visionModel: visionModel)
     }
     
     private static func classifySynchronously(_ image: UIImage, visionModel: VNCoreMLModel?) -> MaimaiImageType {

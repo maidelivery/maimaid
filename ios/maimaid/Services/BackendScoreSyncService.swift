@@ -49,8 +49,6 @@ private struct BackendProfileUpsertPayload: Encodable {
     let plate: String?
     let avatarUrl: String?
     let dfUsername: String
-    let dfImportToken: String
-    let lxnsRefreshToken: String
     let b35Count: Int
     let b15Count: Int
     let b35RecLimit: Int
@@ -79,8 +77,6 @@ enum BackendScoreSyncService {
             plate: profile.plate,
             avatarUrl: profile.avatarUrl,
             dfUsername: profile.dfUsername,
-            dfImportToken: profile.dfImportToken,
-            lxnsRefreshToken: profile.lxnsRefreshToken,
             b35Count: profile.b35Count,
             b15Count: profile.b15Count,
             b35RecLimit: profile.b35RecLimit,

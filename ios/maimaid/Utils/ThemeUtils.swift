@@ -173,41 +173,47 @@ extension UserDefaults {
 }
 
 struct ThemeUtils {
-    static func colorForDifficulty(_ difficulty: String, _ type: String?) -> Color {
+    static func colorForDifficulty(_ difficulty: String, _ type: String?, _ colorScheme: ColorScheme = .light) -> Color {
         let low = difficulty.lowercased()
-        
+        let dark = colorScheme == .dark
+
         if low.contains("basic") {
-            return Color(light: Color(hex: "#36bf63"), dark: Color(hex: "#2a974e"))
+            return dark ? Color(hex: "#2a974e") : Color(hex: "#36bf63")
         }
         if low.contains("advanced") {
-            return Color(light: Color(hex: "#fca13b"), dark: Color(hex: "#c8802d"))
+            return dark ? Color(hex: "#c8802d") : Color(hex: "#fca13b")
         }
         if low.contains("expert") {
-            return Color(light: Color(hex: "#f7536a"), dark: Color(hex: "#c54153"))
+            return dark ? Color(hex: "#c54153") : Color(hex: "#f7536a")
         }
         if low.contains("remaster") {
-            return Color(light: Color(hex: "#e3bdfc"), dark: Color(hex: "#bf8cfc"))
+            return dark ? Color(hex: "#bf8cfc") : Color(hex: "#e3bdfc")
         }
         if low.contains("master") {
-            return Color(light: Color(hex: "#a34ee4"), dark: Color(hex: "#813db4"))
+            return dark ? Color(hex: "#813db4") : Color(hex: "#a34ee4")
         }
         if type?.lowercased().contains("utage") == true {
-            return Color(light: Color(hex: "#ec48e9"), dark: Color(hex: "#bb38b9"))
+            return dark ? Color(hex: "#bb38b9") : Color(hex: "#ec48e9")
         }
-        
+
         return Color.pink.opacity(0.5)
     }
-    
-    static func badgeColorForChartType(_ type: String) -> Color {
+
+    static func utageColor(_ colorScheme: ColorScheme = .light) -> Color {
+        colorScheme == .dark ? Color(hex: "#bb38b9") : Color(hex: "#ec48e9")
+    }
+
+    static func badgeColorForChartType(_ type: String, _ colorScheme: ColorScheme = .light) -> Color {
         let normalizedType = type.lowercased()
-        
+
         if normalizedType == "dx" {
             return .orange
         }
         if normalizedType.contains("utage") {
-            return Color(light: Color(hex: "#ff69b4"), dark: Color(hex: "#d6549a"))
+            let dark = colorScheme == .dark
+            return dark ? Color(hex: "#d6549a") : Color(hex: "#ff69b4")
         }
-        
+
         return .blue
     }
     
@@ -217,8 +223,8 @@ struct ThemeUtils {
         let releaseDate: String?
     }
     
-    static func versionSortOrder(_ version: String) -> Int {
-        let sequence = UserDefaults.app.maimaiVersionSequence
+    nonisolated static func versionSortOrder(_ version: String) -> Int {
+        let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
         
         // 1. Exact match preferred
         if let index = sequence.firstIndex(of: version) {
@@ -464,16 +470,5 @@ extension Color {
             blue: Double(b) / 255,
             opacity: Double(a) / 255
         )
-    }
-    
-    init(light: Color, dark: Color) {
-        self.init(uiColor: UIColor { traitCollection in
-            switch traitCollection.userInterfaceStyle {
-            case .dark:
-                return UIColor(dark)
-            default:
-                return UIColor(light)
-            }
-        })
     }
 }

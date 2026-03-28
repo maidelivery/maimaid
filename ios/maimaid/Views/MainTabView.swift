@@ -40,7 +40,9 @@ struct MainTabView: View {
         .task {
             // Migrate legacy SyncConfig data to UserProfile (one-time)
             migrateToUserProfileIfNeeded()
+            ProfileCredentialStore.shared.migrateLegacyCredentialsIfNeeded(context: modelContext)
             ensureActiveProfileAndRepairScopedData()
+            ScoreService.shared.repairDetachedRecordsIfNeeded(context: modelContext)
             
             // Reconnect orphaned scores due to Model relationship changes
             fixOrphanedScores()
@@ -73,8 +75,6 @@ struct MainTabView: View {
             avatarData: config.avatarData,
             isActive: true,
             dfUsername: config.dfUsername,
-            dfImportToken: config.dfImportToken,
-            lxnsRefreshToken: config.lxnsRefreshToken,
             playerRating: config.playerRating,
             plate: config.plate,
             b35Count: config.b35Count,

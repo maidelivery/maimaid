@@ -6,6 +6,7 @@ struct ScoreEntryView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
     
     let sheet: Sheet
     
@@ -66,7 +67,7 @@ struct ScoreEntryView: View {
     }
     
     private var diffColor: Color {
-        ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
+        ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type, colorScheme)
     }
     
     private var chartTypeLabel: String {
@@ -300,7 +301,7 @@ struct ScoreEntryView: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
-                        .background(ThemeUtils.badgeColorForChartType(sheet.type), in: Capsule())
+                        .background(ThemeUtils.badgeColorForChartType(sheet.type, colorScheme), in: Capsule())
                     
                     Text(difficultyLabel)
                         .font(.subheadline.weight(.semibold))

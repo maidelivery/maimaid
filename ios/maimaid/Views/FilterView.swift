@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FilterView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @Binding var settings: FilterSettings
     
     let allCategories: [String]
@@ -46,7 +47,7 @@ struct FilterView: View {
                                         FilterChip(
                                             title: diff,
                                             isSelected: settings.selectedDifficulties.contains(internalName(for: diff)),
-                                            color: ThemeUtils.colorForDifficulty(internalName(for: diff), nil)
+                                            color: ThemeUtils.colorForDifficulty(internalName(for: diff), nil, colorScheme)
                                         ) {
                                             toggleSet(&settings.selectedDifficulties, internalName(for: diff))
                                         }
@@ -277,10 +278,14 @@ struct FilterChip: View {
     let title: String
     let isSelected: Bool
     var color: Color = .blue
-    let action: () -> Void
-    
+    let action: @MainActor () -> Void
+
     var body: some View {
-        Button(action: action) {
+        Button {
+            MainActor.assumeIsolated {
+                action()
+            }
+        } label: {
             Text(title)
                 .font(.system(size: 13, weight: .semibold))
                 .padding(.horizontal, 14)

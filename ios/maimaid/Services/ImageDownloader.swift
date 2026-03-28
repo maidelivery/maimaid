@@ -4,38 +4,27 @@ import UIKit
 @MainActor
 class ImageDownloader {
     static let shared = ImageDownloader()
+    private let fileManager = FileManager.default
     
-    // The directory where covers will be stored
-    var coversDirectory: URL {
-        let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
-        let docDir = paths[0]
-        let dir = docDir.appendingPathComponent("Covers", isDirectory: true)
-        
-        if !FileManager.default.fileExists(atPath: dir.path) {
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: nil)
-        }
+    private lazy var coversDirectory: URL = {
+        let dir = URL.documentsDirectory.appending(path: "Covers", directoryHint: .isDirectory)
+        ensureDirectoryExists(at: dir)
         return dir
-    }
+    }()
     
-    // The directory where icons will be stored
-    var iconsDirectory: URL {
-        let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
-        let docDir = paths[0]
-        let dir = docDir.appendingPathComponent("Icons", isDirectory: true)
-        
-        if !FileManager.default.fileExists(atPath: dir.path) {
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: nil)
-        }
+    private lazy var iconsDirectory: URL = {
+        let dir = URL.documentsDirectory.appending(path: "Icons", directoryHint: .isDirectory)
+        ensureDirectoryExists(at: dir)
         return dir
-    }
+    }()
     
     func getCoverUrl(for imageName: String) -> URL {
         let cleanName = imageName.trimmingCharacters(in: .whitespacesAndNewlines)
-        return coversDirectory.appendingPathComponent(cleanName)
+        return coversDirectory.appending(path: cleanName)
     }
     
     func getIconUrl(for iconId: Int) -> URL {
-        return iconsDirectory.appendingPathComponent("\(iconId).png")
+        iconsDirectory.appending(path: "\(iconId).png")
     }
     
     private func isValidImageName(_ name: String) -> Bool {
@@ -49,12 +38,12 @@ class ImageDownloader {
     func imageExists(imageName: String) -> Bool {
         guard isValidImageName(imageName) else { return false }
         let url = getCoverUrl(for: imageName)
-        return FileManager.default.fileExists(atPath: url.path)
+        return fileManager.fileExists(atPath: url.path)
     }
     
     func iconExists(iconId: Int) -> Bool {
         let url = getIconUrl(for: iconId)
-        return FileManager.default.fileExists(atPath: url.path)
+        return fileManager.fileExists(atPath: url.path)
     }
     
     func downloadImage(from urlString: String, as imageName: String) async throws -> URL {
@@ -72,7 +61,7 @@ class ImageDownloader {
     }
     
     private func downloadAndSave(from urlString: String, to destinationUrl: URL) async throws -> URL {
-        if FileManager.default.fileExists(atPath: destinationUrl.path) {
+        if fileManager.fileExists(atPath: destinationUrl.path) {
             return destinationUrl
         }
         
@@ -116,5 +105,12 @@ class ImageDownloader {
     func loadImage(iconId: Int) -> UIImage? {
         let url = getIconUrl(for: iconId)
         return UIImage(contentsOfFile: url.path)
+    }
+
+    private func ensureDirectoryExists(at directory: URL) {
+        guard !fileManager.fileExists(atPath: directory.path) else {
+            return
+        }
+        try? fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 }

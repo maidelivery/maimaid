@@ -321,7 +321,7 @@ struct CommunityAliasVotingBoardView: View {
             tipMessage = message
         }
 
-        tipDismissTask = Task {
+        tipDismissTask = Task { @MainActor in
             try? await Task.sleep(for: .seconds(1.6))
             guard !Task.isCancelled else { return }
             if tipMessage == message {

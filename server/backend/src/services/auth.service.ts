@@ -592,8 +592,15 @@ export class AuthService {
 
     try {
       const parsed = new URL(trimmed);
-      if (parsed.protocol === "maimaid:") {
-        return parsed.toString();
+      const isAllowedRedirect =
+        parsed.protocol === "maimaid:"
+        && parsed.hostname === "auth"
+        && (parsed.pathname === "/callback" || parsed.pathname === "/callback/")
+        && !parsed.search
+        && !parsed.hash;
+
+      if (isAllowedRedirect) {
+        return fallback;
       }
     } catch {
       // Fallback to the default app callback URL.

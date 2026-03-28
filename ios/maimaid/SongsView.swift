@@ -139,7 +139,7 @@ struct SongsView: View {
         )
     }
     
-    private static func filterAndSortSongIdentifiers(
+    nonisolated private static func filterAndSortSongIdentifiers(
         from snapshots: [SongFilterSnapshot],
         settings: FilterSettings,
         searchText: String,

@@ -22,8 +22,6 @@ const upsertProfileSchema = z.object({
   plate: z.string().nullable().optional(),
   avatarUrl: z.string().url().nullable().optional(),
   dfUsername: z.string().optional(),
-  dfImportToken: z.string().optional(),
-  lxnsRefreshToken: z.string().optional(),
   b35Count: z.number().int().positive().optional(),
   b15Count: z.number().int().positive().optional(),
   b35RecLimit: z.number().int().positive().optional(),
@@ -39,8 +37,6 @@ const updateProfileSchema = z
     playerRating: z.number().int().nonnegative().optional(),
     plate: z.string().nullable().optional(),
     dfUsername: z.string().optional(),
-    dfImportToken: z.string().optional(),
-    lxnsRefreshToken: z.string().optional(),
     b35Count: z.number().int().positive().optional(),
     b15Count: z.number().int().positive().optional(),
     b35RecLimit: z.number().int().positive().optional(),
@@ -135,8 +131,6 @@ profilesV1Route.post("/upsert", async (c) => {
   if (body.plate !== undefined) payload.plate = body.plate;
   if (body.avatarUrl !== undefined) payload.avatarUrl = body.avatarUrl;
   if (body.dfUsername !== undefined) payload.dfUsername = body.dfUsername;
-  if (body.dfImportToken !== undefined) payload.dfImportToken = body.dfImportToken;
-  if (body.lxnsRefreshToken !== undefined) payload.lxnsRefreshToken = body.lxnsRefreshToken;
   if (body.b35Count !== undefined) payload.b35Count = body.b35Count;
   if (body.b15Count !== undefined) payload.b15Count = body.b15Count;
   if (body.b35RecLimit !== undefined) payload.b35RecLimit = body.b35RecLimit;
@@ -184,8 +178,6 @@ profilesV1Route.patch("/:profileId", async (c) => {
   if (body.playerRating !== undefined) payload.playerRating = body.playerRating;
   if (body.plate !== undefined) payload.plate = body.plate;
   if (body.dfUsername !== undefined) payload.dfUsername = body.dfUsername;
-  if (body.dfImportToken !== undefined) payload.dfImportToken = body.dfImportToken;
-  if (body.lxnsRefreshToken !== undefined) payload.lxnsRefreshToken = body.lxnsRefreshToken;
   if (body.b35Count !== undefined) payload.b35Count = body.b35Count;
   if (body.b15Count !== undefined) payload.b15Count = body.b15Count;
   if (body.b35RecLimit !== undefined) payload.b35RecLimit = body.b35RecLimit;

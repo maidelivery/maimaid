@@ -139,9 +139,6 @@ model Profile {
   avatarObjectKey  String?
   isActive         Boolean          @default(false)
   dfUsername       String           @default("")
-  dfImportToken    String           @default("")
-  lxnsRefreshToken String           @default("")
-  lxnsClientId     String           @default("cfb7ef40-bc0f-4e3a-8258-9e5f52cd7338")
   playerRating     Int              @default(0)
   plate            String?
   lastImportDateDf DateTime?
@@ -160,7 +157,6 @@ model Profile {
 
   @@index([userId])
   @@index([userId, isActive])
-  @@index([dfImportToken])
   @@map("profiles")
 }
 

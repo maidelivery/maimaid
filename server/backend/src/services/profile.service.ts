@@ -42,8 +42,6 @@ export class ProfileService {
       plate?: string | null;
       avatarUrl?: string | null;
       dfUsername?: string;
-      dfImportToken?: string;
-      lxnsRefreshToken?: string;
       b35Count?: number;
       b15Count?: number;
       b35RecLimit?: number;
@@ -77,8 +75,6 @@ export class ProfileService {
           plate: input.plate ?? null,
           avatarUrl: input.avatarUrl ?? null,
           dfUsername: input.dfUsername ?? "",
-          dfImportToken: input.dfImportToken ?? "",
-          lxnsRefreshToken: input.lxnsRefreshToken ?? "",
           b35Count: input.b35Count ?? 35,
           b15Count: input.b15Count ?? 15,
           b35RecLimit: input.b35RecLimit ?? 10,
@@ -109,8 +105,6 @@ export class ProfileService {
     if (input.plate !== undefined) data.plate = input.plate;
     if (input.avatarUrl !== undefined) data.avatarUrl = input.avatarUrl;
     if (input.dfUsername !== undefined) data.dfUsername = input.dfUsername;
-    if (input.dfImportToken !== undefined) data.dfImportToken = input.dfImportToken;
-    if (input.lxnsRefreshToken !== undefined) data.lxnsRefreshToken = input.lxnsRefreshToken;
     if (input.b35Count !== undefined) data.b35Count = input.b35Count;
     if (input.b15Count !== undefined) data.b15Count = input.b15Count;
     if (input.b35RecLimit !== undefined) data.b35RecLimit = input.b35RecLimit;
@@ -144,8 +138,6 @@ export class ProfileService {
       playerRating: number;
       plate: string | null;
       dfUsername: string;
-      dfImportToken: string;
-      lxnsRefreshToken: string;
       b35Count: number;
       b15Count: number;
       b35RecLimit: number;
@@ -166,8 +158,6 @@ export class ProfileService {
     if (input.playerRating !== undefined) data.playerRating = input.playerRating;
     if (input.plate !== undefined) data.plate = input.plate;
     if (input.dfUsername !== undefined) data.dfUsername = input.dfUsername;
-    if (input.dfImportToken !== undefined) data.dfImportToken = input.dfImportToken;
-    if (input.lxnsRefreshToken !== undefined) data.lxnsRefreshToken = input.lxnsRefreshToken;
     if (input.b35Count !== undefined) data.b35Count = input.b35Count;
     if (input.b15Count !== undefined) data.b15Count = input.b15Count;
     if (input.b35RecLimit !== undefined) data.b35RecLimit = input.b35RecLimit;

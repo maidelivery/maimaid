@@ -272,8 +272,8 @@ private extension AccountDataResolutionCoordinator {
         }
 
         let sheets = try context.fetch(FetchDescriptor<Sheet>())
-        let scoreSheetMap = buildSheetMap(for: sheets, separators: ["_", "-"])
-        let recordSheetMap = buildSheetMap(for: sheets, separators: ["-", "_"])
+        let scoreSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["_", "-"])
+        let recordSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["-", "_"])
 
         var allProfiles = localProfiles
         for remoteProfile in snapshot.profiles {
@@ -304,8 +304,6 @@ private extension AccountDataResolutionCoordinator {
                     isActive: remoteProfile.isActive,
                     createdAt: remoteProfile.createdAt,
                     dfUsername: remoteProfile.dfUsername,
-                    dfImportToken: remoteProfile.dfImportToken,
-                    lxnsRefreshToken: remoteProfile.lxnsRefreshToken,
                     playerRating: remoteProfile.playerRating,
                     plate: remoteProfile.plate,
                     lastImportDateDF: remoteProfile.lastImportDateDf,
@@ -337,8 +335,8 @@ private extension AccountDataResolutionCoordinator {
 
     private func applyCloudSnapshot(snapshot: CloudSnapshot, context: ModelContext) throws {
         let sheets = try context.fetch(FetchDescriptor<Sheet>())
-        let scoreSheetMap = buildSheetMap(for: sheets, separators: ["_", "-"])
-        let recordSheetMap = buildSheetMap(for: sheets, separators: ["-", "_"])
+        let scoreSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["_", "-"])
+        let recordSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["-", "_"])
 
         var createdProfiles: [UserProfile] = []
         for remoteProfile in snapshot.profiles {
@@ -351,8 +349,6 @@ private extension AccountDataResolutionCoordinator {
                 isActive: remoteProfile.isActive,
                 createdAt: remoteProfile.createdAt,
                 dfUsername: remoteProfile.dfUsername,
-                dfImportToken: remoteProfile.dfImportToken,
-                lxnsRefreshToken: remoteProfile.lxnsRefreshToken,
                 playerRating: remoteProfile.playerRating,
                 plate: remoteProfile.plate,
                 lastImportDateDF: remoteProfile.lastImportDateDf,
@@ -517,12 +513,6 @@ private extension AccountDataResolutionCoordinator {
         if localProfile.dfUsername.isEmpty {
             localProfile.dfUsername = remoteProfile.dfUsername
         }
-        if localProfile.dfImportToken.isEmpty {
-            localProfile.dfImportToken = remoteProfile.dfImportToken
-        }
-        if localProfile.lxnsRefreshToken.isEmpty {
-            localProfile.lxnsRefreshToken = remoteProfile.lxnsRefreshToken
-        }
         if localProfile.b35Count == 35 {
             localProfile.b35Count = remoteProfile.b35Count
         }
@@ -577,8 +567,8 @@ private extension AccountDataResolutionCoordinator {
     }
 
     private func scoreDraft(from localScore: Score, scoreSheetMap: [String: Sheet]) -> ScoreDraft? {
-        let resolvedSheet = localScore.sheet ?? resolveSheet(for: localScore.sheetId, sheetMap: scoreSheetMap)
-        let normalizedSheetId = resolvedSheet.map(canonicalScoreSheetId(for:)) ?? localScore.sheetId
+        let resolvedSheet = localScore.sheet ?? BackendSyncShared.resolveSheet(for: localScore.sheetId, sheetMap: scoreSheetMap)
+        let normalizedSheetId = resolvedSheet.map(BackendSyncShared.canonicalScoreSheetId(for:)) ?? localScore.sheetId
         let key = normalizedScoreKey(normalizedSheetId)
         return ScoreDraft(
             key: key,
@@ -594,10 +584,19 @@ private extension AccountDataResolutionCoordinator {
     }
 
     private func scoreDraft(from remoteScore: CloudSnapshotScore, scoreSheetMap: [String: Sheet]) -> ScoreDraft? {
-        guard let sheet = resolveSheet(for: remoteScore.sheet, sheetMap: scoreSheetMap) else {
+        guard
+            let remoteSheet = remoteScore.sheet,
+            let sheet = BackendSyncShared.resolveSheet(
+                songIdentifier: remoteSheet.songIdentifier,
+                songId: remoteSheet.songId,
+                chartType: remoteSheet.chartType,
+                difficulty: remoteSheet.difficulty,
+                sheetMap: scoreSheetMap
+            )
+        else {
             return nil
         }
-        let sheetId = canonicalScoreSheetId(for: sheet)
+        let sheetId = BackendSyncShared.canonicalScoreSheetId(for: sheet)
         return ScoreDraft(
             key: normalizedScoreKey(sheetId),
             sheetId: sheetId,
@@ -616,8 +615,8 @@ private extension AccountDataResolutionCoordinator {
     }
 
     private func recordDraft(from localRecord: PlayRecord, recordSheetMap: [String: Sheet]) -> RecordDraft? {
-        let resolvedSheet = localRecord.sheet ?? resolveSheet(for: localRecord.sheetId, sheetMap: recordSheetMap)
-        let sheetId = resolvedSheet.map(canonicalRecordSheetId(for:)) ?? localRecord.sheetId
+        let resolvedSheet = localRecord.sheet ?? BackendSyncShared.resolveSheet(for: localRecord.sheetId, sheetMap: recordSheetMap)
+        let sheetId = resolvedSheet.map(BackendSyncShared.canonicalRecordSheetId(for:)) ?? localRecord.sheetId
         let uniqueKey = recordUniqueKey(
             normalizedSheetKey: normalizedRecordKey(sheetId),
             playDate: localRecord.playDate,
@@ -642,10 +641,19 @@ private extension AccountDataResolutionCoordinator {
     }
 
     private func recordDraft(from remoteRecord: CloudSnapshotPlayRecord, recordSheetMap: [String: Sheet]) -> RecordDraft? {
-        guard let sheet = resolveSheet(for: remoteRecord.sheet, sheetMap: recordSheetMap) else {
+        guard
+            let remoteSheet = remoteRecord.sheet,
+            let sheet = BackendSyncShared.resolveSheet(
+                songIdentifier: remoteSheet.songIdentifier,
+                songId: remoteSheet.songId,
+                chartType: remoteSheet.chartType,
+                difficulty: remoteSheet.difficulty,
+                sheetMap: recordSheetMap
+            )
+        else {
             return nil
         }
-        let sheetId = canonicalRecordSheetId(for: sheet)
+        let sheetId = BackendSyncShared.canonicalRecordSheetId(for: sheet)
         let uniqueKey = recordUniqueKey(
             normalizedSheetKey: normalizedRecordKey(sheetId),
             playDate: remoteRecord.playTime,
@@ -796,127 +804,4 @@ private extension AccountDataResolutionCoordinator {
         return "\(normalizedServer)|\(normalizedName)"
     }
 
-    private func canonicalScoreSheetId(for sheet: Sheet) -> String {
-        "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)"
-    }
-
-    private func canonicalRecordSheetId(for sheet: Sheet) -> String {
-        "\(sheet.songIdentifier)-\(sheet.type)-\(sheet.difficulty)"
-    }
-
-    private func resolveSheet(for existingSheetId: String, sheetMap: [String: Sheet]) -> Sheet? {
-        let key = existingSheetId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if let sheet = sheetMap[key] {
-            return sheet
-        }
-        let swapped = key.contains("_") ? key.replacing("_", with: "-") : key.replacing("-", with: "_")
-        return sheetMap[swapped]
-    }
-
-    private func buildSheetMap(for sheets: [Sheet], separators: [String]) -> [String: Sheet] {
-        var map: [String: Sheet] = [:]
-        for sheet in sheets {
-            let identifiers = candidateSongIdentifiers(for: sheet)
-            let chartTypeCandidates = normalizeChartTypeCandidates(sheet.type)
-            let difficultyCandidates = normalizeDifficultyCandidates(sheet.difficulty)
-            for identifier in identifiers {
-                for separator in separators {
-                    for chartType in chartTypeCandidates {
-                        for difficulty in difficultyCandidates {
-                            let key = "\(identifier)\(separator)\(chartType)\(separator)\(difficulty)".lowercased()
-                            map[key] = sheet
-                        }
-                    }
-                }
-            }
-        }
-        return map
-    }
-
-    private func candidateSongIdentifiers(for sheet: Sheet) -> Set<String> {
-        var ids: Set<String> = []
-        if !sheet.songIdentifier.isEmpty {
-            ids.insert(sheet.songIdentifier)
-        }
-        if sheet.songId > 0 {
-            ids.insert(String(sheet.songId))
-        }
-        if let song = sheet.song {
-            ids.insert(song.songIdentifier)
-            if song.songId > 0 {
-                ids.insert(String(song.songId))
-            }
-        }
-        return ids
-    }
-
-    private func resolveSheet(for remote: CloudSnapshotSheet?, sheetMap: [String: Sheet]) -> Sheet? {
-        guard let remote else {
-            return nil
-        }
-        let identifierCandidates = [remote.songIdentifier, String(remote.songId)]
-            .flatMap { normalizeIdentifierCandidates($0) }
-            .filter { !$0.isEmpty && $0 != "0" }
-        let chartTypeCandidates = normalizeChartTypeCandidates(remote.chartType)
-        let difficultyCandidates = normalizeDifficultyCandidates(remote.difficulty)
-
-        for identifier in identifierCandidates {
-            for separator in ["_", "-"] {
-                for chartType in chartTypeCandidates {
-                    for difficulty in difficultyCandidates {
-                        let key = "\(identifier)\(separator)\(chartType)\(separator)\(difficulty)".lowercased()
-                        if let sheet = sheetMap[key] {
-                            return sheet
-                        }
-                    }
-                }
-            }
-        }
-        return nil
-    }
-
-    private func normalizeIdentifierCandidates(_ value: String) -> [String] {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            return []
-        }
-        let lowered = trimmed.lowercased()
-        if lowered == trimmed {
-            return [trimmed]
-        }
-        return [trimmed, lowered]
-    }
-
-    private func normalizeChartTypeCandidates(_ value: String) -> [String] {
-        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if normalized == "standard" || normalized == "std" || normalized == "sd" {
-            return ["std", "standard"]
-        }
-        if normalized == "dx" {
-            return ["dx"]
-        }
-        if normalized == "utage" {
-            return ["utage"]
-        }
-        return normalized.isEmpty ? [] : [normalized]
-    }
-
-    private func normalizeDifficultyCandidates(_ value: String) -> [String] {
-        let lowered = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let normalized = lowered
-            .replacing(" ", with: "")
-            .replacing("_", with: "")
-            .replacing(":", with: "")
-
-        if normalized == "remaster" {
-            return ["remaster", "re:master", "re_master"]
-        }
-        if normalized.isEmpty {
-            return []
-        }
-        if normalized == lowered {
-            return [normalized]
-        }
-        return [normalized, lowered]
-    }
 }

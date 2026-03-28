@@ -33,7 +33,7 @@ final class SyncConfig {
     var dfUsername: String = ""
     var dfImportToken: String = ""
     var lxnsRefreshToken: String = ""
-    var lxnsClientId: String = "cfb7ef40-bc0f-4e3a-8258-9e5f52cd7338"
+    var lxnsClientId: String = ""
     var b35Count: Int = 35
     var b15Count: Int = 15
     var b35RecLimit: Int = 10

@@ -260,7 +260,7 @@ struct SongDetailContent: View {
         }
 
         // Hide toast after delay
-        Task {
+        Task { @MainActor in
             try? await Task.sleep(for: .seconds(1.5))
             if toastMessage == message {
                 withAnimation {
@@ -269,7 +269,7 @@ struct SongDetailContent: View {
             }
         }
     }
-    
+
     private func copyToClipboard(_ text: String, label: String) {
         UIPasteboard.general.string = text
         showToast(message: String(localized: "song.detail.copy.success \(label)"))
@@ -351,7 +351,7 @@ struct SongDetailContent: View {
             communityQuotaShakePhase += 1
         }
 
-        Task {
+        Task { @MainActor in
             await flashCommunityQuotaBar()
         }
     }
@@ -426,7 +426,7 @@ struct SongDetailContent: View {
     
     private var heroSection: some View {
         VStack(spacing: 16) {
-            SongJacketView(imageName: song.imageName, size: 220, cornerRadius: 28)
+            SongJacketView(imageName: song.imageName, size: 220, cornerRadius: 28, useThumbnail: false)
                 .shadow(color: .black.opacity(0.3), radius: 24, x: 0, y: 12)
                 .contextMenu {
                     Button {
@@ -870,7 +870,7 @@ struct SongDetailContent: View {
     }
 
     private var currentChartTypeColor: Color {
-        ThemeUtils.badgeColorForChartType(selectedType)
+        ThemeUtils.badgeColorForChartType(selectedType, colorScheme)
     }
 
     private func localizedChartType(_ type: String) -> String {
@@ -958,10 +958,11 @@ struct SheetCardView: View {
     @State private var recordToDelete: PlayRecord?
     @State private var showingDeleteConfirm = false
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
-    
+
     private var diffColor: Color {
-        ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type)
+        ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type, colorScheme)
     }
     
     var body: some View {
@@ -1049,8 +1050,10 @@ struct SheetCardView: View {
             .padding(.vertical, 14)
             .contentShape(Rectangle())
             .onTapGesture {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    isExpanded.toggle()
+                MainActor.assumeIsolated {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        isExpanded.toggle()
+                    }
                 }
             }
             
@@ -1168,7 +1171,14 @@ struct SheetCardView: View {
             
             // Fault Tolerance Calculator
             if sheet.total != nil {
-                FaultToleranceCalculatorView(sheet: sheet, diffColor: diffColor)
+                FaultToleranceCalculatorView(
+                    tapCount: sheet.tap ?? 0,
+                    holdCount: sheet.hold ?? 0,
+                    slideCount: sheet.slide ?? 0,
+                    touchCount: sheet.touch ?? 0,
+                    breakCount: sheet.breakCount ?? 0,
+                    diffColor: diffColor
+                )
             }
             
             // Play History Table
@@ -1199,8 +1209,10 @@ struct SheetCardView: View {
         VStack(spacing: 0) {
             if sheet.total != nil {
                 Button {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                        isNotesExpanded.toggle()
+                    MainActor.assumeIsolated {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            isNotesExpanded.toggle()
+                        }
                     }
                 } label: {
                     HStack {
@@ -1252,8 +1264,10 @@ struct SheetCardView: View {
         return VStack(spacing: 0) {
             // Header
             Button {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    isRatingExpanded.toggle()
+                MainActor.assumeIsolated {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        isRatingExpanded.toggle()
+                    }
                 }
             } label: {
                 HStack {
@@ -1357,8 +1371,10 @@ struct SheetCardView: View {
         return VStack(spacing: 0) {
             // Header
             Button {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    isHistoryExpanded.toggle()
+                MainActor.assumeIsolated {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        isHistoryExpanded.toggle()
+                    }
                 }
             } label: {
                 HStack {
@@ -1631,13 +1647,17 @@ struct SheetCardView: View {
 // MARK: - Fault Tolerance Calculator
 
 struct FaultToleranceCalculatorView: View {
-    let sheet: Sheet
+    let tapCount: Int
+    let holdCount: Int
+    let slideCount: Int
+    let touchCount: Int
+    let breakCount: Int
     let diffColor: Color
-    
+
     @State private var targetAchievement: Double = 100.5
-    
+
     private let targetRanks = RatingUtils.rankThresholds.filter { $0.rank != "AP+" }
-    
+
     var body: some View {
         VStack(spacing: 12) {
             // Header
@@ -1651,13 +1671,15 @@ struct FaultToleranceCalculatorView: View {
                     .foregroundStyle(diffColor)
             }
             .padding(.horizontal, 20)
-            
+
             // Target Picker (Rank Based)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(targetRanks.reversed()) { target in
                         Button {
-                            targetAchievement = target.threshold
+                            MainActor.assumeIsolated {
+                                targetAchievement = target.threshold
+                            }
                         } label: {
                             Text(target.rank)
                                 .font(.system(size: 10, weight: .bold))
@@ -1673,7 +1695,7 @@ struct FaultToleranceCalculatorView: View {
                 }
                 .padding(.horizontal, 20)
             }
-            
+
             // Results Grid
             let results = calculateTolerance()
             HStack(spacing: 12) {
@@ -1685,33 +1707,28 @@ struct FaultToleranceCalculatorView: View {
 
         }
     }
-    
+
     private func calculateTolerance() -> (great: Int, good: Int, miss: Int) {
-        let totalBaseWeight = (Double(sheet.tap ?? 0) * 1.0) +
-                              (Double(sheet.hold ?? 0) * 2.0) +
-                              (Double(sheet.slide ?? 0) * 3.0) +
-                              (Double(sheet.touch ?? 0) * 1.0) +
-                              (Double(sheet.breakCount ?? 0) * 5.0)
-        
+        let totalBaseWeight = (Double(tapCount) * 1.0) +
+                              (Double(holdCount) * 2.0) +
+                              (Double(slideCount) * 3.0) +
+                              (Double(touchCount) * 1.0) +
+                              (Double(breakCount) * 5.0)
+
         guard totalBaseWeight > 0 else { return (0, 0, 0) }
-        
+
         let maxAllowedLoss = 101.0 - targetAchievement
         if maxAllowedLoss <= 0 { return (0, 0, 0) }
-        
+
         // Loss for 1 judgement on a TAP (the smallest unit)
         let tapGreatLoss = (0.2 * 1.0 / totalBaseWeight) * 100.0
         let tapGoodLoss = (0.5 * 1.0 / totalBaseWeight) * 100.0
         let tapMissLoss = (1.0 * 1.0 / totalBaseWeight) * 100.0
-        
-        // Note: For simplicity and following community standard calculators,
-        // we show the tolerance assuming the errors occur on TAPs (the most lenient case).
-        // If the user wants precise break/hold loss, it's usually too complex for a quick UI.
-        
+
         let allowedGreat = Int(floor(maxAllowedLoss / tapGreatLoss))
         let allowedGood = Int(floor(maxAllowedLoss / tapGoodLoss))
         let allowedMiss = Int(floor(maxAllowedLoss / tapMissLoss))
-        
-        let tapCount = sheet.tap ?? 0
+
         return (min(allowedGreat, tapCount), min(allowedGood, tapCount), min(allowedMiss, tapCount))
     }
     

@@ -239,7 +239,7 @@ struct ScoreQueryView: View {
                 }
                 
                 if let anchorID = anchorID {
-                    Task {
+                    Task { @MainActor in
                         try? await Task.sleep(for: .milliseconds(50))
                         withAnimation(.easeOut(duration: 0.2)) {
                             self.zoomAnchorEntryID = anchorID
@@ -247,7 +247,7 @@ struct ScoreQueryView: View {
                     }
                 }
 
-                Task {
+                Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(300))
                     navigationDisabled = false
                 }
@@ -298,20 +298,23 @@ struct ScoreQueryView: View {
                             .padding(.top, 12)
                         
                         // Content
-                        if isLoading {
-                            ProgressView()
-                                .padding(.top, 60)
-                        } else if filteredEntries.isEmpty {
-                            ContentUnavailableView(
-                                "scoreQuery.empty",
-                                systemImage: "music.note.list",
-                                description: Text("")
-                            )
-                            .padding(.top, 40)
-                        } else {
-                            contentView(in: width)
-                                .padding(.top, 8)
+                        Group {
+                            if isLoading {
+                                ProgressView()
+                                    .padding(.top, 60)
+                            } else if filteredEntries.isEmpty {
+                                ContentUnavailableView(
+                                    "scoreQuery.empty",
+                                    systemImage: "music.note.list",
+                                    description: Text("")
+                                )
+                                .padding(.top, 40)
+                            } else {
+                                contentView(in: width)
+                                    .padding(.top, 8)
+                            }
                         }
+                        .animation(.easeInOut(duration: 0.2), value: filteredEntries.count)
                     }
                 }
                 .scrollDisabled(isZooming)
@@ -574,7 +577,7 @@ struct ScoreQueryView: View {
                         FilterChip(
                             title: displayName,
                             isSelected: selectedDifficulties.contains(diff),
-                            color: ThemeUtils.colorForDifficulty(diff, nil)
+                            color: ThemeUtils.colorForDifficulty(diff, nil, colorScheme)
                         ) {
                             if selectedDifficulties.contains(diff) {
                                 selectedDifficulties.remove(diff)
@@ -721,7 +724,7 @@ struct ScoreQueryView: View {
             VStack {
                 HStack {
                     RoundedRectangle(cornerRadius: 1)
-                        .fill(ThemeUtils.colorForDifficulty(entry.difficulty, entry.type))
+                        .fill(ThemeUtils.colorForDifficulty(entry.difficulty, entry.type, colorScheme))
                         .frame(width: 3, height: 14)
                         .padding(.leading, 2)
                         .padding(.top, 2)
@@ -784,7 +787,7 @@ struct ScoreQueryView: View {
         HStack(spacing: 10) {
             // Difficulty accent
             RoundedRectangle(cornerRadius: 2)
-                .fill(ThemeUtils.colorForDifficulty(entry.difficulty, entry.type))
+                .fill(ThemeUtils.colorForDifficulty(entry.difficulty, entry.type, colorScheme))
                 .frame(width: 3)
                 .padding(.vertical, 6)
             
@@ -1030,9 +1033,7 @@ struct ScoreQueryView: View {
             return ascending ? !result : result
         }
         
-        withAnimation(.easeInOut(duration: 0.2)) {
-            filteredEntries = entries
-        }
+        filteredEntries = entries
     }
     
     private func scoreForSheet(_ sheet: Sheet, in map: [String: Score]) -> Score? {
@@ -1265,7 +1266,7 @@ private struct ScoreConstantExportView: View {
     }
     
     private func exportChartCell(_ entry: ScoreQueryView.ConstantTableEntry) -> some View {
-        let borderColor = ThemeUtils.colorForDifficulty(entry.difficulty, entry.type)
+        let borderColor = ThemeUtils.colorForDifficulty(entry.difficulty, entry.type, colorScheme)
         
         return ZStack(alignment: .bottomLeading) {
             ZStack(alignment: .topTrailing) {

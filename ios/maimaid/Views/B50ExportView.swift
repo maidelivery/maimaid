@@ -173,7 +173,7 @@ struct B50ExportView: View {
     // MARK: - Song Card
     
     private func songCard(entry: RatingUtils.RatingEntry, accentColor: Color) -> some View {
-        let diffColor = ThemeUtils.colorForDifficulty(entry.diff, entry.type)
+        let diffColor = ThemeUtils.colorForDifficulty(entry.diff, entry.type, colorScheme)
         let rank = RatingUtils.calculateRank(achievement: entry.achievement)
         let jacketSize: CGFloat = 62
         

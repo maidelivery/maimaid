@@ -181,6 +181,7 @@ struct RecommendationListView: View {
 
 struct RecommendationRow: View {
     let result: RecommendationResult
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         HStack(spacing: 14) {
@@ -217,7 +218,7 @@ struct RecommendationRow: View {
                 // Line 3: Badges
                 HStack(spacing: 4) {
                     BadgeView(text: result.sheet.type.uppercased(), background: result.sheet.type.lowercased() == "dx" ? .orange : .blue)
-                    BadgeView(text: ThemeUtils.diffShort(result.sheet.difficulty), background: ThemeUtils.colorForDifficulty(result.sheet.difficulty, result.sheet.type))
+                    BadgeView(text: ThemeUtils.diffShort(result.sheet.difficulty), background: ThemeUtils.colorForDifficulty(result.sheet.difficulty, result.sheet.type, colorScheme))
                 }
             }
             .frame(minHeight: 56, alignment: .leading)

@@ -17,6 +17,7 @@ final class ScoreService {
     
     private var cachedActiveProfileId: UUID?
     private var didResolveActiveProfile = false
+    private var didRepairDetachedRecords = false
     
     private var cachedSnapshotsByProfileKey: [String: ScoreSnapshot] = [:]
     
@@ -66,6 +67,67 @@ final class ScoreService {
     func invalidateAllCaches() {
         invalidateActiveProfileCache()
         cachedSnapshotsByProfileKey.removeAll()
+    }
+
+    func repairDetachedRecordsIfNeeded(context: ModelContext, force: Bool = false) {
+        if didRepairDetachedRecords && !force {
+            return
+        }
+
+        let allRecords = (try? context.fetch(FetchDescriptor<PlayRecord>())) ?? []
+        guard !allRecords.isEmpty else {
+            didRepairDetachedRecords = true
+            return
+        }
+
+        let sheets = (try? context.fetch(FetchDescriptor<Sheet>())) ?? []
+        guard !sheets.isEmpty else {
+            didRepairDetachedRecords = true
+            return
+        }
+
+        let sheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["-", "_"])
+        var didMutate = false
+
+        for record in allRecords {
+            if let attachedSheet = record.sheet {
+                let canonicalId = BackendSyncShared.canonicalRecordSheetId(for: attachedSheet)
+                if record.sheetId != canonicalId {
+                    record.sheetId = canonicalId
+                    didMutate = true
+                }
+                if attachedSheet.playRecords == nil {
+                    attachedSheet.playRecords = []
+                }
+                if !(attachedSheet.playRecords?.contains(where: { $0.id == record.id }) ?? false) {
+                    attachedSheet.playRecords?.append(record)
+                    didMutate = true
+                }
+                continue
+            }
+
+            guard let sheet = BackendSyncShared.resolveSheet(for: record.sheetId, sheetMap: sheetMap) else {
+                continue
+            }
+            let canonicalId = BackendSyncShared.canonicalRecordSheetId(for: sheet)
+            if record.sheetId != canonicalId {
+                record.sheetId = canonicalId
+                didMutate = true
+            }
+            record.sheet = sheet
+            if sheet.playRecords == nil {
+                sheet.playRecords = []
+            }
+            if !(sheet.playRecords?.contains(where: { $0.id == record.id }) ?? false) {
+                sheet.playRecords?.append(record)
+            }
+            didMutate = true
+        }
+
+        if didMutate {
+            try? context.save()
+        }
+        didRepairDetachedRecords = true
     }
     
     // MARK: - 获取当前活跃用户
@@ -299,7 +361,6 @@ final class ScoreService {
     func playHistory(for sheet: Sheet, context: ModelContext) -> [PlayRecord] {
         guard let profileId = currentActiveProfileId(context: context) else {
             var records = sheet.playRecords?.filter { $0.userProfileId == nil } ?? []
-            records = repairDetachedRecords(records, for: sheet, profileId: nil, context: context)
             
             if let bestScore = score(for: sheet, context: context) {
                 let hasMatch = records.contains { abs($0.rate - bestScore.rate) < 0.0001 }
@@ -327,11 +388,10 @@ final class ScoreService {
                 }
             }
             
-            return records
+            return records.sorted { $0.playDate > $1.playDate }
         }
         
         var records = sheet.playRecords?.filter { $0.userProfileId == profileId } ?? []
-        records = repairDetachedRecords(records, for: sheet, profileId: profileId, context: context)
         
         // Auto-repair missing PlayRecord from imported Score
         if let bestScore = score(for: sheet, context: context) {
@@ -360,61 +420,6 @@ final class ScoreService {
             }
         }
         
-        return records
-    }
-    
-    private func repairDetachedRecords(
-        _ existingRecords: [PlayRecord],
-        for sheet: Sheet,
-        profileId: UUID?,
-        context: ModelContext
-    ) -> [PlayRecord] {
-        let descriptor: FetchDescriptor<PlayRecord>
-        if let profileId {
-            descriptor = FetchDescriptor<PlayRecord>(
-                predicate: #Predicate<PlayRecord> { $0.userProfileId == profileId }
-            )
-        } else {
-            descriptor = FetchDescriptor<PlayRecord>(
-                predicate: #Predicate<PlayRecord> { $0.userProfileId == nil }
-            )
-        }
-        
-        let allRecords = (try? context.fetch(descriptor)) ?? []
-        let candidateIds = Set(candidateScoreSheetIds(for: sheet))
-        
-        var recordsById = Dictionary(uniqueKeysWithValues: existingRecords.map { ($0.id, $0) })
-        var didRepair = false
-        let canonicalSheetId = "\(sheet.songIdentifier)-\(sheet.type)-\(sheet.difficulty)"
-        
-        for record in allRecords where candidateIds.contains(record.sheetId) {
-            if record.sheetId != canonicalSheetId {
-                record.sheetId = canonicalSheetId
-                didRepair = true
-            }
-            
-            if record.sheet == nil {
-                record.sheet = sheet
-                if sheet.playRecords == nil {
-                    sheet.playRecords = []
-                }
-                if !(sheet.playRecords?.contains(where: { $0.id == record.id }) ?? false) {
-                    sheet.playRecords?.append(record)
-                }
-                didRepair = true
-            }
-            
-            if recordsById[record.id] == nil {
-                recordsById[record.id] = record
-            }
-        }
-        
-        let repairedRecords = recordsById.values.sorted { $0.playDate > $1.playDate }
-        
-        if didRepair {
-            try? context.save()
-        }
-        
-        return repairedRecords
+        return records.sorted { $0.playDate > $1.playDate }
     }
 }

@@ -101,7 +101,7 @@ struct UserProfileEditView: View {
                 
                 Section("userProfile.section.credentials") {
                     TextField("settings.sync.dfUsername", text: $dfUsername)
-                        .autocapitalization(.none)
+                        .textInputAutocapitalization(.never)
                     SecureField("settings.sync.dfToken", text: $dfImportToken)
                     SecureField("settings.sync.lxnsToken", text: $lxnsRefreshToken)
                 }
@@ -159,8 +159,9 @@ struct UserProfileEditView: View {
                 plate = p.plate ?? ""
                 selectedServer = GameServer(rawValue: p.server) ?? .jp
                 dfUsername = p.dfUsername
-                dfImportToken = p.dfImportToken
-                lxnsRefreshToken = p.lxnsRefreshToken
+                let credentials = ProfileCredentialStore.shared.credentials(for: p.id)
+                dfImportToken = credentials.dfImportToken
+                lxnsRefreshToken = credentials.lxnsRefreshToken
                 b35Count = p.b35Count
                 b15Count = p.b15Count
                 selectedImageData = p.avatarData
@@ -177,8 +178,6 @@ struct UserProfileEditView: View {
             profile.plate = plate.trimmingCharacters(in: .whitespaces)
             profile.server = selectedServer.rawValue
             profile.dfUsername = dfUsername
-            profile.dfImportToken = dfImportToken
-            profile.lxnsRefreshToken = lxnsRefreshToken
             profile.b35Count = max(1, b35Count)
             profile.b15Count = max(1, b15Count)
             profile.avatarData = selectedImageData
@@ -194,8 +193,6 @@ struct UserProfileEditView: View {
                 avatarUrl: avatarUrl,
                 isActive: isFirstProfile,
                 dfUsername: dfUsername,
-                dfImportToken: dfImportToken,
-                lxnsRefreshToken: lxnsRefreshToken,
                 playerRating: 0,
                 plate: plate.trimmingCharacters(in: .whitespaces),
                 b35Count: max(1, b35Count),
@@ -204,6 +201,10 @@ struct UserProfileEditView: View {
             modelContext.insert(profile)
             targetProfile = profile
         }
+        ProfileCredentialStore.shared.setCredentials(
+            ProfileCredentials(dfImportToken: dfImportToken, lxnsRefreshToken: lxnsRefreshToken),
+            for: targetProfile.id
+        )
         try? modelContext.save()
 
         if BackendSessionManager.shared.isAuthenticated {

@@ -3,7 +3,6 @@ import SwiftData
 
 struct DivingFishImportView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var configs: [SyncConfig]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     
     @State private var username: String = ""
@@ -44,7 +43,7 @@ struct DivingFishImportView: View {
         .onAppear {
             if let profile = activeProfile {
                 username = profile.dfUsername
-                importToken = profile.dfImportToken
+                importToken = ProfileCredentialStore.shared.credentials(for: profile.id).dfImportToken
             }
         }
     }
@@ -200,19 +199,9 @@ struct DivingFishImportView: View {
     private func updateConfig() {
         if let profile = activeProfile {
             profile.dfUsername = username
-            if !importToken.isEmpty {
-                profile.dfImportToken = importToken
-            }
+            ProfileCredentialStore.shared.setDfImportToken(importToken, for: profile.id)
         }
-        
-        if configs.isEmpty {
-            let newConfig = SyncConfig()
-            newConfig.dfUsername = username
-            if !importToken.isEmpty {
-                newConfig.dfImportToken = importToken
-            }
-            modelContext.insert(newConfig)
-        }
+        try? modelContext.save()
     }
     
     @MainActor

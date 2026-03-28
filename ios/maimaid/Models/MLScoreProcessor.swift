@@ -9,7 +9,6 @@ nonisolated final class MLScoreProcessor {
     
     // The compiled CoreML model
     private let visionModel: VNCoreMLModel?
-    private let processingQueue = DispatchQueue(label: "com.shiko.maimaid.ml.score", qos: .userInitiated)
     
     private init() {
         self.visionModel = Self.loadModel()
@@ -52,13 +51,7 @@ nonisolated final class MLScoreProcessor {
     /// Processes an image using object detection and targeted OCR.
     func process(_ image: UIImage) async -> MLScoreResult {
         let normalizedImage = await MainActor.run { image.normalized() }
-        let visionModel = self.visionModel
-        
-        return await withCheckedContinuation { continuation in
-            processingQueue.async {
-                continuation.resume(returning: Self.processSynchronously(normalizedImage, visionModel: visionModel))
-            }
-        }
+        return Self.processSynchronously(normalizedImage, visionModel: visionModel)
     }
     
     private static func processSynchronously(_ image: UIImage, visionModel: VNCoreMLModel?) -> MLScoreResult {

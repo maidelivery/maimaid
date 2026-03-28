@@ -14,17 +14,13 @@ struct LxnsTokenData: Decodable {
 
 struct LxnsImportView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var configs: [SyncConfig]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     
     private var activeProfile: UserProfile? { activeProfiles.first }
     
-    private let clientId = "cfb7ef40-bc0f-4e3a-8258-9e5f52cd7338"
-    private let redirectUri = "urn:ietf:wg:oauth:2.0:oob"
-    private let scope = "read_user_profile+read_player+write_player+read_user_token"
-    
     @State private var generatedCodeVerifier: String = ""
     @State private var authCode: String = ""
+    @State private var lxnsRefreshToken: String = ""
     
     @State private var isImporting = false
     @State private var importStatus: String = ""
@@ -38,7 +34,7 @@ struct LxnsImportView: View {
     
     @Environment(\.openURL) var openURL
     
-    private var hasBoundAccount: Bool { !(activeProfile?.lxnsRefreshToken.isEmpty ?? true) }
+    private var hasBoundAccount: Bool { !lxnsRefreshToken.isEmpty }
     
     private var importStatusStyle: (tint: Color, icon: String) {
         let failedText = String(localized: "import.status.failed")
@@ -86,7 +82,15 @@ struct LxnsImportView: View {
         .navigationTitle("import.lxns.title")
         .navigationBarTitleDisplayMode(.inline)
         .task {
+            syncCredentialStateFromStore()
             await validateSessionOnEntryIfNeeded()
+        }
+        .onChange(of: activeProfile?.id) { _, _ in
+            syncCredentialStateFromStore()
+            hasValidatedSessionOnEntry = false
+            Task {
+                await validateSessionOnEntryIfNeeded()
+            }
         }
     }
     
@@ -109,7 +113,7 @@ struct LxnsImportView: View {
     
     @ViewBuilder
     private var contentSection: some View {
-        if let profile = activeProfile, !profile.lxnsRefreshToken.isEmpty {
+        if let profile = activeProfile, !lxnsRefreshToken.isEmpty {
             Section("import.lxns.bound.header") {
                 HStack(spacing: 12) {
                     settingsIcon(icon: isValidatingSession ? "clock.badge.checkmark.fill" : "checkmark.shield.fill", color: sessionStatusTint)
@@ -134,7 +138,8 @@ struct LxnsImportView: View {
             
             Section("import.lxns.manage.header") {
                 Button("import.lxns.action.relogin", role: .destructive) {
-                    activeProfile?.lxnsRefreshToken = ""
+                    ProfileCredentialStore.shared.setLxnsRefreshToken("", for: profile.id)
+                    lxnsRefreshToken = ""
                     validatedAccessToken = nil
                     validatedAccessTokenDate = nil
                     hasValidatedSessionOnEntry = false
@@ -236,7 +241,7 @@ struct LxnsImportView: View {
     
     @MainActor
     private func openAuthPage() {
-        if clientId == "YOUR_CLIENT_ID_HERE" {
+        if LxnsOAuthConfiguration.clientId == "YOUR_CLIENT_ID_HERE" {
             importStatus = String(localized: "import.lxns.error.clientId")
             return
         }
@@ -249,9 +254,9 @@ struct LxnsImportView: View {
         var components = URLComponents(string: "https://maimai.lxns.net/oauth/authorize")!
         components.queryItems = [
             URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "client_id", value: clientId),
-            URLQueryItem(name: "redirect_uri", value: redirectUri),
-            URLQueryItem(name: "scope", value: scope.replacing("+", with: " ")),
+            URLQueryItem(name: "client_id", value: LxnsOAuthConfiguration.clientId),
+            URLQueryItem(name: "redirect_uri", value: LxnsOAuthConfiguration.redirectUri),
+            URLQueryItem(name: "scope", value: LxnsOAuthConfiguration.scope.replacing("+", with: " ")),
             URLQueryItem(name: "code_challenge", value: codeChallenge),
             URLQueryItem(name: "code_challenge_method", value: "S256"),
             URLQueryItem(name: "state", value: UUID().uuidString)
@@ -283,8 +288,8 @@ struct LxnsImportView: View {
             
             let parameters = [
                 "grant_type": "authorization_code",
-                "client_id": clientId,
-                "redirect_uri": redirectUri,
+                "client_id": LxnsOAuthConfiguration.clientId,
+                "redirect_uri": LxnsOAuthConfiguration.redirectUri,
                 "code": authCode.trimmingCharacters(in: .whitespacesAndNewlines),
                 "code_verifier": generatedCodeVerifier
             ]
@@ -314,14 +319,10 @@ struct LxnsImportView: View {
             validatedAccessTokenDate = Date()
             
             if let profile = activeProfile {
-                profile.lxnsRefreshToken = refreshToken
+                ProfileCredentialStore.shared.setLxnsRefreshToken(refreshToken, for: profile.id)
+                lxnsRefreshToken = refreshToken
             }
-            
-            if configs.isEmpty {
-                let newConfig = SyncConfig()
-                modelContext.insert(newConfig)
-            }
-            
+
             await importData(accessToken: accessToken)
         } catch {
             importStatus = String(localized: "import.lxns.status.failed.networkToken")
@@ -344,7 +345,7 @@ struct LxnsImportView: View {
         
         currentStep = String(localized: "import.lxns.status.refreshing")
         
-        switch await SyncManager.shared.refreshLxnsTokenResult(profile: profile) {
+        switch await SyncManager.shared.refreshLxnsTokenResult(profileId: profile.id) {
         case .success(let token):
             validatedAccessToken = token
             validatedAccessTokenDate = Date()
@@ -477,12 +478,12 @@ private extension LxnsImportView {
         guard !hasValidatedSessionOnEntry else { return }
         hasValidatedSessionOnEntry = true
         
-        guard let profile = activeProfile, !profile.lxnsRefreshToken.isEmpty else { return }
+        guard let profile = activeProfile, !lxnsRefreshToken.isEmpty else { return }
         
         isValidatingSession = true
         defer { isValidatingSession = false }
         
-        switch await SyncManager.shared.refreshLxnsTokenResult(profile: profile) {
+        switch await SyncManager.shared.refreshLxnsTokenResult(profileId: profile.id) {
         case .success(let accessToken):
             validatedAccessToken = accessToken
             validatedAccessTokenDate = Date()
@@ -492,9 +493,20 @@ private extension LxnsImportView {
         case .expired:
             validatedAccessToken = nil
             validatedAccessTokenDate = nil
+            ProfileCredentialStore.shared.setLxnsRefreshToken("", for: profile.id)
+            lxnsRefreshToken = ""
             importStatus = String(localized: "import.lxns.status.failed.expired")
         case .failed:
             break
         }
+    }
+
+    @MainActor
+    func syncCredentialStateFromStore() {
+        guard let profile = activeProfile else {
+            lxnsRefreshToken = ""
+            return
+        }
+        lxnsRefreshToken = ProfileCredentialStore.shared.credentials(for: profile.id).lxnsRefreshToken
     }
 }

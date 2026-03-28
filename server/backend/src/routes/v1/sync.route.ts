@@ -49,8 +49,6 @@ const pushSchema = z.object({
         plate: z.string().nullable().optional(),
         avatarUrl: z.string().url().nullable().optional(),
         dfUsername: z.string().optional(),
-        dfImportToken: z.string().optional(),
-        lxnsRefreshToken: z.string().optional(),
         b35Count: z.number().int().positive().optional(),
         b15Count: z.number().int().positive().optional(),
         b35RecLimit: z.number().int().positive().optional(),
@@ -257,8 +255,6 @@ syncV1Route.post("/push", async (c) => {
     if (item.plate !== undefined) payload.plate = item.plate;
     if (item.avatarUrl !== undefined) payload.avatarUrl = item.avatarUrl;
     if (item.dfUsername !== undefined) payload.dfUsername = item.dfUsername;
-    if (item.dfImportToken !== undefined) payload.dfImportToken = item.dfImportToken;
-    if (item.lxnsRefreshToken !== undefined) payload.lxnsRefreshToken = item.lxnsRefreshToken;
     if (item.b35Count !== undefined) payload.b35Count = item.b35Count;
     if (item.b15Count !== undefined) payload.b15Count = item.b15Count;
     if (item.b35RecLimit !== undefined) payload.b35RecLimit = item.b35RecLimit;

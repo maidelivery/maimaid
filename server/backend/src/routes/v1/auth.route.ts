@@ -219,6 +219,20 @@ authV1Route.post("/session/exchange", async (c) => {
   });
 });
 
+authV1Route.post("/session/create", authRequired, async (c) => {
+  const authService = di.resolve<AuthService>(TOKENS.AuthService);
+  const auth = c.get("auth");
+  if (!auth) {
+    return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+  }
+  const user = await authService.findActiveUserById(auth.userId);
+  if (!user.emailVerifiedAt) {
+    return ok(c, { code: "email_not_verified", message: "Email is not verified." }, 403);
+  }
+  const sessionCode = await authService.createSessionCodeForUser(user.id);
+  return ok(c, { sessionCode });
+});
+
 authV1Route.post("/logout", async (c) => {
   const authService = di.resolve<AuthService>(TOKENS.AuthService);
   const body = refreshSchema.parse(await c.req.json());
@@ -726,8 +740,15 @@ const resolveAppRedirectUri = (redirectUri: string | undefined): string => {
 
   try {
     const parsed = new URL(trimmed);
-    if (parsed.protocol === "maimaid:") {
-      return parsed.toString();
+    const isAllowedRedirect =
+      parsed.protocol === "maimaid:"
+      && parsed.hostname === "auth"
+      && (parsed.pathname === "/callback" || parsed.pathname === "/callback/")
+      && !parsed.search
+      && !parsed.hash;
+
+    if (isAllowedRedirect) {
+      return fallback;
     }
   } catch {
     // Fallback to default app callback URL.

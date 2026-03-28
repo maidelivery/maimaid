@@ -15,7 +15,7 @@ final class UserProfile {
     var dfUsername: String = ""
     var dfImportToken: String = ""
     var lxnsRefreshToken: String = ""
-    var lxnsClientId: String = "cfb7ef40-bc0f-4e3a-8258-9e5f52cd7338"
+    var lxnsClientId: String = ""
     
     // Player info
     var playerRating: Int = 0

@@ -9,7 +9,6 @@ nonisolated final class MLChooseProcessor {
     
     // The compiled CoreML model
     private let visionModel: VNCoreMLModel?
-    private let processingQueue = DispatchQueue(label: "com.shiko.maimaid.ml.choose", qos: .userInitiated)
     
     private init() {
         self.visionModel = Self.loadModel()
@@ -47,13 +46,7 @@ nonisolated final class MLChooseProcessor {
     /// Processes an image using `maimaidetector` object detection and targeted OCR.
     func process(_ image: UIImage) async -> MLChooseResult {
         let normalizedImage = await MainActor.run { image.normalized() }
-        let visionModel = self.visionModel
-        
-        return await withCheckedContinuation { continuation in
-            processingQueue.async {
-                continuation.resume(returning: Self.processSynchronously(normalizedImage, visionModel: visionModel))
-            }
-        }
+        return Self.processSynchronously(normalizedImage, visionModel: visionModel)
     }
     
     private static func processSynchronously(_ image: UIImage, visionModel: VNCoreMLModel?) -> MLChooseResult {

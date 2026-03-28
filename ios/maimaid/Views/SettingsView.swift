@@ -5,8 +5,16 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var configs: [SyncConfig]
+    @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     
     private var config: SyncConfig? { configs.first }
+    private var activeProfile: UserProfile? { activeProfiles.first }
+    private var hasLxnsBoundAccount: Bool {
+        guard let activeProfile else {
+            return false
+        }
+        return ProfileCredentialStore.shared.hasLxnsBinding(for: activeProfile.id)
+    }
     @State private var selectedTheme = 0
     @AppStorage(AppStorageKeys.showScannerBoundingBox) private var showScannerBoundingBox: Bool = false
     
@@ -56,7 +64,7 @@ struct SettingsView: View {
                         HStack {
                             settingsRowLabel(icon: "snowflake", iconColor: .cyan, title: "settings.data.importLxns")
                             Spacer()
-                            if let c = config, !c.lxnsRefreshToken.isEmpty {
+                            if hasLxnsBoundAccount {
                                 Text("settings.data.bound").font(.caption).foregroundStyle(.green)
                             }
                         }
