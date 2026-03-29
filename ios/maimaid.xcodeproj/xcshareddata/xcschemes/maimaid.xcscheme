@@ -5,7 +5,8 @@
    <BuildAction
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES"
-      buildArchitectures = "Automatic">
+      buildArchitectures = "Automatic"
+      enableTaskBacktraces = "YES">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"

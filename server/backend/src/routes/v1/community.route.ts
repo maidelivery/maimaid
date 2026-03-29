@@ -76,6 +76,7 @@ communityV1Route.post("/aliases/submit", authRequired, async (c) => {
   const body = submitSchema.parse(await c.req.json());
   const result = await communityAliasService.submitAlias({
     userId: auth.userId,
+    isAdmin: auth.isAdmin,
     songIdentifier: body.songIdentifier,
     aliasText: body.aliasText,
     deviceLocalDate: body.deviceLocalDate,

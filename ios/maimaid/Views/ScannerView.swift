@@ -542,81 +542,162 @@ struct ScannerView: View {
     private func matchSongsWithFilters(titleCandidates: [String], title: String?, difficulty: String?, level: Double?, maxCombo: Int?, dxScore: Int?, maxDxScore: Int?, type: String?, kanji: String?) -> [Song] {
         let rawCandidates = ([title] + titleCandidates.map { Optional($0) }).compactMap { $0 }
         var allCandidates = titleCandidates
-        if let exactTitle = title { allCandidates.insert(exactTitle, at: 0) }
+        if let exactTitle = title {
+            allCandidates.insert(exactTitle, at: 0)
+        }
+
         let isUtage = type?.lowercased() == "utage"
-        if isUtage { allCandidates = allCandidates.map { stripUtagePrefix($0) } }
+        if isUtage {
+            allCandidates = allCandidates.map(stripUtagePrefix)
+        }
+
         let explicitTitleKanji = rawCandidates.compactMap { extractUtagePrefixKanji(from: $0) }.first
-        let hasExplicitUtagePrefix = explicitTitleKanji != nil
-        
         let derivedTotalNotes: Int? = {
-            if let maxDx = maxDxScore, maxDx > 0 { return maxDx / 3 }
+            if let maxDxScore, maxDxScore > 0 {
+                return maxDxScore / 3
+            }
             return maxCombo
         }()
+
+        let validatedLevel: Double? = {
+            guard let level, level >= 1, level <= 15 else { return nil }
+            return level
+        }()
+        let validatedDxScore: Int? = {
+            guard let dxScore, dxScore > 0 else { return nil }
+            return dxScore
+        }()
+        let validatedMaxDxScore: Int? = {
+            guard let maxDxScore, maxDxScore > 0 else { return nil }
+            return maxDxScore
+        }()
+        let validatedKanji: String? = {
+            guard let kanji, !kanji.isEmpty else { return nil }
+            return kanji
+        }()
+
         let hasDifficulty = difficulty != nil && !isUtage
-        let hasLevel = level != nil && level! >= 1 && level! <= 15
-        let hasTotalNotes = derivedTotalNotes != nil && derivedTotalNotes! > 0
-        let hasDxScore = dxScore != nil && dxScore! > 0
-        let hasMaxDxScore = maxDxScore != nil && maxDxScore! > 0
-        let hasKanji = kanji != nil && !(kanji!.isEmpty)
-        
-        var filteredSongs = songs.filter { song in
+        let hasLevel = validatedLevel != nil
+        let hasTotalNotes = (derivedTotalNotes ?? 0) > 0
+        let hasDxScore = validatedDxScore != nil
+        let hasMaxDxScore = validatedMaxDxScore != nil
+        let hasKanji = validatedKanji != nil
+        let hasExplicitUtagePrefix = explicitTitleKanji != nil
+
+        func hasAvailableStandardSheets(_ song: Song) -> Bool {
             let standardSheets = song.sheets.filter { $0.type.lowercased() != "utage" }
             let isDeleted = standardSheets.isEmpty || standardSheets.allSatisfy { !$0.regionJp && !$0.regionIntl && !$0.regionCn }
-            if isDeleted { return false }
+            return !isDeleted
+        }
+
+        func matchesUtage(_ song: Song) -> Bool {
             if isUtage {
                 let utageSheets = song.sheets.filter { $0.type.lowercased() == "utage" }
                 if utageSheets.isEmpty { return false }
                 if hasExplicitUtagePrefix && !songHasExplicitUtagePrefix(song, kanji: explicitTitleKanji) { return false }
-                if hasKanji { if !utageSheets.contains(where: { $0.difficulty.contains(kanji!) }) { return false } }
+                if let validatedKanji,
+                   !utageSheets.contains(where: { $0.difficulty.contains(validatedKanji) }) {
+                    return false
+                }
                 if hasTotalNotes {
-                    let totalMatch = utageSheets.contains { sheet in guard let total = sheet.total else { return true }; return total == derivedTotalNotes! }
-                    if !totalMatch {
-                        if hasDxScore { if !utageSheets.contains(where: { sheet in guard let total = sheet.total else { return true }; return total * 3 >= dxScore! }) { return false } } else { return false }
+                    let totalMatch = utageSheets.contains { sheet in
+                        guard let total = sheet.total, let derivedTotalNotes else { return true }
+                        return total == derivedTotalNotes
                     }
-                } else if hasDxScore {
-                    if !utageSheets.contains(where: { sheet in guard let total = sheet.total else { return true }; return total * 3 >= dxScore! }) { return false }
+                    if !totalMatch {
+                        if let validatedDxScore {
+                            if !utageSheets.contains(where: { sheet in
+                                guard let total = sheet.total else { return true }
+                                return total * 3 >= validatedDxScore
+                            }) {
+                                return false
+                            }
+                        } else {
+                            return false
+                        }
+                    }
+                } else if let validatedDxScore {
+                    if !utageSheets.contains(where: { sheet in
+                        guard let total = sheet.total else { return true }
+                        return total * 3 >= validatedDxScore
+                    }) {
+                        return false
+                    }
                 }
                 return true
             }
-            return song.sheets.contains { sheet in
-                if sheet.type.lowercased() == "utage" { return false }
-                if let t = type, t.lowercased() != "utage" { if sheet.type.lowercased() != t.lowercased() { return false } }
-                if let diff = difficulty { if sheet.difficulty.lowercased() != diff.lowercased() { return false } }
-                if let lv = level, lv >= 1, lv <= 15 {
+            return false
+        }
+
+        func matchesStandard(_ song: Song) -> Bool {
+            song.sheets.contains { sheet in
+                if sheet.type.lowercased() == "utage" {
+                    return false
+                }
+                if let type, type.lowercased() != "utage", sheet.type.lowercased() != type.lowercased() {
+                    return false
+                }
+                if let difficulty, sheet.difficulty.lowercased() != difficulty.lowercased() {
+                    return false
+                }
+                if let validatedLevel {
                     let sheetLevel = sheet.internalLevelValue ?? sheet.levelValue ?? 0
-                    if sheetLevel > 0 { if Int(sheetLevel) != Int(lv) { return false } } else { if Int(sheet.level) != Int(lv) { return false } }
+                    if sheetLevel > 0 {
+                        if Int(sheetLevel) != Int(validatedLevel) { return false }
+                    } else if Int(sheet.level) != Int(validatedLevel) {
+                        return false
+                    }
                 }
-                if let total = derivedTotalNotes, total > 0 { if let sheetTotal = sheet.total { if sheetTotal != total { return false } } }
-                if let dx = dxScore, dx > 0 { if let total = sheet.total { if total * 3 < dx { return false } } }
-                if let maxDx = maxDxScore, maxDx > 0 { if let total = sheet.total { if total * 3 != maxDx { return false } } }
+                if let derivedTotalNotes, derivedTotalNotes > 0,
+                   let sheetTotal = sheet.total, sheetTotal != derivedTotalNotes {
+                    return false
+                }
+                if let validatedDxScore,
+                   let total = sheet.total, total * 3 < validatedDxScore {
+                    return false
+                }
+                if let validatedMaxDxScore,
+                   let total = sheet.total, total * 3 != validatedMaxDxScore {
+                    return false
+                }
                 return true
             }
+        }
+
+        var filteredSongs = songs.filter { song in
+            guard hasAvailableStandardSheets(song) else { return false }
+            return isUtage ? matchesUtage(song) : matchesStandard(song)
         }
         
         let hasAnyValidation = hasDifficulty || hasLevel || hasTotalNotes || hasDxScore || hasMaxDxScore || hasKanji
         if filteredSongs.isEmpty && !hasAnyValidation {
-            filteredSongs = songs.filter { song in
-                let standardSheets = song.sheets.filter { $0.type.lowercased() != "utage" }
-                let isDeleted = standardSheets.isEmpty || standardSheets.allSatisfy { !$0.regionJp && !$0.regionIntl && !$0.regionCn }
-                return !isDeleted
-            }
+            filteredSongs = songs.filter(hasAvailableStandardSheets)
         }
         if filteredSongs.count == 1 && hasMaxDxScore { return filteredSongs }
         
         var matchedSongs: [(song: Song, score: Int)] = []
         var seenIds = Set<String>()
+
         for candidate in allCandidates {
             let cleaned = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !cleaned.isEmpty else { continue }
+
             let variants = generateOCRVariants(cleaned, maxVariants: 6)
             for song in filteredSongs {
                 guard !seenIds.contains(song.songIdentifier) else { continue }
+
                 var matchScore = 0
                 var constraintBonus = 0
                 let normalizedSongTitle = normalizedSongMatchTitle(song.title)
-                if hasMaxDxScore { if song.sheets.contains(where: { guard let total = $0.total else { return false }; return total * 3 == maxDxScore! }) { constraintBonus += 20 } }
+                if let validatedMaxDxScore,
+                   song.sheets.contains(where: {
+                       guard let total = $0.total else { return false }
+                       return total * 3 == validatedMaxDxScore
+                   }) {
+                    constraintBonus += 20
+                }
+
                 for searchCandidate in variants {
-                    let searchLower = searchCandidate.lowercased()
                     let normalizedSearchTitle = normalizedSongMatchTitle(searchCandidate)
                     if normalizedSongTitle == normalizedSearchTitle { matchScore = 110; break }
                     if song.title.localizedCaseInsensitiveCompare(searchCandidate) == .orderedSame { matchScore = 100; break }
@@ -629,32 +710,58 @@ struct ScannerView: View {
                         matchScore = max(matchScore, isUtage ? 40 : 75)
                         continue
                     }
-                    if song.title.localizedCaseInsensitiveContains(searchLower) { matchScore = max(matchScore, isUtage ? 35 : 80); continue }
-                    if searchLower.localizedCaseInsensitiveContains(song.title.lowercased()) { matchScore = max(matchScore, isUtage ? 30 : 75); continue }
-                    if song.aliases.contains(where: { $0.localizedCaseInsensitiveContains(searchLower) }) { matchScore = max(matchScore, 70); continue }
-                    if let keywords = song.searchKeywords, keywords.localizedCaseInsensitiveContains(searchLower) { matchScore = max(matchScore, 60); continue }
+                    if song.title.localizedStandardContains(searchCandidate) { matchScore = max(matchScore, isUtage ? 35 : 80); continue }
+                    if searchCandidate.localizedStandardContains(song.title) { matchScore = max(matchScore, isUtage ? 30 : 75); continue }
+                    if song.aliases.contains(where: { $0.localizedStandardContains(searchCandidate) }) { matchScore = max(matchScore, 70); continue }
+                    if let keywords = song.searchKeywords, keywords.localizedStandardContains(searchCandidate) { matchScore = max(matchScore, 60); continue }
+
                     let dist = levenshteinDistance(cleaned, song.title)
                     let maxLen = max(cleaned.count, song.title.count)
                     if dist <= max(2, maxLen / 3) { matchScore = max(matchScore, 50 - dist); continue }
+
                     for alias in song.aliases {
                         let aliasDist = levenshteinDistance(cleaned, alias)
-                        if aliasDist <= max(2, max(cleaned.count, alias.count) / 3) { matchScore = max(matchScore, 45 - aliasDist); break }
+                        if aliasDist <= max(2, max(cleaned.count, alias.count) / 3) {
+                            matchScore = max(matchScore, 45 - aliasDist)
+                            break
+                        }
                     }
                 }
+
                 if matchScore == 0 && song.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     if hasMaxDxScore || (hasTotalNotes && hasDifficulty) { matchScore = 30 }
                 }
+
                 let totalScore = matchScore + constraintBonus
-                if totalScore > 0 { matchedSongs.append((song: song, score: totalScore)); seenIds.insert(song.songIdentifier) }
+                if totalScore > 0 {
+                    matchedSongs.append((song: song, score: totalScore))
+                    seenIds.insert(song.songIdentifier)
+                }
             }
         }
+
         if matchedSongs.isEmpty && allCandidates.allSatisfy({ $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) && hasAnyValidation {
             for song in filteredSongs where !seenIds.contains(song.songIdentifier) {
-                let score = hasMaxDxScore ? (song.sheets.contains(where: { guard let total = $0.total else { return false }; return total * 3 == maxDxScore! }) ? 50 : 10) : 10
+                let score: Int
+                if let validatedMaxDxScore {
+                    let exactMaxDxMatch = song.sheets.contains(where: {
+                        guard let total = $0.total else { return false }
+                        return total * 3 == validatedMaxDxScore
+                    })
+                    score = exactMaxDxMatch ? 50 : 10
+                } else {
+                    score = 10
+                }
                 matchedSongs.append((song: song, score: score))
             }
         }
-        matchedSongs.sort { a, b in if a.score != b.score { return a.score > b.score }; return a.song.title.count < b.song.title.count }
+
+        matchedSongs.sort { lhs, rhs in
+            if lhs.score != rhs.score {
+                return lhs.score > rhs.score
+            }
+            return lhs.song.title.count < rhs.song.title.count
+        }
         return matchedSongs.map { $0.song }
     }
     

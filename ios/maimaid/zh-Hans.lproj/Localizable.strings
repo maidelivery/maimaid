@@ -613,6 +613,9 @@
 "community.alias.submit.success" = "别名投稿成功，已进入当前公示投票。";
 "community.alias.submit.duplicate" = "相似别名已存在，请直接参与现有候选投票。";
 "community.alias.submit.duplicateWithSuggestions %@" = "相似别名已存在：%@";
+"community.alias.submit.duplicateLxns" = "该别名已在 LXNS 中存在，无法重复投稿。";
+"community.alias.submit.duplicateCommunity" = "该别名已在社区别名中存在，无法重复投稿。";
+"community.alias.submit.adminRejectedLocked" = "该别名曾被管理员拒绝，仅管理员可再次投稿。";
 "community.alias.submit.quotaExceeded" = "今日投稿次数已达上限（5次）。";
 "community.alias.submit.loginRequired" = "请先登录云端账号再投稿。";
 "community.alias.submit.invalidRequest" = "投稿格式无效，请检查输入内容。";

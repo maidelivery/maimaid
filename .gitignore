@@ -17,3 +17,5 @@ server/backend/.env.docker.local
 DerivedData/
 
 .playwright-cli/
+
+.build-benchmark/

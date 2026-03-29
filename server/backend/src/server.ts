@@ -5,6 +5,7 @@ import { TOKENS } from "./di/tokens.js";
 import { getEnv } from "./env.js";
 import type { PrismaClient } from "@prisma/client";
 import type { CatalogService } from "./services/catalog.service.js";
+import type { StaticBundleService } from "./services/static-bundle.service.js";
 
 const env = getEnv();
 const app = createApp();
@@ -24,11 +25,25 @@ const bootstrapCatalogIfEmpty = async () => {
   );
 };
 
+const bootstrapStaticBundleSchedule = async () => {
+  const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+  const schedule = await staticBundleService.syncPeriodicBuildSchedule();
+  console.log(
+    `[bootstrap] static bundle auto-build schedule synced (enabled=${schedule.enabled}, intervalHours=${schedule.intervalHours}, cron="${schedule.cronExpression}")`
+  );
+};
+
 const start = async () => {
   try {
     await bootstrapCatalogIfEmpty();
   } catch (error) {
     console.error("[bootstrap] catalog sync failed:", error);
+  }
+
+  try {
+    await bootstrapStaticBundleSchedule();
+  } catch (error) {
+    console.error("[bootstrap] static bundle auto-build schedule sync failed:", error);
   }
 
   serve(

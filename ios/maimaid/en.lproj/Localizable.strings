@@ -613,6 +613,9 @@
 "community.alias.submit.success" = "Alias submitted and entered the current voting board.";
 "community.alias.submit.duplicate" = "A similar alias already exists. Please vote on the existing candidate.";
 "community.alias.submit.duplicateWithSuggestions %@" = "Similar alias already exists: %@";
+"community.alias.submit.duplicateLxns" = "This alias already exists in LXNS and cannot be submitted again.";
+"community.alias.submit.duplicateCommunity" = "This alias already exists in community aliases and cannot be submitted again.";
+"community.alias.submit.adminRejectedLocked" = "This alias was rejected by an admin. Only admins can submit it again.";
 "community.alias.submit.quotaExceeded" = "Daily submission limit reached (5).";
 "community.alias.submit.loginRequired" = "Please sign in to your cloud account before submitting.";
 "community.alias.submit.invalidRequest" = "Invalid submission format. Please check your input.";

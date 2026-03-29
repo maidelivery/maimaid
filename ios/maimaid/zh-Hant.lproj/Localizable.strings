@@ -613,6 +613,9 @@
 "community.alias.submit.success" = "別名投稿成功，已進入目前公示投票。";
 "community.alias.submit.duplicate" = "相似別名已存在，請直接參與現有候選投票。";
 "community.alias.submit.duplicateWithSuggestions %@" = "相似別名已存在：%@";
+"community.alias.submit.duplicateLxns" = "該別名已在 LXNS 中存在，無法重複投稿。";
+"community.alias.submit.duplicateCommunity" = "該別名已在社群別名中存在，無法重複投稿。";
+"community.alias.submit.adminRejectedLocked" = "該別名曾被管理員拒絕，僅管理員可再次投稿。";
 "community.alias.submit.quotaExceeded" = "今日投稿次數已達上限（5次）。";
 "community.alias.submit.loginRequired" = "請先登入雲端帳號再投稿。";
 "community.alias.submit.invalidRequest" = "投稿格式無效，請檢查輸入內容。";

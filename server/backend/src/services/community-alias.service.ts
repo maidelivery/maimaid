@@ -2,12 +2,17 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { inject, injectable } from "tsyringe";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
+import type { CatalogService } from "./catalog.service.js";
 
 const SHANGHAI_TIMEZONE = "Asia/Shanghai";
+type DuplicateReason = "lxns_existing" | "community_existing" | "admin_rejected_locked";
 
 @injectable()
 export class CommunityAliasService {
-  constructor(@inject(TOKENS.Prisma) private readonly prisma: PrismaClient) {}
+  constructor(
+    @inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
+    @inject(TOKENS.CatalogService) private readonly catalogService: CatalogService
+  ) {}
 
   normalizeAlias(raw: string): string {
     return raw
@@ -20,6 +25,7 @@ export class CommunityAliasService {
 
   async submitAlias(input: {
     userId: string;
+    isAdmin: boolean;
     songIdentifier: string;
     aliasText: string;
     deviceLocalDate: string;
@@ -31,28 +37,65 @@ export class CommunityAliasService {
       throw new AppError(400, "invalid_request", "songIdentifier and aliasText are required.");
     }
 
-    const [dailyCount, dedupe] = await Promise.all([
+    const [dailyCount, lxnsAliases, communityCandidate, communityAlias, adminRejectedCandidate] = await Promise.all([
       this.prisma.communityAliasCandidate.count({
         where: {
           submitterId: input.userId,
           submittedLocalDate: new Date(input.deviceLocalDate)
         }
       }),
+      this.catalogService.listAliases(input.songIdentifier, "lxns"),
       this.prisma.communityAliasCandidate.findFirst({
         where: {
           songIdentifier: input.songIdentifier,
           aliasNorm,
           status: { in: ["voting", "approved"] }
         }
+      }),
+      this.prisma.alias.findFirst({
+        where: {
+          songIdentifier: input.songIdentifier,
+          aliasNorm,
+          source: "community"
+        }
+      }),
+      this.prisma.communityAliasCandidate.findFirst({
+        where: {
+          songIdentifier: input.songIdentifier,
+          aliasNorm,
+          status: "rejected",
+          rejectionSource: "admin_manual"
+        }
       })
     ]);
 
-    if (dedupe) {
-      return {
-        status: "rejected_duplicate",
-        message: "A same/similar alias already exists for this song.",
-        candidate: null
-      } as const;
+    const lxnsMatched = lxnsAliases.find(
+      (item) => this.normalizeAlias(item.aliasText) === aliasNorm || this.normalizeAlias(item.aliasNorm) === aliasNorm
+    );
+    if (lxnsMatched) {
+      return this.buildDuplicateResponse({
+        message: "该别名已在 LXNS 中存在，无法重复投稿。",
+        duplicateReason: "lxns_existing",
+        similarAliases: [lxnsMatched.aliasText]
+      });
+    }
+
+    if (communityCandidate || communityAlias) {
+      return this.buildDuplicateResponse({
+        message: "该别名已在社区别名中存在，无法重复投稿。",
+        duplicateReason: "community_existing",
+        similarAliases: [communityCandidate?.aliasText, communityAlias?.aliasText].filter(
+          (value): value is string => Boolean(value)
+        )
+      });
+    }
+
+    if (adminRejectedCandidate && !input.isAdmin) {
+      return this.buildDuplicateResponse({
+        message: "该别名曾被管理员拒绝，仅管理员可再次投稿。",
+        duplicateReason: "admin_rejected_locked",
+        similarAliases: [adminRejectedCandidate.aliasText]
+      });
     }
 
     if (dailyCount >= 5) {
@@ -73,6 +116,7 @@ export class CommunityAliasService {
         aliasNorm,
         submitterId: input.userId,
         status: "voting",
+        rejectionSource: null,
         voteOpenAt,
         voteCloseAt,
         submittedLocalDate: new Date(input.deviceLocalDate),
@@ -282,10 +326,14 @@ export class CommunityAliasService {
       const support = candidate.votes.filter((item) => item.vote === 1).length;
       const oppose = candidate.votes.filter((item) => item.vote === -1).length;
       const approved = support > oppose && support >= 3;
+      if (!approved) {
+        await this.deleteOtherRejectedCandidates(candidate.songIdentifier, candidate.aliasNorm, candidate.id);
+      }
       await this.prisma.communityAliasCandidate.update({
         where: { id: candidate.id },
         data: {
           status: approved ? "approved" : "rejected",
+          rejectionSource: approved ? null : "community_vote",
           approvedAt: approved ? now : null,
           rejectedAt: approved ? null : now
         }
@@ -445,9 +493,21 @@ export class CommunityAliasService {
   }
 
   async adminSetStatus(candidateId: string, status: "voting" | "approved" | "rejected") {
+    const candidate = await this.prisma.communityAliasCandidate.findUnique({
+      where: { id: candidateId }
+    });
+    if (!candidate) {
+      throw new AppError(404, "candidate_not_found", "Candidate not found.");
+    }
+
+    if (status === "rejected") {
+      await this.deleteOtherRejectedCandidates(candidate.songIdentifier, candidate.aliasNorm, candidateId);
+    }
+
     const now = new Date();
     const data: Prisma.CommunityAliasCandidateUpdateInput = {
       status,
+      rejectionSource: status === "rejected" ? "admin_manual" : null,
       approvedAt: status === "approved" ? now : null,
       rejectedAt: status === "rejected" ? now : null
     };
@@ -500,5 +560,33 @@ export class CommunityAliasService {
     start.setDate(start.getDate() - offsetDays + 3);
     start.setSeconds(-1);
     return start;
+  }
+
+  private buildDuplicateResponse(input: {
+    message: string;
+    duplicateReason: DuplicateReason;
+    similarAliases?: string[];
+  }) {
+    const similarAliases = Array.from(new Set((input.similarAliases ?? []).map((value) => value.trim()).filter(Boolean)));
+    return {
+      status: "rejected_duplicate",
+      message: input.message,
+      duplicateReason: input.duplicateReason,
+      similarAliases: similarAliases.length > 0 ? similarAliases.slice(0, 3) : undefined,
+      candidate: null
+    } as const;
+  }
+
+  private async deleteOtherRejectedCandidates(songIdentifier: string, aliasNorm: string, candidateId: string) {
+    await this.prisma.communityAliasCandidate.deleteMany({
+      where: {
+        songIdentifier,
+        aliasNorm,
+        status: "rejected",
+        id: {
+          not: candidateId
+        }
+      }
+    });
   }
 }

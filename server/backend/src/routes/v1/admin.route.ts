@@ -68,6 +68,13 @@ const bundleBuildSchema = z.object({
   force: z.boolean().default(false)
 });
 
+const staticBundleSchedulePatchSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    intervalHours: z.coerce.number().int().min(1).max(24).optional()
+  })
+  .refine((value) => Object.keys(value).length > 0, "No field to update.");
+
 export const adminV1Route = new Hono<AppEnv>();
 adminV1Route.use("*", adminRequired);
 
@@ -221,4 +228,24 @@ adminV1Route.get("/static-bundles", async (c) => {
   const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
   const bundles = await staticBundleService.listBundles();
   return ok(c, { bundles });
+});
+
+adminV1Route.get("/static-bundle-schedule", async (c) => {
+  const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+  const schedule = await staticBundleService.getPeriodicBuildSchedule();
+  return ok(c, { schedule });
+});
+
+adminV1Route.patch("/static-bundle-schedule", async (c) => {
+  const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+  const body = staticBundleSchedulePatchSchema.parse(await c.req.json());
+  const patch: Parameters<StaticBundleService["updatePeriodicBuildSchedule"]>[0] = {};
+  if (body.enabled !== undefined) {
+    patch.enabled = body.enabled;
+  }
+  if (body.intervalHours !== undefined) {
+    patch.intervalHours = body.intervalHours;
+  }
+  const schedule = await staticBundleService.updatePeriodicBuildSchedule(patch);
+  return ok(c, { schedule });
 });

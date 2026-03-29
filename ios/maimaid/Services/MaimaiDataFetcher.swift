@@ -261,6 +261,28 @@ class MaimaiDataFetcher {
         )
         return (bundle, false)
     }
+
+    private func loadRemoteData(bundleResources: BackendStaticBundleResources?) async throws -> RemoteDataResponse {
+        if let bundled = bundleResources?.dataJSON {
+            return bundled
+        }
+
+        guard let url = URL(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json") else {
+            throw URLError(.badURL)
+        }
+
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode(RemoteDataResponse.self, from: data)
+    }
+
+    private func persistRemoteMetadata(_ response: RemoteDataResponse) {
+        if let encodedVersions = try? JSONEncoder().encode(response.versions) {
+            UserDefaults.app.maimaiVersionsData = encodedVersions
+        }
+
+        UserDefaults.app.maimaiVersionSequence = response.versions.map(\.version)
+        UserDefaults.app.maimaiCategorySequence = response.categories.map(\.category)
+    }
     
     func fetchSongs(
         modelContext: ModelContext,
@@ -298,27 +320,10 @@ class MaimaiDataFetcher {
             // --- 阶段 1: 远程 data.json ---
             if options.updateRemoteData {
                 updateStage(.fetchingRemoteData, base: 0.1, message: String(localized: "data.sync.status.fetchingData"))
-                let response: RemoteDataResponse
-                if let bundled = bundleResources?.dataJSON {
-                    response = bundled
-                } else {
-                    guard let url = URL(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json") else {
-                        throw URLError(.badURL)
-                    }
-                    let (data, _) = try await URLSession.shared.data(from: url)
-                    response = try JSONDecoder().decode(RemoteDataResponse.self, from: data)
-                }
+                let response = try await loadRemoteData(bundleResources: bundleResources)
                 remoteSongs = response.songs
                 log(String(localized: "data.sync.log.fetchedData \(remoteSongs.count)"))
-                
-                if let encodedVersions = try? JSONEncoder().encode(response.versions) {
-                    UserDefaults.app.maimaiVersionsData = encodedVersions
-                }
-                let sequence = response.versions.map { $0.version }
-                UserDefaults.app.maimaiVersionSequence = sequence
-                
-                let catSequence = response.categories.map { $0.category }
-                UserDefaults.app.maimaiCategorySequence = catSequence
+                persistRemoteMetadata(response)
             }
             
             // --- 阶段 2: Aliases & IDs ---

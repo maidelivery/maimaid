@@ -151,10 +151,11 @@ struct B50ExportView: View {
             }
             
             VStack(spacing: cardSpacing) {
-                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                ForEach(rows.indices, id: \.self) { rowIndex in
+                    let row = rows[rowIndex]
                     HStack(spacing: cardSpacing) {
                         ForEach(row) { entry in
-                           songCard(entry: entry, accentColor: accentColor)
+                           songCard(entry: entry)
                         }
                         // Fill empty slots
                         if row.count < columns {
@@ -172,143 +173,19 @@ struct B50ExportView: View {
     
     // MARK: - Song Card
     
-    private func songCard(entry: RatingUtils.RatingEntry, accentColor: Color) -> some View {
-        let diffColor = ThemeUtils.colorForDifficulty(entry.diff, entry.type, colorScheme)
-        let rank = RatingUtils.calculateRank(achievement: entry.achievement)
-        let jacketSize: CGFloat = 62
-        
-        let dxRatio = entry.maxDxScore > 0 ? (Double(entry.dxScore) / Double(entry.maxDxScore)) : 0
-        let stars = starsForDxScore(ratio: dxRatio)
-        
-        return HStack(spacing: 8) {
-            // Left: Jacket image (Small square)
-            ZStack(alignment: .bottomTrailing) {
-                if let imageName = entry.imageName,
-                   let uiImage = ImageDownloader.shared.loadImage(imageName: imageName) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: jacketSize, height: jacketSize)
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
-                } else {
-                    Rectangle()
-                        .fill(emptyCardColor)
-                        .frame(width: jacketSize, height: jacketSize)
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
-                        .overlay(
-                            Image(systemName: "music.note")
-                                .font(.system(size: 14))
-                                .foregroundStyle(subtleColor)
-                        )
-                }
-                
-                // Achievement Rank Small Badge (Optional: if we want to show it on image)
-                // ID overlay at bottom
-                if entry.songId > 0 {
-                    Text("#\(String(entry.songId))")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 3)
-                        .padding(.vertical, 0.5)
-                        .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 2))
-                        .padding(2)
-                }
-            }
-            
-            // Right: Info
-            VStack(alignment: .leading, spacing: 2) {
-                // Row 1: Title
-                Text(entry.songTitle)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(primaryColor)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                
-                // Row 2: Rank + Achievement + Stars
-                HStack(spacing: 4) {
-                    Text(rank)
-                        .font(.system(size: 12, weight: .black, design: .rounded))
-                        .foregroundStyle(RatingUtils.colorForRank(rank))
-                    
-                    Text("\(entry.achievement, format: .number.precision(.fractionLength(4)))%")
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundStyle(secondaryColor)
-                    
-                    Spacer()
-                    
-                    if stars > 0 {
-                        HStack(spacing: 2) {
-                            Text("\(stars)")
-                                .font(.system(size: 8, weight: .bold))
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 8))
-                        }
-                        .foregroundStyle(.yellow)
-                    }
-                }
-                
-                // Row 3: Level -> Rating + DX Score
-                HStack(spacing: 4) {
-                    HStack(spacing: 2) {
-                        Text("\(entry.level, format: .number.precision(.fractionLength(1)))")
-                            .font(.system(size: 9, weight: .bold, design: .rounded))
-                            .foregroundStyle(diffColor)
-                        
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 5))
-                            .foregroundStyle(subtleColor)
-                        
-                        Text("\(entry.rating)")
-                            .font(.system(size: 9, weight: .black, design: .rounded))
-                            .foregroundStyle(colorScheme == .dark ? Color(hex: "#FFD700") : Color(hex: "#C5A000"))
-                    }
-                    
-                    Spacer()
-                    
-                    if entry.maxDxScore > 0 {
-                        Text("\(entry.dxScore)/\(entry.maxDxScore)")
-                            .font(.system(size: 8, weight: .medium, design: .monospaced))
-                            .foregroundStyle(secondaryColor)
-                    }
-                }
-                
-                // Row 4: Badges
-                HStack(spacing: 3) {
-                    exportBadge(text: entry.type.uppercased(), color: entry.type.uppercased() == "DX" ? .orange : .blue)
-                    
-                    if let fc = entry.fc, !fc.isEmpty {
-                        exportBadge(text: ThemeUtils.normalizeFC(fc), color: ThemeUtils.fcColor(fc))
-                    }
-                    
-                    if let fs = entry.fs, !fs.isEmpty {
-                        exportBadge(text: ThemeUtils.normalizeFS(fs), color: ThemeUtils.fsColor(fs))
-                    }
-                }
-            }
-            
-            Spacer(minLength: 0)
-        }
-        .padding(6)
-        .frame(width: cardWidth)
-        .background(diffColor.opacity(0.15))
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-        .overlay(
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(diffColor.opacity(0.2), lineWidth: 0.5)
+    private func songCard(entry: RatingUtils.RatingEntry) -> some View {
+        B50ExportSongCard(
+            entry: entry,
+            cardWidth: cardWidth,
+            colorScheme: colorScheme,
+            primaryColor: primaryColor,
+            secondaryColor: secondaryColor,
+            subtleColor: subtleColor,
+            emptyCardColor: emptyCardColor
         )
     }
     
     // MARK: - Export Badge
-    
-    private func starsForDxScore(ratio: Double) -> Int {
-        if ratio >= 0.97 { return 5 }
-        if ratio >= 0.95 { return 4 }
-        if ratio >= 0.93 { return 3 }
-        if ratio >= 0.90 { return 2 }
-        if ratio >= 0.85 { return 1 }
-        return 0
-    }
     
     private func exportBadge(text: String, color: Color) -> some View {
         Text(text)
@@ -352,6 +229,170 @@ struct B50ExportView: View {
             }
         }
         .padding(.vertical, 24)
+    }
+}
+
+private struct B50ExportSongCard: View {
+    let entry: RatingUtils.RatingEntry
+    let cardWidth: CGFloat
+    let colorScheme: ColorScheme
+    let primaryColor: Color
+    let secondaryColor: Color
+    let subtleColor: Color
+    let emptyCardColor: Color
+
+    private let jacketSize: CGFloat = 62
+
+    private var diffColor: Color {
+        ThemeUtils.colorForDifficulty(entry.diff, entry.type, colorScheme)
+    }
+
+    private var rank: String {
+        RatingUtils.calculateRank(achievement: entry.achievement)
+    }
+
+    private var stars: Int {
+        let dxRatio = entry.maxDxScore > 0
+            ? Double(entry.dxScore) / Double(entry.maxDxScore)
+            : 0
+        return Self.starsForDxScore(ratio: dxRatio)
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            jacket
+            songInfo
+            Spacer(minLength: 0)
+        }
+        .padding(6)
+        .frame(width: cardWidth)
+        .background(diffColor.opacity(0.15))
+        .clipShape(.rect(cornerRadius: 6))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(diffColor.opacity(0.2), lineWidth: 0.5)
+        )
+    }
+
+    @ViewBuilder
+    private var jacket: some View {
+        ZStack(alignment: .bottomTrailing) {
+            if let imageName = entry.imageName,
+               let uiImage = ImageDownloader.shared.loadImage(imageName: imageName) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: jacketSize, height: jacketSize)
+                    .clipShape(.rect(cornerRadius: 4))
+            } else {
+                Rectangle()
+                    .fill(emptyCardColor)
+                    .frame(width: jacketSize, height: jacketSize)
+                    .clipShape(.rect(cornerRadius: 4))
+                    .overlay {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 14))
+                            .foregroundStyle(subtleColor)
+                    }
+            }
+
+            if entry.songId > 0 {
+                Text("#\(entry.songId)")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 3)
+                    .padding(.vertical, 0.5)
+                    .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 2))
+                    .padding(2)
+            }
+        }
+    }
+
+    private var songInfo: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(entry.songTitle)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(primaryColor)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 4) {
+                Text(rank)
+                    .font(.system(size: 12, weight: .black, design: .rounded))
+                    .foregroundStyle(RatingUtils.colorForRank(rank))
+
+                Text("\(entry.achievement, format: .number.precision(.fractionLength(4)))%")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(secondaryColor)
+
+                Spacer()
+
+                if stars > 0 {
+                    HStack(spacing: 2) {
+                        Text("\(stars)")
+                            .font(.system(size: 8, weight: .bold))
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 8))
+                    }
+                    .foregroundStyle(.yellow)
+                }
+            }
+
+            HStack(spacing: 4) {
+                HStack(spacing: 2) {
+                    Text("\(entry.level, format: .number.precision(.fractionLength(1)))")
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .foregroundStyle(diffColor)
+
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 5))
+                        .foregroundStyle(subtleColor)
+
+                    Text("\(entry.rating)")
+                        .font(.system(size: 9, weight: .black, design: .rounded))
+                        .foregroundStyle(colorScheme == .dark ? Color(hex: "#FFD700") : Color(hex: "#C5A000"))
+                }
+
+                Spacer()
+
+                if entry.maxDxScore > 0 {
+                    Text("\(entry.dxScore)/\(entry.maxDxScore)")
+                        .font(.system(size: 8, weight: .medium, design: .monospaced))
+                        .foregroundStyle(secondaryColor)
+                }
+            }
+
+            HStack(spacing: 3) {
+                badge(text: entry.type.uppercased(), color: entry.type.uppercased() == "DX" ? .orange : .blue)
+
+                if let fc = entry.fc, !fc.isEmpty {
+                    badge(text: ThemeUtils.normalizeFC(fc), color: ThemeUtils.fcColor(fc))
+                }
+
+                if let fs = entry.fs, !fs.isEmpty {
+                    badge(text: ThemeUtils.normalizeFS(fs), color: ThemeUtils.fsColor(fs))
+                }
+            }
+        }
+    }
+
+    private func badge(text: String, color: Color) -> some View {
+        Text(text)
+            .font(.system(size: 7, weight: .heavy))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1.5)
+            .background(color, in: RoundedRectangle(cornerRadius: 2))
+    }
+
+    private static func starsForDxScore(ratio: Double) -> Int {
+        if ratio >= 0.97 { return 5 }
+        if ratio >= 0.95 { return 4 }
+        if ratio >= 0.93 { return 3 }
+        if ratio >= 0.90 { return 2 }
+        if ratio >= 0.85 { return 1 }
+        return 0
     }
 }
 

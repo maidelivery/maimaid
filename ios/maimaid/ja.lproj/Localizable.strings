@@ -613,6 +613,9 @@
 "community.alias.submit.success" = "別名を投稿しました。現在の公開投票に追加されました。";
 "community.alias.submit.duplicate" = "類似の別名がすでに存在します。既存候補に投票してください。";
 "community.alias.submit.duplicateWithSuggestions %@" = "類似の別名がすでに存在します: %@";
+"community.alias.submit.duplicateLxns" = "この別名はすでに LXNS に存在するため投稿できません。";
+"community.alias.submit.duplicateCommunity" = "この別名はすでにコミュニティ別名に存在するため投稿できません。";
+"community.alias.submit.adminRejectedLocked" = "この別名は管理者により却下済みです。再投稿できるのは管理者のみです。";
 "community.alias.submit.quotaExceeded" = "本日の投稿上限（5件）に達しました。";
 "community.alias.submit.loginRequired" = "投稿するにはクラウドアカウントにログインしてください。";
 "community.alias.submit.invalidRequest" = "投稿形式が無効です。入力内容を確認してください。";

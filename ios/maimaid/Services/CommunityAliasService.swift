@@ -10,6 +10,12 @@ nonisolated enum CommunityAliasSubmitStatus: String, Codable, Sendable {
     case error
 }
 
+nonisolated enum CommunityAliasDuplicateReason: String, Codable, Sendable {
+    case lxnsExisting = "lxns_existing"
+    case communityExisting = "community_existing"
+    case adminRejectedLocked = "admin_rejected_locked"
+}
+
 nonisolated struct CommunityAliasSubmitCandidate: Codable, Sendable {
     let id: String
     let songIdentifier: String
@@ -33,6 +39,7 @@ nonisolated struct CommunityAliasExistingCandidate: Codable, Identifiable, Senda
 nonisolated struct CommunityAliasSubmitResponse: Codable, Sendable {
     let status: CommunityAliasSubmitStatus
     let message: String
+    let duplicateReason: CommunityAliasDuplicateReason?
     let candidate: CommunityAliasSubmitCandidate?
     let existingCandidates: [CommunityAliasExistingCandidate]?
     let similarAliases: [String]?
@@ -120,6 +127,7 @@ final class CommunityAliasService {
             return .init(
                 status: .error,
                 message: String(localized: "settings.cloud.config.error.unconfigured"),
+                duplicateReason: nil,
                 candidate: nil,
                 existingCandidates: nil,
                 similarAliases: nil,
@@ -131,6 +139,7 @@ final class CommunityAliasService {
             return .init(
                 status: .unauthenticated,
                 message: String(localized: "community.alias.submit.loginRequired"),
+                duplicateReason: nil,
                 candidate: nil,
                 existingCandidates: nil,
                 similarAliases: nil,
@@ -165,6 +174,7 @@ final class CommunityAliasService {
                 return .init(
                     status: .unauthenticated,
                     message: String(localized: "community.alias.submit.loginRequired"),
+                    duplicateReason: nil,
                     candidate: nil,
                     existingCandidates: nil,
                     similarAliases: nil,
@@ -175,6 +185,7 @@ final class CommunityAliasService {
             return .init(
                 status: .error,
                 message: apiError.message,
+                duplicateReason: nil,
                 candidate: nil,
                 existingCandidates: nil,
                 similarAliases: nil,
@@ -184,6 +195,7 @@ final class CommunityAliasService {
             return .init(
                 status: .error,
                 message: error.localizedDescription,
+                duplicateReason: nil,
                 candidate: nil,
                 existingCandidates: nil,
                 similarAliases: nil,

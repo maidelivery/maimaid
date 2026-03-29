@@ -39,6 +39,16 @@ const STATIC_SOURCE_DEFAULTS: Array<{ category: string; activeUrl: string; fallb
   }
 ];
 
+const STATIC_BUNDLE_SCHEDULE_ROW_ID = 1;
+const STATIC_BUNDLE_CRON_JOB_NAME = "maimaid-static-bundle-build-request";
+const STATIC_BUNDLE_BUILD_CRON_SQL = "SELECT public.enqueue_job('static_bundle_build', '{}'::jsonb);";
+
+export type StaticBundlePeriodicBuildSchedule = {
+  enabled: boolean;
+  intervalHours: number;
+  cronExpression: string;
+};
+
 @injectable()
 export class StaticBundleService {
   constructor(
@@ -127,6 +137,41 @@ export class StaticBundleService {
     });
   }
 
+  async getPeriodicBuildSchedule(): Promise<StaticBundlePeriodicBuildSchedule> {
+    const config = await this.getOrCreatePeriodicBuildScheduleConfig();
+    return this.toPeriodicBuildSchedule(config.enabled, config.intervalHours);
+  }
+
+  async updatePeriodicBuildSchedule(input: Partial<{ enabled: boolean; intervalHours: number }>) {
+    const current = await this.getOrCreatePeriodicBuildScheduleConfig();
+    const enabled = input.enabled ?? current.enabled;
+    const intervalHours = input.intervalHours !== undefined
+      ? this.normalizeInputIntervalHours(input.intervalHours)
+      : current.intervalHours;
+
+    const updated = await this.prisma.staticBundleScheduleConfig.upsert({
+      where: { id: STATIC_BUNDLE_SCHEDULE_ROW_ID },
+      update: {
+        enabled,
+        intervalHours
+      },
+      create: {
+        id: STATIC_BUNDLE_SCHEDULE_ROW_ID,
+        enabled,
+        intervalHours
+      }
+    });
+
+    await this.syncPeriodicBuildCronJob(updated.enabled, updated.intervalHours);
+    return this.toPeriodicBuildSchedule(updated.enabled, updated.intervalHours);
+  }
+
+  async syncPeriodicBuildSchedule() {
+    const config = await this.getOrCreatePeriodicBuildScheduleConfig();
+    await this.syncPeriodicBuildCronJob(config.enabled, config.intervalHours);
+    return this.toPeriodicBuildSchedule(config.enabled, config.intervalHours);
+  }
+
   async buildBundle(force = false) {
     await this.ensureDefaultSources();
     const sources = await this.prisma.staticSource.findMany({
@@ -139,8 +184,6 @@ export class StaticBundleService {
 
     const sourceMeta: Record<string, unknown> = {};
     const payload: Record<string, unknown> = {
-      generatedAt: new Date().toISOString(),
-      appVersion: "v1",
       resources: {}
     };
 
@@ -184,8 +227,7 @@ export class StaticBundleService {
       (payload.resources as Record<string, unknown>)[source.category] = content;
       sourceMeta[source.category] = {
         url: finalUrl,
-        contentType,
-        fetchedAt: new Date().toISOString()
+        contentType
       };
     }
 
@@ -287,6 +329,103 @@ export class StaticBundleService {
         scheduledAt: new Date()
       }
     });
+  }
+
+  private async getOrCreatePeriodicBuildScheduleConfig() {
+    const defaultIntervalHours = this.normalizeEnvIntervalHours(this.env.STATIC_SYNC_INTERVAL_HOURS);
+    return this.prisma.staticBundleScheduleConfig.upsert({
+      where: { id: STATIC_BUNDLE_SCHEDULE_ROW_ID },
+      update: {},
+      create: {
+        id: STATIC_BUNDLE_SCHEDULE_ROW_ID,
+        enabled: true,
+        intervalHours: defaultIntervalHours
+      }
+    });
+  }
+
+  private toPeriodicBuildSchedule(enabled: boolean, intervalHours: number): StaticBundlePeriodicBuildSchedule {
+    return {
+      enabled,
+      intervalHours,
+      cronExpression: this.toCronExpression(intervalHours)
+    };
+  }
+
+  private normalizeEnvIntervalHours(value: number): number {
+    if (!Number.isFinite(value)) {
+      return 6;
+    }
+    return Math.max(1, Math.min(24, Math.trunc(value)));
+  }
+
+  private normalizeInputIntervalHours(value: number): number {
+    if (!Number.isFinite(value)) {
+      throw new AppError(400, "static_bundle_schedule_invalid_interval", "Interval hours must be a number.");
+    }
+    const normalized = Math.trunc(value);
+    if (normalized < 1 || normalized > 24) {
+      throw new AppError(400, "static_bundle_schedule_invalid_interval", "Interval hours must be between 1 and 24.");
+    }
+    return normalized;
+  }
+
+  private toCronExpression(intervalHours: number) {
+    if (intervalHours <= 1) {
+      return "0 * * * *";
+    }
+    if (intervalHours >= 24) {
+      return "0 0 * * *";
+    }
+    return `0 */${intervalHours} * * *`;
+  }
+
+  private async ensurePgCronAvailable() {
+    const rows = await this.prisma.$queryRaw<Array<{ available: boolean }>>`
+      SELECT to_regclass('cron.job') IS NOT NULL AS "available";
+    `;
+    if (!rows[0]?.available) {
+      throw new AppError(
+        500,
+        "static_bundle_schedule_unavailable",
+        "pg_cron is unavailable; cannot configure automatic static bundle build."
+      );
+    }
+  }
+
+  private async syncPeriodicBuildCronJob(enabled: boolean, intervalHours: number) {
+    await this.ensurePgCronAvailable();
+    const cronExpression = this.toCronExpression(intervalHours);
+    try {
+      await this.prisma.$executeRawUnsafe(`
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = '${STATIC_BUNDLE_CRON_JOB_NAME}') THEN
+    PERFORM cron.unschedule((SELECT jobid FROM cron.job WHERE jobname = '${STATIC_BUNDLE_CRON_JOB_NAME}' LIMIT 1));
+  END IF;
+END;
+$$;
+      `);
+
+      if (!enabled) {
+        return;
+      }
+
+      await this.prisma.$executeRawUnsafe(`
+SELECT cron.schedule(
+  '${STATIC_BUNDLE_CRON_JOB_NAME}',
+  '${cronExpression}',
+  $$${STATIC_BUNDLE_BUILD_CRON_SQL}$$
+);
+      `);
+    } catch (error) {
+      throw new AppError(
+        500,
+        "static_bundle_schedule_sync_failed",
+        "Failed to sync static bundle periodic build schedule.",
+        { error: error instanceof Error ? error.message : "unknown_error" }
+      );
+    }
   }
 
   private tryParseText(raw: string, contentType: string | null) {
@@ -634,10 +773,7 @@ export class StaticBundleService {
   }
 
   private computeBundleMd5(payload: Record<string, unknown>) {
-    const hashMaterial = {
-      appVersion: payload.appVersion ?? "v1",
-      resources: payload.resources ?? {}
-    };
+    const hashMaterial = payload.resources ?? {};
     const canonical = this.stableStringify(hashMaterial);
     return createHash("md5").update(canonical).digest("hex");
   }

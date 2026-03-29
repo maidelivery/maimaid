@@ -18,6 +18,13 @@ struct CommunityAliasVotingBoardView: View {
         var id: String { songIdentifier }
     }
 
+    private struct VotePresentation {
+        let iconName: String
+        let title: String
+        let accentColor: Color
+        let isSelected: Bool
+    }
+
     private var songTitleMap: [String: String] {
         Dictionary(uniqueKeysWithValues: songs.map { ($0.songIdentifier, $0.title) })
     }
@@ -225,8 +232,7 @@ struct CommunityAliasVotingBoardView: View {
     }
 
     private func voteButton(item: CommunityAliasVotingBoardItem, support: Bool) -> some View {
-        let isSelected = support ? (item.myVote == 1) : (item.myVote == -1)
-        let count = support ? item.supportCount : item.opposeCount
+        let presentation = votePresentation(for: item, support: support)
         let inFlight = inFlightVoteCandidateId == item.id
 
         return Button {
@@ -239,27 +245,55 @@ struct CommunityAliasVotingBoardView: View {
                     ProgressView()
                         .controlSize(.mini)
                 }
-                Image(systemName: support ? (isSelected ? "hand.thumbsup.fill" : "hand.thumbsup") : (isSelected ? "hand.thumbsdown.fill" : "hand.thumbsdown"))
-                Text(
-                    support
-                        ? (isSelected ? String(localized: "community.alias.vote.cancelSupport \(count)") : String(localized: "community.alias.vote.support \(count)"))
-                        : (isSelected ? String(localized: "community.alias.vote.cancelOppose \(count)") : String(localized: "community.alias.vote.oppose \(count)"))
-                )
+                Image(systemName: presentation.iconName)
+                Text(presentation.title)
             }
             .font(.system(size: 12, weight: .semibold))
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .foregroundStyle(isSelected ? .white : (support ? Color.green : Color.red))
+            .foregroundStyle(presentation.isSelected ? .white : presentation.accentColor)
             .background(
-                RoundedRectangle(cornerRadius: 999)
-                    .fill(isSelected ? (support ? Color.green : Color.red) : .clear)
+                Capsule()
+                    .fill(presentation.isSelected ? presentation.accentColor : .clear)
             )
             .overlay(
-                Capsule().strokeBorder((support ? Color.green : Color.red).opacity(0.35), lineWidth: 1)
+                Capsule()
+                    .strokeBorder(presentation.accentColor.opacity(0.35), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
         .disabled(inFlight)
+    }
+
+    private func votePresentation(for item: CommunityAliasVotingBoardItem, support: Bool) -> VotePresentation {
+        let isSelected = support ? (item.myVote == 1) : (item.myVote == -1)
+        let count = support ? item.supportCount : item.opposeCount
+        let accentColor: Color = support ? .green : .red
+
+        let iconName: String
+        if support {
+            iconName = isSelected ? "hand.thumbsup.fill" : "hand.thumbsup"
+        } else {
+            iconName = isSelected ? "hand.thumbsdown.fill" : "hand.thumbsdown"
+        }
+
+        let title: String
+        if support {
+            title = isSelected
+                ? String(localized: "community.alias.vote.cancelSupport \(count)")
+                : String(localized: "community.alias.vote.support \(count)")
+        } else {
+            title = isSelected
+                ? String(localized: "community.alias.vote.cancelOppose \(count)")
+                : String(localized: "community.alias.vote.oppose \(count)")
+        }
+
+        return VotePresentation(
+            iconName: iconName,
+            title: title,
+            accentColor: accentColor,
+            isSelected: isSelected
+        )
     }
 
     private func formatDeadline(_ date: Date?) -> String {

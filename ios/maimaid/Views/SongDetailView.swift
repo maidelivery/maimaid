@@ -324,6 +324,21 @@ struct SongDetailContent: View {
                 communityAliasDailyUsedCount = min(communityAliasDailyQuotaLimit, communityAliasDailyUsedCount + 1)
             }
         case .rejectedDuplicate:
+            if let duplicateReason = result.duplicateReason {
+                switch duplicateReason {
+                case .lxnsExisting:
+                    showToast(message: String(localized: "community.alias.submit.duplicateLxns"))
+                    break
+                case .communityExisting:
+                    showToast(message: String(localized: "community.alias.submit.duplicateCommunity"))
+                    break
+                case .adminRejectedLocked:
+                    showToast(message: String(localized: "community.alias.submit.adminRejectedLocked"))
+                    break
+                }
+                break
+            }
+
             let suggestions = result.similarAliases?.prefix(3).joined(separator: " / ") ?? ""
             if suggestions.isEmpty {
                 showToast(message: String(localized: "community.alias.submit.duplicate"))
@@ -1225,9 +1240,11 @@ struct SheetCardView: View {
                             .foregroundStyle(.secondary.opacity(0.4))
                             .rotationEffect(.degrees(isNotesExpanded ? 90 : 0))
                     }
+                    .foregroundStyle(.primary)
                     .padding(.horizontal, 20)
                     .padding(.bottom, isNotesExpanded ? 8 : 0)
                 }
+                .buttonStyle(.plain)
                 
                 if isNotesExpanded {
                     noteBreakdown
@@ -1258,291 +1275,22 @@ struct SheetCardView: View {
     // MARK: - Rating Table
     
     private func ratingTable(level: Double) -> some View {
-        let ratings = RatingUtils.rankThresholds.filter { $0.rank != "AP+" }.map { item in
-            (item.rank, item.threshold, RatingUtils.calculateRating(internalLevel: level, achievements: item.threshold))
-        }.reversed() // Reverse to SSS+ -> D
-        return VStack(spacing: 0) {
-            // Header
-            Button {
-                MainActor.assumeIsolated {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                        isRatingExpanded.toggle()
-                    }
-                }
-            } label: {
-                HStack {
-                    Text("song.detail.section.rating")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.secondary.opacity(0.4))
-                        .rotationEffect(.degrees(isRatingExpanded ? 90 : 0))
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, isRatingExpanded ? 8 : 0)
-            }
-            
-            if isRatingExpanded {
-                VStack(spacing: 0) {
-                    // Table header row
-                    HStack {
-                        Text("song.detail.table.achievement")
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        Text("song.detail.table.rating")
-                            .frame(width: 50, alignment: .trailing)
-                        Text("song.detail.table.delta")
-                            .frame(width: 40, alignment: .trailing)
-                    }
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 4)
-                    
-                    // Table rows
-                    let ratingArray = Array(ratings)
-                    ForEach(Array(ratingArray.enumerated()), id: \.offset) { index, item in
-                        let (rank, ach, rating) = item
-                        // Delta compared to the next rank (lower rank) since we're now SSS+ -> D
-                        let nextRating = index < ratingArray.count - 1 ? ratingArray[index + 1].2 : 0
-                        let delta = index < ratingArray.count - 1 ? rating - nextRating : 0
-                        
-                        HStack {
-                            HStack(spacing: 6) {
-                                Text(rank)
-                                    .font(.system(size: 11, weight: .black, design: .rounded))
-                                    .foregroundStyle(RatingUtils.colorForRank(rank))
-                                    .frame(width: 36, alignment: .leading)
-                                
-                                Text("\(ach, format: .number.precision(.fractionLength(4)))%")
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .foregroundStyle(.primary)
-                            }
-                            
-                            Spacer()
-                            
-                            Text("\(rating)")
-                                .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                .foregroundStyle(.primary)
-                                .frame(width: 50, alignment: .trailing)
-                            
-                            if delta > 0 {
-                                Text("↑\(delta)")
-                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 40, alignment: .trailing)
-                            } else {
-                                Text("")
-                                    .frame(width: 40)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 5)
-                        .background(index % 2 == 0 ? Color.primary.opacity(0.02) : Color.clear)
-                    }
-                }
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
+        SongDetailRatingTableSection(level: level, isExpanded: $isRatingExpanded)
     }
     
     
     // MARK: - Play History Table
     
     private func playHistoryTable(records: [PlayRecord], diffColor: Color) -> some View {
-        let sortedRecords = records.sorted { a, b in
-            if historySortByDate {
-                return a.playDate > b.playDate
-            } else {
-                return a.rate > b.rate
-            }
-        }
-        
-        let bestRecordId = records.max(by: { $0.rate < $1.rate })?.id
-        
-        let itemsPerPage = 5
-        let totalPages = max(1, Int(ceil(Double(sortedRecords.count) / Double(itemsPerPage))))
-        let validPage = max(1, min(historyPage, totalPages))
-        let startIndex = (validPage - 1) * itemsPerPage
-        let endIndex = min(startIndex + itemsPerPage, sortedRecords.count)
-        let displayRecords = Array(sortedRecords[startIndex..<endIndex])
-        
-        return VStack(spacing: 0) {
-            // Header
-            Button {
-                MainActor.assumeIsolated {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                        isHistoryExpanded.toggle()
-                    }
-                }
-            } label: {
-                HStack {
-                    Text("song.detail.section.history")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.secondary.opacity(0.4))
-                        .rotationEffect(.degrees(isHistoryExpanded ? 90 : 0))
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, isHistoryExpanded ? 8 : 0)
-            }
-            
-            if isHistoryExpanded {
-                VStack(spacing: 0) {
-                    // Controls
-                    HStack {
-                        Spacer()
-                        Picker("Sort by", selection: $historySortByDate) {
-                            Text(String(localized: "song.detail.sort.time")).tag(true)
-                            Text(String(localized: "song.detail.sort.rate")).tag(false)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 140)
-                        .scaleEffect(0.8)
-                        .onChange(of: historySortByDate) { _, _ in
-                            historyPage = 1
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 4)
-                    
-                    ForEach(Array(displayRecords.enumerated()), id: \.offset) { index, record in
-                        HStack(spacing: 12) {
-                            // Left: Date
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(record.playDate.formatted(.dateTime.year(.twoDigits).month(.defaultDigits).day(.defaultDigits)))
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(.primary)
-                                Text(record.playDate, style: .time)
-                                    .font(.system(size: 9))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .frame(width: 70, alignment: .leading)
-                            
-                            // Middle: Rate & Rating
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 4) {
-                                    Text(record.rank)
-                                        .font(.system(size: 11, weight: .black, design: .rounded))
-                                        .foregroundStyle(RatingUtils.colorForRank(record.rank))
-                                    Text("\(record.rate, format: .number.precision(.fractionLength(4)))%")
-                                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(.primary)
-                                }
-                                
-                                if record.dxScore > 0 {
-                                    HStack(spacing: 2) {
-                                        Image(systemName: "star.fill")
-                                            .font(.system(size: 8))
-                                            .foregroundStyle(.yellow)
-                                        Text("\(record.dxScore)")
-                                            .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
-                            
-                            Spacer()
-                            
-                            // Right: Badges
-                            VStack(alignment: .trailing, spacing: 4) {
-                                HStack(spacing: 4) {
-                                    if let fc = record.fc, !fc.isEmpty {
-                                        Text(ThemeUtils.normalizeFC(fc))
-                                            .font(.system(size: 8, weight: .bold, design: .rounded))
-                                            .foregroundStyle(.white)
-                                            .padding(.horizontal, 4)
-                                            .padding(.vertical, 1)
-                                            .background(ThemeUtils.fcColor(fc), in: RoundedRectangle(cornerRadius: 3))
-                                    }
-                                    
-                                    if let fs = record.fs, !fs.isEmpty {
-                                        Text(ThemeUtils.normalizeFS(fs))
-                                            .font(.system(size: 8, weight: .bold, design: .rounded))
-                                            .foregroundStyle(.white)
-                                            .padding(.horizontal, 4)
-                                            .padding(.vertical, 1)
-                                            .background(ThemeUtils.fsColor(fs), in: RoundedRectangle(cornerRadius: 3))
-                                    }
-                                    
-                                    // Delete button
-                                    Button {
-                                        recordToDelete = record
-                                        showingDeleteConfirm = true
-                                    } label: {
-                                        Image(systemName: "trash")
-                                            .font(.system(size: 10))
-                                            .foregroundStyle(.red.opacity(0.6))
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 8)
-                        .background(
-                            Group {
-                                if record.id == bestRecordId {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(diffColor.opacity(0.1))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .strokeBorder(diffColor, lineWidth: 1.5)
-                                        )
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 2)
-                                } else if index % 2 == 0 {
-                                    Color.primary.opacity(0.02)
-                                }
-                            }
-                        )
-                    }
-                    
-                    if totalPages > 1 {
-                        HStack(spacing: 12) {
-                            Button {
-                                if historyPage > 1 { historyPage -= 1 }
-                            } label: {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundStyle(historyPage > 1 ? AnyShapeStyle(diffColor) : AnyShapeStyle(.secondary.opacity(0.3)))
-                                    .padding(8)
-                            }
-                            .disabled(historyPage <= 1)
-                            
-                            Menu {
-                                Picker("song.detail.history.pagePicker", selection: $historyPage) {
-                                    ForEach(1...totalPages, id: \.self) { page in
-                                        Text(String(localized: "song.detail.page \(page)")).tag(page)
-                                    }
-                                }
-                            } label: {
-                                Text("\(validPage) / \(totalPages)")
-                                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(.primary)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 6)
-                                    .background(Color.primary.opacity(0.05), in: Capsule())
-                            }
-                            
-                            Button {
-                                if historyPage < totalPages { historyPage += 1 }
-                            } label: {
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundStyle(historyPage < totalPages ? AnyShapeStyle(diffColor) : AnyShapeStyle(.secondary.opacity(0.3)))
-                                    .padding(8)
-                            }
-                            .disabled(historyPage >= totalPages)
-                        }
-                        .padding(.vertical, 12)
-                    }
-                }
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
+        SongDetailPlayHistorySection(
+            records: records,
+            diffColor: diffColor,
+            isExpanded: $isHistoryExpanded,
+            historySortByDate: $historySortByDate,
+            historyPage: $historyPage
+        ) { record in
+            recordToDelete = record
+            showingDeleteConfirm = true
         }
     }
     
@@ -1642,6 +1390,341 @@ struct SheetCardView: View {
     }
     
 
+}
+
+private struct SongDetailRatingTableSection: View {
+    let level: Double
+    @Binding var isExpanded: Bool
+
+    private struct Row: Identifiable {
+        let id: Int
+        let rank: String
+        let achievement: Double
+        let rating: Int
+        let delta: Int
+    }
+
+    private var rows: [Row] {
+        let values = RatingUtils.rankThresholds
+            .filter { $0.rank != "AP+" }
+            .reversed()
+            .map { item in
+                (
+                    rank: item.rank,
+                    achievement: item.threshold,
+                    rating: RatingUtils.calculateRating(internalLevel: level, achievements: item.threshold)
+                )
+            }
+
+        return values.enumerated().map { index, item in
+            let nextRating = index < values.count - 1 ? values[index + 1].rating : 0
+            return Row(
+                id: index,
+                rank: item.rank,
+                achievement: item.achievement,
+                rating: item.rating,
+                delta: max(0, item.rating - nextRating)
+            )
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack {
+                    Text("song.detail.section.rating")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.secondary.opacity(0.4))
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, isExpanded ? 8 : 0)
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                VStack(spacing: 0) {
+                    HStack {
+                        Text("song.detail.table.achievement")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Text("song.detail.table.rating")
+                            .frame(width: 50, alignment: .trailing)
+                        Text("song.detail.table.delta")
+                            .frame(width: 40, alignment: .trailing)
+                    }
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 4)
+
+                    ForEach(rows) { row in
+                        HStack {
+                            HStack(spacing: 6) {
+                                Text(row.rank)
+                                    .font(.system(size: 11, weight: .black, design: .rounded))
+                                    .foregroundStyle(RatingUtils.colorForRank(row.rank))
+                                    .frame(width: 36, alignment: .leading)
+
+                                Text("\(row.achievement, format: .number.precision(.fractionLength(4)))%")
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundStyle(.primary)
+                            }
+
+                            Spacer()
+
+                            Text("\(row.rating)")
+                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                .foregroundStyle(.primary)
+                                .frame(width: 50, alignment: .trailing)
+
+                            if row.delta > 0 {
+                                Text("↑\(row.delta)")
+                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 40, alignment: .trailing)
+                            } else {
+                                Text("")
+                                    .frame(width: 40)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 5)
+                        .background(row.id % 2 == 0 ? Color.primary.opacity(0.02) : Color.clear)
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+}
+
+private struct SongDetailPlayHistorySection: View {
+    let records: [PlayRecord]
+    let diffColor: Color
+    @Binding var isExpanded: Bool
+    @Binding var historySortByDate: Bool
+    @Binding var historyPage: Int
+    let onDeleteRequested: (PlayRecord) -> Void
+
+    private let itemsPerPage = 5
+
+    private var sortedRecords: [PlayRecord] {
+        records.sorted { lhs, rhs in
+            if historySortByDate {
+                return lhs.playDate > rhs.playDate
+            }
+            return lhs.rate > rhs.rate
+        }
+    }
+
+    private var totalPages: Int {
+        max(1, Int(ceil(Double(sortedRecords.count) / Double(itemsPerPage))))
+    }
+
+    private var validPage: Int {
+        max(1, min(historyPage, totalPages))
+    }
+
+    private var displayRecords: [PlayRecord] {
+        let startIndex = (validPage - 1) * itemsPerPage
+        let endIndex = min(startIndex + itemsPerPage, sortedRecords.count)
+        guard startIndex < endIndex else { return [] }
+        return Array(sortedRecords[startIndex..<endIndex])
+    }
+
+    var body: some View {
+        let bestRecordId = records.max(by: { $0.rate < $1.rate })?.id
+
+        return VStack(spacing: 0) {
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack {
+                    Text("song.detail.section.history")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.secondary.opacity(0.4))
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, isExpanded ? 8 : 0)
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                VStack(spacing: 0) {
+                    HStack {
+                        Spacer()
+                        Picker("Sort by", selection: $historySortByDate) {
+                            Text(String(localized: "song.detail.sort.time")).tag(true)
+                            Text(String(localized: "song.detail.sort.rate")).tag(false)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 140)
+                        .scaleEffect(0.8)
+                        .onChange(of: historySortByDate) { _, _ in
+                            historyPage = 1
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 4)
+
+                    ForEach(displayRecords.indices, id: \.self) { index in
+                        let record = displayRecords[index]
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(record.playDate.formatted(.dateTime.year(.twoDigits).month(.defaultDigits).day(.defaultDigits)))
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(.primary)
+                                Text(record.playDate, style: .time)
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(width: 70, alignment: .leading)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 4) {
+                                    Text(record.rank)
+                                        .font(.system(size: 11, weight: .black, design: .rounded))
+                                        .foregroundStyle(RatingUtils.colorForRank(record.rank))
+                                    Text("\(record.rate, format: .number.precision(.fractionLength(4)))%")
+                                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(.primary)
+                                }
+
+                                if record.dxScore > 0 {
+                                    HStack(spacing: 2) {
+                                        Image(systemName: "star.fill")
+                                            .font(.system(size: 8))
+                                            .foregroundStyle(.yellow)
+                                        Text("\(record.dxScore)")
+                                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+
+                            Spacer()
+
+                            VStack(alignment: .trailing, spacing: 4) {
+                                HStack(spacing: 4) {
+                                    if let fc = record.fc, !fc.isEmpty {
+                                        Text(ThemeUtils.normalizeFC(fc))
+                                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(ThemeUtils.fcColor(fc), in: RoundedRectangle(cornerRadius: 3))
+                                    }
+
+                                    if let fs = record.fs, !fs.isEmpty {
+                                        Text(ThemeUtils.normalizeFS(fs))
+                                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(ThemeUtils.fsColor(fs), in: RoundedRectangle(cornerRadius: 3))
+                                    }
+
+                                    Button {
+                                        onDeleteRequested(record)
+                                    } label: {
+                                        Image(systemName: "trash")
+                                            .font(.system(size: 10))
+                                            .foregroundStyle(.red.opacity(0.6))
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
+                        .background(
+                            Group {
+                                if record.id == bestRecordId {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(diffColor.opacity(0.1))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .strokeBorder(diffColor, lineWidth: 1.5)
+                                        )
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 2)
+                                } else if index % 2 == 0 {
+                                    Color.primary.opacity(0.02)
+                                }
+                            }
+                        )
+                    }
+
+                    if totalPages > 1 {
+                        HStack(spacing: 12) {
+                            Button {
+                                if historyPage > 1 {
+                                    historyPage -= 1
+                                }
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(
+                                        historyPage > 1
+                                            ? AnyShapeStyle(diffColor)
+                                            : AnyShapeStyle(.secondary.opacity(0.3))
+                                    )
+                                    .padding(8)
+                            }
+                            .disabled(historyPage <= 1)
+
+                            Menu {
+                                Picker("song.detail.history.pagePicker", selection: $historyPage) {
+                                    ForEach(1...totalPages, id: \.self) { page in
+                                        Text(String(localized: "song.detail.page \(page)")).tag(page)
+                                    }
+                                }
+                            } label: {
+                                Text("\(validPage) / \(totalPages)")
+                                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(.primary)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 6)
+                                    .background(Color.primary.opacity(0.05), in: Capsule())
+                            }
+
+                            Button {
+                                if historyPage < totalPages {
+                                    historyPage += 1
+                                }
+                            } label: {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(
+                                        historyPage < totalPages
+                                            ? AnyShapeStyle(diffColor)
+                                            : AnyShapeStyle(.secondary.opacity(0.3))
+                                    )
+                                    .padding(8)
+                            }
+                            .disabled(historyPage >= totalPages)
+                        }
+                        .padding(.vertical, 12)
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
 }
 
 // MARK: - Fault Tolerance Calculator

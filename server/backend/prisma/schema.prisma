@@ -42,6 +42,11 @@ enum CandidateStatus {
   rejected
 }
 
+enum CandidateRejectionSource {
+  admin_manual
+  community_vote
+}
+
 enum ImportProvider {
   df
   lxns
@@ -487,6 +492,18 @@ model StaticBundle {
   @@map("static_bundles")
 }
 
+model StaticBundleScheduleConfig {
+  id            Int      @id @default(1)
+  enabled       Boolean  @default(true)
+  intervalHours Int      @default(6)
+  lastEnqueuedAt DateTime?
+  nextEnqueueAt DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("static_bundle_schedule_config")
+}
+
 model ImportRun {
   id          String          @id @default(uuid()) @db.Uuid
   profileId   String          @db.Uuid
@@ -522,6 +539,7 @@ model CommunityAliasCandidate {
   aliasNorm            String
   submitterId          String                 @db.Uuid
   status               CandidateStatus        @default(voting)
+  rejectionSource      CandidateRejectionSource?
   voteOpenAt           DateTime?
   voteCloseAt          DateTime?
   approvedAt           DateTime?
