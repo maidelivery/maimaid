@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.next/
+out/
+.wrangler/
+public/song-catalog.json
+.env*.local
