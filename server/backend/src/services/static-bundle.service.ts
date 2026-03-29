@@ -41,7 +41,8 @@ const STATIC_SOURCE_DEFAULTS: Array<{ category: string; activeUrl: string; fallb
 
 const STATIC_BUNDLE_SCHEDULE_ROW_ID = 1;
 const STATIC_BUNDLE_CRON_JOB_NAME = "maimaid-static-bundle-build-request";
-const STATIC_BUNDLE_BUILD_CRON_SQL = "SELECT public.enqueue_job('static_bundle_build', '{}'::jsonb);";
+const STATIC_BUNDLE_CRON_DRIVER_EXPRESSION = "* * * * *";
+const STATIC_BUNDLE_BUILD_CRON_SQL = "SELECT public.enqueue_static_bundle_build_if_due();";
 
 export type StaticBundlePeriodicBuildSchedule = {
   enabled: boolean;
@@ -149,26 +150,48 @@ export class StaticBundleService {
       ? this.normalizeInputIntervalHours(input.intervalHours)
       : current.intervalHours;
 
+    const now = new Date();
+    const shouldResetNextEnqueueAt = enabled
+      && (!current.enabled || input.intervalHours !== undefined || current.nextEnqueueAt === null);
+    const nextEnqueueAt = this.addHours(now, intervalHours);
+    const updateData: Prisma.StaticBundleScheduleConfigUpdateInput = {
+      enabled,
+      intervalHours
+    };
+    if (!enabled) {
+      updateData.nextEnqueueAt = null;
+    } else if (shouldResetNextEnqueueAt) {
+      updateData.nextEnqueueAt = nextEnqueueAt;
+    }
+
+    const createData: Prisma.StaticBundleScheduleConfigCreateInput = {
+      id: STATIC_BUNDLE_SCHEDULE_ROW_ID,
+      enabled,
+      intervalHours,
+      nextEnqueueAt: enabled ? nextEnqueueAt : null
+    };
+
     const updated = await this.prisma.staticBundleScheduleConfig.upsert({
       where: { id: STATIC_BUNDLE_SCHEDULE_ROW_ID },
-      update: {
-        enabled,
-        intervalHours
-      },
-      create: {
-        id: STATIC_BUNDLE_SCHEDULE_ROW_ID,
-        enabled,
-        intervalHours
-      }
+      update: updateData,
+      create: createData
     });
 
-    await this.syncPeriodicBuildCronJob(updated.enabled, updated.intervalHours);
+    await this.syncPeriodicBuildCronJob(updated.enabled);
     return this.toPeriodicBuildSchedule(updated.enabled, updated.intervalHours);
   }
 
   async syncPeriodicBuildSchedule() {
-    const config = await this.getOrCreatePeriodicBuildScheduleConfig();
-    await this.syncPeriodicBuildCronJob(config.enabled, config.intervalHours);
+    let config = await this.getOrCreatePeriodicBuildScheduleConfig();
+    if (config.enabled && config.nextEnqueueAt === null) {
+      config = await this.prisma.staticBundleScheduleConfig.update({
+        where: { id: STATIC_BUNDLE_SCHEDULE_ROW_ID },
+        data: {
+          nextEnqueueAt: this.addHours(new Date(), config.intervalHours)
+        }
+      });
+    }
+    await this.syncPeriodicBuildCronJob(config.enabled);
     return this.toPeriodicBuildSchedule(config.enabled, config.intervalHours);
   }
 
@@ -339,7 +362,8 @@ export class StaticBundleService {
       create: {
         id: STATIC_BUNDLE_SCHEDULE_ROW_ID,
         enabled: true,
-        intervalHours: defaultIntervalHours
+        intervalHours: defaultIntervalHours,
+        nextEnqueueAt: this.addHours(new Date(), defaultIntervalHours)
       }
     });
   }
@@ -348,7 +372,7 @@ export class StaticBundleService {
     return {
       enabled,
       intervalHours,
-      cronExpression: this.toCronExpression(intervalHours)
+      cronExpression: this.describeCronExpression()
     };
   }
 
@@ -356,7 +380,7 @@ export class StaticBundleService {
     if (!Number.isFinite(value)) {
       return 6;
     }
-    return Math.max(1, Math.min(24, Math.trunc(value)));
+    return Math.max(1, Math.trunc(value));
   }
 
   private normalizeInputIntervalHours(value: number): number {
@@ -364,20 +388,22 @@ export class StaticBundleService {
       throw new AppError(400, "static_bundle_schedule_invalid_interval", "Interval hours must be a number.");
     }
     const normalized = Math.trunc(value);
-    if (normalized < 1 || normalized > 24) {
-      throw new AppError(400, "static_bundle_schedule_invalid_interval", "Interval hours must be between 1 and 24.");
+    if (normalized < 1) {
+      throw new AppError(400, "static_bundle_schedule_invalid_interval", "Interval hours must be greater than or equal to 1.");
     }
     return normalized;
   }
 
-  private toCronExpression(intervalHours: number) {
-    if (intervalHours <= 1) {
-      return "0 * * * *";
-    }
-    if (intervalHours >= 24) {
-      return "0 0 * * *";
-    }
-    return `0 */${intervalHours} * * *`;
+  private addHours(base: Date, hours: number) {
+    return new Date(base.getTime() + hours * 60 * 60 * 1000);
+  }
+
+  private toCronExpression() {
+    return STATIC_BUNDLE_CRON_DRIVER_EXPRESSION;
+  }
+
+  private describeCronExpression() {
+    return `${STATIC_BUNDLE_CRON_DRIVER_EXPRESSION} (precise-hour driver)`;
   }
 
   private async ensurePgCronAvailable() {
@@ -393,9 +419,9 @@ export class StaticBundleService {
     }
   }
 
-  private async syncPeriodicBuildCronJob(enabled: boolean, intervalHours: number) {
+  private async syncPeriodicBuildCronJob(enabled: boolean) {
     await this.ensurePgCronAvailable();
-    const cronExpression = this.toCronExpression(intervalHours);
+    const cronExpression = this.toCronExpression();
     try {
       await this.prisma.$executeRawUnsafe(`
 DO $$

@@ -71,7 +71,7 @@ const bundleBuildSchema = z.object({
 const staticBundleSchedulePatchSchema = z
   .object({
     enabled: z.boolean().optional(),
-    intervalHours: z.coerce.number().int().min(1).max(24).optional()
+    intervalHours: z.coerce.number().int().positive().optional()
   })
   .refine((value) => Object.keys(value).length > 0, "No field to update.");
 
