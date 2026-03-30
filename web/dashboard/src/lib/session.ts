@@ -73,9 +73,19 @@ export function readStoredRefreshToken(): string | null {
     return null;
   }
 
-  const storedToken = sessionStorage?.getItem(REFRESH_TOKEN_STORAGE_KEY)?.trim() ?? "";
-  if (storedToken) {
-    return storedToken;
+  const localStoredToken = localStorage?.getItem(REFRESH_TOKEN_STORAGE_KEY)?.trim() ?? "";
+  if (localStoredToken) {
+    return localStoredToken;
+  }
+
+  const sessionStoredToken = sessionStorage?.getItem(REFRESH_TOKEN_STORAGE_KEY)?.trim() ?? "";
+  if (sessionStoredToken) {
+    try {
+      localStorage?.setItem(REFRESH_TOKEN_STORAGE_KEY, sessionStoredToken);
+    } catch {
+      // noop
+    }
+    return sessionStoredToken;
   }
 
   const legacyRaw = localStorage?.getItem(LEGACY_SESSION_STORAGE_KEY);
@@ -91,7 +101,7 @@ export function readStoredRefreshToken(): string | null {
       return null;
     }
 
-    sessionStorage?.setItem(REFRESH_TOKEN_STORAGE_KEY, refreshToken);
+    localStorage?.setItem(REFRESH_TOKEN_STORAGE_KEY, refreshToken);
     localStorage?.removeItem(LEGACY_SESSION_STORAGE_KEY);
     return refreshToken;
   } catch {
@@ -110,7 +120,13 @@ export function persistRefreshToken(refreshToken: string) {
   }
 
   try {
-    sessionStorage?.setItem(REFRESH_TOKEN_STORAGE_KEY, normalized);
+    localStorage?.setItem(REFRESH_TOKEN_STORAGE_KEY, normalized);
+  } catch {
+    // noop
+  }
+
+  try {
+    sessionStorage?.removeItem(REFRESH_TOKEN_STORAGE_KEY);
   } catch {
     // noop
   }
@@ -125,6 +141,12 @@ export function persistRefreshToken(refreshToken: string) {
 export function clearStoredSessionArtifacts() {
   const sessionStorage = getSessionStorage();
   const localStorage = getLocalStorage();
+
+  try {
+    localStorage?.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+  } catch {
+    // noop
+  }
 
   try {
     sessionStorage?.removeItem(REFRESH_TOKEN_STORAGE_KEY);
