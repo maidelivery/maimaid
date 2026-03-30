@@ -5,6 +5,7 @@ import { parse as parseYaml } from "yaml";
 import { TOKENS } from "../di/tokens.js";
 import type { Env } from "../env.js";
 import { AppError } from "../lib/errors.js";
+import type { ChartFitService } from "./chart-fit.service.js";
 
 const STATIC_SOURCE_DEFAULTS: Array<{ category: string; activeUrl: string; fallbackUrls: string[] }> = [
   {
@@ -28,7 +29,7 @@ const STATIC_SOURCE_DEFAULTS: Array<{ category: string; activeUrl: string; fallb
     fallbackUrls: []
   },
   {
-    category: "df_chart_fit",
+    category: "chart_fit",
     activeUrl: "https://www.diving-fish.com/api/maimaidxprober/chart_stats",
     fallbackUrls: []
   },
@@ -54,7 +55,8 @@ export type StaticBundlePeriodicBuildSchedule = {
 export class StaticBundleService {
   constructor(
     @inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
-    @inject(TOKENS.Env) private readonly env: Env
+    @inject(TOKENS.Env) private readonly env: Env,
+    @inject(TOKENS.ChartFitService) private readonly chartFitService: ChartFitService
   ) {}
 
   private toJsonValue(value: unknown): Prisma.InputJsonValue {
@@ -68,7 +70,50 @@ export class StaticBundleService {
     return this.toJsonValue(value);
   }
 
+  private normalizeSourceCategory(category: string) {
+    if (category === "df_chart_fit") {
+      return "chart_fit";
+    }
+    return category;
+  }
+
+  private sanitizeFallbackUrls(category: string, fallbackUrls: string[]) {
+    const normalized = fallbackUrls
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+    const deduplicated = Array.from(new Set(normalized));
+
+    if (category === "chart_fit" && deduplicated.length > 1) {
+      throw new AppError(
+        400,
+        "static_source_invalid_fallback_urls",
+        "chart_fit supports at most one extra URL."
+      );
+    }
+    return deduplicated;
+  }
+
   async ensureDefaultSources() {
+    const legacyChartFit = await this.prisma.staticSource.findUnique({
+      where: { category: "df_chart_fit" },
+      select: { id: true }
+    });
+    const modernChartFit = await this.prisma.staticSource.findUnique({
+      where: { category: "chart_fit" },
+      select: { id: true }
+    });
+
+    if (legacyChartFit && modernChartFit) {
+      await this.prisma.staticSource.delete({
+        where: { id: legacyChartFit.id }
+      });
+    } else if (legacyChartFit && !modernChartFit) {
+      await this.prisma.staticSource.update({
+        where: { id: legacyChartFit.id },
+        data: { category: "chart_fit" }
+      });
+    }
+
     for (const item of STATIC_SOURCE_DEFAULTS) {
       await this.prisma.staticSource.upsert({
         where: {
@@ -99,11 +144,14 @@ export class StaticBundleService {
     enabled?: boolean;
     metadata?: Record<string, unknown> | null;
   }) {
+    const category = this.normalizeSourceCategory(input.category.trim());
+    const fallbackUrls = this.sanitizeFallbackUrls(category, input.fallbackUrls ?? []);
+
     return this.prisma.staticSource.create({
       data: {
-        category: input.category.trim(),
+        category,
         activeUrl: input.activeUrl.trim(),
-        fallbackUrls: input.fallbackUrls ?? [],
+        fallbackUrls,
         enabled: input.enabled ?? true,
         metadataJson: this.toNullableJson(input.metadata ?? null)
       }
@@ -119,12 +167,21 @@ export class StaticBundleService {
       metadata: Record<string, unknown> | null;
     }>
   ) {
+    const existing = await this.prisma.staticSource.findUnique({
+      where: { id: sourceId },
+      select: { category: true }
+    });
+    if (!existing) {
+      throw new AppError(404, "static_source_not_found", "Static source not found.");
+    }
+
+    const category = this.normalizeSourceCategory(existing.category);
     const data: Prisma.StaticSourceUpdateInput = {};
     if (input.activeUrl !== undefined) {
       data.activeUrl = input.activeUrl.trim();
     }
     if (input.fallbackUrls !== undefined) {
-      data.fallbackUrls = input.fallbackUrls;
+      data.fallbackUrls = this.sanitizeFallbackUrls(category, input.fallbackUrls);
     }
     if (input.enabled !== undefined) {
       data.enabled = input.enabled;
@@ -210,47 +267,76 @@ export class StaticBundleService {
       resources: {}
     };
 
-    for (const source of sources) {
-      const targets = [source.activeUrl, ...source.fallbackUrls];
-      let finalUrl: string | null = null;
-      let content: unknown = null;
-      let contentType: string | null = null;
-      let fetchError: string | null = null;
+    const normalizedSources = sources.map((source) => ({
+      ...source,
+      category: this.normalizeSourceCategory(source.category)
+    }));
+    const chartFitSource = normalizedSources.find((source) => source.category === "chart_fit");
+    const commonSources = normalizedSources.filter((source) => source.category !== "chart_fit");
 
-      for (const url of targets) {
-        try {
-          const response = await fetch(url, {
-            method: "GET"
-          });
-          if (!response.ok) {
-            fetchError = `HTTP_${response.status}`;
-            continue;
-          }
-          contentType = response.headers.get("content-type");
-          const raw = await response.text();
-          const parsed = this.tryParseText(raw, contentType);
-          content = this.normalizeResourcePayload(source.category, parsed, raw);
-          finalUrl = url;
-          fetchError = null;
-          break;
-        } catch (error) {
-          fetchError = error instanceof Error ? error.message : "unknown_error";
-        }
-      }
+    for (const source of commonSources) {
+      const fetched = await this.fetchStaticSourceFromTargets(source.category, [source.activeUrl, ...source.fallbackUrls]);
+      (payload.resources as Record<string, unknown>)[source.category] = fetched.content;
+      sourceMeta[source.category] = {
+        url: fetched.url,
+        contentType: fetched.contentType
+      };
+    }
 
-      if (!finalUrl) {
+    const resourcesRecord = payload.resources as Record<string, unknown>;
+    const selfChartFit = await this.chartFitService.refreshSnapshot({
+      dataJson: resourcesRecord.data_json,
+      songidJson: resourcesRecord.songid_json
+    });
+
+    if (chartFitSource) {
+      if (chartFitSource.fallbackUrls.length > 1) {
         throw new AppError(
-          502,
-          "static_source_fetch_failed",
-          `Static source fetch failed: ${source.category}`,
-          { category: source.category, error: fetchError }
+          400,
+          "static_source_invalid_fallback_urls",
+          "chart_fit supports at most one extra URL."
         );
       }
 
-      (payload.resources as Record<string, unknown>)[source.category] = content;
-      sourceMeta[source.category] = {
-        url: finalUrl,
-        contentType
+      let primaryPayload: unknown = {};
+      let primaryResolvedUrl: string | null = null;
+      let primaryContentType: string | null = null;
+      let primaryFetchError: string | null = null;
+
+      try {
+        const primary = await this.fetchStaticSourceByUrl("chart_fit", chartFitSource.activeUrl);
+        primaryPayload = primary.content;
+        primaryResolvedUrl = primary.url;
+        primaryContentType = primary.contentType;
+      } catch (error) {
+        primaryFetchError = error instanceof Error ? error.message : "unknown_error";
+      }
+
+      const extraUrl = chartFitSource.fallbackUrls[0] ?? null;
+      let secondaryPayload: unknown = selfChartFit.payload;
+      let secondaryResolvedUrl: string | null = null;
+      let secondaryFetchError: string | null = null;
+
+      if (extraUrl) {
+        try {
+          const secondary = await this.fetchStaticSourceByUrl("chart_fit", extraUrl);
+          secondaryPayload = secondary.content;
+          secondaryResolvedUrl = secondary.url;
+        } catch (error) {
+          secondaryFetchError = error instanceof Error ? error.message : "unknown_error";
+        }
+      }
+
+      const mergedChartFit = this.chartFitService.mergePayloads(primaryPayload, secondaryPayload, 1000);
+      resourcesRecord.chart_fit = mergedChartFit;
+      sourceMeta.chart_fit = {
+        url: primaryResolvedUrl,
+        contentType: primaryContentType,
+        primaryFetchError,
+        extraUrl,
+        extraResolvedUrl: secondaryResolvedUrl,
+        extraFetchError: secondaryFetchError,
+        selfGeneratedAt: (selfChartFit.meta as Record<string, unknown>).generatedAt ?? null
       };
     }
 
@@ -454,6 +540,47 @@ SELECT cron.schedule(
     }
   }
 
+  private async fetchStaticSourceByUrl(category: string, url: string) {
+    const response = await fetch(url, {
+      method: "GET"
+    });
+    if (!response.ok) {
+      throw new AppError(
+        502,
+        "static_source_fetch_failed",
+        `Static source fetch failed: ${category}`,
+        { category, url, error: `HTTP_${response.status}` }
+      );
+    }
+
+    const contentType = response.headers.get("content-type");
+    const raw = await response.text();
+    const parsed = this.tryParseText(raw, contentType);
+    return {
+      url,
+      contentType,
+      content: this.normalizeResourcePayload(category, parsed, raw)
+    };
+  }
+
+  private async fetchStaticSourceFromTargets(category: string, targets: string[]) {
+    let fetchError: string | null = null;
+    for (const url of targets) {
+      try {
+        return await this.fetchStaticSourceByUrl(category, url);
+      } catch (error) {
+        fetchError = error instanceof Error ? error.message : "unknown_error";
+      }
+    }
+
+    throw new AppError(
+      502,
+      "static_source_fetch_failed",
+      `Static source fetch failed: ${category}`,
+      { category, error: fetchError }
+    );
+  }
+
   private tryParseText(raw: string, contentType: string | null) {
     const normalizedType = (contentType ?? "").toLowerCase();
     const maybeJson = normalizedType.includes("json") || raw.trimStart().startsWith("{") || raw.trimStart().startsWith("[");
@@ -477,6 +604,10 @@ SELECT cron.schedule(
 
   private normalizeBundleResources(resources: Record<string, unknown>) {
     const normalized = { ...resources };
+    if (normalized.chart_fit === undefined && normalized.df_chart_fit !== undefined) {
+      normalized.chart_fit = normalized.df_chart_fit;
+    }
+    delete (normalized as Record<string, unknown>).df_chart_fit;
     normalized.lxns_aliases = this.normalizeLxnsAliasesPayload(
       resources.lxns_aliases,
       resources.songid_json

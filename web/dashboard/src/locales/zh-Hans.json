@@ -385,6 +385,8 @@
     "dialogEditUrlDesc": "更新「{{category}}」的 Active URL。",
     "dialogEditUrlFallbackDesc": "更新静态源 URL。",
     "labelActiveUrl": "Active URL",
+    "labelExtraUrl": "额外 URL",
+    "labelExtraUrlPlaceholder": "可选：你自己的后端 /v1/static/chart_stats URL",
     "btnCancel": "取消",
     "btnUpdateUrl": "更新 URL"
   },

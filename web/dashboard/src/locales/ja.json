@@ -385,6 +385,8 @@
     "dialogEditUrlDesc": "「{{category}}」の Active URL を更新します。",
     "dialogEditUrlFallbackDesc": "静的ソースの URL を更新します。",
     "labelActiveUrl": "Active URL",
+    "labelExtraUrl": "追加 URL",
+    "labelExtraUrlPlaceholder": "任意: 自分のバックエンド /v1/static/chart_stats URL",
     "btnCancel": "キャンセル",
     "btnUpdateUrl": "URL を更新"
   },

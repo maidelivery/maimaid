@@ -504,6 +504,16 @@ model StaticBundleScheduleConfig {
   @@map("static_bundle_schedule_config")
 }
 
+model ChartFitSnapshot {
+  id         BigInt   @id @default(autoincrement())
+  payloadJson Json
+  metaJson   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("chart_fit_snapshots")
+}
+
 model ImportRun {
   id          String          @id @default(uuid()) @db.Uuid
   profileId   String          @db.Uuid

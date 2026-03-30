@@ -522,18 +522,27 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
     }
   };
 
-  const handleEditSourceUrl = async (source: StaticSource, nextUrl: string) => {
+  const handleEditSourceUrl = async (
+    source: StaticSource,
+    nextUrl: string,
+    nextExtraUrl?: string
+  ) => {
     const normalizedUrl = nextUrl.trim();
     if (!normalizedUrl) {
       showToast(t("actionSrcUrlReq"), "warning");
       return;
     }
+    const normalizedExtraUrl = nextExtraUrl?.trim() ?? "";
     try {
+      const body: Record<string, unknown> = {
+        activeUrl: normalizedUrl,
+      };
+      if (source.category === "chart_fit") {
+        body.fallbackUrls = normalizedExtraUrl ? [normalizedExtraUrl] : [];
+      }
       await request(`v1/admin/static-sources/${encodeURIComponent(source.id)}`, {
         method: "PATCH",
-        body: {
-          activeUrl: normalizedUrl,
-        },
+        body,
       });
       await loadStaticAdmin();
       showToast(t("actionSrcUrlUpdate"), "success");

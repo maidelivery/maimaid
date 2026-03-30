@@ -65,13 +65,21 @@ private struct BackendStaticBundleResources: Decodable {
     let songIDJSON: [SongIdItem]?
     let utageNoteJSON: [UtageChartStatsItem]?
     let lxnsAliases: AliasListResponse?
+    let chartFit: ChartStatsResponse?
+    let legacyChartFit: ChartStatsResponse?
     let danInfo: [DanCategory]?
+
+    var resolvedChartFit: ChartStatsResponse? {
+        chartFit ?? legacyChartFit
+    }
 
     enum CodingKeys: String, CodingKey {
         case dataJSON = "data_json"
         case songIDJSON = "songid_json"
         case utageNoteJSON = "utage_note_json"
         case lxnsAliases = "lxns_aliases"
+        case chartFit = "chart_fit"
+        case legacyChartFit = "df_chart_fit"
         case danInfo = "dan_info"
     }
 }
@@ -486,8 +494,13 @@ class MaimaiDataFetcher {
 
             if options.updateChartStats {
                 updateStage(.fetchingChartStats, base: 0.53, message: String(localized: "data.sync.status.fetchingChartStats"))
-                await ChartStatsService.shared.fetchStats(forceRefresh: true)
-                log(String(localized: "data.sync.log.chartStatsUpdated"))
+                if let bundledChartFit = bundleResources?.resolvedChartFit {
+                    ChartStatsService.shared.replaceStats(with: bundledChartFit)
+                    log(String(localized: "data.sync.log.chartStatsUpdated"))
+                } else {
+                    await ChartStatsService.shared.fetchStats()
+                    log("Chart fit is unavailable in backend static bundle; keeping existing local cache.")
+                }
             }
 
             if options.updateUtageChartStats {
@@ -923,7 +936,7 @@ class MaimaiDataFetcher {
             
             UserDefaults.app.didPerformInitialSync = true
             updateStage(.completed, base: 1.0, message: String(localized: "data.sync.status.completed"))
-            _ = try? await Task.sleep(nanoseconds: 1_000_000_000)
+            _ = try? await Task.sleep(for: .seconds(1))
             isSyncing = false
         } catch {
             print("Fetch failed: \(error)")

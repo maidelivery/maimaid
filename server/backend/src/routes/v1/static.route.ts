@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { di } from "../../di/container.js";
 import { TOKENS } from "../../di/tokens.js";
 import type { StaticBundleService } from "../../services/static-bundle.service.js";
+import type { ChartFitService } from "../../services/chart-fit.service.js";
 import { ok } from "../../http/response.js";
 import type { AppEnv } from "../../types/hono.js";
 
@@ -23,4 +24,10 @@ staticV1Route.get("/bundle/:version", async (c) => {
     createdAt: bundle.createdAt,
     payload: bundle.payloadJson
   });
+});
+
+staticV1Route.get("/chart_stats", async (c) => {
+  const chartFitService = di.resolve<ChartFitService>(TOKENS.ChartFitService);
+  const snapshot = await chartFitService.getLatestSnapshotOrRefresh();
+  return ok(c, snapshot.payload);
 });

@@ -141,7 +141,7 @@ type TabPanelContentProps = {
   handleUpdateStaticBundleSchedule: (input: { enabled: boolean; intervalHours: number }) => Promise<void>;
   loadStaticAdmin: () => Promise<void>;
   handleToggleSource: (source: StaticSource) => Promise<void>;
-  handleEditSourceUrl: (source: StaticSource, nextUrl: string) => Promise<void>;
+  handleEditSourceUrl: (source: StaticSource, nextUrl: string, nextExtraUrl?: string) => Promise<void>;
 };
 
 export function TabPanelContent(props: TabPanelContentProps) {

@@ -385,6 +385,8 @@
     "dialogEditUrlDesc": "Update the Active URL for '{{category}}'.",
     "dialogEditUrlFallbackDesc": "Update the static source URL.",
     "labelActiveUrl": "Active URL",
+    "labelExtraUrl": "Extra URL",
+    "labelExtraUrlPlaceholder": "Optional: your backend /v1/static/chart_stats URL",
     "btnCancel": "Cancel",
     "btnUpdateUrl": "Update URL"
   },

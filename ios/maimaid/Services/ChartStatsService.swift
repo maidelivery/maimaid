@@ -10,15 +10,26 @@ nonisolated struct ChartStat: Codable, Sendable {
     let std_dev: Double?
     let dist: [Int]?
     let fc_dist: [Int]?
+
+    var isPlaceholder: Bool {
+        cnt == nil
+            && diff == nil
+            && fit_diff == nil
+            && avg == nil
+            && avg_dx == nil
+            && std_dev == nil
+            && dist == nil
+            && fc_dist == nil
+    }
     
     var formattedAvg: String {
         guard let avg = avg else { return "N/A" }
-        return String(format: "%.4f%%", avg)
+        return "\(avg.formatted(.number.precision(.fractionLength(4))))%"
     }
     
     var formattedFitDiff: String {
         guard let fit_diff = fit_diff else { return "N/A" }
-        return String(format: "%.2f", fit_diff)
+        return fit_diff.formatted(.number.precision(.fractionLength(2)))
     }
 
     // Skip decoding if fields are missing (handles empty {} in API)
@@ -39,8 +50,20 @@ nonisolated struct ChartStat: Codable, Sendable {
     }
 }
 
+nonisolated struct ChartStatsDiffData: Codable, Sendable {
+    let achievements: Double?
+    let dist: [Double]?
+    let fc_dist: [Double]?
+}
+
 nonisolated struct ChartStatsResponse: Codable, Sendable {
     let charts: [String: [ChartStat]]
+    let diff_data: [String: ChartStatsDiffData]?
+
+    init(charts: [String: [ChartStat]], diff_data: [String: ChartStatsDiffData]? = nil) {
+        self.charts = charts
+        self.diff_data = diff_data
+    }
 }
 
 @Observable
@@ -53,46 +76,28 @@ class ChartStatsService {
     }
     
     private var cache: [String: [ChartStat]] = [:]
-    private var fetchTask: Task<Void, Error>?
     private var lastFetchDate: Date? = nil
     
     func fetchStats(forceRefresh: Bool = false) async {
         ensureCacheLoaded()
+        if forceRefresh && !cache.isEmpty {
+            saveCachedStats()
+        }
+    }
 
-        // Only fetch once per session or if cache is empty
-        if !forceRefresh,
-           !cache.isEmpty,
-           let lastFetchDate,
-           Date().timeIntervalSince(lastFetchDate) < 3600 {
-            return
-        }
-        
-        if let existingTask = fetchTask {
-            _ = try? await existingTask.value
-            return
-        }
-        
-        let task = Task {
-            guard let url = URL(string: "https://www.diving-fish.com/api/maimaidxprober/chart_stats") else { return }
-            let response = try await Task.detached(priority: .utility) {
-                let (data, _) = try await URLSession.shared.data(from: url)
-                return try JSONDecoder().decode(ChartStatsResponse.self, from: data)
-            }.value
+    func replaceStats(with response: ChartStatsResponse) {
+        replaceStats(charts: response.charts)
+    }
 
-            self.cache = response.charts
-            self.lastFetchDate = Date()
-            self.saveCachedStats()
-        }
-        
-        self.fetchTask = task
-        
-        do {
-            _ = try await task.value
-        } catch {
-            print("Failed to fetch chart stats: \(error)")
-        }
-        
-        self.fetchTask = nil
+    func replaceStats(charts: [String: [ChartStat]]) {
+        cache = Self.normalizeCharts(charts)
+        lastFetchDate = Date.now
+        saveCachedStats()
+    }
+
+    func allStats() -> [String: [ChartStat]] {
+        ensureCacheLoaded()
+        return cache
     }
     
     func getStats(for songId: Int) -> [ChartStat]? {
@@ -143,14 +148,26 @@ class ChartStatsService {
             return
         }
 
-        cache = response.charts
+        cache = Self.normalizeCharts(response.charts)
+        lastFetchDate = Date.now
     }
 
     private func saveCachedStats() {
-        guard let data = try? JSONEncoder().encode(ChartStatsResponse(charts: cache)) else {
+        guard let data = try? JSONEncoder().encode(ChartStatsResponse(charts: cache, diff_data: nil)) else {
             return
         }
 
         UserDefaults.app.maimaiChartStatsData = data
+    }
+
+    private static func normalizeCharts(_ charts: [String: [ChartStat]]) -> [String: [ChartStat]] {
+        var normalized: [String: [ChartStat]] = [:]
+        for (songId, stats) in charts {
+            let filtered = stats.filter { !$0.isPlaceholder }
+            if !filtered.isEmpty {
+                normalized[songId] = filtered
+            }
+        }
+        return normalized
     }
 }

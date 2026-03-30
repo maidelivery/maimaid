@@ -15,5 +15,6 @@ export const TOKENS = {
   RateLimitService: Symbol.for("RateLimitService"),
   SyncService: Symbol.for("SyncService"),
   StaticBundleService: Symbol.for("StaticBundleService"),
+  ChartFitService: Symbol.for("ChartFitService"),
   AdminUserService: Symbol.for("AdminUserService")
 } as const;

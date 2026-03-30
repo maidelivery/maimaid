@@ -50,7 +50,7 @@ type AdminStaticPageProps = {
   onUpdateBundleSchedule: (input: { enabled: boolean; intervalHours: number }) => void | Promise<void>;
   onReloadStatic: () => void | Promise<void>;
   onToggleSource: (source: StaticSource) => void | Promise<void>;
-  onEditSourceUrl: (source: StaticSource, nextUrl: string) => void | Promise<void>;
+  onEditSourceUrl: (source: StaticSource, nextUrl: string, nextExtraUrl?: string) => void | Promise<void>;
 };
 
 export function AdminStaticPage({
@@ -68,6 +68,7 @@ export function AdminStaticPage({
   const bundlesPagination = useTablePagination(staticBundles);
   const [editingSource, setEditingSource] = useState<StaticSource | null>(null);
   const [editingSourceUrl, setEditingSourceUrl] = useState("");
+  const [editingSourceExtraUrl, setEditingSourceExtraUrl] = useState("");
   const [scheduleEnabledDraft, setScheduleEnabledDraft] = useState(staticBundleSchedule?.enabled ?? true);
   const [scheduleIntervalDraft, setScheduleIntervalDraft] = useState(String(staticBundleSchedule?.intervalHours ?? 6));
   const { confirm, confirmDialogNode } = useConfirmDialog();
@@ -118,6 +119,7 @@ export function AdminStaticPage({
   const openEditSourceDialog = (source: StaticSource) => {
     setEditingSource(source);
     setEditingSourceUrl(source.activeUrl);
+    setEditingSourceExtraUrl(source.fallbackUrls[0] ?? "");
   };
 
   const handleSubmitEditSourceUrl = async () => {
@@ -136,7 +138,7 @@ export function AdminStaticPage({
     if (!confirmed) {
       return;
     }
-    await onEditSourceUrl(editingSource, normalizedUrl);
+    await onEditSourceUrl(editingSource, normalizedUrl, editingSourceExtraUrl.trim());
     setEditingSource(null);
   };
 
@@ -370,6 +372,17 @@ export function AdminStaticPage({
                 onChange={(event) => setEditingSourceUrl(event.target.value)}
               />
             </Field>
+            {editingSource?.category === "chart_fit" ? (
+              <Field>
+                <FieldLabel htmlFor="edit-static-source-extra-url">{t("labelExtraUrl")}</FieldLabel>
+                <Input
+                  id="edit-static-source-extra-url"
+                  value={editingSourceExtraUrl}
+                  onChange={(event) => setEditingSourceExtraUrl(event.target.value)}
+                  placeholder={t("labelExtraUrlPlaceholder")}
+                />
+              </Field>
+            ) : null}
             <DialogFooter>
                <Button variant="outline" onClick={() => setEditingSource(null)}>
                  {t("btnCancel")}
