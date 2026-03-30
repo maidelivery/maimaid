@@ -5,11 +5,9 @@ Self-hosted unified serverless-style backend for:
 - maimaid app canonical API (`/v1/*`)
 - user-initiated import from Diving Fish / LXNS into canonical data model
 
-Current phase targets **maimai** only.
-
 ## Stack
 
-- Runtime: Node.js (works with Bun-compatible APIs)
+- Runtime: Node.js
 - Framework: Hono
 - DI: tsyringe
 - ORM: Prisma
@@ -63,6 +61,7 @@ cp server/backend/.env.docker.example server/backend/.env.docker
 ```
 
 Optional (recommended for local secrets): create `server/backend/.env.docker.local` for overrides such as `RESEND_API_KEY`.
+If you change MinIO credentials, update both `MINIO_ROOT_*` and `S3_ACCESS_*` to the same values.
 
 2. Start stack:
 
@@ -111,8 +110,10 @@ See `server/backend/.env.example`:
 - Auth: `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_ACCESS_SECRET`, `JWT_ACCESS_TTL_SECONDS`, `JWT_REFRESH_TTL_SECONDS`
 - Database: `DATABASE_URL`
 - Catalog source: `CATALOG_SOURCE_URL` (default points to cloudfront `data.json`)
+- MinIO root credentials (local compose): `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`
 - S3: `S3_*`
   - For Podman local testing, keep `S3_ENDPOINT=http://minio:9000` and set `S3_PUBLIC_ENDPOINT=http://localhost:9000` so pre-signed upload URLs are reachable from iOS/macOS host.
+  - In local compose, keep `S3_ACCESS_KEY_ID/S3_SECRET_ACCESS_KEY` aligned with `MINIO_ROOT_USER/MINIO_ROOT_PASSWORD`.
 
 ## API surfaces
 
