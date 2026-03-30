@@ -46,7 +46,7 @@ The project focuses on score management, song database workflows, progression tr
 - The repository root uses `pnpm workspace` for frontend packages (currently `web/*`)
 - Nx orchestrates frontend tasks from the root
 - iOS targets require Xcode command line tools
-- Supabase targets require Supabase CLI (and Docker for local container commands)
+- Supabase targets require Supabase CLI (and Podman for local container commands)
 
 ```bash
 pnpm install

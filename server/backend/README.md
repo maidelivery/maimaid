@@ -48,7 +48,7 @@ pnpm run migrate:server
 pnpm run dev:server
 ```
 
-## Local test stack (Docker Compose)
+## Local test stack (Podman Compose)
 
 This repo now includes a ready-to-run local stack:
 
@@ -56,7 +56,7 @@ This repo now includes a ready-to-run local stack:
 - MinIO (S3-compatible storage)
 - backend API service (Node 25.8.1)
 
-1. Prepare docker env:
+1. Prepare local env:
 
 ```bash
 cp server/backend/.env.docker.example server/backend/.env.docker
@@ -68,12 +68,14 @@ Optional (recommended for local secrets): create `server/backend/.env.docker.loc
 
 ```bash
 cd server/backend
-pnpm run docker:up
+pnpm run podman:up
 ```
 
 3. Verify:
 
 - API: `http://localhost:8787/health`
+- OpenAPI JSON: `http://localhost:8787/openapi.json`
+- API docs (Scalar): `http://localhost:8787/docs`
 - MinIO API: `http://localhost:9000`
 - MinIO Console: `http://localhost:9001`
 - Postgres host port: `localhost:54329`
@@ -86,7 +88,7 @@ pnpm run docker:up
 
 ```bash
 cd server/backend
-pnpm run docker:down
+pnpm run podman:down
 ```
 
 ## Monorepo scripts
@@ -110,7 +112,7 @@ See `server/backend/.env.example`:
 - Database: `DATABASE_URL`
 - Catalog source: `CATALOG_SOURCE_URL` (default points to cloudfront `data.json`)
 - S3: `S3_*`
-  - For Docker local testing, keep `S3_ENDPOINT=http://minio:9000` and set `S3_PUBLIC_ENDPOINT=http://localhost:9000` so pre-signed upload URLs are reachable from iOS/macOS host.
+  - For Podman local testing, keep `S3_ENDPOINT=http://minio:9000` and set `S3_PUBLIC_ENDPOINT=http://localhost:9000` so pre-signed upload URLs are reachable from iOS/macOS host.
 
 ## API surfaces
 

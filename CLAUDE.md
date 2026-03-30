@@ -38,8 +38,8 @@ pnpm run test                   # vitest run (test files: test/**/*.spec.ts)
 pnpm run test:watch             # vitest in watch mode
 pnpm run prisma:migrate:dev     # Create new migration
 pnpm run prisma:studio          # Open Prisma Studio
-pnpm run docker:up              # Start local stack (Postgres + MinIO + backend)
-pnpm run docker:down            # Stop local stack
+pnpm run podman:up              # Start local stack (Postgres + MinIO + backend)
+pnpm run podman:down            # Stop local stack
 ```
 
 ### iOS
@@ -88,7 +88,7 @@ The iOS app can operate fully offline with local SwiftData. When the backend is 
 5. Cloud backup/restore through the sync service
 6. Community song alias submissions go through a voting cycle on the backend
 
-### Docker Local Dev Stack
+### Podman Local Dev Stack
 
 `server/backend/docker-compose.yml` provides: PostgreSQL 18.3 + pg_cron (port 54329), MinIO (API 9000, console 9001), and the backend service (port 8787). Copy `.env.docker.example` to `.env.docker` before starting.
 

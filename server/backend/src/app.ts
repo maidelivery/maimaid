@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { Scalar } from "@scalar/hono-api-reference";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { ZodError } from "zod";
 import { isAppError } from "./lib/errors.js";
@@ -16,6 +17,7 @@ import { staticV1Route } from "./routes/v1/static.route.js";
 import { jobsInternalRoute } from "./routes/internal/jobs.route.js";
 import type { AppEnv } from "./types/hono.js";
 import { getEnv } from "./env.js";
+import { buildOpenApiDocument } from "./openapi.js";
 
 export const createApp = () => {
   const env = getEnv();
@@ -52,6 +54,19 @@ export const createApp = () => {
   app.route("/v1/sync", syncV1Route);
   app.route("/v1/static", staticV1Route);
   app.route("/internal/jobs", jobsInternalRoute);
+
+  const openApiDocument = buildOpenApiDocument(app, env);
+
+  app.get("/openapi.json", (c) => c.json(openApiDocument));
+
+  app.get(
+    "/docs",
+    Scalar({
+      url: "/openapi.json",
+      pageTitle: "maimaid backend API docs",
+      theme: "kepler"
+    })
+  );
 
   app.get("/", (c) =>
     c.json({

@@ -9,10 +9,10 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
-    "docker:up": "docker compose up -d --build",
-    "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f backend",
-    "docker:reset": "docker compose down -v",
+    "podman:up": "podman compose up -d --build",
+    "podman:down": "podman compose down",
+    "podman:logs": "podman compose logs -f backend",
+    "podman:reset": "podman compose down -v",
     "test": "vitest run",
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",
@@ -27,6 +27,7 @@
     "@hono/node-server": "^1.14.4",
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
+    "@scalar/hono-api-reference": "^0.10.5",
     "@simplewebauthn/server": "^12.0.0",
     "bcryptjs": "^3.0.2",
     "hono": "^4.9.8",
@@ -35,6 +36,7 @@
     "pg": "^8.17.0",
     "prisma": "^7.5.0",
     "reflect-metadata": "^0.2.2",
+    "typescript": "^5.9.2",
     "tsyringe": "^4.10.0",
     "yaml": "^2.8.3",
     "zod": "^4.1.11"
@@ -43,7 +45,6 @@
     "@types/node": "^24.5.2",
     "@types/pg": "8.20.0",
     "tsx": "^4.20.5",
-    "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }
 }

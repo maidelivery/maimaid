@@ -47,7 +47,7 @@
 - 根目录使用 `pnpm workspace` 管理前端子包（当前包含 `web/*`）
 - 使用 Nx 统一编排前端任务
 - iOS 任务依赖 Xcode 命令行工具
-- Supabase 任务依赖 Supabase CLI（本地容器相关命令依赖 Docker）
+- Supabase 任务依赖 Supabase CLI（本地容器相关命令依赖 Podman）
 
 ```bash
 pnpm install
