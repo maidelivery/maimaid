@@ -1,4 +1,4 @@
-import type { SongFilterSettings } from "@/components/songs/types";
+import type { Alias, Sheet as SongSheet, Song, SongFilterSettings } from "@/components/songs/types";
 import type { CatalogVersionItem, SongFilterSnapshot, SongIdItem } from "@/lib/app-types";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
@@ -164,6 +164,251 @@ export function parseSongIdItems(value: unknown): SongIdItem[] {
   }
 
   return rows;
+}
+
+function toRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
+}
+
+function toCleanString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function toOptionalString(value: unknown): string | null {
+  const trimmed = toCleanString(value);
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function toOptionalNumber(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toBoolean(value: unknown): boolean {
+  return value === true;
+}
+
+function parseSongIdentifier(value: unknown): string {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      return trimmed;
+    }
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(Math.trunc(value));
+  }
+
+  return "";
+}
+
+function parseRemoteSongs(value: unknown) {
+  const record = toRecord(value);
+  const songs = Array.isArray(record?.songs) ? record.songs : [];
+  return songs
+    .map((item) => toRecord(item))
+    .filter((item): item is Record<string, unknown> => item !== null);
+}
+
+type SongResolverContext = {
+  songs: Song[];
+  songIdItems: SongIdItem[];
+};
+
+type SongResolverIndexes = {
+  songIdentifierSet: Set<string>;
+  songIdentifierByProviderId: Map<number, string>;
+};
+
+function buildSongResolverIndexes(context: SongResolverContext): SongResolverIndexes {
+  const songIdentifierSet = new Set(context.songs.map((song) => song.songIdentifier));
+  const songIdentifierByNormalizedName = new Map<string, string>();
+
+  for (const song of context.songs) {
+    songIdentifierByNormalizedName.set(normalizeSearchText(song.title), song.songIdentifier);
+    songIdentifierByNormalizedName.set(compactSearchText(song.title), song.songIdentifier);
+    songIdentifierByNormalizedName.set(normalizeSearchText(song.songIdentifier), song.songIdentifier);
+    songIdentifierByNormalizedName.set(compactSearchText(song.songIdentifier), song.songIdentifier);
+  }
+
+  const songIdentifierByProviderId = new Map<number, string>();
+  for (const item of context.songIdItems) {
+    const mappedIdentifier =
+      songIdentifierByNormalizedName.get(normalizeSearchText(item.name))
+      ?? songIdentifierByNormalizedName.get(compactSearchText(item.name));
+    if (mappedIdentifier) {
+      songIdentifierByProviderId.set(item.id, mappedIdentifier);
+    }
+  }
+
+  return {
+    songIdentifierSet,
+    songIdentifierByProviderId,
+  };
+}
+
+function resolveBundleAliasSongIdentifier(songId: number, indexes: SongResolverIndexes): string {
+  const candidates = Array.from(expandProviderSongIdCandidates(songId));
+  for (const candidateId of candidates) {
+    const mapped = indexes.songIdentifierByProviderId.get(candidateId);
+    if (mapped) {
+      return mapped;
+    }
+  }
+
+  for (const candidateId of candidates) {
+    const candidateIdentifier = String(candidateId);
+    if (indexes.songIdentifierSet.has(candidateIdentifier)) {
+      return candidateIdentifier;
+    }
+  }
+
+  return String(songId);
+}
+
+export function parseBundleSongs(value: unknown): Song[] {
+  const rows = parseRemoteSongs(value);
+  const songs: Song[] = [];
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index]!;
+    const songIdentifier = parseSongIdentifier(row.songId ?? row.id);
+    if (!songIdentifier) {
+      continue;
+    }
+
+    const title = toCleanString(row.title);
+    if (!title) {
+      continue;
+    }
+
+    const songId = Number(songIdentifier);
+    songs.push({
+      songIdentifier,
+      songId: Number.isFinite(songId) ? Math.trunc(songId) : 0,
+      title,
+      artist: toCleanString(row.artist),
+      category: toOptionalString(row.category) ?? undefined,
+      sortOrder: index,
+      version: toOptionalString(row.version),
+      releaseDate: toOptionalString(row.releaseDate),
+      bpm: toOptionalNumber(row.bpm),
+      isLocked: toBoolean(row.isLocked),
+      isNew: toBoolean(row.isNew),
+      comment: toOptionalString(row.comment),
+      imageName: toOptionalString(row.imageName) ?? undefined,
+    });
+  }
+
+  return songs;
+}
+
+export function parseBundleSheets(value: unknown): SongSheet[] {
+  const rows = parseRemoteSongs(value);
+  const sheets: SongSheet[] = [];
+
+  for (const songRow of rows) {
+    const songIdentifier = parseSongIdentifier(songRow.songId ?? songRow.id);
+    if (!songIdentifier) {
+      continue;
+    }
+    const songId = Number(songIdentifier);
+    const sheetRows = Array.isArray(songRow.sheets) ? songRow.sheets : [];
+    for (let index = 0; index < sheetRows.length; index += 1) {
+      const sheetRow = toRecord(sheetRows[index]);
+      if (!sheetRow) {
+        continue;
+      }
+
+      const chartType = toCleanString(sheetRow.type ?? sheetRow.chartType);
+      const difficulty = toCleanString(sheetRow.difficulty);
+      const level = toCleanString(sheetRow.level);
+      if (!chartType || !difficulty || !level) {
+        continue;
+      }
+
+      const noteCounts = toRecord(sheetRow.noteCounts);
+      const regions = toRecord(sheetRow.regions);
+      const identity = [songIdentifier, chartType.toLowerCase(), difficulty.toLowerCase(), String(index)].join(":");
+      sheets.push({
+        id: identity,
+        songIdentifier,
+        songId: Number.isFinite(songId) ? Math.trunc(songId) : undefined,
+        chartType,
+        difficulty,
+        level,
+        version: toOptionalString(sheetRow.version),
+        levelValue: toOptionalNumber(sheetRow.levelValue),
+        internalLevel: toOptionalString(sheetRow.internalLevel),
+        internalLevelValue: toOptionalNumber(sheetRow.internalLevelValue),
+        noteDesigner: toOptionalString(sheetRow.noteDesigner),
+        tap: toOptionalNumber(noteCounts?.tap),
+        hold: toOptionalNumber(noteCounts?.hold),
+        slide: toOptionalNumber(noteCounts?.slide),
+        touch: toOptionalNumber(noteCounts?.touch),
+        breakCount: toOptionalNumber(noteCounts?.break),
+        total: toOptionalNumber(noteCounts?.total),
+        regionJp: toBoolean(regions?.jp),
+        regionIntl: toBoolean(regions?.intl),
+        regionUsa: toBoolean(regions?.usa),
+        regionCn: toBoolean(regions?.cn),
+        isSpecial: toBoolean(sheetRow.isSpecial),
+      });
+    }
+  }
+
+  return sheets;
+}
+
+export function parseBundleLxnsAliases(value: unknown, context: SongResolverContext): Alias[] {
+  const record = toRecord(value);
+  const source = Array.isArray(value) ? value : Array.isArray(record?.aliases) ? record.aliases : [];
+  const aliases: Alias[] = [];
+  const unique = new Set<string>();
+  const indexes = buildSongResolverIndexes(context);
+
+  for (const item of source) {
+    const row = toRecord(item);
+    if (!row) {
+      continue;
+    }
+    const songId = Number(row.song_id);
+    if (!Number.isFinite(songId)) {
+      continue;
+    }
+    const normalizedSongId = Math.trunc(songId);
+    const resolvedSongIdentifier = resolveBundleAliasSongIdentifier(normalizedSongId, indexes);
+    const aliasRows = Array.isArray(row.aliases) ? row.aliases : [];
+    for (const aliasValue of aliasRows) {
+      if (typeof aliasValue !== "string") {
+        continue;
+      }
+      const aliasText = aliasValue.trim();
+      if (!aliasText) {
+        continue;
+      }
+      const id = `lxns:${resolvedSongIdentifier}:${compactSearchText(aliasText)}`;
+      if (unique.has(id)) {
+        continue;
+      }
+      unique.add(id);
+      aliases.push({
+        id,
+        songIdentifier: resolvedSongIdentifier,
+        aliasText,
+        source: "lxns",
+      });
+    }
+  }
+
+  return aliases.sort((left, right) => {
+    const identifierDiff = left.songIdentifier.localeCompare(right.songIdentifier);
+    if (identifierDiff !== 0) {
+      return identifierDiff;
+    }
+    return left.aliasText.localeCompare(right.aliasText);
+  });
 }
 
 export function parseCatalogVersionItems(value: unknown): CatalogVersionItem[] {

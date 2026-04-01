@@ -37,6 +37,9 @@ import {
   compactSearchText,
   localizedStandardContains,
   normalizeSearchText,
+  parseBundleLxnsAliases,
+  parseBundleSheets,
+  parseBundleSongs,
   parseCatalogVersionItems,
   parseSongIdItems,
   songSnapshotMatchesSearch,
@@ -848,38 +851,41 @@ function App() {
   }, [request, session]);
 
   const loadSongCatalog = useCallback(async () => {
-    const [songPayload, sheetPayload, aliasPayload, bundlePayload] = await Promise.all([
-      request<{ songs: Song[] }>("v1/catalog/songs", { auth: false }),
-      request<{ sheets: SongSheet[] }>("v1/catalog/sheets", { auth: false }),
-      request<{ aliases: Alias[] }>("v1/catalog/aliases", { auth: false }),
-      request<{ payload?: { resources?: Record<string, unknown> } }>("v1/static/bundle/latest", {
-        auth: false,
-      }).catch(() => null),
-    ]);
-    setSongCatalog(songPayload.songs);
-    setCatalogSheets(sheetPayload.sheets);
-    setCatalogAliases(aliasPayload.aliases);
-    const songidResource = bundlePayload?.payload?.resources?.songid_json;
-    setSongIdItems(parseSongIdItems(songidResource));
-    const dataJsonResource = bundlePayload?.payload?.resources?.data_json;
+    const bundlePayload = await request<{ payload?: { resources?: Record<string, unknown> } }>("v1/static/bundle/latest", {
+      auth: false,
+    });
+    const resources = bundlePayload.payload?.resources;
+    const dataJsonResource = resources?.data_json;
+    const songidResource = resources?.songid_json;
+    const lxnsAliasesResource = resources?.lxns_aliases;
+
+    const nextSongs = parseBundleSongs(dataJsonResource);
+    const nextSheets = parseBundleSheets(dataJsonResource);
+    if (nextSongs.length === 0 || nextSheets.length === 0) {
+      throw new Error(t("app:backendErrDefault"));
+    }
+
+    const nextSongIdItems = parseSongIdItems(songidResource);
+    const nextAliases = parseBundleLxnsAliases(lxnsAliasesResource, {
+      songs: nextSongs,
+      songIdItems: nextSongIdItems,
+    });
+
+    setSongCatalog(nextSongs);
+    setCatalogSheets(nextSheets);
+    setCatalogAliases(nextAliases);
+    setSongIdItems(nextSongIdItems);
     setCatalogVersionItems(parseCatalogVersionItems(dataJsonResource));
-  }, [request]);
+  }, [request, t]);
 
   const loadSongDetail = useCallback(
     async (songIdentifier: string) => {
       setSongDetailLoading(true);
       try {
-        const [sheetPayload, aliasPayload] = await Promise.all([
-          request<{ sheets: SongSheet[] }>(`v1/catalog/sheets?songIdentifier=${encodeURIComponent(songIdentifier)}`, {
-            auth: false,
-          }),
-          request<{ aliases: Alias[] }>(`v1/catalog/aliases?songIdentifier=${encodeURIComponent(songIdentifier)}`, {
-            auth: false,
-          }),
-        ]);
-        const nextSheets = sheetPayload.sheets;
+        const nextSheets = catalogSheets.filter((sheet) => sheet.songIdentifier === songIdentifier);
+        const nextAliases = catalogAliases.filter((alias) => alias.songIdentifier === songIdentifier);
         setSongSheets(nextSheets);
-        setSongAliases(aliasPayload.aliases);
+        setSongAliases(nextAliases);
 
         const types = Array.from(new Set(nextSheets.map((sheet) => normalizeSheetType(sheet.chartType)).filter(Boolean)))
           .sort((a, b) => (CHART_TYPE_ORDER[a] ?? 99) - (CHART_TYPE_ORDER[b] ?? 99) || a.localeCompare(b));
@@ -894,7 +900,7 @@ function App() {
         setSongDetailLoading(false);
       }
     },
-    [normalizeSheetType, request],
+    [catalogAliases, catalogSheets, normalizeSheetType],
   );
 
   const closeSongDetail = useCallback(() => {
