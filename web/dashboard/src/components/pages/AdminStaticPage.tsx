@@ -46,7 +46,7 @@ type AdminStaticPageProps = {
   staticSources: StaticSource[];
   staticBundles: StaticBundle[];
   staticBundleSchedule: StaticBundleSchedule | null;
-  onBuildBundle: () => void | Promise<void>;
+  onBuildBundle: () => Promise<boolean>;
   onUpdateBundleSchedule: (input: { enabled: boolean; intervalHours: number }) => void | Promise<void>;
   onReloadStatic: () => void | Promise<void>;
   onToggleSource: (source: StaticSource) => void | Promise<void>;
@@ -66,6 +66,8 @@ export function AdminStaticPage({
   const { t } = useTranslation("adminStatic");
   const sourcesPagination = useTablePagination(staticSources);
   const bundlesPagination = useTablePagination(staticBundles);
+  const [buildState, setBuildState] = useState<"idle" | "running" | "succeeded" | "failed">("idle");
+  const [buildProgress, setBuildProgress] = useState(0);
   const [editingSource, setEditingSource] = useState<StaticSource | null>(null);
   const [editingSourceUrl, setEditingSourceUrl] = useState("");
   const [editingSourceExtraUrl, setEditingSourceExtraUrl] = useState("");
@@ -89,8 +91,34 @@ export function AdminStaticPage({
     ? scheduleEnabledDraft !== staticBundleSchedule.enabled
       || normalizedScheduleInterval !== staticBundleSchedule.intervalHours
     : true;
+  const buildRunning = buildState === "running";
+
+  useEffect(() => {
+    if (!buildRunning) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setBuildProgress((previous) => {
+        const next = previous < 70
+          ? previous + 6
+          : previous < 85
+            ? previous + 3
+            : previous < 93
+              ? previous + 1.2
+              : previous + 0.4;
+        return Math.min(95, next);
+      });
+    }, 400);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [buildRunning]);
 
   const handleBuildBundle = async () => {
+    if (buildRunning) {
+      return;
+    }
     const confirmed = await confirm({
       title: t("btnForceBuild"),
       description: t("descForceBuild"),
@@ -99,7 +127,12 @@ export function AdminStaticPage({
     if (!confirmed) {
       return;
     }
-    await onBuildBundle();
+    setBuildState("running");
+    setBuildProgress(8);
+
+    const success = await onBuildBundle();
+    setBuildProgress(100);
+    setBuildState(success ? "succeeded" : "failed");
   };
 
   const handleToggleSource = async (source: StaticSource) => {
@@ -171,14 +204,44 @@ export function AdminStaticPage({
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         <div className="flex flex-wrap gap-2">
-          <Button className="h-9 w-full sm:w-auto" onClick={() => void handleBuildBundle()}>
-            {t("btnForceBuild")}
+          <Button className="h-9 w-full sm:w-auto" onClick={() => void handleBuildBundle()} disabled={buildRunning}>
+            {buildRunning ? t("btnBuilding") : t("btnForceBuild")}
           </Button>
-          <Button className="h-9 w-full sm:w-auto" variant="outline" onClick={() => void onReloadStatic()}>
+          <Button className="h-9 w-full sm:w-auto" variant="outline" onClick={() => void onReloadStatic()} disabled={buildRunning}>
             <RefreshCwIcon data-icon="inline-start" />
             {t("btnRefresh")}
           </Button>
         </div>
+
+        {buildState !== "idle" ? (
+          <section className="flex flex-col gap-2 rounded-lg border p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium">{t("buildProgressTitle")}</p>
+              <p className="text-xs tabular-nums text-muted-foreground">
+                {t("buildProgressPercent", { value: Math.round(buildProgress) })}
+              </p>
+            </div>
+            <div
+              className="h-2 w-full overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(buildProgress)}
+            >
+              <div
+                className={`h-full transition-[width] duration-300 ${buildState === "failed" ? "bg-destructive" : "bg-primary"}`}
+                style={{ width: `${Math.max(0, Math.min(100, buildProgress))}%` }}
+              />
+            </div>
+            <p className={`text-xs ${buildState === "failed" ? "text-destructive" : "text-muted-foreground"}`}>
+              {buildState === "running"
+                ? t("buildProgressRunning")
+                : buildState === "succeeded"
+                  ? t("buildProgressSuccess")
+                  : t("buildProgressFailed")}
+            </p>
+          </section>
+        ) : null}
 
         <section className="flex flex-col gap-3 rounded-lg border p-3">
           <h3 className="text-sm font-medium">{t("scheduleSectionTitle")}</h3>

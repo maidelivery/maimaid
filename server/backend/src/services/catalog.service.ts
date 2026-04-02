@@ -337,99 +337,104 @@ export class CatalogService {
 
   private async applySnapshotPayload(snapshotId: bigint, payload: RemoteDataResponse) {
     const songs = payload.songs;
-    await this.prisma.$transaction(async (tx) => {
-      await tx.song.updateMany({
-        data: { disabled: true }
-      });
-
-      for (let index = 0; index < songs.length; index += 1) {
-        const song = songs[index]!;
-        const songIdentifier = `${song.songId}`;
-
-        await tx.song.upsert({
-          where: { songIdentifier },
-          create: {
-            songIdentifier,
-            songId: 0,
-            category: (song.category ?? "").trim(),
-            title: (song.title ?? "").trim(),
-            artist: (song.artist ?? "").trim(),
-            imageName: (song.imageName ?? "").trim(),
-            version: song.version ?? null,
-            releaseDate: this.parseDate(song.releaseDate),
-            sortOrder: index,
-            bpm: song.bpm ?? null,
-            isNew: song.isNew ?? false,
-            isLocked: song.isLocked ?? false,
-            comment: song.comment ?? null,
-            disabled: false,
-            snapshotId
-          },
-          update: {
-            category: (song.category ?? "").trim(),
-            title: (song.title ?? "").trim(),
-            artist: (song.artist ?? "").trim(),
-            imageName: (song.imageName ?? "").trim(),
-            version: song.version ?? null,
-            releaseDate: this.parseDate(song.releaseDate),
-            sortOrder: index,
-            bpm: song.bpm ?? null,
-            isNew: song.isNew ?? false,
-            isLocked: song.isLocked ?? false,
-            comment: song.comment ?? null,
-            disabled: false,
-            snapshotId
-          }
+    await this.prisma.$transaction(
+      async (tx) => {
+        await tx.song.updateMany({
+          data: { disabled: true }
         });
-      }
 
-      await tx.sheet.deleteMany({});
+        for (let index = 0; index < songs.length; index += 1) {
+          const song = songs[index]!;
+          const songIdentifier = `${song.songId}`;
 
-      const chunks: Prisma.SheetCreateManyInput[][] = [];
-      const buffer: Prisma.SheetCreateManyInput[] = [];
-      for (const song of songs) {
-        const songIdentifier = `${song.songId}`;
-        for (const sheet of song.sheets) {
-          buffer.push({
-            songIdentifier,
-            songId: 0,
-            chartType: this.normalizeChartType(sheet.type),
-            difficulty: sheet.difficulty,
-            version: sheet.version ?? null,
-            level: sheet.level,
-            levelValue: sheet.levelValue ?? null,
-            internalLevel: sheet.internalLevel ?? null,
-            internalLevelValue: sheet.internalLevelValue ?? null,
-            noteDesigner: sheet.noteDesigner ?? null,
-            tap: sheet.noteCounts?.tap ?? null,
-            hold: sheet.noteCounts?.hold ?? null,
-            slide: sheet.noteCounts?.slide ?? null,
-            touch: sheet.noteCounts?.touch ?? null,
-            breakCount: sheet.noteCounts?.break ?? null,
-            total: sheet.noteCounts?.total ?? null,
-            regionJp: sheet.regions?.jp ?? false,
-            regionIntl: sheet.regions?.intl ?? false,
-            regionUsa: sheet.regions?.usa ?? false,
-            regionCn: sheet.regions?.cn ?? false,
-            isSpecial: sheet.isSpecial ?? false
+          await tx.song.upsert({
+            where: { songIdentifier },
+            create: {
+              songIdentifier,
+              songId: 0,
+              category: (song.category ?? "").trim(),
+              title: (song.title ?? "").trim(),
+              artist: (song.artist ?? "").trim(),
+              imageName: (song.imageName ?? "").trim(),
+              version: song.version ?? null,
+              releaseDate: this.parseDate(song.releaseDate),
+              sortOrder: index,
+              bpm: song.bpm ?? null,
+              isNew: song.isNew ?? false,
+              isLocked: song.isLocked ?? false,
+              comment: song.comment ?? null,
+              disabled: false,
+              snapshotId
+            },
+            update: {
+              category: (song.category ?? "").trim(),
+              title: (song.title ?? "").trim(),
+              artist: (song.artist ?? "").trim(),
+              imageName: (song.imageName ?? "").trim(),
+              version: song.version ?? null,
+              releaseDate: this.parseDate(song.releaseDate),
+              sortOrder: index,
+              bpm: song.bpm ?? null,
+              isNew: song.isNew ?? false,
+              isLocked: song.isLocked ?? false,
+              comment: song.comment ?? null,
+              disabled: false,
+              snapshotId
+            }
           });
-          if (buffer.length >= 1000) {
-            chunks.push([...buffer]);
-            buffer.length = 0;
+        }
+
+        await tx.sheet.deleteMany({});
+
+        const chunks: Prisma.SheetCreateManyInput[][] = [];
+        const buffer: Prisma.SheetCreateManyInput[] = [];
+        for (const song of songs) {
+          const songIdentifier = `${song.songId}`;
+          for (const sheet of song.sheets) {
+            buffer.push({
+              songIdentifier,
+              songId: 0,
+              chartType: this.normalizeChartType(sheet.type),
+              difficulty: sheet.difficulty,
+              version: sheet.version ?? null,
+              level: sheet.level,
+              levelValue: sheet.levelValue ?? null,
+              internalLevel: sheet.internalLevel ?? null,
+              internalLevelValue: sheet.internalLevelValue ?? null,
+              noteDesigner: sheet.noteDesigner ?? null,
+              tap: sheet.noteCounts?.tap ?? null,
+              hold: sheet.noteCounts?.hold ?? null,
+              slide: sheet.noteCounts?.slide ?? null,
+              touch: sheet.noteCounts?.touch ?? null,
+              breakCount: sheet.noteCounts?.break ?? null,
+              total: sheet.noteCounts?.total ?? null,
+              regionJp: sheet.regions?.jp ?? false,
+              regionIntl: sheet.regions?.intl ?? false,
+              regionUsa: sheet.regions?.usa ?? false,
+              regionCn: sheet.regions?.cn ?? false,
+              isSpecial: sheet.isSpecial ?? false
+            });
+            if (buffer.length >= 1000) {
+              chunks.push([...buffer]);
+              buffer.length = 0;
+            }
           }
         }
-      }
-      if (buffer.length > 0) {
-        chunks.push([...buffer]);
-      }
+        if (buffer.length > 0) {
+          chunks.push([...buffer]);
+        }
 
-      for (const batch of chunks) {
-        await tx.sheet.createMany({
-          data: batch,
-          skipDuplicates: true
-        });
+        for (const batch of chunks) {
+          await tx.sheet.createMany({
+            data: batch,
+            skipDuplicates: true
+          });
+        }
+      },
+      {
+        timeout: 10_000
       }
-    });
+    );
   }
 
   private parseCatalogPayload(value: unknown): RemoteDataResponse | null {

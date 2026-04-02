@@ -551,7 +551,7 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
     }
   };
 
-  const handleBuildBundle = async () => {
+  const handleBuildBundle = async (): Promise<boolean> => {
     try {
       await request("v1/admin/static-bundles/build", {
         method: "POST",
@@ -561,8 +561,10 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
       });
       await loadStaticAdmin();
       showToast(t("actionSrcBundle"), "success");
+      return true;
     } catch (error) {
       showToast((error as Error).message, "error");
+      return false;
     }
   };
 

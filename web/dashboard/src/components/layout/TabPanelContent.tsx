@@ -137,7 +137,7 @@ type TabPanelContentProps = {
   staticSources: StaticSource[];
   staticBundles: StaticBundle[];
   staticBundleSchedule: StaticBundleSchedule | null;
-  handleBuildBundle: () => Promise<void>;
+  handleBuildBundle: () => Promise<boolean>;
   handleUpdateStaticBundleSchedule: (input: { enabled: boolean; intervalHours: number }) => Promise<void>;
   loadStaticAdmin: () => Promise<void>;
   handleToggleSource: (source: StaticSource) => Promise<void>;
