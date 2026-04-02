@@ -109,7 +109,7 @@ See `server/backend/.env.example`:
 - WebAuthn: `WEBAUTHN_ORIGIN`, `WEBAUTHN_RP_ID` (local dashboard with Next.js defaults to `http://localhost:3000`)
 - Auth: `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_ACCESS_SECRET`, `JWT_ACCESS_TTL_SECONDS`, `JWT_REFRESH_TTL_SECONDS`
 - Database: `DATABASE_URL`
-- Catalog source: `CATALOG_SOURCE_URL` (default points to cloudfront `data.json`)
+- Catalog source override: `CATALOG_SOURCE_URL` (optional; used only for manual `/v1/catalog/sync` flow)
 - MinIO root credentials (local compose): `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`
 - S3: `S3_*`
   - For Podman local testing, keep `S3_ENDPOINT=http://minio:9000` and set `S3_PUBLIC_ENDPOINT=http://localhost:9000` so pre-signed upload URLs are reachable from iOS/macOS host.

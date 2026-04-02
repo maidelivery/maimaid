@@ -5,7 +5,7 @@ import type { Env } from "../env.js";
 import { AppError } from "../lib/errors.js";
 import { sha256Hex } from "../lib/crypto.js";
 
-type RemoteDataResponse = {
+export type RemoteDataResponse = {
   songs: RemoteSong[];
   categories?: Array<{ category: string }>;
   versions?: Array<{ version: string; abbr: string; releaseDate?: string | null }>;
@@ -61,6 +61,12 @@ type CatalogAliasRow = {
   status: string;
   createdAt: Date;
   updatedAt: Date;
+};
+
+type CatalogVersionItem = {
+  version: string;
+  abbr: string;
+  releaseDate: string | null;
 };
 
 @injectable()
@@ -171,47 +177,87 @@ export class CatalogService {
     });
   }
 
-  async syncCatalog(force = false) {
-    const response = await fetch(this.env.CATALOG_SOURCE_URL, {
-      method: "GET"
+  async listVersions() {
+    const latestAppliedSnapshot = await this.prisma.catalogSnapshot.findFirst({
+      where: { status: "applied" },
+      orderBy: [{ activatedAt: "desc" }, { fetchedAt: "desc" }],
+      select: { payloadJson: true }
     });
-    if (!response.ok) {
-      throw new AppError(502, "catalog_fetch_failed", `Catalog source fetch failed: ${response.status}`);
+    const versionsFromSnapshot = this.extractCatalogVersionItems(latestAppliedSnapshot?.payloadJson);
+    if (versionsFromSnapshot.length > 0) {
+      return versionsFromSnapshot;
     }
 
-    const etag = response.headers.get("etag");
-    const payload = (await response.json()) as RemoteDataResponse;
-    if (!payload.songs || !Array.isArray(payload.songs)) {
+    const activeBundle = await this.prisma.staticBundle.findFirst({
+      where: { active: true },
+      orderBy: { createdAt: "desc" },
+      select: { payloadJson: true }
+    });
+    const bundlePayload = this.toRecord(activeBundle?.payloadJson);
+    const resources = this.toRecord(bundlePayload?.resources);
+    return this.extractCatalogVersionItems(resources?.data_json);
+  }
+
+  async applyCatalogData(
+    payloadInput: unknown,
+    options: {
+      source: string;
+      sourceUrl: string;
+      etag?: string | null;
+      force?: boolean;
+      applyWhenUnchanged?: boolean;
+      metadata?: Record<string, unknown>;
+    }
+  ) {
+    const payload = this.parseCatalogPayload(payloadInput);
+    if (!payload) {
       throw new AppError(502, "catalog_invalid_payload", "Catalog source payload is invalid.");
     }
 
+    const source = options.source.trim();
+    const sourceUrl = options.sourceUrl.trim();
+    if (!source || !sourceUrl) {
+      throw new AppError(400, "catalog_snapshot_source_invalid", "Catalog snapshot source metadata is invalid.");
+    }
+
+    const force = options.force ?? false;
+    const applyWhenUnchanged = options.applyWhenUnchanged ?? false;
     const payloadHash = sha256Hex(JSON.stringify(payload));
+    const metadata = this.buildSnapshotMetadata(payload, options.metadata);
+
     const existed = await this.prisma.catalogSnapshot.findFirst({
       where: {
-        source: "data.json",
+        source,
         payloadHash
       }
     });
 
-    if (existed && !force) {
+    if (existed && !force && !applyWhenUnchanged) {
       return { snapshot: existed, applied: false };
     }
 
-    const snapshot = await this.prisma.catalogSnapshot.create({
-      data: {
-        source: "data.json",
-        sourceUrl: this.env.CATALOG_SOURCE_URL,
-        etag,
-        payloadHash,
-        status: "pending",
-        payloadJson: payload,
-        metadataJson: {
-          songCount: payload.songs.length,
-          categoryCount: payload.categories?.length ?? 0,
-          versionCount: payload.versions?.length ?? 0
-        }
-      }
-    });
+    const snapshot = existed
+      ? await this.prisma.catalogSnapshot.update({
+          where: { id: existed.id },
+          data: {
+            sourceUrl,
+            etag: options.etag ?? null,
+            status: "pending",
+            payloadJson: payload,
+            metadataJson: metadata
+          }
+        })
+      : await this.prisma.catalogSnapshot.create({
+          data: {
+            source,
+            sourceUrl,
+            etag: options.etag ?? null,
+            payloadHash,
+            status: "pending",
+            payloadJson: payload,
+            metadataJson: metadata
+          }
+        });
 
     try {
       await this.applySnapshotPayload(snapshot.id, payload);
@@ -236,6 +282,34 @@ export class CatalogService {
       });
       throw error;
     }
+  }
+
+  async syncCatalog(force = false) {
+    const sourceUrl = this.env.CATALOG_SOURCE_URL?.trim();
+    if (!sourceUrl) {
+      throw new AppError(
+        400,
+        "catalog_source_not_configured",
+        "CATALOG_SOURCE_URL is not configured. Build a static bundle or set CATALOG_SOURCE_URL for manual sync."
+      );
+    }
+
+    const response = await fetch(sourceUrl, {
+      method: "GET"
+    });
+    if (!response.ok) {
+      throw new AppError(502, "catalog_fetch_failed", `Catalog source fetch failed: ${response.status}`);
+    }
+
+    const etag = response.headers.get("etag");
+    const payload = (await response.json()) as unknown;
+    return this.applyCatalogData(payload, {
+      source: "data.json",
+      sourceUrl,
+      etag,
+      force,
+      applyWhenUnchanged: force
+    });
   }
 
   async rollback(snapshotId: bigint) {
@@ -356,6 +430,55 @@ export class CatalogService {
         });
       }
     });
+  }
+
+  private parseCatalogPayload(value: unknown): RemoteDataResponse | null {
+    const record = this.toRecord(value);
+    if (!record) {
+      return null;
+    }
+    if (!Array.isArray(record.songs)) {
+      return null;
+    }
+    return record as unknown as RemoteDataResponse;
+  }
+
+  private buildSnapshotMetadata(payload: RemoteDataResponse, metadata?: Record<string, unknown>) {
+    return {
+      songCount: payload.songs.length,
+      categoryCount: payload.categories?.length ?? 0,
+      versionCount: payload.versions?.length ?? 0,
+      ...(metadata ?? {})
+    };
+  }
+
+  private extractCatalogVersionItems(value: unknown): CatalogVersionItem[] {
+    const record = this.toRecord(value);
+    const source = Array.isArray(record?.versions) ? record.versions : Array.isArray(value) ? value : [];
+    if (!Array.isArray(source)) {
+      return [];
+    }
+
+    const rows: CatalogVersionItem[] = [];
+    for (const item of source) {
+      const row = this.toRecord(item);
+      if (!row) {
+        continue;
+      }
+      const versionRaw = typeof row.version === "string" ? row.version : "";
+      const abbrRaw = typeof row.abbr === "string" ? row.abbr : "";
+      const version = versionRaw.trim();
+      if (!version) {
+        continue;
+      }
+      rows.push({
+        version,
+        abbr: abbrRaw.trim() || version,
+        releaseDate: typeof row.releaseDate === "string" ? row.releaseDate : null
+      });
+    }
+
+    return rows;
   }
 
   private parseDate(value?: string | null): Date | null {

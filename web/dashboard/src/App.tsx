@@ -50,6 +50,7 @@ import type {
   AdminUserRow,
   ApprovedAliasSyncRow,
   BackupCodeStatus,
+  CatalogVersionItem,
   CommunityCandidate,
   MfaStatus,
   NavigationTabItem,
@@ -61,6 +62,7 @@ import type {
   StaticBundle,
   StaticBundleSchedule,
   StaticSource,
+  SongIdItem,
   ToastSeverity
 } from "@/lib/app-types";
 import { buildSongCatalogIndex, normalizeDifficulty, normalizeSheetType } from "@/lib/song-index";
@@ -851,6 +853,41 @@ function App() {
   }, [request, session]);
 
   const loadSongCatalog = useCallback(async () => {
+    try {
+      const [songsPayload, sheetsPayload, aliasesPayload, versionsPayload, songIdItemsPayload] = await Promise.all([
+        request<{ songs: Song[] }>("v1/catalog/songs", { auth: false }),
+        request<{ sheets: SongSheet[] }>("v1/catalog/sheets", { auth: false }),
+        request<{ aliases: Alias[] }>("v1/catalog/aliases", { auth: false }),
+        request<{ versions: CatalogVersionItem[] }>("v1/catalog/versions", { auth: false }),
+        request<{ items: SongIdItem[] }>("v1/static/songid-items", { auth: false }),
+      ]);
+
+      const nextSongs = songsPayload.songs;
+      const nextSheets = sheetsPayload.sheets.map((sheet) => ({
+        ...sheet,
+        id: String(sheet.id),
+      }));
+      if (nextSongs.length > 0 && nextSheets.length > 0) {
+        const nextAliases = aliasesPayload.aliases.map((alias) => ({
+          id: String(alias.id),
+          songIdentifier: alias.songIdentifier,
+          aliasText: alias.aliasText,
+          source: alias.source,
+        }));
+        const nextSongIdItems = parseSongIdItems(songIdItemsPayload.items);
+        const nextVersionItems = parseCatalogVersionItems(versionsPayload.versions);
+
+        setSongCatalog(nextSongs);
+        setCatalogSheets(nextSheets);
+        setCatalogAliases(nextAliases);
+        setSongIdItems(nextSongIdItems);
+        setCatalogVersionItems(nextVersionItems);
+        return;
+      }
+    } catch (error) {
+      console.warn("[catalog] catalog API load failed, falling back to static bundle payload.", error);
+    }
+
     const bundlePayload = await request<{ payload?: { resources?: Record<string, unknown> } }>("v1/static/bundle/latest", {
       auth: false,
     });

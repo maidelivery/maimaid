@@ -10,6 +10,10 @@ import type { StaticBundleService } from "./services/static-bundle.service.js";
 const env = getEnv();
 const app = createApp();
 
+const toRecord = (value: unknown): Record<string, unknown> | null => {
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
+};
+
 const bootstrapCatalogIfEmpty = async () => {
   const prisma = di.resolve<PrismaClient>(TOKENS.Prisma);
   const existingSheets = await prisma.sheet.count();
@@ -17,11 +21,54 @@ const bootstrapCatalogIfEmpty = async () => {
     return;
   }
 
+  const activeBundle = await prisma.staticBundle.findFirst({
+    where: { active: true },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      version: true,
+      md5: true,
+      payloadJson: true,
+      sourceMeta: true
+    }
+  });
+  if (!activeBundle) {
+    console.warn("[bootstrap] catalog is empty and no active static bundle exists. Trigger a bundle build from admin dashboard.");
+    return;
+  }
+
+  const payload = toRecord(activeBundle.payloadJson);
+  const resources = toRecord(payload?.resources);
+  const dataJsonResource = resources?.data_json;
+  if (!dataJsonResource) {
+    console.warn(
+      `[bootstrap] catalog is empty and active static bundle ${activeBundle.version} has no data_json resource. Trigger a bundle build from admin dashboard.`
+    );
+    return;
+  }
+
+  const sourceMeta = toRecord(activeBundle.sourceMeta);
+  const dataJsonMeta = toRecord(sourceMeta?.data_json);
+  const sourceUrl =
+    typeof dataJsonMeta?.url === "string" && dataJsonMeta.url.trim()
+      ? dataJsonMeta.url
+      : `static-bundle://${activeBundle.version}/data_json`;
+
   const catalogService = di.resolve<CatalogService>(TOKENS.CatalogService);
-  console.log("[bootstrap] catalog is empty, syncing from source...");
-  const result = await catalogService.syncCatalog(false);
+  console.log(`[bootstrap] catalog is empty, applying data_json from active static bundle ${activeBundle.version}...`);
+  const result = await catalogService.applyCatalogData(dataJsonResource, {
+    source: `static_bundle:${activeBundle.version}`,
+    sourceUrl,
+    applyWhenUnchanged: true,
+    metadata: {
+      bundleId: activeBundle.id.toString(),
+      bundleVersion: activeBundle.version,
+      bundleMd5: activeBundle.md5,
+      appliedFrom: "server_bootstrap"
+    }
+  });
   console.log(
-    `[bootstrap] catalog sync complete (applied=${result.applied}) snapshot=${result.snapshot.id.toString()}`
+    `[bootstrap] catalog apply complete (applied=${result.applied}) snapshot=${result.snapshot.id.toString()} source=static_bundle:${activeBundle.version}`
   );
 };
 
@@ -37,7 +84,7 @@ const start = async () => {
   try {
     await bootstrapCatalogIfEmpty();
   } catch (error) {
-    console.error("[bootstrap] catalog sync failed:", error);
+    console.error("[bootstrap] catalog apply failed:", error);
   }
 
   try {

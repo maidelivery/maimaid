@@ -36,6 +36,12 @@ catalogV1Route.get("/aliases", async (c) => {
   return ok(c, { aliases });
 });
 
+catalogV1Route.get("/versions", async (c) => {
+  const catalogService = di.resolve<CatalogService>(TOKENS.CatalogService);
+  const versions = await catalogService.listVersions();
+  return ok(c, { versions });
+});
+
 catalogV1Route.get("/icons", async (c) => {
   const catalogService = di.resolve<CatalogService>(TOKENS.CatalogService);
   const icons = await catalogService.listIcons();

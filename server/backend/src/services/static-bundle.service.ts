@@ -6,6 +6,7 @@ import { TOKENS } from "../di/tokens.js";
 import type { Env } from "../env.js";
 import { AppError } from "../lib/errors.js";
 import type { ChartFitService } from "./chart-fit.service.js";
+import type { CatalogService } from "./catalog.service.js";
 
 const STATIC_SOURCE_DEFAULTS: Array<{ category: string; activeUrl: string; fallbackUrls: string[] }> = [
   {
@@ -56,7 +57,8 @@ export class StaticBundleService {
   constructor(
     @inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
     @inject(TOKENS.Env) private readonly env: Env,
-    @inject(TOKENS.ChartFitService) private readonly chartFitService: ChartFitService
+    @inject(TOKENS.ChartFitService) private readonly chartFitService: ChartFitService,
+    @inject(TOKENS.CatalogService) private readonly catalogService: CatalogService
   ) {}
 
   private toJsonValue(value: unknown): Prisma.InputJsonValue {
@@ -377,6 +379,27 @@ export class StaticBundleService {
       });
     });
 
+    const dataJsonResource = resourcesRecord.data_json;
+    if (dataJsonResource === undefined || dataJsonResource === null) {
+      throw new AppError(502, "static_bundle_missing_catalog_data", "Bundle payload is missing data_json.");
+    }
+
+    const dataJsonMeta = this.toRecord(sourceMeta.data_json);
+    const dataJsonSourceUrl =
+      typeof dataJsonMeta?.url === "string" && dataJsonMeta.url.trim()
+        ? dataJsonMeta.url
+        : `static-bundle://${bundle.version}/data_json`;
+    await this.catalogService.applyCatalogData(dataJsonResource, {
+      source: `static_bundle:${bundle.version}`,
+      sourceUrl: dataJsonSourceUrl,
+      applyWhenUnchanged: true,
+      metadata: {
+        bundleId: bundle.id.toString(),
+        bundleVersion: bundle.version,
+        bundleMd5: bundle.md5
+      }
+    });
+
     return {
       bundle,
       created: true
@@ -427,6 +450,38 @@ export class StaticBundleService {
       throw new AppError(404, "static_bundle_not_found", "Static bundle not found.");
     }
     return bundle;
+  }
+
+  async listSongIdItems() {
+    const activeBundle = await this.prisma.staticBundle.findFirst({
+      where: { active: true },
+      orderBy: { createdAt: "desc" },
+      select: { payloadJson: true }
+    });
+    if (!activeBundle) {
+      return [];
+    }
+
+    const payload = this.toRecord(activeBundle.payloadJson);
+    const resources = this.toRecord(payload?.resources);
+    const rows = Array.isArray(resources?.songid_json) ? resources.songid_json : [];
+    const items: Array<{ id: number; name: string }> = [];
+    for (const rowValue of rows) {
+      const row = this.toRecord(rowValue);
+      if (!row) {
+        continue;
+      }
+      const id = Number(row.id);
+      const name = typeof row.name === "string" ? row.name.trim() : "";
+      if (!Number.isFinite(id) || !name) {
+        continue;
+      }
+      items.push({
+        id: Math.trunc(id),
+        name
+      });
+    }
+    return items;
   }
 
   async enqueuePeriodicBuild() {

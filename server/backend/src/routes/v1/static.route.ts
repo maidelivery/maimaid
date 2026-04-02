@@ -26,6 +26,12 @@ staticV1Route.get("/bundle/:version", async (c) => {
   });
 });
 
+staticV1Route.get("/songid-items", async (c) => {
+  const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+  const items = await staticBundleService.listSongIdItems();
+  return ok(c, { items });
+});
+
 staticV1Route.get("/chart_stats", async (c) => {
   const chartFitService = di.resolve<ChartFitService>(TOKENS.ChartFitService);
   const snapshot = await chartFitService.getLatestSnapshotOrRefresh();

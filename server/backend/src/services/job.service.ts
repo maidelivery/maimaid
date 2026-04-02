@@ -53,6 +53,7 @@ export class JobService {
         } else if (job.jobType === "community_alias_roll_cycle") {
           await this.communityAliasService.rollCycle();
         } else if (job.jobType === "static_bundle_build") {
+          // buildBundle also refreshes Song/Sheet catalog from bundle data_json.
           await this.staticBundleService.buildBundle(false);
         }
         await this.prisma.jobQueue.update({

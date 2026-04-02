@@ -268,6 +268,7 @@ function resolveBundleAliasSongIdentifier(songId: number, indexes: SongResolverI
 }
 
 export function parseBundleSongs(value: unknown): Song[] {
+  // Legacy parser kept for fallback when catalog APIs are unavailable.
   const rows = parseRemoteSongs(value);
   const songs: Song[] = [];
 
@@ -305,6 +306,7 @@ export function parseBundleSongs(value: unknown): Song[] {
 }
 
 export function parseBundleSheets(value: unknown): SongSheet[] {
+  // Legacy parser kept for fallback when catalog APIs are unavailable.
   const rows = parseRemoteSongs(value);
   const sheets: SongSheet[] = [];
 
@@ -362,6 +364,7 @@ export function parseBundleSheets(value: unknown): SongSheet[] {
 }
 
 export function parseBundleLxnsAliases(value: unknown, context: SongResolverContext): Alias[] {
+  // Legacy parser kept for fallback when catalog APIs are unavailable.
   const record = toRecord(value);
   const source = Array.isArray(value) ? value : Array.isArray(record?.aliases) ? record.aliases : [];
   const aliases: Alias[] = [];
