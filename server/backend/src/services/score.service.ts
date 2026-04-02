@@ -2,7 +2,7 @@ import { inject, injectable } from "tsyringe";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
-import { difficultyByLevelIndex, normalizeChartType, normalizeLxnsSongId } from "../utils/compat.js";
+import { difficultyByLevelIndex, lxnsSongIdToLocal, normalizeChartType, normalizeLxnsSongId } from "../utils/compat.js";
 
 export type ScoreLocator = {
   sheetId?: bigint;
@@ -346,22 +346,43 @@ export class ScoreService {
       return this.prisma.sheet.findUnique({ where: { id: locator.sheetId } });
     }
 
-    const songIdentifier = locator.songIdentifier ?? (locator.songId ? String(locator.songId) : undefined);
     const type = normalizeChartType(locator.chartType ?? locator.type);
     const difficulty = this.normalizeDifficulty(locator.difficulty, locator.levelIndex);
 
-    if (songIdentifier && type && difficulty) {
-      const byIdentifier = await this.prisma.sheet.findUnique({
-        where: {
-          songIdentifier_chartType_difficulty: {
-            songIdentifier,
-            chartType: type,
-            difficulty
+    if (type && difficulty) {
+      // Try songIdentifier first (most reliable — set by ImportService catalog mapping)
+      if (locator.songIdentifier) {
+        const byIdentifier = await this.prisma.sheet.findUnique({
+          where: {
+            songIdentifier_chartType_difficulty: {
+              songIdentifier: locator.songIdentifier,
+              chartType: type,
+              difficulty
+            }
+          }
+        });
+        if (byIdentifier) {
+          return byIdentifier;
+        }
+      }
+
+      // Try songId as songIdentifier (local IDs are used as songIdentifier strings)
+      if (typeof locator.songId === "number" && Number.isFinite(locator.songId) && locator.songId > 0) {
+        const songIdStr = String(Math.trunc(locator.songId));
+        if (songIdStr !== locator.songIdentifier) {
+          const bySongId = await this.prisma.sheet.findUnique({
+            where: {
+              songIdentifier_chartType_difficulty: {
+                songIdentifier: songIdStr,
+                chartType: type,
+                difficulty
+              }
+            }
+          });
+          if (bySongId) {
+            return bySongId;
           }
         }
-      });
-      if (byIdentifier) {
-        return byIdentifier;
       }
     }
 

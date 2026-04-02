@@ -415,16 +415,16 @@ export function AliasesPage({
       </CardContent>
 
       <Dialog open={Boolean(selectedCandidate)} onOpenChange={(open) => !open && setSelectedCandidateId(null)}>
-        <DialogContent className="sm:!max-w-3xl">
+        <DialogContent className="max-h-[calc(100dvh-1.5rem)] gap-3 overflow-y-auto sm:!max-w-3xl">
           <DialogHeader>
             <DialogTitle>{t("dialogTitle")}</DialogTitle>
             <DialogDescription>{t("dialogDesc")}</DialogDescription>
           </DialogHeader>
 
           {selectedCandidate ? (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Avatar className="size-24 rounded-md">
+                <Avatar className="size-20 rounded-md sm:size-24">
                   <AvatarImage
                     src={resolveSongCoverUrl(selectedCandidate.songIdentifier) ?? undefined}
                     alt={resolveSongTitle(selectedCandidate.songIdentifier)}
@@ -444,7 +444,7 @@ export function AliasesPage({
 
               <Separator />
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 <InfoBlock label={t("infoSubmitter")} value={submitterDisplay} />
                 <InfoBlock
                   label={t("infoSubmitTime")}
@@ -465,14 +465,14 @@ export function AliasesPage({
 
               <div className="flex flex-wrap gap-2">
                 <Button
-                  className="h-9 flex-1 sm:flex-none"
+                  className="h-8 flex-1 sm:flex-none"
                   variant={selectedCandidate.myVote === 1 ? "default" : "outline"}
                   onClick={() => void onCommunityVote(selectedCandidate.candidateId, 1)}
                 >
                   {selectedCandidate.myVote === 1 ? t("btnCancelSupport") : t("btnSupport")}
                 </Button>
                 <Button
-                  className="h-9 flex-1 sm:flex-none"
+                  className="h-8 flex-1 sm:flex-none"
                   variant={selectedCandidate.myVote === -1 ? "default" : "outline"}
                   onClick={() => void onCommunityVote(selectedCandidate.candidateId, -1)}
                 >
@@ -484,7 +484,7 @@ export function AliasesPage({
                 <>
                   <Separator />
                   <div className="text-sm font-medium">{t("sectionAdminActions")}</div>
-                  <FieldGroup>
+                  <FieldGroup className="gap-2">
                     <Field>
                       <FieldLabel htmlFor="candidate-vote-close">{t("labelVoteCloseTime")}</FieldLabel>
                       <Input
@@ -498,16 +498,16 @@ export function AliasesPage({
                     </Field>
                   </FieldGroup>
                   <div className="flex flex-wrap gap-2">
-                    <Button className="h-9 w-full sm:w-auto" variant="outline" onClick={() => void onAdminVoteWindowUpdate(selectedCandidate.candidateId)}>
+                    <Button className="h-8 w-full sm:w-auto" variant="outline" onClick={() => void onAdminVoteWindowUpdate(selectedCandidate.candidateId)}>
                       {t("btnUpdateCloseTime")}
                     </Button>
-                    <Button className="h-9 w-full sm:w-auto" variant="outline" onClick={() => void onAdminCandidateStatusUpdate(selectedCandidate.candidateId, "voting")}>
+                    <Button className="h-8 w-full sm:w-auto" variant="outline" onClick={() => void onAdminCandidateStatusUpdate(selectedCandidate.candidateId, "voting")}>
                       {t("btnSetVoting")}
                     </Button>
-                    <Button className="h-9 w-full sm:w-auto" variant="outline" onClick={() => void onAdminCandidateStatusUpdate(selectedCandidate.candidateId, "approved")}>
+                    <Button className="h-8 w-full sm:w-auto" variant="outline" onClick={() => void onAdminCandidateStatusUpdate(selectedCandidate.candidateId, "approved")}>
                       {t("btnSetApproved")}
                     </Button>
-                    <Button className="h-9 w-full sm:w-auto" variant="outline" onClick={() => void onAdminCandidateStatusUpdate(selectedCandidate.candidateId, "rejected")}>
+                    <Button className="h-8 w-full sm:w-auto" variant="outline" onClick={() => void onAdminCandidateStatusUpdate(selectedCandidate.candidateId, "rejected")}>
                       {t("btnSetRejected")}
                     </Button>
                   </div>
@@ -529,9 +529,9 @@ export function AliasesPage({
 
 function InfoBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border p-3">
+    <div className="rounded-md border p-2.5">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 break-all text-sm">{value}</p>
+      <p className="mt-1 break-all text-[13px] leading-5">{value}</p>
     </div>
   );
 }

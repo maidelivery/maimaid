@@ -2,9 +2,15 @@ import SwiftUI
 import SwiftData
 
 struct HomeView: View {
+    private static var prefetchedSongsDescriptor: FetchDescriptor<Song> {
+        var descriptor = FetchDescriptor<Song>()
+        descriptor.relationshipKeyPathsForPrefetching = [\Song.sheets]
+        return descriptor
+    }
+
     @Environment(\.modelContext) private var modelContext
     @Query private var configs: [SyncConfig]
-    @Query private var songs: [Song]
+    @Query(Self.prefetchedSongsDescriptor) private var songs: [Song]
     @Query(sort: \MaimaiIcon.id) private var icons: [MaimaiIcon]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     @Query private var allScores: [Score]
@@ -17,10 +23,10 @@ struct HomeView: View {
     @State private var standardB50Total: Int = 0
     
     // Cache invalidation: track fingerprints to avoid redundant recalculation
-    @State private var lastB50Fingerprint: String = ""
-    @State private var lastStandardB50Fingerprint: String = ""
+    @State private var cachedScoreFingerprint = ""
+    @State private var lastB50Fingerprint = ""
     @State private var hasComputedB50 = false
-    @State private var hasComputedStandardB50 = false
+    @State private var b50UpdateTask: Task<Void, Never>?
     
     private var config: SyncConfig? { configs.first }
     private var activeProfile: UserProfile? { activeProfiles.first }
@@ -41,31 +47,14 @@ struct HomeView: View {
         max(standardB50Total, activeProfile?.playerRating ?? 0)
     }
     
-    /// Generates a lightweight fingerprint from scores to detect changes.
-    private var scoreFingerprint: String {
-        let profileId = activeProfile?.id
-        let relevantScores = allScores.filter { $0.userProfileId == profileId }
-        let count = relevantScores.count
-        let totalRate = relevantScores.reduce(0.0) { $0 + $1.rate }
-        return "\(count)_\(String(format: "%.2f", totalRate))"
-    }
-    
     /// Generates a lightweight fingerprint to detect changes relevant to B50 calculation.
-    private func b50Fingerprint() -> String {
+    private func b50Fingerprint(scoreFingerprint: String) -> String {
         let songCount = songs.count
         let b35 = currentB35Count
         let b15 = currentB15Count
         let profileId = activeProfile?.id.uuidString ?? "none"
         let server = activeProfile?.server ?? "jp"
         return "\(songCount)_\(b35)_\(b15)_\(profileId)_\(server)_\(scoreFingerprint)"
-    }
-    
-    /// Generates a fingerprint for standard B50 (always uses 35/15).
-    private func standardB50Fingerprint() -> String {
-        let songCount = songs.count
-        let profileId = activeProfile?.id.uuidString ?? "none"
-        let server = activeProfile?.server ?? "jp"
-        return "\(songCount)_\(profileId)_\(server)_\(scoreFingerprint)"
     }
     
     let columns = [
@@ -113,33 +102,40 @@ struct HomeView: View {
             }
             .onChange(of: songs.count) { _, _ in
                 evaluateOnboardingGate()
+                scheduleB50Update()
             }
             .onChange(of: didPerformInitialSync) { _, _ in
                 evaluateOnboardingGate()
             }
             .task {
+                refreshScoreFingerprintCache()
                 await updateB50IfNeeded()
-                await updateStandardB50IfNeeded()
-            }
-            .onChange(of: songs.count) { _, _ in
-                Task { await updateB50IfNeeded() }
-                Task { await updateStandardB50IfNeeded() }
             }
             .onChange(of: allScores.count) { _, _ in
-                Task { await updateB50IfNeeded() }
-                Task { await updateStandardB50IfNeeded() }
+                refreshScoreFingerprintCache()
+                scheduleB50Update()
             }
             .onChange(of: activeProfile?.b15Count) { _, _ in
-                Task { await updateB50IfNeeded() }
+                scheduleB50Update()
             }
             .onChange(of: activeProfile?.b35Count) { _, _ in
-                Task { await updateB50IfNeeded() }
+                scheduleB50Update()
             }
             .onChange(of: config?.b15Count) { _, _ in
-                Task { await updateB50IfNeeded() }
+                scheduleB50Update()
             }
             .onChange(of: config?.b35Count) { _, _ in
-                Task { await updateB50IfNeeded() }
+                scheduleB50Update()
+            }
+            .onChange(of: activeProfile?.id) { _, _ in
+                refreshScoreFingerprintCache()
+                scheduleB50Update()
+            }
+            .onChange(of: activeProfile?.server) { _, _ in
+                scheduleB50Update()
+            }
+            .onDisappear {
+                b50UpdateTask?.cancel()
             }
         }
     }
@@ -162,64 +158,92 @@ struct HomeView: View {
         }
     }
     
-    private func updateStandardB50IfNeeded() async {
-        let fingerprint = standardB50Fingerprint()
-        guard !hasComputedStandardB50 || fingerprint != lastStandardB50Fingerprint else { return }
-        
-        // Small delay to avoid computing during navigation animations
-        try? await Task.sleep(for: .milliseconds(100))
-
-        // Re-check after sleep in case we navigated away
-        let currentFingerprint = standardB50Fingerprint()
-        guard currentFingerprint == fingerprint else { return }
-
-        await updateStandardB50()
-        lastStandardB50Fingerprint = fingerprint
-        hasComputedStandardB50 = true
+    private func refreshScoreFingerprintCache() {
+        cachedScoreFingerprint = makeScoreFingerprint(profileId: activeProfile?.id)
     }
-    
+
+    private func makeScoreFingerprint(profileId: UUID?) -> String {
+        var scoreCount = 0
+        var totalRate = 0.0
+        var totalDxScore = 0
+        var latestUpdate: TimeInterval = 0
+
+        for score in allScores where score.userProfileId == profileId {
+            scoreCount += 1
+            totalRate += score.rate
+            totalDxScore += score.dxScore
+            latestUpdate = max(latestUpdate, score.achievementDate.timeIntervalSince1970)
+        }
+
+        let normalizedRate = Int((totalRate * 10_000).rounded())
+        return "\(scoreCount)_\(normalizedRate)_\(totalDxScore)_\(Int(latestUpdate))"
+    }
+
+    private func scheduleB50Update() {
+        b50UpdateTask?.cancel()
+        b50UpdateTask = Task { @MainActor in
+            await updateB50IfNeeded()
+        }
+    }
+
     private func updateB50IfNeeded() async {
-        let fingerprint = b50Fingerprint()
+        let fingerprint = b50Fingerprint(scoreFingerprint: cachedScoreFingerprint)
         guard !hasComputedB50 || fingerprint != lastB50Fingerprint else { return }
         
-        // Small delay to avoid computing during navigation animations
+        // Small delay to avoid competing with navigation animations.
         try? await Task.sleep(for: .milliseconds(100))
+        guard !Task.isCancelled else { return }
 
-        // Re-check after sleep in case we navigated away
-        let currentFingerprint = b50Fingerprint()
+        // Re-check after sleep in case state changed while this task was suspended.
+        let currentFingerprint = b50Fingerprint(scoreFingerprint: cachedScoreFingerprint)
         guard currentFingerprint == fingerprint else { return }
-        
-        await updateB50()
+
+        let profileId = activeProfile?.id
+        let server = activeProfile.flatMap { GameServer(rawValue: $0.server) }
+        let scoreMap = await RatingUtils.fetchScoreMap(context: modelContext)
+        let input = await songs.toCalculationInput(userProfileId: profileId, server: server, preloadedScores: scoreMap)
+
+        guard !Task.isCancelled else { return }
+
+        let b35Limit = currentB35Count
+        let b15Limit = currentB15Count
+        let serverVersion = activeServerLatestVersion
+
+        let totals = await Task.detached(priority: .userInitiated) {
+            if b35Limit == 35 && b15Limit == 15 {
+                let shared = await RatingUtils.calculateB50(
+                    input: input,
+                    b35Count: 35,
+                    b15Count: 15,
+                    latestVersion: serverVersion
+                )
+                return (custom: shared.total, standard: shared.total)
+            }
+
+            async let custom = RatingUtils.calculateB50(
+                input: input,
+                b35Count: b35Limit,
+                b15Count: b15Limit,
+                latestVersion: serverVersion
+            )
+            async let standard = RatingUtils.calculateB50(
+                input: input,
+                b35Count: 35,
+                b15Count: 15,
+                latestVersion: serverVersion
+            )
+
+            let customResult = await custom
+            let standardResult = await standard
+            return (custom: customResult.total, standard: standardResult.total)
+        }.value
+
+        guard !Task.isCancelled else { return }
+
+        computedB50Total = totals.custom
+        standardB50Total = totals.standard
         lastB50Fingerprint = fingerprint
         hasComputedB50 = true
-    }
-    
-    private func updateStandardB50() async {
-        let profileId = activeProfile?.id
-        let server = activeProfile.flatMap { GameServer(rawValue: $0.server) }
-        
-        let scoreMap = await RatingUtils.fetchScoreMap(context: modelContext)
-        let input = await songs.toCalculationInput(userProfileId: profileId, server: server, preloadedScores: scoreMap)
-        let serverVersion = activeServerLatestVersion
-        let result = await RatingUtils.calculateB50(input: input, b35Count: 35, b15Count: 15, latestVersion: serverVersion)
-        self.standardB50Total = result.total
-    }
-    
-    private func updateB50() async {
-        let profileId = activeProfile?.id
-        let server = activeProfile.flatMap { GameServer(rawValue: $0.server) }
-        
-        let scoreMap = await RatingUtils.fetchScoreMap(context: modelContext)
-        let input = await songs.toCalculationInput(userProfileId: profileId, server: server, preloadedScores: scoreMap)
-        
-        let b35Limit = activeProfile?.b35Count ?? config?.b35Count ?? 35
-        let b15Limit = activeProfile?.b15Count ?? config?.b15Count ?? 15
-        let serverVersion = activeServerLatestVersion
-        
-        // Background calculation with sendable input
-        let result = await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: serverVersion)
-        
-        self.computedB50Total = result.total
     }
     
     private var activeServerLatestVersion: String? {

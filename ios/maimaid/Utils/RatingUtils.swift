@@ -402,29 +402,44 @@ enum RatingUtils {
 // MARK: - Song Array Extension for Calculation Input
 
 extension Array where Element == Song {
-    func toCalculationInput(
-        userProfileId: UUID?,
-        server: GameServer?,
-        preloadedScores: [String: Score],
-        useFitDiff: Bool = false
-    ) async -> RatingUtils.CalculationInput {
-        var songsData: [RatingUtils.SongCalculationData] = []
-        songsData.reserveCapacity(count)
+    private struct SheetExtractionData: Sendable {
+        let songIdentifier: String
+        let type: String
+        let difficulty: String
+        let version: String?
+        let internalLevelValue: Double?
+        let fitDiffValue: Double?
+        let regionJp: Bool
+        let regionIntl: Bool
+        let regionCn: Bool
+    }
+
+    private struct SongExtractionData: Sendable {
+        let songId: Int
+        let songIdentifier: String
+        let title: String
+        let artist: String
+        let imageName: String
+        let version: String?
+        let category: String
+        let isLocked: Bool
+        let sheets: [SheetExtractionData]
+    }
+
+    @MainActor
+    private func extractCalculationData(useFitDiff: Bool) -> [SongExtractionData] {
+        var extractedSongs: [SongExtractionData] = []
+        extractedSongs.reserveCapacity(count)
 
         for song in self {
-            var sheetsData: [RatingUtils.SheetCalculationData] = []
-            sheetsData.reserveCapacity(song.sheets.count)
+            var extractedSheets: [SheetExtractionData] = []
+            extractedSheets.reserveCapacity(song.sheets.count)
 
             for sheet in song.sheets {
-                let fitDiffValue: Double?
-                if useFitDiff {
-                    fitDiffValue = await ChartStatsService.shared.getStat(for: sheet)?.fit_diff
-                } else {
-                    fitDiffValue = nil
-                }
+                let fitDiffValue = useFitDiff ? ChartStatsService.shared.getStat(for: sheet)?.fit_diff : nil
 
-                sheetsData.append(
-                    RatingUtils.SheetCalculationData(
+                extractedSheets.append(
+                    SheetExtractionData(
                         songIdentifier: sheet.songIdentifier,
                         type: sheet.type,
                         difficulty: sheet.difficulty,
@@ -438,8 +453,8 @@ extension Array where Element == Song {
                 )
             }
 
-            songsData.append(
-                RatingUtils.SongCalculationData(
+            extractedSongs.append(
+                SongExtractionData(
                     songId: song.songId,
                     songIdentifier: song.songIdentifier,
                     title: song.title,
@@ -448,13 +463,57 @@ extension Array where Element == Song {
                     version: song.version,
                     category: song.category,
                     isLocked: song.isLocked,
-                    sheets: sheetsData
+                    sheets: extractedSheets
                 )
             )
         }
-        
-        let scoresData = preloadedScores.mapValues { score in
-            RatingUtils.ScoreCalculationData(
+
+        return extractedSongs
+    }
+
+    nonisolated private static func makeSongCalculationData(from extractedSongs: [SongExtractionData]) -> [RatingUtils.SongCalculationData] {
+        extractedSongs.map { song in
+            let sheets = song.sheets.map { sheet in
+                RatingUtils.SheetCalculationData(
+                    songIdentifier: sheet.songIdentifier,
+                    type: sheet.type,
+                    difficulty: sheet.difficulty,
+                    version: sheet.version,
+                    internalLevelValue: sheet.internalLevelValue,
+                    fitDiffValue: sheet.fitDiffValue,
+                    regionJp: sheet.regionJp,
+                    regionIntl: sheet.regionIntl,
+                    regionCn: sheet.regionCn
+                )
+            }
+
+            return RatingUtils.SongCalculationData(
+                songId: song.songId,
+                songIdentifier: song.songIdentifier,
+                title: song.title,
+                artist: song.artist,
+                imageName: song.imageName,
+                version: song.version,
+                category: song.category,
+                isLocked: song.isLocked,
+                sheets: sheets
+            )
+        }
+    }
+
+    @MainActor
+    func toCalculationInput(
+        userProfileId: UUID?,
+        server: GameServer?,
+        preloadedScores: [String: Score],
+        useFitDiff: Bool = false
+    ) async -> RatingUtils.CalculationInput {
+        let extractedSongs = extractCalculationData(useFitDiff: useFitDiff)
+
+        var scoresData: [String: RatingUtils.ScoreCalculationData] = [:]
+        scoresData.reserveCapacity(preloadedScores.count)
+        for (sheetId, score) in preloadedScores {
+            scoresData[sheetId] = RatingUtils.ScoreCalculationData(
                 sheetId: score.sheetId,
                 rate: score.rate,
                 rank: score.rank,
@@ -463,7 +522,12 @@ extension Array where Element == Song {
                 fs: score.fs
             )
         }
-        
+
+        let songsBuildTask = Task.detached(priority: .userInitiated) {
+            Self.makeSongCalculationData(from: extractedSongs)
+        }
+        let songsData = await songsBuildTask.value
+
         return RatingUtils.CalculationInput(
             songs: songsData,
             userProfileId: userProfileId,
@@ -479,7 +543,7 @@ extension RatingUtils {
     /// 🔴 推荐使用：通过 ScoreService 获取成绩映射
     /// 确保成绩获取严格在当前用户作用域下
     static func fetchScoreMap(context: ModelContext) async -> [String: Score] {
-        await ScoreService.shared.scoreMap(context: context)
+        ScoreService.shared.scoreMap(context: context)
     }
     
     // 保留旧方法用于迁移兼容，但标记为废弃

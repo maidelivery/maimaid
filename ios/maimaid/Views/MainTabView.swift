@@ -208,28 +208,8 @@ struct MainTabView: View {
     private func scheduleSongsPreloadIfNeeded() {
         guard !didScheduleSongsPreload else { return }
         didScheduleSongsPreload = true
-
-        let container = modelContext.container
-        Task.detached(priority: .utility) {
-            let backgroundContext = SwiftData.ModelContext(container)
-            var descriptor = FetchDescriptor<Song>(sortBy: [SortDescriptor(\Song.sortOrder, order: .forward)])
-            descriptor.relationshipKeyPathsForPrefetching = [\Song.sheets]
-
-            do {
-                let songs = try backgroundContext.fetch(descriptor)
-                var sheetCount = 0
-
-                for song in songs {
-                    _ = song.songIdentifier
-                    _ = song.title
-                    _ = song.category
-                    sheetCount += song.sheets.count
-                }
-
-                print("MainTabView: Preloaded \(songs.count) songs and \(sheetCount) sheets for SongsView.")
-            } catch {
-                print("MainTabView: Failed to preload SongsView data: \(error)")
-            }
-        }
+        // HomeView and SongsView now use @Query descriptors with Song.sheets prefetching.
+        // A detached background context does not warm the main-context cache, so we skip that work here.
+        print("MainTabView: Song preload handled by view query prefetch descriptors.")
     }
 }

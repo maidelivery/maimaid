@@ -4,7 +4,7 @@ import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
 import { ScoreService } from "./score.service.js";
 import { SyncService } from "./sync.service.js";
-import { difficultyByLevelIndex, normalizeChartType, normalizeLxnsSongId } from "../utils/compat.js";
+import { difficultyByLevelIndex, lxnsSongIdToLocal, normalizeChartType } from "../utils/compat.js";
 
 type DivingFishRecord = {
   achievements: number;
@@ -167,18 +167,18 @@ export class ImportService {
       const normalizedRecords = payload.records.map((record) => {
         const backendChartType = this.normalizeBackendChartType(record.type);
         const difficulty = difficultyByLevelIndex(record.level_index) ?? "basic";
-        const normalizedSongId =
-          typeof record.song_id === "number" && Number.isFinite(record.song_id) ? normalizeLxnsSongId(record.song_id) : null;
+        // DF song IDs are identical to local IDs — no conversion needed
+        const localSongId = this.parseProviderSongId(record.song_id);
         return {
           record,
           backendChartType,
           difficulty,
-          normalizedSongId
+          localSongId
         };
       });
       const mappings = await this.resolveCatalogMappings(
         normalizedRecords.map((item) => ({
-          songId: item.normalizedSongId,
+          songId: item.localSongId,
           title: item.record.title,
           chartType: item.backendChartType,
           difficulty: item.difficulty
@@ -188,14 +188,14 @@ export class ImportService {
       const transformed: TransformedImportRecord[] = normalizedRecords.map((item, index) => {
         const mapped = mappings[index] ?? {
           songIdentifier: null,
-          songId: item.normalizedSongId,
+          songId: item.localSongId,
           sheetKey: null
         };
         return {
           source: "df",
           sheetKey: mapped.sheetKey,
           songIdentifier: mapped.songIdentifier,
-          songId: mapped.songId ?? item.normalizedSongId,
+          songId: mapped.songId ?? item.localSongId,
           title: item.record.title,
           chartType: this.toAppChartType(item.backendChartType),
           difficulty: item.difficulty,
@@ -332,19 +332,20 @@ export class ImportService {
     }
 
     const normalizedScores = scoresPayload.data.map((score) => {
-      const normalizedSongId = normalizeLxnsSongId(score.id);
       const backendChartType = this.normalizeBackendChartType(score.type);
       const difficulty = difficultyByLevelIndex(score.level_index) ?? "basic";
+      // LXNS uses a single id per song; DX charts need +10000 to match local IDs
+      const localSongId = lxnsSongIdToLocal(score.id, score.type);
       return {
         score,
-        normalizedSongId,
+        localSongId,
         backendChartType,
         difficulty
       };
     });
     const mappings = await this.resolveCatalogMappings(
       normalizedScores.map((item) => ({
-        songId: item.normalizedSongId,
+        songId: item.localSongId,
         title: item.score.song_name,
         chartType: item.backendChartType,
         difficulty: item.difficulty
@@ -354,14 +355,14 @@ export class ImportService {
     const transformed: TransformedImportRecord[] = normalizedScores.map((item, index) => {
       const mapped = mappings[index] ?? {
         songIdentifier: null,
-        songId: item.normalizedSongId,
+        songId: item.localSongId,
         sheetKey: null
       };
       return {
         source: "lxns",
         sheetKey: mapped.sheetKey,
         songIdentifier: mapped.songIdentifier,
-        songId: mapped.songId ?? item.normalizedSongId,
+        songId: mapped.songId ?? item.localSongId,
         title: item.score.song_name,
         chartType: this.toAppChartType(item.backendChartType),
         difficulty: item.difficulty,
@@ -747,12 +748,17 @@ export class ImportService {
       return [];
     }
 
-    const songIds = Array.from(new Set(inputs.map((item) => item.songId).filter((item): item is number => Boolean(item && item > 0))));
+    const songIds = Array.from(
+      new Set(
+        inputs.map((item) => item.songId).filter((item): item is number => Boolean(item && item > 0))
+      )
+    );
     const chartTypes = Array.from(new Set(inputs.map((item) => item.chartType)));
     const difficulties = Array.from(new Set(inputs.map((item) => item.difficulty)));
 
     const bySongIdKey = new Map<string, CatalogSheetCandidate>();
     if (songIds.length > 0) {
+      const songIdentifierCandidates = songIds.map((item) => String(item));
       const sheetsBySongId = await this.prisma.sheet.findMany({
         where: {
           chartType: {
@@ -761,7 +767,11 @@ export class ImportService {
           difficulty: {
             in: difficulties
           },
-          OR: [{ songId: { in: songIds } }, { song: { songId: { in: songIds } } }]
+          OR: [
+            { songId: { in: songIds } },
+            { song: { songId: { in: songIds } } },
+            { songIdentifier: { in: songIdentifierCandidates } }
+          ]
         },
         select: {
           songIdentifier: true,
@@ -778,8 +788,8 @@ export class ImportService {
       });
 
       for (const sheet of sheetsBySongId) {
-        const resolvedSongId = sheet.song?.songId && sheet.song.songId > 0 ? sheet.song.songId : sheet.songId;
-        if (!resolvedSongId || resolvedSongId <= 0) {
+        const resolvedSongId = this.extractPositiveSongIdFromCatalogSheet(sheet);
+        if (!resolvedSongId) {
           continue;
         }
         const key = this.catalogSongIdKey(resolvedSongId, this.normalizeBackendChartType(sheet.chartType), sheet.difficulty);
@@ -884,6 +894,31 @@ export class ImportService {
     });
   }
 
+  private parseProviderSongId(value: number | null | undefined): number | null {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      return null;
+    }
+    const normalized = Math.trunc(value);
+    if (normalized <= 0) {
+      return null;
+    }
+    return normalized;
+  }
+
+  private extractPositiveSongIdFromCatalogSheet(sheet: CatalogSheetCandidate): number | null {
+    if (sheet.song?.songId && sheet.song.songId > 0) {
+      return sheet.song.songId;
+    }
+    if (sheet.songId > 0) {
+      return sheet.songId;
+    }
+    const numericSongIdentifier = Number(sheet.songIdentifier);
+    if (Number.isFinite(numericSongIdentifier) && numericSongIdentifier > 0) {
+      return Math.trunc(numericSongIdentifier);
+    }
+    return null;
+  }
+
   private catalogSongIdKey(songId: number, chartType: "standard" | "dx" | "utage", difficulty: string) {
     return `${songId}:${chartType}:${difficulty}`;
   }
@@ -894,10 +929,10 @@ export class ImportService {
 
   private buildCatalogMappingResult(sheet: CatalogSheetCandidate, fallbackSongId: number | null): CatalogMappingResult {
     const appType = this.toAppChartType(this.normalizeBackendChartType(sheet.chartType));
-    const resolvedSongId = sheet.song?.songId && sheet.song.songId > 0 ? sheet.song.songId : sheet.songId;
+    const resolvedSongId = this.extractPositiveSongIdFromCatalogSheet(sheet);
     return {
       songIdentifier: sheet.songIdentifier,
-      songId: resolvedSongId > 0 ? resolvedSongId : fallbackSongId,
+      songId: resolvedSongId ?? fallbackSongId,
       sheetKey: `${sheet.songIdentifier}_${appType}_${sheet.difficulty}`
     };
   }

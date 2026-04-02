@@ -1,5 +1,47 @@
 const DIFFICULTY_BY_INDEX = ["basic", "advanced", "expert", "master", "remaster"];
 
+/**
+ * Converts an LXNS song ID + chart type into the local (bundle) song ID.
+ *
+ * ID systems:
+ *   Local (songid.json / Prisma):
+ *     - Pre-DX STD songs: id < 10000
+ *     - DX-era songs:     10000 < id < 100000  (base + 10000)
+ *     - Utage songs:      id >= 100000
+ *
+ *   LXNS:
+ *     - Uses ONE id per song for both STD and DX charts, distinguished by `type`
+ *     - All non-Utage ids are < 10000 (the base id)
+ *     - Utage ids >= 100000 (same as local)
+ *
+ *   Diving Fish:
+ *     - Identical to local. No conversion needed.
+ *
+ * Conversion rule for LXNS:
+ *   - type = "standard" / "SD" → local id = lxns_id  (direct)
+ *   - type = "dx" / "DX"      → local id = lxns_id + 10000
+ *   - Utage (id >= 100000)     → local id = lxns_id  (direct)
+ */
+export const lxnsSongIdToLocal = (lxnsSongId: number, chartType: string): number => {
+  // Utage songs share the same ID space
+  if (lxnsSongId >= 100000) {
+    return lxnsSongId;
+  }
+
+  const normalized = chartType.trim().toLowerCase();
+  if (normalized === "dx") {
+    return lxnsSongId + 10000;
+  }
+
+  // "standard", "sd", "std", or anything else → direct
+  return lxnsSongId;
+};
+
+/**
+ * @deprecated Use `lxnsSongIdToLocal` with chart type instead.
+ * Kept only for backward compatibility with existing callers that haven't
+ * been migrated yet.
+ */
 export const normalizeLxnsSongId = (songId: number): number => {
   if (songId > 100000) {
     return songId;

@@ -454,10 +454,11 @@ struct VersionPickerSheet: View {
                             Spacer()
                             if tempSelection == nil {
                                 Image(systemName: "checkmark")
-                                    .foregroundStyle(.blue)
+                                    .foregroundStyle(.primary)
                             }
                         }
                     }
+                    .buttonStyle(.plain)
                 } footer: {
                     if let serverVersion = currentServerVersion {
                         Text(ThemeUtils.versionAbbreviation(serverVersion))
@@ -480,10 +481,11 @@ struct VersionPickerSheet: View {
                                 Spacer()
                                 if tempSelection == version {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(.primary)
                                 }
                             }
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -494,12 +496,14 @@ struct VersionPickerSheet: View {
                     Button("bestTable.settings.version.cancel") {
                         dismiss()
                     }
+                    .foregroundStyle(.primary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("bestTable.settings.version.confirm") {
                         selectedVersion = tempSelection
                         dismiss()
                     }
+                    .foregroundStyle(.primary)
                     .bold()
                 }
             }

@@ -8,7 +8,7 @@
 import SwiftUI
 import SwiftData
 
-enum SortOption: String, CaseIterable, Identifiable {
+enum SortOption: String, CaseIterable, Identifiable, Sendable {
     case defaultOrder = "sort.default"
     case versionAndDate = "sort.versionDate"
     case difficulty = "sort.difficulty"
@@ -17,8 +17,14 @@ enum SortOption: String, CaseIterable, Identifiable {
 }
 
 struct SongsView: View {
+    private static var prefetchedSongsDescriptor: FetchDescriptor<Song> {
+        var descriptor = FetchDescriptor<Song>(sortBy: [SortDescriptor(\Song.sortOrder, order: .forward)])
+        descriptor.relationshipKeyPathsForPrefetching = [\Song.sheets]
+        return descriptor
+    }
+
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Song.sortOrder, order: .forward) private var songs: [Song]
+    @Query(Self.prefetchedSongsDescriptor) private var songs: [Song]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     
     var searchText: String = ""
@@ -32,6 +38,7 @@ struct SongsView: View {
     @State private var displayedSongs: [Song] = []
     @State private var isSorting: Bool = false
     @State private var searchTask: Task<Void, Never>?
+    @State private var snapshotCache: [SongFilterSnapshot] = []
     
     // Performance: Cache score map to avoid repeated lookups
     @State private var scoreCache: [String: Score] = [:]
@@ -85,6 +92,32 @@ struct SongsView: View {
         let sheets: [SheetSnapshot]
         let maxDifficulty: Double
     }
+
+    private struct SongSnapshotExtraction: Sendable {
+        struct SheetExtraction: Sendable {
+            let type: String
+            let difficulty: String
+            let noteDesigner: String?
+            let internalLevelValue: Double?
+            let levelValue: Double?
+            let regionJp: Bool
+            let regionIntl: Bool
+            let regionCn: Bool
+        }
+
+        let songIdentifier: String
+        let songId: Int
+        let category: String
+        let title: String
+        let artist: String
+        let version: String?
+        let releaseDate: String?
+        let sortOrder: Int
+        let isFavorite: Bool
+        let searchKeywords: String?
+        let aliases: [String]
+        let sheets: [SheetExtraction]
+    }
     
     private func refreshScoreCache() {
         scoreCacheTask?.cancel()
@@ -106,23 +139,26 @@ struct SongsView: View {
         Array(Set(songs.compactMap { $0.version })).sorted { ThemeUtils.versionSortOrder($0) < ThemeUtils.versionSortOrder($1) }
     }
     
-    private func makeSongSnapshot(_ song: Song) -> SongFilterSnapshot {
-        let sheetSnapshots = song.sheets.map { sheet in
-            SongFilterSnapshot.SheetSnapshot(
-                type: sheet.type.lowercased(),
-                difficulty: sheet.difficulty.lowercased(),
-                noteDesigner: sheet.noteDesigner,
-                internalLevelValue: sheet.internalLevelValue,
-                levelValue: sheet.levelValue,
-                regionJp: sheet.regionJp,
-                regionIntl: sheet.regionIntl,
-                regionCn: sheet.regionCn
+    private func extractSongSnapshot(_ song: Song) -> SongSnapshotExtraction {
+        var sheets: [SongSnapshotExtraction.SheetExtraction] = []
+        sheets.reserveCapacity(song.sheets.count)
+
+        for sheet in song.sheets {
+            sheets.append(
+                SongSnapshotExtraction.SheetExtraction(
+                    type: sheet.type,
+                    difficulty: sheet.difficulty,
+                    noteDesigner: sheet.noteDesigner,
+                    internalLevelValue: sheet.internalLevelValue,
+                    levelValue: sheet.levelValue,
+                    regionJp: sheet.regionJp,
+                    regionIntl: sheet.regionIntl,
+                    regionCn: sheet.regionCn
+                )
             )
         }
-        
-        let maxDifficulty = sheetSnapshots.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
-        
-        return SongFilterSnapshot(
+
+        return SongSnapshotExtraction(
             songIdentifier: song.songIdentifier,
             songId: song.songId,
             category: song.category,
@@ -134,6 +170,38 @@ struct SongsView: View {
             isFavorite: song.isFavorite,
             searchKeywords: song.searchKeywords,
             aliases: song.aliases,
+            sheets: sheets
+        )
+    }
+
+    nonisolated private static func makeSongSnapshot(from extraction: SongSnapshotExtraction) -> SongFilterSnapshot {
+        let sheetSnapshots = extraction.sheets.map { sheet in
+            SongFilterSnapshot.SheetSnapshot(
+                type: sheet.type.lowercased(),
+                difficulty: sheet.difficulty.lowercased(),
+                noteDesigner: sheet.noteDesigner,
+                internalLevelValue: sheet.internalLevelValue,
+                levelValue: sheet.levelValue,
+                regionJp: sheet.regionJp,
+                regionIntl: sheet.regionIntl,
+                regionCn: sheet.regionCn
+            )
+        }
+
+        let maxDifficulty = sheetSnapshots.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
+
+        return SongFilterSnapshot(
+            songIdentifier: extraction.songIdentifier,
+            songId: extraction.songId,
+            category: extraction.category,
+            title: extraction.title,
+            artist: extraction.artist,
+            version: extraction.version,
+            releaseDate: extraction.releaseDate,
+            sortOrder: extraction.sortOrder,
+            isFavorite: extraction.isFavorite,
+            searchKeywords: extraction.searchKeywords,
+            aliases: extraction.aliases,
             sheets: sheetSnapshots,
             maxDifficulty: maxDifficulty
         )
@@ -248,7 +316,7 @@ struct SongsView: View {
         .map(\.songIdentifier)
     }
     
-    private func updateDisplayedSongs(debounce: Duration? = nil) {
+    private func updateDisplayedSongs(debounce: Duration? = nil, refreshSnapshots: Bool = false) {
         searchTask?.cancel()
         isSorting = true
         
@@ -261,7 +329,17 @@ struct SongsView: View {
             
             let currentSongs = songs
             let songsByIdentifier = Dictionary(uniqueKeysWithValues: currentSongs.map { ($0.songIdentifier, $0) })
-            let snapshots = currentSongs.map(makeSongSnapshot)
+            let snapshots: [SongFilterSnapshot]
+            if refreshSnapshots || snapshotCache.isEmpty {
+                let extractions = currentSongs.map(extractSongSnapshot)
+                snapshots = await Task.detached(priority: .userInitiated) {
+                    extractions.map(Self.makeSongSnapshot(from:))
+                }.value
+                guard !Task.isCancelled else { return }
+                snapshotCache = snapshots
+            } else {
+                snapshots = snapshotCache
+            }
             
             let currentFilter = filterSettings
             let currentSearch = searchText
@@ -517,7 +595,7 @@ struct SongsView: View {
                 refreshScoreCache()
             }
             if displayedSongs.isEmpty && !songs.isEmpty {
-                updateDisplayedSongs()
+                updateDisplayedSongs(refreshSnapshots: true)
             }
             liveColumnCount = CGFloat(committedColumns)
         }
@@ -525,7 +603,7 @@ struct SongsView: View {
         .onChange(of: activeProfiles.first?.id) { _, _ in
             refreshScoreCache()
         }
-        .onChange(of: songs) { _, _ in updateDisplayedSongs() }
+        .onChange(of: songs) { _, _ in updateDisplayedSongs(refreshSnapshots: true) }
         .onChange(of: searchText) { _, _ in updateDisplayedSongs(debounce: .milliseconds(200)) }
         .onChange(of: filterSettings) { _, _ in updateDisplayedSongs() }
         .onChange(of: sortOption) { _, _ in updateDisplayedSongs() }
@@ -533,6 +611,7 @@ struct SongsView: View {
         .onDisappear {
             searchTask?.cancel()
             scoreCacheTask?.cancel()
+            snapshotCache = []
         }
     }
     
