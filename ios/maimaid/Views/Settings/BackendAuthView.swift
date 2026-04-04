@@ -622,7 +622,8 @@ struct BackendAuthView: View {
             showToast(message: "settings.cloud.message.backupSuccess")
             await BackendAutoBackup.scheduleNextBackup(container: modelContext.container)
         } catch {
-            showToast(message: "settings.cloud.message.backupFailed", error: true)
+            let detail = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            showToast(message: String(localized: "settings.cloud.message.backupFailed") + ": " + detail, error: true)
         }
     }
 
@@ -637,7 +638,8 @@ struct BackendAuthView: View {
             try await BackendCloudSyncService.restoreFromCloud(context: modelContext)
             showToast(message: "settings.cloud.message.restoreSuccess")
         } catch {
-            showToast(message: "settings.cloud.message.restoreFailed", error: true)
+            let detail = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            showToast(message: String(localized: "settings.cloud.message.restoreFailed") + ": " + detail, error: true)
         }
     }
 }

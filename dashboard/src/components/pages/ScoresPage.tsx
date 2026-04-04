@@ -356,8 +356,8 @@ export function ScoresPage({
                           </p>
                           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                             <span className="rounded-md border px-2 py-1">{t("scores:achievements")} {String(row.achievements)}</span>
-                            <span className="rounded-md border px-2 py-1">Rank {row.rank || "-"}</span>
-                            <span className="rounded-md border px-2 py-1">DX {row.dxScore}</span>
+                            <span className="rounded-md border px-2 py-1">{t("scores:rank")} {row.rank || "-"}</span>
+                            <span className="rounded-md border px-2 py-1">{t("scores:dxScore")} {row.dxScore}</span>
                           </div>
                         </div>
                       </div>
@@ -381,8 +381,8 @@ export function ScoresPage({
                       <TableHead>{t("scores:colSong")}</TableHead>
                       <TableHead>{t("scores:colChart")}</TableHead>
                       <TableHead>{t("scores:colAchievements")}</TableHead>
-                      <TableHead>Rank</TableHead>
-                      <TableHead>DX</TableHead>
+                      <TableHead>{t("scores:colRank")}</TableHead>
+                      <TableHead>{t("scores:colDxScore")}</TableHead>
                       <TableHead>{t("scores:colAction")}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -459,7 +459,7 @@ export function ScoresPage({
                           </p>
                           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                             <span className="rounded-md border px-2 py-1">{t("scores:achievements")} {String(row.achievements)}</span>
-                            <span className="rounded-md border px-2 py-1">DX {row.dxScore}</span>
+                            <span className="rounded-md border px-2 py-1">{t("scores:dxScore")} {row.dxScore}</span>
                             <span className="rounded-md border px-2 py-1">{t("scores:time")} {formatDate(row.playTime)}</span>
                           </div>
                         </div>
@@ -479,8 +479,8 @@ export function ScoresPage({
                       <TableHead>{t("scores:colSong")}</TableHead>
                       <TableHead>{t("scores:colChart")}</TableHead>
                       <TableHead>{t("scores:colAchievements")}</TableHead>
-                      <TableHead>DX</TableHead>
-                      <TableHead>{t("scores:colTime") ?? "Time"}</TableHead>
+                      <TableHead>{t("scores:colDxScore")}</TableHead>
+                      <TableHead>{t("scores:colTime")}</TableHead>
                       <TableHead>{t("scores:colAction")}</TableHead>
                     </TableRow>
                   </TableHeader>

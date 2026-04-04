@@ -23,6 +23,8 @@ let refreshInFlight:
   | null = null;
 
 function toUserSafeErrorMessage(status: number, payload: unknown): string {
+  const unsafeCode = (payload as BackendError | null)?.code;
+  const code = typeof unsafeCode === "string" ? unsafeCode.trim().toLowerCase() : "";
   const unsafeMessage = (payload as BackendError | null)?.message;
   const message = typeof unsafeMessage === "string" ? unsafeMessage.trim() : "";
   const t = i18next.getFixedT(null, "app");
@@ -32,6 +34,9 @@ function toUserSafeErrorMessage(status: number, payload: unknown): string {
   }
 
   if (status === 401) {
+    if (code === "invalid_credentials") {
+      return t("backendErrInvalidCredentials");
+    }
     return t("backendErr401");
   }
 

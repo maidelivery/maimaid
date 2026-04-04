@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ChevronLeftIcon, ChevronRightIcon, ChevronsLeftIcon, ChevronsRightIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
@@ -34,6 +35,7 @@ export function TablePagination({
   const canGoPrev = page > 1;
   const canGoNext = page < pageCount;
   const normalizedOptions = pageSizeOptions.length > 0 ? pageSizeOptions : DEFAULT_PAGE_SIZE_OPTIONS;
+  const { t } = useTranslation();
 
   return (
     <div
@@ -44,7 +46,7 @@ export function TablePagination({
     >
       <div className="flex w-full flex-wrap items-center justify-between gap-3 md:w-auto md:flex-1 md:justify-start">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">Rows per page</span>
+          <span className="text-sm font-medium text-muted-foreground">{t("app:paginationRowsPerPage")}</span>
           <Select
             value={String(pageSize)}
             onValueChange={(value) => {
@@ -69,9 +71,7 @@ export function TablePagination({
           </Select>
         </div>
 
-        <div className="text-sm font-medium md:ml-4">
-          Page {page} of {pageCount}
-        </div>
+        <div className="text-sm font-medium md:ml-4">{t("app:paginationPageOf", { page, pageCount })}</div>
       </div>
 
       <div className="flex w-full items-center justify-center gap-2 md:w-auto md:justify-end">
@@ -80,7 +80,7 @@ export function TablePagination({
           size="icon-lg"
           disabled={!canGoPrev}
           onClick={() => onPageChange(1)}
-          aria-label="第一页"
+          aria-label={t("app:paginationFirstPage")}
         >
           <ChevronsLeftIcon />
         </Button>
@@ -89,7 +89,7 @@ export function TablePagination({
           size="icon-lg"
           disabled={!canGoPrev}
           onClick={() => onPageChange(page - 1)}
-          aria-label="上一页"
+          aria-label={t("app:paginationPrevPage")}
         >
           <ChevronLeftIcon />
         </Button>
@@ -98,7 +98,7 @@ export function TablePagination({
           size="icon-lg"
           disabled={!canGoNext}
           onClick={() => onPageChange(page + 1)}
-          aria-label="下一页"
+          aria-label={t("app:paginationNextPage")}
         >
           <ChevronRightIcon />
         </Button>
@@ -107,7 +107,7 @@ export function TablePagination({
           size="icon-lg"
           disabled={!canGoNext}
           onClick={() => onPageChange(pageCount)}
-          aria-label="最后一页"
+          aria-label={t("app:paginationLastPage")}
         >
           <ChevronsRightIcon />
         </Button>
