@@ -19,7 +19,7 @@ Self-hosted unified serverless-style backend for:
 1. Copy env file:
 
 ```bash
-cp server/backend/.env.example server/backend/.env
+cp backend/.env.example backend/.env
 ```
 
 2. Install dependencies:
@@ -57,16 +57,16 @@ This repo now includes a ready-to-run local stack:
 1. Prepare local env:
 
 ```bash
-cp server/backend/.env.docker.example server/backend/.env.docker
+cp backend/.env.docker.example backend/.env.docker
 ```
 
-Optional (recommended for local secrets): create `server/backend/.env.docker.local` for overrides such as `RESEND_API_KEY`.
+Optional (recommended for local secrets): create `backend/.env.docker.local` for overrides such as `RESEND_API_KEY`.
 If you change MinIO credentials, update both `MINIO_ROOT_*` and `S3_ACCESS_*` to the same values.
 
 2. Start stack:
 
 ```bash
-cd server/backend
+cd backend
 pnpm run podman:up
 ```
 
@@ -86,7 +86,7 @@ pnpm run podman:up
 5. Stop stack:
 
 ```bash
-cd server/backend
+cd backend
 pnpm run podman:down
 ```
 
@@ -101,7 +101,7 @@ At repository root:
 
 ## Environment variables
 
-See `server/backend/.env.example`:
+See `backend/.env.example`:
 
 - Network: `HOST`, `PORT`
 - Public URL: `APP_PUBLIC_URL` (used to build email verification links)

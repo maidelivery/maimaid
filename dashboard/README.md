@@ -22,7 +22,7 @@ pnpm run dev:web
 也可以在当前目录单独运行：
 
 ```bash
-cd web/dashboard
+cd dashboard
 pnpm run dev
 ```
 
@@ -38,7 +38,7 @@ pnpm run build:web
 当前目录：
 
 ```bash
-cd web/dashboard
+cd dashboard
 pnpm run build
 ```
 
@@ -73,7 +73,7 @@ pnpm run check:env
 首次部署：
 
 ```bash
-cd web/dashboard
+cd dashboard
 pnpm install
 pnpm run cf:create
 pnpm run deploy

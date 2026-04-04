@@ -1,6 +1,6 @@
 packages:
-  - web/*
-  - server/*
+  - backend
+  - dashboard
 onlyBuiltDependencies:
   - nx
   - esbuild

@@ -6,8 +6,8 @@ node_modules/
 .nx/workspace-data
 vite.config.*.timestamp*
 
-server/backend/dist/
-server/backend/.env.docker.local
+backend/dist/
+backend/.env.docker.local
 
 # Xcode user-local files
 **/xcuserdata/

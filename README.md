@@ -23,8 +23,8 @@ maimaid 创新了查询歌曲和记录成绩的范式，利用端侧机器视觉
 ## 仓库结构
 
 - `ios/maimaid/`：iOS App
-- `web/dashboard/`：Dashboard
-- `server/backend/`：后端
+- `dashboard/`：Dashboard
+- `backend/`：后端
 
 ## Monorepo 工作流（Nx + pnpm Workspace）
 
@@ -47,7 +47,7 @@ pnpm run typecheck:web          # TypeScript check for dashboard
 pnpm run build:ios              # Build iOS via Nx (requires Xcode CLI tools)
 ```
 
-### 后端命令（从 `server/backend/`）
+### 后端命令（从 `backend/`）
 
 ```bash
 pnpm run dev                    # tsx watch src/server.ts

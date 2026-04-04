@@ -9,10 +9,10 @@ maimaid is a maimai DX player ecosystem app. It's a monorepo with three main com
 ## Monorepo Structure
 
 - **`ios/maimaid/`** — iOS app (SwiftUI + SwiftData), the core product
-- **`server/backend/`** — Hono API server (TypeScript, Prisma, PostgreSQL)
-- **`web/dashboard/`** — Admin/user dashboard (Next.js 16, shadcn/ui, Tailwind CSS v4)
+- **`backend/`** — Hono API server (TypeScript, Prisma, PostgreSQL)
+- **`dashboard/`** — Admin/user dashboard (Next.js 16, shadcn/ui, Tailwind CSS v4)
 
-Orchestrated with **Nx** and **pnpm workspaces** (`pnpm@10.20.0`). The pnpm workspace covers `web/*` and `server/*`.
+Orchestrated with **Nx** and **pnpm workspaces** (`pnpm@10.20.0`). The pnpm workspace covers `dashboard` and `backend`.
 
 ## Common Commands
 
@@ -30,7 +30,7 @@ pnpm run typecheck:web          # TypeScript check for dashboard
 pnpm run build:ios              # Build iOS via Nx (requires Xcode CLI tools)
 ```
 
-### Backend-specific (from `server/backend/`)
+### Backend-specific (from `backend/`)
 
 ```bash
 pnpm run dev                    # tsx watch src/server.ts
@@ -57,7 +57,7 @@ Use XcodeBuildMCP (via the xcodebuildmcp-cli skill) for building, testing, and r
 - **Services/**: Backend API client (`BackendAPIClient`), session management (`BackendSessionManager`), cloud sync (`BackendCloudSyncService`), incremental sync, score sync, data import from Diving Fish / LXNS, image recognition (`MLScoreProcessor`, `MLChooseProcessor`, `MLDistinguishProcessor`), community aliases
 - **Localization**: `Localizable.strings` in `en`, `ja`, `zh-Hans`, `zh-Hant`. When adding user-facing strings, translate into all four languages.
 
-### Backend (`server/backend/`)
+### Backend (`backend/`)
 
 - **Framework**: Hono on Node.js (port 8787)
 - **DI**: tsyringe with token-based injection (`src/di/container.ts`, `src/di/tokens.ts`)
@@ -69,7 +69,7 @@ Use XcodeBuildMCP (via the xcodebuildmcp-cli skill) for building, testing, and r
 - **Key services**: AuthService, ImportService (Diving Fish / LXNS), CatalogService, ScoreService, SyncService, StaticBundleService, CommunityAliasService, MfaService, StorageService
 - **Tests**: Vitest, test files in `test/**/*.spec.ts`
 
-### Web Dashboard (`web/dashboard/`)
+### Web Dashboard (`dashboard/`)
 
 - **Framework**: Next.js 16 with static export (`output: "export"`)
 - **UI**: shadcn/ui + Radix UI + Tailwind CSS v4
@@ -90,7 +90,7 @@ The iOS app can operate fully offline with local SwiftData. When the backend is 
 
 ### Podman Local Dev Stack
 
-`server/backend/docker-compose.yml` provides: PostgreSQL 18.3 + pg_cron (port 54329), MinIO (API 9000, console 9001), and the backend service (port 8787). Copy `.env.docker.example` to `.env.docker` before starting.
+`backend/docker-compose.yml` provides: PostgreSQL 18.3 + pg_cron (port 54329), MinIO (API 9000, console 9001), and the backend service (port 8787). Copy `.env.docker.example` to `.env.docker` before starting.
 
 ## iOS Coding Guidelines
 

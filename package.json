@@ -1,7 +1,7 @@
 {
   "name": "maimaid-monorepo",
   "private": true,
-  "packageManager": "pnpm@10.20.0",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "nx": "nx",
     "graph": "nx graph",
