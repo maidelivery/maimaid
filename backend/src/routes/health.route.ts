@@ -5,8 +5,8 @@ import type { AppEnv } from "../types/hono.js";
 export const healthRoute = new Hono<AppEnv>();
 
 healthRoute.get("/", (c) => {
-  return ok(c, {
-    message: "ok",
-    timestamp: new Date().toISOString()
-  });
+	return ok(c, {
+		message: "ok",
+		timestamp: new Date().toISOString(),
+	});
 });

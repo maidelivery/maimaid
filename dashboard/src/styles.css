@@ -1,50 +1,50 @@
 html,
 body {
-  min-height: 100%;
+	min-height: 100%;
 }
 
 body {
-  margin: 0;
+	margin: 0;
 }
 
 a {
-  color: inherit;
+	color: inherit;
 }
 
 [data-slot="table-container"] {
-  -webkit-overflow-scrolling: touch;
+	-webkit-overflow-scrolling: touch;
 }
 
 .song-title-marquee {
-  width: 100%;
-  max-width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
+	width: 100%;
+	max-width: 100%;
+	overflow: hidden;
+	white-space: nowrap;
 }
 
 .song-title-marquee-track {
-  display: inline-flex;
-  width: max-content;
-  gap: 2rem;
-  animation: song-title-marquee 12s linear infinite;
+	display: inline-flex;
+	width: max-content;
+	gap: 2rem;
+	animation: song-title-marquee 12s linear infinite;
 }
 
 .song-title-marquee-text {
-  flex: 0 0 auto;
+	flex: 0 0 auto;
 }
 
 @keyframes song-title-marquee {
-  from {
-    transform: translateX(0);
-  }
+	from {
+		transform: translateX(0);
+	}
 
-  to {
-    transform: translateX(calc(-50% - 1rem));
-  }
+	to {
+		transform: translateX(calc(-50% - 1rem));
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .song-title-marquee-track {
-    animation: none;
-  }
+	.song-title-marquee-track {
+		animation: none;
+	}
 }

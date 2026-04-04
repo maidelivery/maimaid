@@ -8,22 +8,22 @@ import "./globals.css";
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "MaiMaid Dashboard",
-  description: "MaiMaid unified management dashboard",
+	title: "MaiMaid Dashboard",
+	description: "MaiMaid unified management dashboard",
 };
 
 type RootLayoutProps = {
-  children: ReactNode;
+	children: ReactNode;
 };
 
 export default function RootLayout({ children }: RootLayoutProps) {
-  return (
-    <html lang="zh-CN" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
-      <body>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          {children}
-        </ThemeProvider>
-      </body>
-    </html>
-  );
+	return (
+		<html lang="zh-CN" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
+			<body>
+				<ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+					{children}
+				</ThemeProvider>
+			</body>
+		</html>
+	);
 }

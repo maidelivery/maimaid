@@ -5,6 +5,9 @@
   "scripts": {
     "nx": "nx",
     "graph": "nx graph",
+    "format": "pnpm --filter backend run format && pnpm --filter dashboard run format",
+    "format:check": "pnpm --filter backend run format:check && pnpm --filter dashboard run format:check",
+    "lint": "pnpm --filter backend run lint && pnpm --filter dashboard run lint",
     "list:ios": "nx run ios:list",
     "clean:ios": "nx run ios:clean",
     "build:ios": "nx run ios:build",
@@ -29,6 +32,7 @@
     "@vitest/ui": "~4.0.0",
     "jiti": "2.4.2",
     "nx": "22.6.1",
+    "prettier": "^3.6.2",
     "vite": "^7.0.0",
     "vitest": "~4.0.0"
   }

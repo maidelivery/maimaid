@@ -8,7 +8,7 @@ const targetPath = resolve(currentDirectory, "../public/song-catalog.json");
 const targetDirectory = dirname(targetPath);
 
 if (!existsSync(sourcePath)) {
-  throw new Error(`Song catalog source not found: ${sourcePath}`);
+	throw new Error(`Song catalog source not found: ${sourcePath}`);
 }
 
 mkdirSync(targetDirectory, { recursive: true });

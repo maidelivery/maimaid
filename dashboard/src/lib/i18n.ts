@@ -8,28 +8,28 @@ import en from "../locales/en.json";
 import ja from "../locales/ja.json";
 
 const resources = {
-  "zh-Hans": zhHans,
-  "zh-Hant": zhHant,
-  en,
-  ja,
+	"zh-Hans": zhHans,
+	"zh-Hant": zhHant,
+	en,
+	ja,
 };
 
 i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources,
-    ns: ["language", "sidebar", "auth", "app", "tab", "scores", "settings", "adminStatic", "adminUsers", "aliases", "imports"],
-    defaultNS: "app",
-    fallbackLng: "zh-Hans",
-    supportedLngs: ["zh-Hans", "zh-Hant", "en", "ja"],
-    interpolation: {
-      escapeValue: false, // react already safes from xss
-    },
-    detection: {
-      order: ["localStorage", "navigator"],
-      caches: ["localStorage"],
-    },
-  });
+	.use(LanguageDetector)
+	.use(initReactI18next)
+	.init({
+		resources,
+		ns: ["language", "sidebar", "auth", "app", "tab", "scores", "settings", "adminStatic", "adminUsers", "aliases", "imports"],
+		defaultNS: "app",
+		fallbackLng: "zh-Hans",
+		supportedLngs: ["zh-Hans", "zh-Hant", "en", "ja"],
+		interpolation: {
+			escapeValue: false, // react already safes from xss
+		},
+		detection: {
+			order: ["localStorage", "navigator"],
+			caches: ["localStorage"],
+		},
+	});
 
 export default i18n;

@@ -7,7 +7,7 @@ Self-hosted unified serverless-style backend for:
 
 ## Stack
 
-- Runtime: Node.js
+- Runtime: Bun (Docker runtime) + Node.js (local dev scripts)
 - Framework: Hono
 - DI: tsyringe
 - ORM: Prisma
@@ -52,7 +52,7 @@ This repo now includes a ready-to-run local stack:
 
 - PostgreSQL 18.3 + `pg_cron`
 - MinIO (S3-compatible storage)
-- backend API service (Node 25.8.1)
+- backend API service (Bun 1.3.2 runtime)
 
 1. Prepare local env:
 
