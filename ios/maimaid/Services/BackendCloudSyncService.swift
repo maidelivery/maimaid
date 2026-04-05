@@ -298,6 +298,79 @@ enum BackendCloudSyncService {
         try context.save()
     }
 
+    static func overwriteRemoteProfileData(context: ModelContext, profileId: UUID) async throws {
+        guard BackendSessionManager.shared.isAuthenticated else {
+            throw BackendAPIError.unauthorized
+        }
+
+        guard let profile = try context.fetch(
+            FetchDescriptor<UserProfile>(predicate: #Predicate<UserProfile> { $0.id == profileId })
+        ).first else {
+            throw BackendAPIError(
+                statusCode: nil,
+                code: "profile_not_found",
+                message: "Local profile not found."
+            )
+        }
+
+        let sheets = try context.fetch(FetchDescriptor<Sheet>())
+        let scoreSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["_", "-"])
+        let recordSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["-", "_"])
+        let escapedProfileId = profile.id.uuidString.lowercased()
+        let resolvedAvatarURL = try await uploadAvatarIfNeeded(for: profile)
+
+        let upsertPayload = BackendProfileUpsertRequest(
+            profileId: escapedProfileId,
+            name: profile.name,
+            server: profile.server,
+            isActive: profile.isActive,
+            playerRating: profile.playerRating,
+            plate: profile.plate,
+            avatarUrl: resolvedAvatarURL,
+            dfUsername: profile.dfUsername,
+            b35Count: profile.b35Count,
+            b15Count: profile.b15Count,
+            b35RecLimit: profile.b35RecLimit,
+            b15RecLimit: profile.b15RecLimit,
+            createdAt: profile.createdAt
+        )
+
+        let _: BackendProfileUpsertResponse = try await BackendAPIClient.request(
+            path: "v1/profiles/upsert",
+            method: "POST",
+            body: upsertPayload,
+            authentication: .required
+        )
+
+        let profileScores = try context.fetch(
+            FetchDescriptor<Score>(predicate: #Predicate<Score> { $0.userProfileId == profileId })
+        )
+        let profileRecords = try context.fetch(
+            FetchDescriptor<PlayRecord>(predicate: #Predicate<PlayRecord> { $0.userProfileId == profileId })
+        )
+
+        let scoreEntries = profileScores.map { score in
+            buildScoreEntry(from: score, sheetMap: scoreSheetMap)
+        }
+        let recordEntries = profileRecords.map { record in
+            buildPlayRecordEntry(from: record, sheetMap: recordSheetMap)
+        }
+
+        let _: BackendOverwriteAck = try await BackendAPIClient.request(
+            path: "v1/scores/overwrite",
+            method: "POST",
+            body: BackendScoresOverwriteRequest(profileId: escapedProfileId, scores: scoreEntries),
+            authentication: .required
+        )
+
+        let _: BackendOverwriteAck = try await BackendAPIClient.request(
+            path: "v1/scores/play-records/overwrite",
+            method: "POST",
+            body: BackendPlayRecordsOverwriteRequest(profileId: escapedProfileId, records: recordEntries),
+            authentication: .required
+        )
+    }
+
     static func fetchCloudSnapshot() async throws -> CloudSnapshot {
         guard BackendSessionManager.shared.isAuthenticated else {
             throw BackendAPIError.unauthorized

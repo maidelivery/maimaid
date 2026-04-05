@@ -699,16 +699,16 @@ struct ScoreEntryView: View {
             context: modelContext
         )
         
+        try? modelContext.save()
+        cachedCurrentScore = savedScore
+
         Task {
-            await SyncManager.shared.uploadScoreImmediately(
+            await SyncManager.shared.syncAfterScoreSave(
                 sheet: sheet,
                 score: savedScore,
                 context: modelContext
             )
         }
-        
-        try? modelContext.save()
-        cachedCurrentScore = savedScore
         
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         withAnimation(feedbackAnimation) {

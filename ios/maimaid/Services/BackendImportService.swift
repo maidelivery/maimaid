@@ -5,6 +5,7 @@ struct BackendImportRunResponse: Decodable {
     let fetchedCount: Int
     let upsertedCount: Int
     let skippedCount: Int
+    let latestRevision: String?
 }
 
 private struct DivingFishImportRequest: Encodable {

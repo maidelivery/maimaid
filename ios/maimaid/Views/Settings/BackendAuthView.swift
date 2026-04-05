@@ -92,12 +92,12 @@ struct BackendAuthView: View {
             }
         }
         .sheet(item: $conflictState) { state in
-            AccountConflictResolutionSheet(
-                state: state,
+            SyncConflictResolutionSheet(
+                context: .account(state),
                 isApplying: isResolvingAccountConflict
-            ) { option in
+            ) { action in
                 Task {
-                    await applyAccountResolution(option)
+                    await applyAccountResolutionAction(action)
                 }
             }
             .interactiveDismissDisabled(true)
@@ -486,6 +486,20 @@ struct BackendAuthView: View {
     }
 
     @MainActor
+    private func applyAccountResolutionAction(_ action: SyncConflictResolutionSheetAction) async {
+        let option: AccountResolutionOption
+        switch action {
+        case .merge:
+            option = .mergeLocalAndCloud
+        case .keepLocal:
+            option = .overwriteCloudWithLocal
+        case .useRemote:
+            option = .overwriteLocalWithCloud
+        }
+        await applyAccountResolution(option)
+    }
+
+    @MainActor
     private func applyAccountResolution(_ option: AccountResolutionOption) async {
         guard !isResolvingAccountConflict else { return }
         isResolvingAccountConflict = true
@@ -641,102 +655,5 @@ struct BackendAuthView: View {
             let detail = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             showToast(message: String(localized: "settings.cloud.message.restoreFailed") + ": " + detail, error: true)
         }
-    }
-}
-
-private struct AccountConflictResolutionSheet: View {
-    let state: AccountConflictState
-    let isApplying: Bool
-    let onSelect: (AccountResolutionOption) -> Void
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    VStack(alignment: .leading) {
-                        Text("settings.cloud.resolution.message.current")
-                            .font(.subheadline)
-                        Text(verbatim: state.currentUserId)
-                            .font(.footnote.monospaced())
-                            .foregroundStyle(.secondary)
-                        Text("settings.cloud.resolution.message.owner")
-                            .font(.subheadline)
-                        Text(verbatim: state.ownerUserId ?? "-")
-                            .font(.footnote.monospaced())
-                            .foregroundStyle(.secondary)
-                    }
-                    .fixedSize(horizontal: false, vertical: true)
-                } header: {
-                    Text("settings.cloud.resolution.title")
-                }
-
-                Section("settings.cloud.resolution.section.actions") {
-                    actionRow(
-                        title: "settings.cloud.resolution.option.merge",
-                        icon: "arrow.triangle.merge",
-                        tint: .blue
-                    ) {
-                        onSelect(.mergeLocalAndCloud)
-                    }
-
-                    actionRow(
-                        title: "settings.cloud.resolution.option.overwriteCloud",
-                        icon: "icloud.and.arrow.up",
-                        tint: .orange
-                    ) {
-                        onSelect(.overwriteCloudWithLocal)
-                    }
-
-                    actionRow(
-                        title: "settings.cloud.resolution.option.overwriteLocal",
-                        icon: "iphone.and.arrow.forward",
-                        tint: .green
-                    ) {
-                        onSelect(.overwriteLocalWithCloud)
-                    }
-                }
-
-                if isApplying {
-                    Section {
-                        HStack {
-                            ProgressView()
-                            Text("settings.cloud.resolution.processing")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            }
-            .navigationTitle("settings.cloud.resolution.title")
-            .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-
-    private func actionRow(
-        title: String,
-        icon: String,
-        tint: Color,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 28, height: 28)
-                    .background(tint, in: .rect(cornerRadius: 8))
-
-                Text(LocalizedStringKey(title))
-                    .foregroundStyle(.primary)
-
-                Spacer()
-
-                Image(systemName: "arrow.up.forward.app")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(tint)
-            }
-        }
-        .buttonStyle(.plain)
-        .disabled(isApplying)
-        .opacity(isApplying ? 0.6 : 1)
     }
 }

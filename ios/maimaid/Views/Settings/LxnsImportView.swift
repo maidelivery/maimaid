@@ -27,6 +27,9 @@ struct LxnsImportView: View {
     @State private var progress: Double = 0
     @State private var totalRecords: Int = 0
     @State private var currentStep: String = ""
+    @State private var importConflictPreview: ImportSyncConflictPreview?
+    @State private var isResolvingImportConflict = false
+    @State private var pendingUpsertedCount: Int = 0
     @State private var hasValidatedSessionOnEntry = false
     @State private var isValidatingSession = false
     @State private var validatedAccessToken: String?
@@ -92,6 +95,17 @@ struct LxnsImportView: View {
                 await validateSessionOnEntryIfNeeded()
             }
         }
+        .sheet(item: $importConflictPreview) { preview in
+            SyncConflictResolutionSheet(
+                context: .importPreview(preview),
+                isApplying: isResolvingImportConflict
+            ) { action in
+                Task {
+                    await applyImportConflictResolutionAction(action, preview: preview)
+                }
+            }
+            .interactiveDismissDisabled(true)
+        }
     }
     
     @ViewBuilder
@@ -132,8 +146,8 @@ struct LxnsImportView: View {
                         await startQuickImport(profile: profile)
                     }
                 }
-                .disabled(isImporting || isValidatingSession)
-                .opacity(isImporting || isValidatingSession ? 0.6 : 1.0)
+                .disabled(isImporting || isValidatingSession || isResolvingImportConflict)
+                .opacity(isImporting || isValidatingSession || isResolvingImportConflict ? 0.6 : 1.0)
             }
             
             Section("import.lxns.manage.header") {
@@ -189,7 +203,7 @@ struct LxnsImportView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-                    .disabled(authCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isImporting)
+                    .disabled(authCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isImporting || isResolvingImportConflict)
                 }
                 .padding(.vertical, 4)
                 .listRowSeparator(.hidden)
@@ -388,10 +402,37 @@ struct LxnsImportView: View {
             progress = Double(result.fetchedCount)
             importStatus = String(localized: "import.status.processing \(totalRecords)")
 
-            try await BackendIncrementalSyncService.pullUpdates(
+            if result.upsertedCount == 0 {
+                try BackendIncrementalSyncService.updateLastSyncRevisionIfAvailable(
+                    result.latestRevision,
+                    context: modelContext
+                )
+                profile.lastImportDateLXNS = Date()
+                try modelContext.save()
+                pendingUpsertedCount = 0
+                importStatus = String(localized: "import.status.noChanges")
+                isImporting = false
+                return
+            }
+
+            importStatus = String(localized: "import.status.conflict.checking")
+            let preview = try await BackendIncrementalSyncService.previewImportConflicts(
                 context: modelContext,
-                profileId: profile.id,
-                force: false
+                profileId: profile.id
+            )
+            if preview.hasConflicts {
+                pendingUpsertedCount = result.upsertedCount
+                importConflictPreview = preview
+                importStatus = String(localized: "import.status.conflict.detected \(preview.conflicts.count)")
+                isImporting = false
+                return
+            }
+
+            importStatus = String(localized: "import.status.conflict.applying")
+            try await BackendIncrementalSyncService.applyImportConflictResolution(
+                .overwriteLocalWithImport,
+                preview: preview,
+                context: modelContext
             )
             profile.lastImportDateLXNS = Date()
             try modelContext.save()
@@ -402,6 +443,48 @@ struct LxnsImportView: View {
         }
         
         isImporting = false
+    }
+
+    @MainActor
+    private func applyImportConflictResolutionAction(
+        _ action: SyncConflictResolutionSheetAction,
+        preview: ImportSyncConflictPreview
+    ) async {
+        guard !isResolvingImportConflict else { return }
+        isResolvingImportConflict = true
+        defer { isResolvingImportConflict = false }
+
+        let option: ImportSyncResolutionOption
+        switch action {
+        case .merge:
+            option = .mergeLocalAndImport
+        case .keepLocal:
+            option = .keepLocalAndImportRemoteOnly
+        case .useRemote:
+            option = .overwriteLocalWithImport
+        }
+
+        do {
+            importStatus = String(localized: "import.status.conflict.applying")
+            try await BackendIncrementalSyncService.applyImportConflictResolution(
+                option,
+                preview: preview,
+                context: modelContext
+            )
+
+            let targetProfileId = preview.profileId
+            if let profile = try modelContext.fetch(
+                FetchDescriptor<UserProfile>(predicate: #Predicate<UserProfile> { $0.id == targetProfileId })
+            ).first {
+                profile.lastImportDateLXNS = Date()
+            }
+            try modelContext.save()
+            importStatus = String(localized: "import.status.success \(pendingUpsertedCount)")
+            importConflictPreview = nil
+            pendingUpsertedCount = 0
+        } catch {
+            importStatus = String(localized: "import.status.error.message \(error.localizedDescription)")
+        }
     }
 }
 
