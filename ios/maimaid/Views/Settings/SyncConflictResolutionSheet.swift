@@ -51,11 +51,13 @@ struct SyncConflictResolutionSheet: View {
 
                 if isApplying {
                     Section {
-                        HStack {
+                        HStack(spacing: 12) {
                             ProgressView()
                             Text(processingMessageKey)
+                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
+                        .padding(.vertical, 4)
                     }
                 }
             }
@@ -64,54 +66,56 @@ struct SyncConflictResolutionSheet: View {
         }
     }
 
+    // MARK: - Summary Section
+
     @ViewBuilder
     private var summarySection: some View {
         switch context {
         case let .account(state):
-            Section {
-                VStack(alignment: .leading) {
+            Section("settings.cloud.resolution.title") {
+                HStack(spacing: 8) {
                     Text("settings.cloud.resolution.message.current")
                         .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
                     Text(verbatim: state.currentUserId)
                         .font(.footnote.monospaced())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary)
+                }
+
+                HStack(spacing: 8) {
                     Text("settings.cloud.resolution.message.owner")
                         .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
                     Text(verbatim: state.ownerUserId ?? "-")
                         .font(.footnote.monospaced())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary)
                 }
-                .fixedSize(horizontal: false, vertical: true)
-            } header: {
-                Text("settings.cloud.resolution.title")
             }
+
         case let .importPreview(preview):
             Section {
-                VStack(alignment: .leading) {
-                    LabeledContent(
-                        String(localized: "settings.import.resolution.summary.localOnly"),
-                        value: "\(preview.localOnlyCount)"
-                    )
-                    LabeledContent(
-                        String(localized: "settings.import.resolution.summary.different"),
-                        value: "\(preview.differentCount)"
-                    )
-                }
-                .font(.subheadline)
+                statRow(
+                    icon: "tray.fill",
+                    iconTint: .blue,
+                    label: String(localized: "settings.import.resolution.summary.localOnly"),
+                    value: "\(preview.localOnlyCount)"
+                )
+
+                statRow(
+                    icon: "arrow.left.arrow.right",
+                    iconTint: .orange,
+                    label: String(localized: "settings.import.resolution.summary.different"),
+                    value: "\(preview.differentCount)"
+                )
             } header: {
                 Text("settings.import.resolution.section.summary")
-            } footer: {
-                Label {
-                    Text("settings.import.resolution.summary.footer")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                } icon: {
-                    Image(systemName: "info.circle")
-                }
             }
         }
     }
+
+    // MARK: - Conflicts Section
 
     @ViewBuilder
     private func importConflictsSection(preview: ImportSyncConflictPreview) -> some View {
@@ -143,6 +147,7 @@ struct SyncConflictResolutionSheet: View {
 
                         Image(systemName: isShowingAllImportConflicts ? "chevron.up" : "chevron.down")
                             .font(.caption)
+                            .contentTransition(.symbolEffect(.replace))
                     }
                     .foregroundStyle(.secondary)
                 }
@@ -157,12 +162,12 @@ struct SyncConflictResolutionSheet: View {
 
     @ViewBuilder
     private func importConflictRow(_ conflict: ImportScoreConflictItem) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
                 SongJacketView(
                     imageName: conflict.songImageName ?? "",
-                    size: 44,
-                    cornerRadius: 8
+                    size: 48,
+                    cornerRadius: 10
                 )
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -190,9 +195,11 @@ struct SyncConflictResolutionSheet: View {
         .padding(.vertical, 2)
     }
 
+    // MARK: - Score Comparison
+
     @ViewBuilder
     private func scoreComparisonRow(local: ImportScoreValue?, remote: ImportScoreValue?) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 8) {
             scorePanel(titleKey: "settings.import.resolution.value.local", value: local)
             scorePanel(titleKey: "settings.import.resolution.value.remote", value: remote)
         }
@@ -200,9 +207,9 @@ struct SyncConflictResolutionSheet: View {
 
     @ViewBuilder
     private func scorePanel(titleKey: LocalizedStringKey, value: ImportScoreValue?) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 3) {
             Text(titleKey)
-                .font(.caption2)
+                .font(.caption2.bold())
                 .foregroundStyle(.secondary)
 
             if let value {
@@ -242,7 +249,11 @@ struct SyncConflictResolutionSheet: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
     }
+
+    // MARK: - Processing Key
 
     private var processingMessageKey: LocalizedStringKey {
         switch context {
@@ -252,6 +263,8 @@ struct SyncConflictResolutionSheet: View {
             return "settings.import.resolution.processing"
         }
     }
+
+    // MARK: - Action Section
 
     @ViewBuilder
     private var actionSection: some View {
@@ -316,8 +329,33 @@ struct SyncConflictResolutionSheet: View {
         }
         return chartType.uppercased()
     }
+}
 
-    private func actionRow(
+// MARK: - Reusable Components
+
+private extension SyncConflictResolutionSheet {
+    func settingsIcon(icon: String, color: Color) -> some View {
+        Image(systemName: icon)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: 32, height: 32)
+            .background(color.gradient, in: RoundedRectangle(cornerRadius: 10))
+    }
+
+
+    func statRow(icon: String, iconTint: Color, label: String, value: String) -> some View {
+        HStack(spacing: 12) {
+            settingsIcon(icon: icon, color: iconTint)
+            Text(label)
+                .font(.subheadline)
+            Spacer()
+            Text(value)
+                .font(.subheadline.monospacedDigit().bold())
+                .foregroundStyle(.primary)
+        }
+    }
+
+    func actionRow(
         title: String,
         icon: String,
         tint: Color,
@@ -325,10 +363,7 @@ struct SyncConflictResolutionSheet: View {
     ) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(tint)
-                    .frame(width: 22, height: 22, alignment: .center)
+                settingsIcon(icon: icon, color: tint)
 
                 Text(LocalizedStringKey(title))
                     .foregroundStyle(.primary)
@@ -336,7 +371,7 @@ struct SyncConflictResolutionSheet: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.caption)
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.tertiary)
             }
         }
@@ -345,7 +380,7 @@ struct SyncConflictResolutionSheet: View {
         .opacity(isApplying ? 0.6 : 1)
     }
 
-    private func capsuleTag(text: String, background: Color) -> some View {
+    func capsuleTag(text: String, background: Color) -> some View {
         Text(text)
             .font(.caption2.bold())
             .foregroundStyle(.white)

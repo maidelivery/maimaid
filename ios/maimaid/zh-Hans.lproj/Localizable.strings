@@ -1,4 +1,4 @@
-/* 
+/*
   Localizable.strings
   maimaid
 */
@@ -277,6 +277,7 @@
 "import.df.token.setup.placeholder" = "导入令牌 (在查分器设置页获取，用于上送功能)";
 "import.df.action.bindImport" = "绑定并开始导入";
 "import.df.status.connecting" = "正在连接到 Diving Fish...";
+"import.df.summary.footer" = "用于从 Diving Fish 拉取并导入成绩。";
 
 // LXNS
 "import.lxns.title" = "从 LXNS 导入";
@@ -303,6 +304,7 @@
 "import.lxns.status.failed.expired" = "授权已过期，请重新登录。";
 "import.lxns.status.player" = "正在获取玩家信息...";
 "import.lxns.status.fetching" = "正在连接到 LXNS 拉取成绩数据...";
+"import.lxns.summary.footer" = "用于从 LXNS 拉取并导入成绩。";
 
 // Static Data Update
 "update.title" = "静态数据更新";
@@ -687,7 +689,6 @@
 "settings.import.resolution.section.summary" = "冲突概览";
 "settings.import.resolution.summary.localOnly" = "本地独有成绩";
 "settings.import.resolution.summary.different" = "同谱面成绩差异";
-"settings.import.resolution.summary.footer" = "开关仅控制第三方同步；此处用于处理导入后本地与导入成绩的冲突。";
 "settings.import.resolution.section.conflicts" = "冲突成绩明细";
 "settings.import.resolution.section.actions" = "请选择处理策略";
 "settings.import.resolution.option.merge" = "合并本地与导入（取更优）";

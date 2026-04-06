@@ -523,7 +523,7 @@ private extension LxnsImportView {
             
             Divider()
             
-            Label("settings.sync.footer", systemImage: "lock.shield.fill")
+            Label("import.lxns.summary.footer", systemImage: "square.and.arrow.down")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

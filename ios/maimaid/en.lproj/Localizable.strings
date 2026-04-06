@@ -1,4 +1,4 @@
-/* 
+/*
   Localizable.strings
   maimaid
 */
@@ -277,6 +277,7 @@
 "import.df.token.setup.placeholder" = "Token (for sync)";
 "import.df.action.bindImport" = "Bind & Import";
 "import.df.status.connecting" = "Connecting...";
+"import.df.summary.footer" = "This page imports scores from Diving Fish.";
 
 // LXNS
 "import.lxns.title" = "Import from LXNS";
@@ -303,6 +304,7 @@
 "import.lxns.status.failed.expired" = "Auth expired, relogin.";
 "import.lxns.status.player" = "Getting player info...";
 "import.lxns.status.fetching" = "Connecting...";
+"import.lxns.summary.footer" = "This page imports scores from LXNS.";
 
 // Static Data Update
 "update.title" = "Static Data Update";
@@ -687,7 +689,6 @@
 "settings.import.resolution.section.summary" = "Conflict Summary";
 "settings.import.resolution.summary.localOnly" = "Local-only scores";
 "settings.import.resolution.summary.different" = "Different values on same chart";
-"settings.import.resolution.summary.footer" = "This switch only controls third-party sync. This page resolves conflicts between local and imported scores.";
 "settings.import.resolution.section.conflicts" = "Conflicting Scores";
 "settings.import.resolution.section.actions" = "Choose a resolution strategy";
 "settings.import.resolution.option.merge" = "Merge local and import (keep better)";

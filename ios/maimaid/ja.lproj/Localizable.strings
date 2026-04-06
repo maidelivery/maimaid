@@ -1,4 +1,4 @@
-/* 
+/*
   Localizable.strings
   maimaid
 */
@@ -276,6 +276,7 @@
 "import.df.token.setup.placeholder" = "トークン（同期用）";
 "import.df.action.bindImport" = "連携してインポート";
 "import.df.status.connecting" = "接続中...";
+"import.df.summary.footer" = "このページは Diving Fish からスコアを取り込みます。";
 
 // LXNS
 "import.lxns.title" = "LXNS からインポート";
@@ -302,6 +303,7 @@
 "import.lxns.status.failed.expired" = "認証の有効期限が切れました。再ログインしてください。";
 "import.lxns.status.player" = "プレイヤー情報を取得中...";
 "import.lxns.status.fetching" = "接続中...";
+"import.lxns.summary.footer" = "このページは LXNS からスコアを取り込みます。";
 
 // Static Data Update
 "update.title" = "静的データの更新";
@@ -687,7 +689,6 @@
 "settings.import.resolution.section.summary" = "競合サマリー";
 "settings.import.resolution.summary.localOnly" = "ローカルのみのスコア";
 "settings.import.resolution.summary.different" = "同一譜面の値差分";
-"settings.import.resolution.summary.footer" = "このスイッチは第三者同期のみを制御します。この画面ではローカルとインポート結果の競合を解決します。";
 "settings.import.resolution.section.conflicts" = "競合スコア一覧";
 "settings.import.resolution.section.actions" = "処理方法を選択";
 "settings.import.resolution.option.merge" = "ローカルとインポートを統合（より良い値を採用）";

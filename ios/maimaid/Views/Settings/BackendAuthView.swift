@@ -31,6 +31,12 @@ struct BackendAuthView: View {
 
     @State private var toastMessage: String?
     @State private var isErrorToast = false
+    @State private var resolutionError: DisplayableError?
+
+    private struct DisplayableError: Identifiable {
+        let id = UUID()
+        let message: String
+    }
 
     private let webAuthPresentationContextProvider = BackendWebAuthPresentationContextProvider()
 
@@ -101,6 +107,12 @@ struct BackendAuthView: View {
                 }
             }
             .interactiveDismissDisabled(true)
+            .alert(item: $resolutionError) { error in
+                Alert(
+                    title: Text("Error"),
+                    message: Text(error.message)
+                )
+            }
         }
     }
 
@@ -511,7 +523,7 @@ struct BackendAuthView: View {
             showToast(message: "settings.cloud.resolution.success")
             await BackendAutoBackup.scheduleNextBackup(container: modelContext.container)
         } catch {
-            showToast(message: error.localizedDescription, error: true)
+            resolutionError = DisplayableError(message: error.localizedDescription)
         }
     }
 

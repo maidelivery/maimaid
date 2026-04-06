@@ -372,7 +372,7 @@ private extension DivingFishImportView {
             
             Divider()
             
-            Label("settings.sync.footer", systemImage: "lock.shield.fill")
+            Label("import.df.summary.footer", systemImage: "square.and.arrow.down")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

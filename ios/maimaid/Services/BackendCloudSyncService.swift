@@ -235,15 +235,15 @@ enum BackendCloudSyncService {
 
         for profile in profiles {
             let profileId = profile.id.uuidString.lowercased()
-            let resolvedAvatarURL = try await uploadAvatarIfNeeded(for: profile)
-            let upsertPayload = BackendProfileUpsertRequest(
+            
+            let initialUpsertPayload = BackendProfileUpsertRequest(
                 profileId: profileId,
                 name: profile.name,
                 server: profile.server,
                 isActive: profile.isActive,
                 playerRating: profile.playerRating,
                 plate: profile.plate,
-                avatarUrl: resolvedAvatarURL,
+                avatarUrl: profile.avatarUrl,
                 dfUsername: profile.dfUsername,
                 b35Count: profile.b35Count,
                 b15Count: profile.b15Count,
@@ -255,9 +255,33 @@ enum BackendCloudSyncService {
             let _: BackendProfileUpsertResponse = try await BackendAPIClient.request(
                 path: "v1/profiles/upsert",
                 method: "POST",
-                body: upsertPayload,
+                body: initialUpsertPayload,
                 authentication: .required
             )
+
+            if let resolvedAvatarURL = try await uploadAvatarIfNeeded(for: profile), resolvedAvatarURL != profile.avatarUrl {
+                // Perform a quick patch if the avatar URL was generated
+                let _: BackendProfileUpsertResponse = try await BackendAPIClient.request(
+                    path: "v1/profiles/upsert",
+                    method: "POST",
+                    body: BackendProfileUpsertRequest(
+                        profileId: profileId,
+                        name: profile.name,
+                        server: profile.server,
+                        isActive: profile.isActive,
+                        playerRating: profile.playerRating,
+                        plate: profile.plate,
+                        avatarUrl: resolvedAvatarURL,
+                        dfUsername: profile.dfUsername,
+                        b35Count: profile.b35Count,
+                        b15Count: profile.b15Count,
+                        b35RecLimit: profile.b35RecLimit,
+                        b15RecLimit: profile.b15RecLimit,
+                        createdAt: profile.createdAt
+                    ),
+                    authentication: .required
+                )
+            }
 
             let profileIdValue = profile.id
             let profileScores = try context.fetch(
@@ -317,16 +341,15 @@ enum BackendCloudSyncService {
         let scoreSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["_", "-"])
         let recordSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["-", "_"])
         let escapedProfileId = profile.id.uuidString.lowercased()
-        let resolvedAvatarURL = try await uploadAvatarIfNeeded(for: profile)
 
-        let upsertPayload = BackendProfileUpsertRequest(
+        let initialUpsertPayload = BackendProfileUpsertRequest(
             profileId: escapedProfileId,
             name: profile.name,
             server: profile.server,
             isActive: profile.isActive,
             playerRating: profile.playerRating,
             plate: profile.plate,
-            avatarUrl: resolvedAvatarURL,
+            avatarUrl: profile.avatarUrl,
             dfUsername: profile.dfUsername,
             b35Count: profile.b35Count,
             b15Count: profile.b15Count,
@@ -338,9 +361,32 @@ enum BackendCloudSyncService {
         let _: BackendProfileUpsertResponse = try await BackendAPIClient.request(
             path: "v1/profiles/upsert",
             method: "POST",
-            body: upsertPayload,
+            body: initialUpsertPayload,
             authentication: .required
         )
+        
+        if let resolvedAvatarURL = try await uploadAvatarIfNeeded(for: profile), resolvedAvatarURL != profile.avatarUrl {
+            let _: BackendProfileUpsertResponse = try await BackendAPIClient.request(
+                path: "v1/profiles/upsert",
+                method: "POST",
+                body: BackendProfileUpsertRequest(
+                    profileId: escapedProfileId,
+                    name: profile.name,
+                    server: profile.server,
+                    isActive: profile.isActive,
+                    playerRating: profile.playerRating,
+                    plate: profile.plate,
+                    avatarUrl: resolvedAvatarURL,
+                    dfUsername: profile.dfUsername,
+                    b35Count: profile.b35Count,
+                    b15Count: profile.b15Count,
+                    b35RecLimit: profile.b35RecLimit,
+                    b15RecLimit: profile.b15RecLimit,
+                    createdAt: profile.createdAt
+                ),
+                authentication: .required
+            )
+        }
 
         let profileScores = try context.fetch(
             FetchDescriptor<Score>(predicate: #Predicate<Score> { $0.userProfileId == profileId })
