@@ -30,17 +30,11 @@
 "home.dan.subtitle" = "View Dan exam songs for each version";
 
 // MARK: - Profile Edit
-"profile.edit.title" = "Profile";
 "profile.edit.changeAvatar" = "Change Avatar";
 "profile.edit.clearAvatar" = "Clear Avatar";
-"profile.edit.basicInfo" = "Basic Info";
-"profile.edit.name" = "Name";
-"profile.edit.name.placeholder" = "Enter name";
 "profile.edit.titleName" = "Title";
-"profile.edit.titleName.placeholder" = "Enter title";
 "profile.edit.presetIcon" = "Preset Avatars";
 "profile.edit.presetIcon.select" = "Select Preset Avatar";
-"profile.edit.save" = "Save";
 "profile.edit.cancel" = "Cancel";
 "profile.picker.title" = "Select Avatar";
 "profile.picker.search" = "Search avatar or category";
@@ -51,9 +45,6 @@
 "scanner.error.title" = "Failed to recognize song title";
 "scanner.chart.std" = "STD";
 "scanner.chart.dx" = "DX";
-"scanner.reset.hint" = "Unlocked needed"; // For lock status in scanner
-"scanner.unlock.needed" = "Unlock required";
-"scanner.unlock.notNeeded" = "No unlock required";
 "scanner.capture.button" = "Capture photo";
 "scanner.capture.saving" = "Saving photo";
 "scanner.capture.hint" = "Saves the current recognized score screen to your maimai album.";
@@ -64,10 +55,6 @@
 
 // MARK: - Settings
 "settings.title" = "Settings";
-"settings.data.header" = "Static Data";
-"settings.data.footer" = "Updates songs, aliases, and IDs. Auto-update supported.";
-"settings.data.syncing" = "Updating...";
-"settings.data.updateAll" = "Update static data";
 "settings.data.importDivingFish" = "Import from Diving Fish";
 "settings.data.importLxns" = "Import from LXNS";
 "settings.data.bound" = "Bound";
@@ -84,34 +71,11 @@
 "settings.appearance.showBoundingBox" = "Show bounding box";
 
 // MARK: - Data Transfer
-"settings.transfer.header" = "Data Management";
-"settings.transfer.footer" = "Export all scores, favorites and settings. Imports merge data, keeping higher scores.";
-"settings.transfer.export" = "Export Data";
-"settings.transfer.import" = "Import Data";
-"settings.transfer.error" = "Error";
-"settings.transfer.importConfirm" = "Confirm Import";
-"settings.transfer.importConfirmMessage" = "Import will merge data into the current app. Existing higher scores won't be overwritten. Continue?";
-"settings.transfer.importAction" = "Import";
-"settings.transfer.cancel" = "Cancel";
-"settings.transfer.importSuccess" = "Import Successful";
-"settings.transfer.importSummary" = "Imported %d scores, restored %d favorites.";
 
 // MARK: - iCloud Backup
-"settings.icloud.header" = "iCloud Backup";
-"settings.icloud.footer" = "Automatically backs up data to iCloud when app enters background. Restore on new devices.";
-"settings.icloud.unavailable" = "iCloud is not available. Please sign in to iCloud in Settings.";
-"settings.icloud.autoBackup" = "Auto Backup to iCloud";
-"settings.icloud.lastBackup" = "Last Backup";
-"settings.icloud.backupNow" = "Back Up Now";
-"settings.icloud.restore" = "Restore from iCloud";
-"settings.icloud.restoreConfirm" = "Confirm Restore";
-"settings.icloud.restoreConfirmMessage" = "Data will be restored from iCloud backup. Existing higher scores won't be overwritten. Continue?";
-"settings.icloud.restoreAction" = "Restore";
-"settings.icloud.restoreSuccess" = "Restore Successful";
 
 // MARK: - Useful Links
 "links.title" = "Useful Links";
-"links.tip" = "Tap cards to open in browser";
 "links.nearcade.title" = "nearcade";
 "links.nearcade.subtitle" = "Find nearby arcade locations";
 "links.dx_jp.title" = "maimai DX Japan";
@@ -129,7 +93,6 @@
 
 // MARK: - Song Detail
 "song.detail.copy.success %@" = "Copied %@";
-"song.detail.region.cn" = "China";
 "song.detail.stats.fitDiff" = "Fitted Diff";
 "song.detail.stats.avgRate" = "Avg. Rate";
 "song.detail.stats.sampleCount" = "Samples";
@@ -142,7 +105,6 @@
 "song.detail.metadata.releaseDate" = "Release";
 "song.detail.region.jp" = "Japan";
 "song.detail.region.intl" = "Intl";
-"song.detail.region.usa" = "USA";
 "song.detail.region.cn" = "China";
 "song.detail.lock.required" = "Lock";
 "song.detail.lock.notRequired" = "No lock";
@@ -205,7 +167,6 @@
 "score.entry.validation.dxRange %lld" = "DX Score must not exceed %lld.";
 "score.entry.savedHint" = "Score saved. Review it and tap Done when finished.";
 "score.entry.save" = "Save Score";
-"score.entry.saved" = "Saved";
 
 // MARK: - Content View / Sorting
 "songs.title" = "Songs";
@@ -235,7 +196,6 @@
 "plate.menu.version" = "Version";
 "plate.menu.difficulty" = "Difficulty";
 "plate.menu.plate" = "Plate";
-"plate.section.count %@ %lld" = "Lv.%@ (%lld charts)";
 
 "极牌" = "极 Plate";
 "将牌" = "将 Plate";
@@ -248,10 +208,6 @@
 "import.status.importing" = "Importing...";
 "import.status.failed" = "Failed";
 "import.status.failed.network" = "Network error";
-"import.status.failed.message %@" = "Failed: %@";
-"import.status.failed.code %lld" = "HTTP Error %lld";
-"import.status.failed.noRecords" = "No records";
-"import.status.failed.empty" = "No scores found";
 "import.status.processing %lld" = "Processing %lld records...";
 "import.status.success %lld" = "Imported %lld scores";
 "import.status.noChanges" = "Import complete: no new or changed scores, skipped conflict check.";
@@ -298,54 +254,14 @@
 "import.lxns.error.clientId" = "Dev Error: Client ID not configured.";
 "import.lxns.error.security" = "Session lost, try Step 1 again.";
 "import.lxns.status.exchanging" = "Exchanging token...";
-"import.lxns.status.failed.token %@" = "Token error: %@";
 "import.lxns.status.failed.networkToken" = "Network error";
 "import.lxns.status.refreshing" = "Refreshing...";
 "import.lxns.status.failed.expired" = "Auth expired, relogin.";
-"import.lxns.status.player" = "Getting player info...";
 "import.lxns.status.fetching" = "Connecting...";
 "import.lxns.summary.footer" = "This page imports scores from LXNS.";
 
 // Static Data Update
 "update.title" = "Static Data Update";
-"update.control.header" = "Update Control";
-"update.action.now" = "Update Static Data Now";
-"update.options.header" = "Options";
-"update.option.remoteData" = "Base song data";
-"update.option.aliasesAndIds" = "Aliases & chart IDs";
-"update.option.coversMissing" = "Download missing covers";
-"update.option.iconsDataAndImages" = "Icon data & images";
-"update.option.danData" = "Dan data";
-"update.option.chartStats" = "Chart Stats";
-"update.option.utageChartStats" = "Utage note totals";
-"update.options.footer" = "Aliases also sync song/chart IDs. Covers and icons only download missing assets and do not overwrite existing files.";
-"update.control.selectAtLeastOne" = "Select at least one update option.";
-"update.control.error %@" = "Sync failed: %@";
-"update.logs.header" = "Logs";
-"update.auto.header" = "Scheduled Update Check";
-"update.auto.footer" = "iOS runs checks opportunistically in the background, or the app may wait until the next launch. Exact timing is not guaranteed.";
-"update.auto.interval" = "Check Interval";
-"update.interval.disabled" = "Disabled";
-"update.interval.days.1" = "1 Day";
-"update.interval.days.7" = "7 Days";
-"update.interval.days.14" = "14 Days";
-"update.interval.days.30" = "30 Days";
-"update.debug.header" = "Debug Info";
-"update.debug.lastUpdate" = "Last Update";
-"update.debug.never" = "Never";
-"update.debug.timeSince" = "Time Since";
-"update.debug.timeAgo.days %lld %lld" = "%lldd %lldh ago";
-"update.debug.timeAgo.hours %lld" = "%lldh ago";
-"update.debug.totalSongs" = "Total Songs";
-"update.debug.totalSheets" = "Total Sheets";
-"update.debug.totalCategories" = "Categories";
-"update.debug.utageSongs" = "Utage Songs";
-"update.debug.songsWithAliases" = "Songs with Aliases";
-"update.debug.knownInternalLevels" = "Known Constants";
-"update.debug.totalIcons" = "Preset Avatars";
-"update.debug.totalDanCategories" = "Dan Categories";
-"update.debug.totalDanSections" = "Dan Sections";
-"update.debug.appVersion" = "App Version";
 
 // MARK: - Best Table
 "bestTable.title" = "Best Table";
@@ -372,11 +288,8 @@
 "bestTable.settings.version" = "Game Version";
 "bestTable.settings.version.current" = "Current Version";
 "bestTable.settings.version.reset" = "Reset";
-"bestTable.settings.version.overrideHint" = "Temporarily using %@ as latest version";
-"bestTable.settings.version.custom" = "%@ (Custom)";
 "bestTable.settings.version.unknown" = "Unknown";
 "bestTable.settings.version.auto" = "Auto";
-"bestTable.settings.version.auto.footer" = "Server default: %@";
 "bestTable.settings.version.available" = "Available Versions";
 "bestTable.settings.version.title" = "Select Version";
 "bestTable.settings.version.cancel" = "Cancel";
@@ -432,7 +345,6 @@
 "data.sync.status.downloadingCovers %lld %lld" = "Downloding covers (%lld/%lld)";
 "data.sync.status.downloadingIcons" = "Downloading icons...";
 "data.sync.log.downloadingIcons %lld" = "Downloading %lld icons...";
-"data.sync.status.downloadingIconsProgress %lld %lld" = "Downloading icons: %lld/%lld";
 "data.sync.status.saving" = "Saving data...";
 "data.sync.status.completed" = "Update completed!";
 "data.sync.status.failed %@" = "Error: %@";
@@ -441,17 +353,14 @@
 "server.jp" = "Japan";
 "server.intl" = "International";
 "server.cn" = "China";
-"server.usa" = "USA";
 
 // MARK: - User Profile
 "userProfile.title" = "User Profiles";
 "userProfile.empty.title" = "No Profiles";
 "userProfile.empty.description" = "Create a profile to get started";
-"userProfile.create" = "Create Profile";
 "userProfile.edit" = "Edit";
 "userProfile.delete" = "Delete";
 "userProfile.active" = "Active";
-"userProfile.switchTo" = "Switch";
 "userProfile.unnamed" = "Unnamed";
 "userProfile.defaultName" = "Player";
 "userProfile.createTitle" = "Create Profile";
@@ -485,12 +394,9 @@
 "scoreQuery.sort.rating" = "Rating";
 "scoreQuery.sort.achievement" = "Achievement";
 "scoreQuery.sort.level" = "Level";
-"scoreQuery.display.grid" = "Grid";
-"scoreQuery.display.list" = "List";
 "scoreQuery.badge.rank" = "Rank";
 "scoreQuery.badge.fc" = "FC";
 "scoreQuery.badge.fs" = "FS";
-"scoreQuery.columns" = "Col";
 "scoreQuery.empty" = "No scores yet";
 "scoreQuery.results" = "results";
 "scoreQuery.songNotFound" = "Song not found";
@@ -507,11 +413,7 @@
 "scoreQuery.export.imageTitle.constants" = "%@ Constant Table";
 "scoreQuery.export.imageTitle.scores" = "%@ Constant Table with Scores";
 "scoreQuery.export.imageSummary" = "%d sections · %d regular charts";
-"scoreQuery.export.imageMode.constants" = "Constants";
-"scoreQuery.export.imageMode.scores" = "With Scores";
 "scoreQuery.export.watermark" = "Generated by maimaid";
-"scoreQuery.export.footer.constants" = "Regular charts only";
-"scoreQuery.export.footer.scores" = "Regular charts with score overlays";
 
 // MARK: - Cloud Sync
 "settings.cloud.title" = "Cloud Account";
@@ -525,31 +427,22 @@
 "settings.cloud.login.title" = "Cloud Login";
 "settings.cloud.login.subtitle" = "Sign in with your email to enable cloud sync services";
 "settings.cloud.login.button" = "Login";
-"settings.cloud.signup.title" = "Create Cloud Account";
 "settings.cloud.signup.subtitle" = "Sign up with your email to enable cloud sync services";
 "settings.cloud.signup.button" = "Sign Up";
-"settings.cloud.mode.login" = "Login";
-"settings.cloud.mode.signup" = "Sign up";
-"settings.cloud.email" = "Email";
-"settings.cloud.password" = "Password";
 "settings.cloud.signup.passwordRequirement" = "Password must be at least 8 characters and include lowercase, uppercase, digits, and symbols.";
 "settings.cloud.forgotPassword" = "Forgot Password?";
-"settings.cloud.resendVerification" = "Resend Verification Email";
 "settings.cloud.recovery.title" = "Reset Password";
 "settings.cloud.recovery.subtitle" = "The recovery link is verified. Set a new password to complete account recovery.";
 "settings.cloud.recovery.section" = "Set New Password";
 "settings.cloud.recovery.newPassword" = "New Password";
-"settings.cloud.recovery.confirmPassword" = "Confirm New Password";
 "settings.cloud.recovery.updateButton" = "Update Password";
 "settings.cloud.recovery.cancel" = "Cancel";
 "settings.cloud.privacy.hint" = "Your account information is used to enable cloud sync when you sign in. Data is stored securely on Backend.";
 "settings.cloud.message.loginSuccess" = "Login successful!";
-"settings.cloud.message.signupSuccess" = "Signup successful!";
 "settings.cloud.message.authLinkSuccess" = "Account verification completed. You can now sign in.";
 "settings.cloud.message.authLinkFailed" = "Verification link is invalid or expired.";
 "settings.cloud.message.recoveryLinkOpened" = "Recovery link verified. Please set a new password.";
 "settings.cloud.message.recoveryLinkInvalid" = "Password reset link is invalid or expired.";
-"settings.cloud.message.passwordMismatch" = "The two passwords do not match.";
 "settings.cloud.message.passwordRequirementNotMet" = "Password does not meet the required format.";
 "settings.cloud.message.passwordUpdated" = "Password updated successfully!";
 "settings.cloud.message.emailRateLimited" = "You can request only one auth email per minute.";
@@ -557,8 +450,6 @@
 "settings.cloud.message.emailNotRegistered" = "This email is not registered.";
 "settings.cloud.message.emailInvalidFormat" = "Please enter a valid email address.";
 "settings.cloud.message.signupVerificationSent" = "Signup successful! Check your email to verify your account.";
-"settings.cloud.message.verificationEmailResent" = "Verification email sent. Please check your inbox.";
-"settings.cloud.message.resetEmailSent" = "Password reset email sent. Please check your inbox.";
 "settings.cloud.message.backupSuccess" = "Backup successful!";
 "settings.cloud.message.backupFailed" = "Backup failed";
 "settings.cloud.message.restoreSuccess" = "Restore successful!";
@@ -581,10 +472,8 @@
 "avatar.editor.hint" = "Drag to position, pinch to zoom, or rotate with two fingers.";
 "avatar.editor.reset" = "Reset";
 "avatar.editor.apply" = "Apply Crop";
-"avatar.editor.reedit" = "Edit Avatar";
 
 // MARK: - Onboarding
-"onboarding.title" = "Welcome to\nmaimaid";
 "onboarding.titlePrefix" = "Welcome to";
 "onboarding.appName" = "maimaid";
 "onboarding.subtitle" = "See the core value at a glance, then jump right in.";
@@ -594,13 +483,8 @@
 "onboarding.feature.localOffline.detail" = "Your data stays on device and remains available even without network.";
 "onboarding.feature.multiUser" = "Multi-user support";
 "onboarding.feature.multiUser.detail" = "Create and switch multiple profiles to manage each player separately.";
-"onboarding.startButton" = "Get Started";
-"onboarding.download.sectionTitle" = "Static Resource Download";
-"onboarding.download.required" = "Download static resources before first use. You will enter Home automatically when done.";
-"onboarding.download.failed" = "Download failed. Check your connection and try again.";
 "onboarding.download.action.start" = "Download and Continue";
 "onboarding.download.action.retry" = "Retry Download";
-"onboarding.download.action.inProgress" = "Downloading...";
 
 // MARK: - Community Alias
 "home.communityAlias.title" = "Community Alias Voting";
@@ -622,7 +506,6 @@
 "community.alias.submit.duplicateLxns" = "This alias already exists in LXNS and cannot be submitted again.";
 "community.alias.submit.duplicateCommunity" = "This alias already exists in community aliases and cannot be submitted again.";
 "community.alias.submit.adminRejectedLocked" = "This alias was rejected by an admin. Only admins can submit it again.";
-"community.alias.submit.quotaExceeded" = "Daily submission limit reached (5).";
 "community.alias.submit.loginRequired" = "Please sign in to your cloud account before submitting.";
 "community.alias.submit.invalidRequest" = "Invalid submission format. Please check your input.";
 "community.alias.board.title" = "Community Alias Voting";
@@ -635,7 +518,6 @@
 "community.alias.board.empty.message" = "Check back later, or submit an alias from song details first.";
 "community.alias.board.loading" = "Loading voting board...";
 "community.alias.board.group.subtitle %lld" = "%lld alias candidates";
-"community.alias.board.deadline %@" = "Ends %@";
 "community.alias.vote.support %lld" = "Support %lld";
 "community.alias.vote.oppose %lld" = "Oppose %lld";
 "community.alias.vote.cancelSupport %lld" = "Unvote support %lld";
@@ -643,23 +525,7 @@
 "community.alias.board.tip.loginRequired" = "Please sign in before voting.";
 "community.alias.board.tip.voteFailedFallback" = "Vote failed. Please try again later.";
 "community.alias.board.tip.voteUpdated" = "Vote updated.";
-"community.alias.service.submit.unconfigured" = "Backend is not configured, submission unavailable.";
-"community.alias.service.submit.sessionInvalid" = "Login session is invalid or expired. Please sign out and sign in again.";
-"community.alias.service.submit.sessionExpiredRelogin" = "Login session has expired. Please sign out and sign in again.";
-"community.alias.service.submit.sessionExpiredRetry" = "Login session has expired. Please sign in again before submitting.";
-"community.alias.service.submit.requestFailed %@" = "Submission request failed: %@";
 "community.alias.service.vote.sessionInvalid" = "Login session is invalid. Please sign in again before voting.";
-"community.alias.service.vote.responseAbnormal %@" = "Unexpected vote response: %@";
-"community.alias.service.vote.emptyResponse" = "Vote returned empty response. Pull to refresh and retry.";
-"community.alias.service.vote.error.windowClosed" = "This entry has passed the voting deadline. Pull to refresh the list.";
-"community.alias.service.vote.error.notVoting" = "This entry has already been settled. Refresh the voting list.";
-"community.alias.service.vote.error.authExpired" = "Your login has expired. Please sign in again.";
-"community.alias.service.vote.error.rpcSignature" = "Vote failed: backend RPC signature mismatch. Please apply the latest vote hotfix SQL.";
-"community.alias.service.vote.error.rpcAmbiguous" = "Vote failed: backend RPC has ambiguous fields. Please apply the latest vote ambiguous hotfix SQL.";
-"community.alias.service.vote.error.permissionDenied" = "Vote failed: database permission denied. Check GRANT/RLS for community_alias_vote.";
-"community.alias.service.vote.error.rls" = "Vote failed: blocked by RLS policy. Check policies for community_alias_votes.";
-"community.alias.service.vote.error.detail %@" = "Vote failed: %@";
-"community.alias.service.vote.error.generic" = "Vote failed. Please try again later.";
 "song.detail.tolerance.limit" = "Max";
 
 // MARK: - Data Sync (Additional)
@@ -695,12 +561,8 @@
 "settings.import.resolution.option.keepLocal" = "Prefer local (add import-only)";
 "settings.import.resolution.option.overwriteLocal" = "Overwrite local with import";
 "settings.import.resolution.processing" = "Resolving import conflicts...";
-"settings.import.resolution.kind.localOnly" = "Local only";
-"settings.import.resolution.kind.different" = "Different score";
 "settings.import.resolution.value.local" = "Local";
 "settings.import.resolution.value.remote" = "Import";
 "settings.import.resolution.value.missing" = "-";
 "settings.import.resolution.more.show %lld" = "Show more (%lld remaining)";
 "settings.import.resolution.more.hide" = "Collapse remaining conflicts";
-"settings.import.resolution.score.line.main %@ %@ %lld" = "%@ · %@ · DX:%lld";
-"settings.import.resolution.score.line.detail %@ %@ %@" = "FC:%@ FS:%@ Time:%@";

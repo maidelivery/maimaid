@@ -30,17 +30,11 @@
 "home.dan.subtitle" = "各バージョンの段位課題曲を確認";
 
 // MARK: - Profile Edit
-"profile.edit.title" = "プロフィール";
 "profile.edit.changeAvatar" = "アバターの変更";
 "profile.edit.clearAvatar" = "アバターを削除";
-"profile.edit.basicInfo" = "基本情報";
-"profile.edit.name" = "名前";
-"profile.edit.name.placeholder" = "名前を入力してください";
 "profile.edit.titleName" = "タイトル";
-"profile.edit.titleName.placeholder" = "タイトルを入力してください";
 "profile.edit.presetIcon" = "プリセットアバター";
 "profile.edit.presetIcon.select" = "プリセットアバターを選択";
-"profile.edit.save" = "保存";
 "profile.edit.cancel" = "キャンセル";
 "profile.picker.title" = "アバターの選択";
 "profile.picker.search" = "アバターまたはカテゴリを検索";
@@ -51,9 +45,6 @@
 "scanner.error.title" = "曲名を認識できませんでした";
 "scanner.chart.std" = "STD";
 "scanner.chart.dx" = "DX";
-"scanner.reset.hint" = "ロック解除が必要です"; // For lock status in scanner
-"scanner.unlock.needed" = "ロック解除が必要です";
-"scanner.unlock.notNeeded" = "ロック解除は必要ありません";
 "scanner.capture.button" = "写真を撮影";
 "scanner.capture.saving" = "写真を保存中";
 "scanner.capture.hint" = "現在認識中のスコア画面を maimai アルバムに保存します。";
@@ -64,10 +55,6 @@
 
 // MARK: - Settings
 "settings.title" = "設定";
-"settings.data.header" = "静的データ";
-"settings.data.footer" = "曲、エイリアス、ID を更新します。自動更新がサポートされています。";
-"settings.data.syncing" = "更新中...";
-"settings.data.updateAll" = "静的データを更新する";
 "settings.data.importDivingFish" = "Diving Fish からインポート";
 "settings.data.importLxns" = "LXNS からインポート";
 "settings.data.bound" = "連携済み";
@@ -84,34 +71,11 @@
 "settings.appearance.showBoundingBox" = "境界ボックスを表示";
 
 // MARK: - Data Transfer
-"settings.transfer.header" = "データ管理";
-"settings.transfer.footer" = "すべてのスコア、お気に入り、設定をエクスポートします。インポートではデータがマージされ、より高いスコアが維持されます。";
-"settings.transfer.export" = "データのエクスポート";
-"settings.transfer.import" = "データのインポート";
-"settings.transfer.error" = "エラー";
-"settings.transfer.importConfirm" = "インポートの確認";
-"settings.transfer.importConfirmMessage" = "インポートしたデータを現在のアプリにマージします。既存の高いスコアは上書きされません。続行しますか？";
-"settings.transfer.importAction" = "インポート";
-"settings.transfer.cancel" = "キャンセル";
-"settings.transfer.importSuccess" = "インポート成功";
-"settings.transfer.importSummary" = "%d スコアをインポートし、%d のお気に入りを復元しました。";
 
 // MARK: - iCloud Backup
-"settings.icloud.header" = "iCloudバックアップ";
-"settings.icloud.footer" = "アプリがバックグラウンドになると、データが自動的に iCloud にバックアップされます。新しいデバイスで復元します。";
-"settings.icloud.unavailable" = "iCloudは利用できません。設定で iCloud にサインインしてください。";
-"settings.icloud.autoBackup" = "iCloudへの自動バックアップ";
-"settings.icloud.lastBackup" = "最後のバックアップ";
-"settings.icloud.backupNow" = "今すぐバックアップ";
-"settings.icloud.restore" = "iCloudから復元";
-"settings.icloud.restoreConfirm" = "復元の確認";
-"settings.icloud.restoreConfirmMessage" = "iCloud バックアップからデータを復元します。既存の高いスコアは上書きされません。続行しますか？";
-"settings.icloud.restoreAction" = "復元する";
-"settings.icloud.restoreSuccess" = "復元に成功しました";
 
 // MARK: - Useful Links
 "links.title" = "役立つリンク";
-"links.tip" = "カードをタップしてブラウザで開きます";
 "links.nearcade.title" = "nearcade";
 "links.nearcade.subtitle" = "近くのゲームセンターの場所を探す";
 "links.dx_jp.title" = "maimai DX Japan";
@@ -129,7 +93,6 @@
 
 // MARK: - Song Detail
 "song.detail.copy.success %@" = "%@ をコピーしました";
-"song.detail.region.cn" = "中国";
 "song.detail.stats.fitDiff" = "擬合難度";
 "song.detail.stats.avgRate" = "平均レート";
 "song.detail.stats.sampleCount" = "サンプル";
@@ -141,7 +104,6 @@
 "song.detail.metadata.releaseDate" = "リリース";
 "song.detail.region.jp" = "日本";
 "song.detail.region.intl" = "国際";
-"song.detail.region.usa" = "USA";
 "song.detail.region.cn" = "中国";
 "song.detail.lock.required" = "ロック";
 "song.detail.lock.notRequired" = "ロックなし";
@@ -204,7 +166,6 @@
 "score.entry.validation.dxRange %lld" = "DX スコアは %lld を超えてはなりません。";
 "score.entry.savedHint" = "スコアが保存されました。内容を確認し、完了したら「完了」をタップします。";
 "score.entry.save" = "スコアの保存";
-"score.entry.saved" = "保存されました";
 
 // MARK: - Content View / Sorting
 "songs.title" = "楽曲";
@@ -234,7 +195,6 @@
 "plate.menu.version" = "バージョン";
 "plate.menu.difficulty" = "難易度";
 "plate.menu.plate" = "プレート";
-"plate.section.count %@ %lld" = "Lv.%@ (%lld チャート)";
 
 "极牌" = "極プレート";
 "将牌" = "将プレート";
@@ -247,10 +207,6 @@
 "import.status.importing" = "インポート中...";
 "import.status.failed" = "失敗";
 "import.status.failed.network" = "ネットワークエラー";
-"import.status.failed.message %@" = "失敗しました: %@";
-"import.status.failed.code %lld" = "HTTP エラー %lld";
-"import.status.failed.noRecords" = "記録がありません";
-"import.status.failed.empty" = "スコアが見つかりませんでした";
 "import.status.processing %lld" = "%lld レコードを処理しています...";
 "import.status.success %lld" = "%lld スコアをインポートしました";
 "import.status.noChanges" = "インポート完了: 新規/更新スコアがないため、競合チェックをスキップしました。";
@@ -297,54 +253,14 @@
 "import.lxns.error.clientId" = "開発エラー: クライアント ID が構成されていません。";
 "import.lxns.error.security" = "セッションが失われました。手順 1 をもう一度試してください。";
 "import.lxns.status.exchanging" = "トークンを交換中...";
-"import.lxns.status.failed.token %@" = "トークンエラー: %@";
 "import.lxns.status.failed.networkToken" = "ネットワークエラー";
 "import.lxns.status.refreshing" = "状態を更新中...";
 "import.lxns.status.failed.expired" = "認証の有効期限が切れました。再ログインしてください。";
-"import.lxns.status.player" = "プレイヤー情報を取得中...";
 "import.lxns.status.fetching" = "接続中...";
 "import.lxns.summary.footer" = "このページは LXNS からスコアを取り込みます。";
 
 // Static Data Update
 "update.title" = "静的データの更新";
-"update.control.header" = "更新制御";
-"update.action.now" = "静的データを今すぐ更新する";
-"update.options.header" = "オプション";
-"update.option.remoteData" = "ベースソングデータ";
-"update.option.aliasesAndIds" = "エイリアスとチャート ID";
-"update.option.coversMissing" = "不足しているカバーをダウンロードする";
-"update.option.iconsDataAndImages" = "アイコンデータと画像";
-"update.option.danData" = "段位データ";
-"update.option.chartStats" = "チャート統計";
-"update.option.utageChartStats" = "宴譜ノーツ合計";
-"update.options.footer" = "エイリアスは曲/チャート ID も同期します。カバーとアイコンは不足しているアセットをダウンロードするだけであり、既存のファイルは上書きされません。";
-"update.control.selectAtLeastOne" = "少なくとも 1 つの更新オプションを選択します。";
-"update.control.error %@" = "同期に失敗しました: %@";
-"update.logs.header" = "ログ";
-"update.auto.header" = "スケジュールされたアップデートのチェック";
-"update.auto.footer" = "iOS はバックグラウンドで便宜的にチェックを実行するか、アプリが次の起動まで待機することがあります。正確なタイミングは保証されません。";
-"update.auto.interval" = "チェック間隔";
-"update.interval.disabled" = "無効";
-"update.interval.days.1" = "1日";
-"update.interval.days.7" = "7日間";
-"update.interval.days.14" = "14日間";
-"update.interval.days.30" = "30日";
-"update.debug.header" = "デバッグ情報";
-"update.debug.lastUpdate" = "最終更新";
-"update.debug.never" = "なし";
-"update.debug.timeSince" = "経過時間";
-"update.debug.timeAgo.days %lld %lld" = "%lld日 %lld時間前";
-"update.debug.timeAgo.hours %lld" = "%lld時間前";
-"update.debug.totalSongs" = "総曲数";
-"update.debug.totalSheets" = "譜面総数";
-"update.debug.totalCategories" = "カテゴリー";
-"update.debug.utageSongs" = "宴曲数";
-"update.debug.songsWithAliases" = "別名のある曲";
-"update.debug.knownInternalLevels" = "既知の定数";
-"update.debug.totalIcons" = "プリセットアバター";
-"update.debug.totalDanCategories" = "ダンのカテゴリー";
-"update.debug.totalDanSections" = "ダンセクション";
-"update.debug.appVersion" = "アプリのバージョン";
 
 // MARK: - Best Table
 "bestTable.title" = "ベストテーブル";
@@ -371,11 +287,8 @@
 "bestTable.settings.version" = "ゲームバージョン";
 "bestTable.settings.version.current" = "現在のバージョン";
 "bestTable.settings.version.reset" = "リセット";
-"bestTable.settings.version.overrideHint" = "一時的に %@ を最新バージョンとして使用します";
-"bestTable.settings.version.custom" = "%@ (カスタム)";
 "bestTable.settings.version.unknown" = "未知";
 "bestTable.settings.version.auto" = "自動";
-"bestTable.settings.version.auto.footer" = "サーバーのデフォルト: %@";
 "bestTable.settings.version.available" = "利用可能なバージョン";
 "bestTable.settings.version.title" = "バージョンの選択";
 "bestTable.settings.version.cancel" = "キャンセル";
@@ -431,7 +344,6 @@
 "data.sync.status.downloadingCovers %lld %lld" = "カバーのダウンロード (%lld/%lld)";
 "data.sync.status.downloadingIcons" = "アイコンをダウンロード中...";
 "data.sync.log.downloadingIcons %lld" = "%lld アイコンをダウンロードしています...";
-"data.sync.status.downloadingIconsProgress %lld %lld" = "アイコンのダウンロード: %lld/%lld";
 "data.sync.status.saving" = "データを保存中...";
 "data.sync.status.completed" = "アップデート完了！";
 "data.sync.status.failed %@" = "エラー: %@";
@@ -440,17 +352,14 @@
 "server.jp" = "日本";
 "server.intl" = "国際";
 "server.cn" = "中国";
-"server.usa" = "USA";
 
 // MARK: - User Profile
 "userProfile.title" = "ユーザープロフィール";
 "userProfile.empty.title" = "プロファイルがありません";
 "userProfile.empty.description" = "始めるにはプロフィールを作成してください";
-"userProfile.create" = "プロファイルの作成";
 "userProfile.edit" = "編集";
 "userProfile.delete" = "削除";
 "userProfile.active" = "アクティブ";
-"userProfile.switchTo" = "切替";
 "userProfile.unnamed" = "無名";
 "userProfile.defaultName" = "プレーヤー";
 "userProfile.createTitle" = "プロファイルの作成";
@@ -484,12 +393,9 @@
 "scoreQuery.sort.rating" = "Rating";
 "scoreQuery.sort.achievement" = "達成率";
 "scoreQuery.sort.level" = "レベル";
-"scoreQuery.display.grid" = "グリッド";
-"scoreQuery.display.list" = "リスト";
 "scoreQuery.badge.rank" = "ランク";
 "scoreQuery.badge.fc" = "FC";
 "scoreQuery.badge.fs" = "FS";
-"scoreQuery.columns" = "列";
 "scoreQuery.empty" = "まだスコアがありません";
 "scoreQuery.results" = "件";
 "scoreQuery.songNotFound" = "曲が見つかりません";
@@ -506,11 +412,7 @@
 "scoreQuery.export.imageTitle.constants" = "%@ 定数テーブル";
 "scoreQuery.export.imageTitle.scores" = "%@ スコアを含む定数テーブル";
 "scoreQuery.export.imageSummary" = "%d セクション · %d 通常のチャート";
-"scoreQuery.export.imageMode.constants" = "定数";
-"scoreQuery.export.imageMode.scores" = "スコア付き";
 "scoreQuery.export.watermark" = "Generated by maimaid";
-"scoreQuery.export.footer.constants" = "通常のチャートのみ";
-"scoreQuery.export.footer.scores" = "スコアオーバーレイを備えた通常のチャート";
 
 // MARK: - Cloud Sync
 "settings.cloud.title" = "クラウドアカウント";
@@ -524,31 +426,22 @@
 "settings.cloud.login.title" = "クラウドログイン";
 "settings.cloud.login.subtitle" = "メールでサインインしてクラウド同期サービスを有効にします";
 "settings.cloud.login.button" = "ログイン";
-"settings.cloud.signup.title" = "クラウドアカウントの作成";
 "settings.cloud.signup.subtitle" = "メールでサインアップしてクラウド同期サービスを有効にします";
 "settings.cloud.signup.button" = "サインアップ";
-"settings.cloud.mode.login" = "ログイン";
-"settings.cloud.mode.signup" = "サインアップ";
-"settings.cloud.email" = "電子メール";
-"settings.cloud.password" = "パスワード";
 "settings.cloud.signup.passwordRequirement" = "パスワードは8文字以上で、英小文字・英大文字・数字・記号をすべて含める必要があります。";
 "settings.cloud.forgotPassword" = "パスワードをお忘れですか？";
-"settings.cloud.resendVerification" = "確認メールを再送信する";
 "settings.cloud.recovery.title" = "パスワードのリセット";
 "settings.cloud.recovery.subtitle" = "リカバリーリンクを確認しました。新しいパスワードを設定して復旧を完了してください。";
 "settings.cloud.recovery.section" = "新しいパスワードを設定する";
 "settings.cloud.recovery.newPassword" = "新しいパスワード";
-"settings.cloud.recovery.confirmPassword" = "新しいパスワードを確認する";
 "settings.cloud.recovery.updateButton" = "パスワードを更新する";
 "settings.cloud.recovery.cancel" = "キャンセル";
 "settings.cloud.privacy.hint" = "アカウント情報は、サインイン時にクラウド同期を有効にするために使用されます。データは Backend に安全に保存されます。";
 "settings.cloud.message.loginSuccess" = "ログインしました。";
-"settings.cloud.message.signupSuccess" = "登録が完了しました。";
 "settings.cloud.message.authLinkSuccess" = "アカウント認証が完了しました。これでサインインできるようになりました。";
 "settings.cloud.message.authLinkFailed" = "認証リンクが無効か期限切れです。";
 "settings.cloud.message.recoveryLinkOpened" = "リカバリリンクが確認されました。新しいパスワードを設定してください。";
 "settings.cloud.message.recoveryLinkInvalid" = "パスワードリセットリンクが無効か期限切れです。";
-"settings.cloud.message.passwordMismatch" = "2 つのパスワードが一致しません。";
 "settings.cloud.message.passwordRequirementNotMet" = "パスワードの形式要件を満たしていません。";
 "settings.cloud.message.passwordUpdated" = "パスワードが正常に更新されました。";
 "settings.cloud.message.emailRateLimited" = "1 分あたり 1 つの認証メールのみをリクエストできます。";
@@ -556,8 +449,6 @@
 "settings.cloud.message.emailNotRegistered" = "このメールアドレスはまだ登録されていません。";
 "settings.cloud.message.emailInvalidFormat" = "有効なメールアドレスを入力してください。";
 "settings.cloud.message.signupVerificationSent" = "登録が完了しました。メールを確認してアカウントを認証してください。";
-"settings.cloud.message.verificationEmailResent" = "確認メールが送信されました。受信箱をご確認ください。";
-"settings.cloud.message.resetEmailSent" = "パスワードリセットメールを送信しました。受信箱をご確認ください。";
 "settings.cloud.message.backupSuccess" = "バックアップが完了しました。";
 "settings.cloud.message.backupFailed" = "バックアップに失敗しました";
 "settings.cloud.message.restoreSuccess" = "復元が完了しました。";
@@ -580,10 +471,8 @@
 "avatar.editor.hint" = "ドラッグして位置を決めたり、ピンチしてズームしたり、2 本の指で回転したりできます。";
 "avatar.editor.reset" = "リセット";
 "avatar.editor.apply" = "クロップを適用する";
-"avatar.editor.reedit" = "アバターの編集";
 
 // MARK: - Onboarding
-"onboarding.title" = "ようこそ\nmaimaid";
 "onboarding.titlePrefix" = "ようこそ";
 "onboarding.appName" = "maimaid";
 "onboarding.subtitle" = "コア機能をすぐ把握して、すぐに記録と分析を始められます。";
@@ -593,13 +482,8 @@
 "onboarding.feature.localOffline.detail" = "データは端末内に保存され、オフラインでも閲覧・記録できます。";
 "onboarding.feature.multiUser" = "マルチユーザー対応";
 "onboarding.feature.multiUser.detail" = "複数プロフィールを作成して切り替え、プレイヤーごとに管理できます。";
-"onboarding.startButton" = "使い始める";
-"onboarding.download.sectionTitle" = "静的リソースのダウンロード";
-"onboarding.download.required" = "初回利用前に静的リソースをダウンロードしてください。完了後は自動でホームへ進みます。";
-"onboarding.download.failed" = "ダウンロードに失敗しました。ネットワークを確認して再試行してください。";
 "onboarding.download.action.start" = "ダウンロードして続行";
 "onboarding.download.action.retry" = "再試行";
-"onboarding.download.action.inProgress" = "ダウンロード中...";
 
 // MARK: - Community Alias
 "song.detail.chartType" = "譜面タイプ";
@@ -622,7 +506,6 @@
 "community.alias.submit.duplicateLxns" = "この別名はすでに LXNS に存在するため投稿できません。";
 "community.alias.submit.duplicateCommunity" = "この別名はすでにコミュニティ別名に存在するため投稿できません。";
 "community.alias.submit.adminRejectedLocked" = "この別名は管理者により却下済みです。再投稿できるのは管理者のみです。";
-"community.alias.submit.quotaExceeded" = "本日の投稿上限（5件）に達しました。";
 "community.alias.submit.loginRequired" = "投稿するにはクラウドアカウントにログインしてください。";
 "community.alias.submit.invalidRequest" = "投稿形式が無効です。入力内容を確認してください。";
 "community.alias.board.title" = "コミュニティ別名投票";
@@ -635,7 +518,6 @@
 "community.alias.board.empty.message" = "後でもう一度確認するか、曲詳細から先に別名を投稿してください。";
 "community.alias.board.loading" = "公開リストを読み込み中…";
 "community.alias.board.group.subtitle %lld" = "候補別名 %lld 件";
-"community.alias.board.deadline %@" = "締切 %@";
 "community.alias.vote.support %lld" = "賛成 %lld";
 "community.alias.vote.oppose %lld" = "反対 %lld";
 "community.alias.vote.cancelSupport %lld" = "賛成を取り消す %lld";
@@ -643,23 +525,7 @@
 "community.alias.board.tip.loginRequired" = "投票するには先にログインしてください";
 "community.alias.board.tip.voteFailedFallback" = "投票に失敗しました。しばらくして再試行してください。";
 "community.alias.board.tip.voteUpdated" = "投票を更新しました";
-"community.alias.service.submit.unconfigured" = "Backend が未設定のため投稿できません。";
-"community.alias.service.submit.sessionInvalid" = "ログイン状態が無効または期限切れです。一度ログアウトして再ログインしてください。";
-"community.alias.service.submit.sessionExpiredRelogin" = "ログイン状態の有効期限が切れました。ログアウト後に再ログインしてください。";
-"community.alias.service.submit.sessionExpiredRetry" = "ログイン状態の有効期限が切れました。再ログイン後に投稿してください。";
-"community.alias.service.submit.requestFailed %@" = "投稿リクエストに失敗しました: %@";
 "community.alias.service.vote.sessionInvalid" = "ログイン状態が無効です。再ログインしてから投票してください。";
-"community.alias.service.vote.responseAbnormal %@" = "投票レスポンスが不正です: %@";
-"community.alias.service.vote.emptyResponse" = "投票結果が空でした。プルダウン更新後に再試行してください。";
-"community.alias.service.vote.error.windowClosed" = "この項目は投票締切を過ぎています。リストを更新してください。";
-"community.alias.service.vote.error.notVoting" = "この項目はすでに集計済みです。公開リストを更新してください。";
-"community.alias.service.vote.error.authExpired" = "ログイン状態の期限が切れました。再ログインしてください。";
-"community.alias.service.vote.error.rpcSignature" = "投票失敗: バックエンド RPC のシグネチャ不一致です。最新の vote hotfix SQL を適用してください。";
-"community.alias.service.vote.error.rpcAmbiguous" = "投票失敗: バックエンド RPC のフィールド曖昧性があります。最新の vote ambiguous hotfix SQL を適用してください。";
-"community.alias.service.vote.error.permissionDenied" = "投票失敗: データベース権限不足（permission denied）。community_alias_vote の GRANT/RLS を確認してください。";
-"community.alias.service.vote.error.rls" = "投票失敗: RLS ポリシーにより拒否されました。community_alias_votes のポリシーを確認してください。";
-"community.alias.service.vote.error.detail %@" = "投票失敗: %@";
-"community.alias.service.vote.error.generic" = "投票に失敗しました。しばらくして再試行してください。";
 "song.detail.tolerance.limit" = "上限";
 
 // MARK: - Data Sync (Additional)
@@ -695,12 +561,8 @@
 "settings.import.resolution.option.keepLocal" = "ローカル優先（インポート新規のみ追加）";
 "settings.import.resolution.option.overwriteLocal" = "インポートでローカルを上書き";
 "settings.import.resolution.processing" = "インポート競合を処理中...";
-"settings.import.resolution.kind.localOnly" = "ローカルのみ";
-"settings.import.resolution.kind.different" = "スコア差分";
 "settings.import.resolution.value.local" = "ローカル";
 "settings.import.resolution.value.remote" = "インポート";
 "settings.import.resolution.value.missing" = "-";
 "settings.import.resolution.more.show %lld" = "さらに表示（残り %lld 件）";
 "settings.import.resolution.more.hide" = "残りの競合を折りたたむ";
-"settings.import.resolution.score.line.main %@ %@ %lld" = "%@ · %@ · DX:%lld";
-"settings.import.resolution.score.line.detail %@ %@ %@" = "FC:%@ FS:%@ 時刻:%@";

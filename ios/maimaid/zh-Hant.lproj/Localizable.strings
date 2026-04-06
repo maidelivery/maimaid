@@ -30,17 +30,11 @@
 "home.dan.subtitle" = "檢視各版本段位考覈曲目";
 
 // MARK: - Profile Edit
-"profile.edit.title" = "個人資料";
 "profile.edit.changeAvatar" = "更換頭像";
 "profile.edit.clearAvatar" = "清除頭像";
-"profile.edit.basicInfo" = "基本資訊";
-"profile.edit.name" = "名字";
-"profile.edit.name.placeholder" = "輸入名稱";
 "profile.edit.titleName" = "稱號";
-"profile.edit.titleName.placeholder" = "輸入稱號";
 "profile.edit.presetIcon" = "預設頭像";
 "profile.edit.presetIcon.select" = "選擇預設頭像";
-"profile.edit.save" = "儲存";
 "profile.edit.cancel" = "取消";
 "profile.picker.title" = "選擇頭像";
 "profile.picker.search" = "搜尋頭像或分類";
@@ -51,9 +45,6 @@
 "scanner.error.title" = "未能識別到歌曲標題";
 "scanner.chart.std" = "STD";
 "scanner.chart.dx" = "DX";
-"scanner.reset.hint" = "需要解鎖";
-"scanner.unlock.needed" = "需要解鎖";
-"scanner.unlock.notNeeded" = "無需解鎖";
 "scanner.capture.button" = "拍攝照片";
 "scanner.capture.saving" = "正在儲存照片";
 "scanner.capture.hint" = "將目前識別到的成績畫面儲存到 maimai 相簿。";
@@ -64,10 +55,6 @@
 
 // MARK: - Settings
 "settings.title" = "設定";
-"settings.data.header" = "靜態資料";
-"settings.data.footer" = "更新靜態資料將同步最新的歌曲列表、別名以及官方 ID 映射。支援設定自動更新頻率。";
-"settings.data.syncing" = "正在更新靜態資料...";
-"settings.data.updateAll" = "更新所有靜態資料";
 "settings.data.importDivingFish" = "從 Diving Fish 匯入成績";
 "settings.data.importLxns" = "從 LXNS 匯入成績";
 "settings.data.bound" = "已綁定";
@@ -84,34 +71,11 @@
 "settings.appearance.showBoundingBox" = "顯示識別框";
 
 // MARK: - Data Transfer
-"settings.transfer.header" = "資料管理";
-"settings.transfer.footer" = "匯出你的所有成績、收藏和設定。匯入時將自動合併資料，僅覆蓋更高成績。";
-"settings.transfer.export" = "匯出資料";
-"settings.transfer.import" = "匯入資料";
-"settings.transfer.error" = "錯誤";
-"settings.transfer.importConfirm" = "確認匯入";
-"settings.transfer.importConfirmMessage" = "匯入將合併資料到目前 App 中。已有的更高成績不會被覆蓋。確定繼續嗎？";
-"settings.transfer.importAction" = "匯入";
-"settings.transfer.cancel" = "取消";
-"settings.transfer.importSuccess" = "匯入成功";
-"settings.transfer.importSummary" = "已匯入 %d 筆成績，恢復 %d 個收藏。";
 
 // MARK: - iCloud Backup
-"settings.icloud.header" = "iCloud 備份";
-"settings.icloud.footer" = "開啟後，App 會在進入背景時自動將資料備份到 iCloud，可在新設備上恢復。";
-"settings.icloud.unavailable" = "iCloud 不可用。請在系統設定中登入 iCloud 帳號。";
-"settings.icloud.autoBackup" = "自動備份到 iCloud";
-"settings.icloud.lastBackup" = "上次備份";
-"settings.icloud.backupNow" = "立即備份";
-"settings.icloud.restore" = "從 iCloud 恢復";
-"settings.icloud.restoreConfirm" = "確認恢復";
-"settings.icloud.restoreConfirmMessage" = "將從 iCloud 備份恢復資料。已有的更高成績不會被覆蓋。確定繼續嗎？";
-"settings.icloud.restoreAction" = "恢復";
-"settings.icloud.restoreSuccess" = "恢復成功";
 
 // MARK: - Useful Links
 "links.title" = "常用網站";
-"links.tip" = "提示: 點選上方卡片將會在瀏覽器中開啟網頁";
 "links.nearcade.title" = "nearcade";
 "links.nearcade.subtitle" = "附近機廳 · 一鍵導航";
 "links.dx_jp.title" = "maimai DX Japan";
@@ -129,7 +93,6 @@
 
 // MARK: - Song Detail
 "song.detail.copy.success %@" = "已複製%@";
-"song.detail.region.cn" = "中國";
 "song.detail.stats.fitDiff" = "擬合難度";
 "song.detail.stats.avgRate" = "平均達成率";
 "song.detail.stats.sampleCount" = "樣本人數";
@@ -141,7 +104,6 @@
 "song.detail.metadata.releaseDate" = "發行日";
 "song.detail.region.jp" = "日本";
 "song.detail.region.intl" = "國際";
-"song.detail.region.usa" = "美國";
 "song.detail.region.cn" = "中國";
 "song.detail.lock.required" = "需要解鎖";
 "song.detail.lock.notRequired" = "無需解鎖";
@@ -204,7 +166,6 @@
 "score.entry.validation.dxRange %lld" = "DX 分數不能超過 %lld。";
 "score.entry.savedHint" = "成績已儲存，確認無誤後點選完成。";
 "score.entry.save" = "儲存成績";
-"score.entry.saved" = "已儲存";
 
 // MARK: - Content View / Sorting
 "songs.title" = "歌曲";
@@ -234,7 +195,6 @@
 "plate.menu.version" = "版本";
 "plate.menu.difficulty" = "難度";
 "plate.menu.plate" = "牌子";
-"plate.section.count %@ %lld" = "Lv.%@ (%lld首)";
 
 "极牌" = "極牌";
 "将牌" = "將牌";
@@ -247,10 +207,6 @@
 "import.status.importing" = "正在匯入...";
 "import.status.failed" = "失敗";
 "import.status.failed.network" = "匯入失敗：無效的網路響應";
-"import.status.failed.message %@" = "匯入失敗：%@";
-"import.status.failed.code %lld" = "匯入失敗：HTTP 錯誤 %lld";
-"import.status.failed.noRecords" = "匯入失敗：未找到成績記錄";
-"import.status.failed.empty" = "匯入失敗：沒有任何成績";
 "import.status.processing %lld" = "查找到 %lld 筆成績，正在處理...";
 "import.status.success %lld" = "匯入成功！共寫入/更新了 %lld 筆成績。";
 "import.status.noChanges" = "匯入完成：未發現新增/變更成績，已略過衝突檢測。";
@@ -297,54 +253,14 @@
 "import.lxns.error.clientId" = "開發錯誤：請先在程式碼中配置 Client ID。";
 "import.lxns.error.security" = "安全狀態丟失，請重新點選第一步按鈕生成授權頁面。";
 "import.lxns.status.exchanging" = "正在取得存取權杖...";
-"import.lxns.status.failed.token %@" = "令牌交換失敗：%@";
 "import.lxns.status.failed.networkToken" = "網路錯誤：無法取得存取權杖。";
 "import.lxns.status.refreshing" = "更新授權狀態...";
 "import.lxns.status.failed.expired" = "授權已過期，請重新登入。";
-"import.lxns.status.player" = "正在取得玩家資訊...";
 "import.lxns.status.fetching" = "正在連接到 LXNS 拉取成績資料...";
 "import.lxns.summary.footer" = "用於從 LXNS 拉取並匯入成績。";
 
 // Static Data Update
 "update.title" = "靜態資料更新";
-"update.control.header" = "更新控制";
-"update.action.now" = "立即更新靜態資料";
-"update.options.header" = "更新項選擇";
-"update.option.remoteData" = "基礎歌曲資料";
-"update.option.aliasesAndIds" = "別名與譜面 ID";
-"update.option.coversMissing" = "補全封面圖片";
-"update.option.iconsDataAndImages" = "頭像資料與圖片";
-"update.option.danData" = "段位資料";
-"update.option.chartStats" = "譜面擬合資訊";
-"update.option.utageChartStats" = "宴譜音符總數";
-"update.options.footer" = "別名項同時會同步歌曲/譜面 ID；封面和圖標僅補全缺失資源，不會強制覆蓋已有文件。";
-"update.control.selectAtLeastOne" = "請至少選擇一項更新內容。";
-"update.control.error %@" = "同步失敗：%@";
-"update.logs.header" = "同步日誌";
-"update.auto.header" = "定期檢查更新";
-"update.auto.footer" = "iOS 只會在條件允許時擇機於背景運行檢查，也可能在你下次開啟應用時才執行；無法保證精確按設定時間觸發。";
-"update.auto.interval" = "檢查間隔";
-"update.interval.disabled" = "禁用";
-"update.interval.days.1" = "1 天";
-"update.interval.days.7" = "7 天";
-"update.interval.days.14" = "14 天";
-"update.interval.days.30" = "30 天";
-"update.debug.header" = "調試資訊";
-"update.debug.lastUpdate" = "上次更新時間";
-"update.debug.never" = "從未更新";
-"update.debug.timeSince" = "距離上次更新";
-"update.debug.timeAgo.days %lld %lld" = "%lld天%lld小時前";
-"update.debug.timeAgo.hours %lld" = "%lld小時前";
-"update.debug.totalSongs" = "歌曲總數";
-"update.debug.totalSheets" = "譜面總數";
-"update.debug.totalCategories" = "分類數量";
-"update.debug.utageSongs" = "宴會曲數量";
-"update.debug.songsWithAliases" = "擁有別名曲目";
-"update.debug.knownInternalLevels" = "已知內部定數譜面";
-"update.debug.totalIcons" = "預設頭像數量";
-"update.debug.appVersion" = "App 版本";
-"update.debug.totalDanCategories" = "段位分類數";
-"update.debug.totalDanSections" = "段位關卡數";
 
 // MARK: - Best Table
 "bestTable.title" = "Best 表";
@@ -371,11 +287,8 @@
 "bestTable.settings.version" = "遊戲版本";
 "bestTable.settings.version.current" = "目前版本";
 "bestTable.settings.version.reset" = "重置";
-"bestTable.settings.version.overrideHint" = "臨時將 %@ 設為最新版本";
-"bestTable.settings.version.custom" = "%@ (自定義)";
 "bestTable.settings.version.unknown" = "未知";
 "bestTable.settings.version.auto" = "自動";
-"bestTable.settings.version.auto.footer" = "伺服器預設: %@";
 "bestTable.settings.version.available" = "可選版本";
 "bestTable.settings.version.title" = "選擇版本";
 "bestTable.settings.version.cancel" = "取消";
@@ -427,7 +340,6 @@
 "data.sync.status.downloadingCovers %lld %lld" = "下載封面 (%lld/%lld)";
 "data.sync.status.downloadingIcons" = "下載預設頭像...";
 "data.sync.log.downloadingIcons %lld" = "正在下載 %lld 個缺失的頭像...";
-"data.sync.status.downloadingIconsProgress %lld %lld" = "下載頭像: %lld/%lld";
 "data.sync.status.saving" = "持久化資料...";
 "data.sync.status.completed" = "更新完成！";
 "data.sync.status.failed %@" = "異常: %@";
@@ -440,17 +352,14 @@
 "server.jp" = "日服";
 "server.intl" = "國際服";
 "server.cn" = "國服";
-"server.usa" = "美服";
 
 // MARK: - User Profile
 "userProfile.title" = "使用者檔案";
 "userProfile.empty.title" = "暫無檔案";
 "userProfile.empty.description" = "建立一個使用者檔案以開始使用";
-"userProfile.create" = "建立檔案";
 "userProfile.edit" = "編輯";
 "userProfile.delete" = "刪除";
 "userProfile.active" = "使用中";
-"userProfile.switchTo" = "切換";
 "userProfile.unnamed" = "未命名";
 "userProfile.defaultName" = "玩家";
 "userProfile.createTitle" = "建立檔案";
@@ -484,12 +393,9 @@
 "scoreQuery.sort.rating" = "Rating";
 "scoreQuery.sort.achievement" = "達成率";
 "scoreQuery.sort.level" = "定數";
-"scoreQuery.display.grid" = "格狀";
-"scoreQuery.display.list" = "列表";
 "scoreQuery.badge.rank" = "評級";
 "scoreQuery.badge.fc" = "FC";
 "scoreQuery.badge.fs" = "FS";
-"scoreQuery.columns" = "列";
 "scoreQuery.empty" = "暫無成績";
 "scoreQuery.results" = "筆結果";
 "scoreQuery.songNotFound" = "未找到歌曲";
@@ -506,11 +412,7 @@
 "scoreQuery.export.imageTitle.constants" = "%@ 定數表";
 "scoreQuery.export.imageTitle.scores" = "%@ 定數與成績表";
 "scoreQuery.export.imageSummary" = "%d 個細分定數 · %d 張常規譜面";
-"scoreQuery.export.imageMode.constants" = "僅定數";
-"scoreQuery.export.imageMode.scores" = "帶成績";
 "scoreQuery.export.watermark" = "Generated by maimaid";
-"scoreQuery.export.footer.constants" = "僅含常規譜面";
-"scoreQuery.export.footer.scores" = "常規譜面 + 成績覆蓋";
 
 // MARK: - Cloud Sync
 "settings.cloud.title" = "雲端帳戶";
@@ -524,31 +426,22 @@
 "settings.cloud.login.title" = "登入雲端";
 "settings.cloud.login.subtitle" = "透過電子郵件登入以啟用雲端同步服務";
 "settings.cloud.login.button" = "登入";
-"settings.cloud.signup.title" = "建立雲端帳戶";
 "settings.cloud.signup.subtitle" = "透過電子郵件註冊以啟用雲端同步服務";
 "settings.cloud.signup.button" = "註冊";
-"settings.cloud.mode.login" = "登入";
-"settings.cloud.mode.signup" = "註冊";
-"settings.cloud.email" = "電子郵件";
-"settings.cloud.password" = "密碼";
 "settings.cloud.signup.passwordRequirement" = "密碼至少 8 位，且必須包含大小寫字母、數字與符號。";
 "settings.cloud.forgotPassword" = "忘記密碼？";
-"settings.cloud.resendVerification" = "重新發送驗證郵件";
 "settings.cloud.recovery.title" = "重置密碼";
 "settings.cloud.recovery.subtitle" = "恢復鏈接已驗證，請設定新密碼以完成帳號恢復。";
 "settings.cloud.recovery.section" = "設定新密碼";
 "settings.cloud.recovery.newPassword" = "新密碼";
-"settings.cloud.recovery.confirmPassword" = "確認新密碼";
 "settings.cloud.recovery.updateButton" = "更新密碼";
 "settings.cloud.recovery.cancel" = "取消";
 "settings.cloud.privacy.hint" = "你的帳戶資訊僅用於登入時啟用雲端同步，資料會安全儲存在 Backend。";
 "settings.cloud.message.loginSuccess" = "登入成功！";
-"settings.cloud.message.signupSuccess" = "註冊成功！";
 "settings.cloud.message.authLinkSuccess" = "帳號驗證已完成，現在可以登入了。";
 "settings.cloud.message.authLinkFailed" = "驗證連結無效或已過期。";
 "settings.cloud.message.recoveryLinkOpened" = "恢復鏈接已驗證，請設定新密碼。";
 "settings.cloud.message.recoveryLinkInvalid" = "重設密碼連結無效或已過期。";
-"settings.cloud.message.passwordMismatch" = "兩次輸入的密碼不一致。";
 "settings.cloud.message.passwordRequirementNotMet" = "密碼不符合要求格式。";
 "settings.cloud.message.passwordUpdated" = "密碼更新成功！";
 "settings.cloud.message.emailRateLimited" = "每分鐘最多只能寄送一封驗證信，請稍後再試。";
@@ -556,8 +449,6 @@
 "settings.cloud.message.emailNotRegistered" = "該信箱尚未註冊。";
 "settings.cloud.message.emailInvalidFormat" = "請輸入有效的電子郵件地址。";
 "settings.cloud.message.signupVerificationSent" = "註冊成功！請至信箱完成帳號驗證。";
-"settings.cloud.message.verificationEmailResent" = "已重新寄送驗證信，請查看信箱。";
-"settings.cloud.message.resetEmailSent" = "已寄出重設密碼信件，請查看信箱。";
 "settings.cloud.message.backupSuccess" = "備份成功！";
 "settings.cloud.message.backupFailed" = "備份失敗";
 "settings.cloud.message.restoreSuccess" = "恢復成功！";
@@ -580,10 +471,8 @@
 "avatar.editor.hint" = "拖動調整位置，雙指縮放或旋轉。";
 "avatar.editor.reset" = "重置";
 "avatar.editor.apply" = "應用裁剪";
-"avatar.editor.reedit" = "編輯頭像";
 
 // MARK: - Onboarding
-"onboarding.title" = "歡迎使用\nmaimaid";
 "onboarding.titlePrefix" = "歡迎使用";
 "onboarding.appName" = "maimaid";
 "onboarding.subtitle" = "一眼看懂核心能力，立即開始記錄與分析。";
@@ -593,13 +482,8 @@
 "onboarding.feature.localOffline.detail" = "資料保存在裝置本地，離線時也能持續查看與記錄。";
 "onboarding.feature.multiUser" = "多使用者支援";
 "onboarding.feature.multiUser.detail" = "可建立並切換多個檔案，分別管理不同玩家資料。";
-"onboarding.startButton" = "開始使用";
-"onboarding.download.sectionTitle" = "靜態資源下載";
-"onboarding.download.required" = "首次使用需先下載靜態資源，完成後將自動進入首頁。";
-"onboarding.download.failed" = "下載失敗，請檢查網路後重試。";
 "onboarding.download.action.start" = "下載資源並繼續";
 "onboarding.download.action.retry" = "重試下載";
-"onboarding.download.action.inProgress" = "正在下載...";
 
 // MARK: - 社群別名
 "song.detail.chartType" = "譜面類型";
@@ -622,7 +506,6 @@
 "community.alias.submit.duplicateLxns" = "該別名已在 LXNS 中存在，無法重複投稿。";
 "community.alias.submit.duplicateCommunity" = "該別名已在社群別名中存在，無法重複投稿。";
 "community.alias.submit.adminRejectedLocked" = "該別名曾被管理員拒絕，僅管理員可再次投稿。";
-"community.alias.submit.quotaExceeded" = "今日投稿次數已達上限（5次）。";
 "community.alias.submit.loginRequired" = "請先登入雲端帳號再投稿。";
 "community.alias.submit.invalidRequest" = "投稿格式無效，請檢查輸入內容。";
 "community.alias.board.title" = "社群別名投票";
@@ -635,7 +518,6 @@
 "community.alias.board.empty.message" = "請稍後再來，或先去歌曲詳情頁投稿別名。";
 "community.alias.board.loading" = "正在載入公示列表…";
 "community.alias.board.group.subtitle %lld" = "%lld 個候選別名";
-"community.alias.board.deadline %@" = "截止 %@";
 "community.alias.vote.support %lld" = "支持 %lld";
 "community.alias.vote.oppose %lld" = "反對 %lld";
 "community.alias.vote.cancelSupport %lld" = "取消支持 %lld";
@@ -643,23 +525,7 @@
 "community.alias.board.tip.loginRequired" = "請先登入再投票";
 "community.alias.board.tip.voteFailedFallback" = "投票失敗，請稍後重試";
 "community.alias.board.tip.voteUpdated" = "投票已更新";
-"community.alias.service.submit.unconfigured" = "Backend 未配置，無法投稿。";
-"community.alias.service.submit.sessionInvalid" = "登入狀態無效或已過期，請登出後重新登入。";
-"community.alias.service.submit.sessionExpiredRelogin" = "登入狀態已過期，請登出後重新登入。";
-"community.alias.service.submit.sessionExpiredRetry" = "登入狀態已過期，請重新登入後再投稿。";
-"community.alias.service.submit.requestFailed %@" = "投稿請求失敗：%@";
 "community.alias.service.vote.sessionInvalid" = "登入狀態無效，請重新登入後再投票。";
-"community.alias.service.vote.responseAbnormal %@" = "投票回傳異常：%@";
-"community.alias.service.vote.emptyResponse" = "投票回傳空結果，請下拉刷新後重試。";
-"community.alias.service.vote.error.windowClosed" = "該條目已過投票截止時間，請下拉刷新列表。";
-"community.alias.service.vote.error.notVoting" = "該條目已結算，請刷新公示列表。";
-"community.alias.service.vote.error.authExpired" = "登入狀態已失效，請重新登入後再試。";
-"community.alias.service.vote.error.rpcSignature" = "投票失敗：後端 RPC 函數簽名不匹配，請執行最新 vote hotfix SQL。";
-"community.alias.service.vote.error.rpcAmbiguous" = "投票失敗：後端 RPC 存在欄位歧義，請執行最新 vote ambiguous hotfix SQL。";
-"community.alias.service.vote.error.permissionDenied" = "投票失敗：資料庫權限不足（permission denied），請檢查 community_alias_vote 的 GRANT/RLS。";
-"community.alias.service.vote.error.rls" = "投票失敗：觸發了 RLS 策略限制，請檢查 community_alias_votes 的策略。";
-"community.alias.service.vote.error.detail %@" = "投票失敗：%@";
-"community.alias.service.vote.error.generic" = "投票失敗，請稍後重試。";
 "song.detail.tolerance.limit" = "上限";
 
 // MARK: - 資料同步（補充）
@@ -695,12 +561,8 @@
 "settings.import.resolution.option.keepLocal" = "本地優先（僅補入匯入新增）";
 "settings.import.resolution.option.overwriteLocal" = "用匯入覆蓋本地";
 "settings.import.resolution.processing" = "正在處理匯入衝突...";
-"settings.import.resolution.kind.localOnly" = "本地獨有";
-"settings.import.resolution.kind.different" = "成績差異";
 "settings.import.resolution.value.local" = "本地";
 "settings.import.resolution.value.remote" = "匯入";
 "settings.import.resolution.value.missing" = "-";
 "settings.import.resolution.more.show %lld" = "查看更多（其餘 %lld 筆）";
 "settings.import.resolution.more.hide" = "收起其餘衝突成績";
-"settings.import.resolution.score.line.main %@ %@ %lld" = "%@ · %@ · DX:%lld";
-"settings.import.resolution.score.line.detail %@ %@ %@" = "FC:%@ FS:%@ 時間:%@";
