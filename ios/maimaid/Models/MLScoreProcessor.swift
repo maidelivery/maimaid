@@ -356,7 +356,8 @@ nonisolated final class MLScoreProcessor {
         // Check for utage early — even a single "u" in the difficulty region
         // strongly indicates utage, since no other difficulty starts with "u".
         // The score screen shows "UTAGE" but OCR may only capture partial text.
-        if lower.contains("utage") || lower.contains("宴") {
+        let utageMarkers: Set<Character> = ["宴", "会", "场"]
+        if lower.contains("utage") || lower.contains(where: { utageMarkers.contains($0) }) {
             return "utage"
         }
         
