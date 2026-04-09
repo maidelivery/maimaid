@@ -607,7 +607,7 @@ struct BackendAuthView: View {
         }
         queryItems.append(URLQueryItem(name: "authMode", value: mode.rawValue))
         queryItems.append(URLQueryItem(name: "redirect_uri", value: "maimaid://auth/callback"))
-        queryItems.append(URLQueryItem(name: "client", value: "ios"))
+        queryItems.append(URLQueryItem(name: "client", value: "app"))
         components.queryItems = queryItems
         return components.url
     }

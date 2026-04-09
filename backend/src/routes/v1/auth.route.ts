@@ -650,7 +650,7 @@ const buildPasswordResetCallbackUrl = (target: AuthCallbackTarget, input: AuthCa
 	}
 
 	const dashboardUrl = new URL(buildDashboardAuthUrl(input));
-	dashboardUrl.searchParams.set("client", "ios");
+	dashboardUrl.searchParams.set("client", "app");
 	dashboardUrl.searchParams.set("authMode", "reset-password");
 	dashboardUrl.searchParams.set("redirect_uri", target.redirectUri);
 	return dashboardUrl.toString();

@@ -135,7 +135,7 @@ function parseAppAuthRequestFromLocation(): AppAuthRequest | null {
 	};
 
 	const redirectUri = parseRedirectUri(params.get("redirect_uri") ?? "");
-	if (client === "ios" && redirectUri) {
+	if ((client === "app" || client === "ios") && redirectUri) {
 		const parsedRequest: AppAuthRequest = {
 			redirectUri,
 			requestedMode: parseRequestedMode(authMode),
