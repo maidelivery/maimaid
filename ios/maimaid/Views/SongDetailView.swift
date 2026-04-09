@@ -205,14 +205,15 @@ struct SongDetailContent: View {
                     .zIndex(100)
             }
         }
-        .task(id: song.imageName) {
-            updateJacketDominantColor()
-            await statsService.fetchStats()
-            await refreshCommunityAliasState()
+        .task(id: song.songIdentifier) {
+            await loadInitialState()
+        }
+        .task(id: "\(song.songIdentifier)-approved-alias-refresh") {
+            await refreshApprovedCommunityAliasesAfterTransition()
         }
         .onChange(of: backendSessionManager.isAuthenticated) { _, _ in
             Task {
-                await refreshCommunityAliasState()
+                await refreshCommunityAliasUserState()
             }
         }
     }
@@ -275,11 +276,32 @@ struct SongDetailContent: View {
         showToast(message: String(localized: "song.detail.copy.success \(label)"))
     }
 
-    private func refreshCommunityAliasState() async {
-        // Pull latest approved aliases before reading local cache, so other devices
-        // can see newly approved aliases promptly without waiting for app lifecycle sync.
-        await communityAliasService.syncApprovedAliasesIntoSongs(modelContext: modelContext)
+    private func loadInitialState() async {
+        loadApprovedCommunityAliasesFromCache()
+        extractedDominantUIColor = SongJacketColorLoader.dominantColor(for: song.imageName)
 
+        async let statsFetch: Void = statsService.fetchStats()
+        async let communityUserStateRefresh: Void = refreshCommunityAliasUserState()
+        await statsFetch
+        await communityUserStateRefresh
+    }
+
+    private func refreshApprovedCommunityAliasesAfterTransition() async {
+        guard communityAliasService.isConfigured else { return }
+
+        try? await Task.sleep(for: .seconds(0.8))
+        guard !Task.isCancelled else { return }
+
+        await communityAliasService.syncApprovedAliasesIntoSongs(
+            modelContext: modelContext,
+            updateSongs: false
+        )
+
+        guard !Task.isCancelled else { return }
+        loadApprovedCommunityAliasesFromCache()
+    }
+
+    private func loadApprovedCommunityAliasesFromCache() {
         let songIdentifier = song.songIdentifier
         let approvedStatus = "approved"
         let descriptor = FetchDescriptor<CommunityAliasCache>(
@@ -289,7 +311,12 @@ struct SongDetailContent: View {
             sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
         )
         approvedCommunityAliases = (try? modelContext.fetch(descriptor)) ?? []
+    }
+
+    private func refreshCommunityAliasUserState() async {
+        let songIdentifier = song.songIdentifier
         myCommunityCandidates = await communityAliasService.fetchMySongCandidates(songIdentifier: songIdentifier, limit: 30)
+        guard !Task.isCancelled else { return }
 
         if backendSessionManager.isAuthenticated {
             if let dailyCount = await communityAliasService.fetchMyDailySubmissionCount() {
@@ -356,7 +383,8 @@ struct SongDetailContent: View {
             showToast(message: result.message)
         }
 
-        await refreshCommunityAliasState()
+        loadApprovedCommunityAliasesFromCache()
+        await refreshCommunityAliasUserState()
     }
 
     private func triggerCommunityQuotaLimitFeedback() {
@@ -390,18 +418,6 @@ struct SongDetailContent: View {
     private var ambientBackground: some View {
         Color(adjustedBackgroundUIColor(for: colorScheme))
             .ignoresSafeArea()
-    }
-    
-    private func updateJacketDominantColor() {
-        guard
-            let image = getJacketImage(),
-            let cgImage = image.cgImage,
-            let dominantUIColor = cgImage.averageColor()
-        else {
-            extractedDominantUIColor = nil
-            return
-        }
-        extractedDominantUIColor = dominantUIColor
     }
     
     private func adjustedBackgroundUIColor(for scheme: ColorScheme) -> UIColor {

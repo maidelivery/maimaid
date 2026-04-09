@@ -340,6 +340,7 @@
 "data.sync.status.scanningCovers" = "扫描并下载缺失封面...";
 "data.sync.status.downloadingCovers %lld %lld" = "下载封面 (%lld/%lld)";
 "data.sync.status.downloadingIcons" = "下载预设头像...";
+"data.sync.status.downloadingIconsProgress %lld %lld" = "下载预设头像 (%lld/%lld)";
 "data.sync.log.downloadingIcons %lld" = "正在下载 %lld 个缺失的头像...";
 "data.sync.status.saving" = "持久化数据...";
 "data.sync.status.completed" = "更新完成！";
@@ -518,6 +519,7 @@
 "community.alias.board.empty.message" = "请稍后再来，或先去歌曲详情页投稿别名。";
 "community.alias.board.loading" = "正在加载公示列表…";
 "community.alias.board.group.subtitle %lld" = "%lld 个候选别名";
+"community.alias.board.deadline %@" = "截止于 %@";
 "community.alias.vote.support %lld" = "支持 %lld";
 "community.alias.vote.oppose %lld" = "反对 %lld";
 "community.alias.vote.cancelSupport %lld" = "取消支持 %lld";

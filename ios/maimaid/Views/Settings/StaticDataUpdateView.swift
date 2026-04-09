@@ -62,7 +62,11 @@ struct StaticDataUpdateView: View {
                         ProgressView(value: fetcher.progress, total: 1)
                             .tint(.accentColor)
 
-                        Text(fetcher.statusMessage.isEmpty ? fetcher.currentStage.rawValue : fetcher.statusMessage)
+                        Text(
+                            fetcher.statusMessage.isEmpty
+                                ? String(localized: LocalizedStringResource(stringLiteral: fetcher.currentStage.rawValue))
+                                : fetcher.statusMessage
+                        )
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }

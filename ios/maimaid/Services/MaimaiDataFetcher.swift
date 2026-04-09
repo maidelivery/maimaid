@@ -880,7 +880,8 @@ class MaimaiDataFetcher {
                 
                 if !iconDownloadTasks.isEmpty {
                     log(String(localized: "data.sync.log.downloadingIcons \(iconDownloadTasks.count)"))
-                    let total = Double(iconDownloadTasks.count)
+                    let totalCount = iconDownloadTasks.count
+                    let total = Double(totalCount)
                     var completed = 0
                     
                     let batchSize = 30
@@ -906,7 +907,7 @@ class MaimaiDataFetcher {
                                         Double(completed) / max(total, 1),
                                         totalForStage: 0.10,
                                         baseForStage: 0.85,
-                                        status: String(localized: "data.sync.status.downloadingIconsProgress \(completed) \(Int(total))")
+                                        status: String(localized: "data.sync.status.downloadingIconsProgress \(completed) \(totalCount)")
                                     )
                                 }
                             }

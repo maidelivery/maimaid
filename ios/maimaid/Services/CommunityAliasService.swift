@@ -297,7 +297,11 @@ final class CommunityAliasService {
         await syncApprovedAliasesIntoSongs(modelContext: context)
     }
 
-    func syncApprovedAliasesIntoSongs(modelContext: ModelContext, force: Bool = false) async {
+    func syncApprovedAliasesIntoSongs(
+        modelContext: ModelContext,
+        force: Bool = false,
+        updateSongs: Bool = true
+    ) async {
         guard isConfigured else { return }
 
         let rawSince = force ? nil : UserDefaults.app.communityAliasApprovedSyncAt
@@ -371,7 +375,10 @@ final class CommunityAliasService {
                 modelContext.insert(cache)
             }
 
-            if let song = fetchSong(songIdentifier: row.songIdentifier, modelContext: modelContext) {
+            if
+                updateSongs,
+                let song = fetchSong(songIdentifier: row.songIdentifier, modelContext: modelContext)
+            {
                 let exists = song.aliases.contains {
                     $0.localizedCaseInsensitiveCompare(row.aliasText) == .orderedSame
                 }

@@ -344,6 +344,7 @@
 "data.sync.status.scanningCovers" = "Scanning covers...";
 "data.sync.status.downloadingCovers %lld %lld" = "Downloding covers (%lld/%lld)";
 "data.sync.status.downloadingIcons" = "Downloading icons...";
+"data.sync.status.downloadingIconsProgress %lld %lld" = "Downloading icons (%lld/%lld)";
 "data.sync.log.downloadingIcons %lld" = "Downloading %lld icons...";
 "data.sync.status.saving" = "Saving data...";
 "data.sync.status.completed" = "Update completed!";
@@ -518,6 +519,7 @@
 "community.alias.board.empty.message" = "Check back later, or submit an alias from song details first.";
 "community.alias.board.loading" = "Loading voting board...";
 "community.alias.board.group.subtitle %lld" = "%lld alias candidates";
+"community.alias.board.deadline %@" = "Deadline %@";
 "community.alias.vote.support %lld" = "Support %lld";
 "community.alias.vote.oppose %lld" = "Oppose %lld";
 "community.alias.vote.cancelSupport %lld" = "Unvote support %lld";

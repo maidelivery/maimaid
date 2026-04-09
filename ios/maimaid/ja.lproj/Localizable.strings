@@ -343,6 +343,7 @@
 "data.sync.status.scanningCovers" = "表紙をスキャン中...";
 "data.sync.status.downloadingCovers %lld %lld" = "カバーのダウンロード (%lld/%lld)";
 "data.sync.status.downloadingIcons" = "アイコンをダウンロード中...";
+"data.sync.status.downloadingIconsProgress %lld %lld" = "アイコンをダウンロード中 (%lld/%lld)";
 "data.sync.log.downloadingIcons %lld" = "%lld アイコンをダウンロードしています...";
 "data.sync.status.saving" = "データを保存中...";
 "data.sync.status.completed" = "アップデート完了！";
@@ -518,6 +519,7 @@
 "community.alias.board.empty.message" = "後でもう一度確認するか、曲詳細から先に別名を投稿してください。";
 "community.alias.board.loading" = "公開リストを読み込み中…";
 "community.alias.board.group.subtitle %lld" = "候補別名 %lld 件";
+"community.alias.board.deadline %@" = "締切 %@";
 "community.alias.vote.support %lld" = "賛成 %lld";
 "community.alias.vote.oppose %lld" = "反対 %lld";
 "community.alias.vote.cancelSupport %lld" = "賛成を取り消す %lld";
