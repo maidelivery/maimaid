@@ -139,7 +139,7 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		}
 
 		try {
-			await request("v1/scores/bulk-upsert", {
+			await request("v1/scores:batchUpsert", {
 				method: "POST",
 				body: {
 					profileId: activeProfileId,
@@ -235,7 +235,7 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 			return;
 		}
 		try {
-			await request(`v1/scores/play-records/${encodeURIComponent(recordId)}`, {
+			await request(`v1/play-records/${encodeURIComponent(recordId)}`, {
 				method: "DELETE",
 			});
 			await loadScores();
@@ -251,7 +251,7 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 			return;
 		}
 		try {
-			const payload = await request<{ upsertedCount: number }>("v1/import/df", {
+			const payload = await request<{ upsertedCount: number }>("v1/imports:importDf", {
 				method: "POST",
 				body: {
 					profileId: activeProfileId,
@@ -272,7 +272,7 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 			return;
 		}
 		try {
-			const oauthPayload = await request<{ accessToken: string; refreshToken: string }>("v1/import/lxns/oauth/token", {
+			const oauthPayload = await request<{ accessToken: string; refreshToken: string }>("v1/imports:exchangeLxnsToken", {
 				method: "POST",
 				body: {
 					code: lxnsAuthCode.trim(),
@@ -280,7 +280,7 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 				},
 			});
 
-			const payload = await request<{ upsertedCount: number }>("v1/import/lxns", {
+			const payload = await request<{ upsertedCount: number }>("v1/imports:importLxns", {
 				method: "POST",
 				body: {
 					profileId: activeProfileId,
@@ -306,7 +306,7 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 			return;
 		}
 		try {
-			const payload = await request<CommunitySubmitResponse>("v1/community/aliases/submit", {
+			const payload = await request<CommunitySubmitResponse>("v1/community/candidates", {
 				method: "POST",
 				body: {
 					songIdentifier: matchedSong.songIdentifier,
@@ -349,9 +349,9 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 
 	const handleCommunityVote = async (candidateId: string, vote: -1 | 1) => {
 		try {
-			await request("v1/community/aliases/vote", {
+			await request(`v1/community/candidates/${encodeURIComponent(candidateId)}:vote`, {
 				method: "POST",
-				body: { candidateId, vote },
+				body: { vote },
 			});
 			await loadCommunity();
 			await loadMyCommunity();
@@ -372,8 +372,8 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 			return;
 		}
 		try {
-			await request(`v1/admin/candidates/${encodeURIComponent(candidateId)}/status`, {
-				method: "PATCH",
+			await request(`v1/admin/candidates/${encodeURIComponent(candidateId)}:setStatus`, {
+				method: "POST",
 				body: { status },
 			});
 			await Promise.all([loadAdminCandidates(), loadAdminStats(), loadCommunity(), loadMyCommunity()]);
@@ -394,7 +394,7 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 			return;
 		}
 		try {
-			await request("v1/admin/roll-cycle", {
+			await request("v1/admin:rollCycle", {
 				method: "POST",
 			});
 			await Promise.all([loadAdminCandidates(), loadAdminStats(), loadCommunity(), loadMyCommunity()]);
@@ -416,8 +416,8 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 			return;
 		}
 		try {
-			await request(`v1/admin/candidates/${encodeURIComponent(candidateId)}/vote-window`, {
-				method: "PATCH",
+			await request(`v1/admin/candidates/${encodeURIComponent(candidateId)}:updateVoteWindow`, {
+				method: "POST",
 				body: {
 					voteCloseAt: date.toISOString(),
 				},
@@ -549,7 +549,7 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 
 	const handleBuildBundle = async (): Promise<boolean> => {
 		try {
-			await request("v1/admin/static-bundles/build", {
+			await request("v1/admin/static-bundles:build", {
 				method: "POST",
 				body: {
 					force: true,
@@ -586,7 +586,7 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 
 	const handleStartTotpSetup = async () => {
 		try {
-			const payload = await request<MfaSetup>("v1/auth/mfa/totp/setup/start", {
+			const payload = await request<MfaSetup>("v1/auth/mfa/totp:startSetup", {
 				method: "POST",
 			});
 			setMfaSetup(payload);
@@ -602,7 +602,7 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 			return;
 		}
 		try {
-			await request("v1/auth/mfa/totp/setup/confirm", {
+			await request("v1/auth/mfa/totp:confirmSetup", {
 				method: "POST",
 				body: { code: mfaSetupCode.trim() },
 			});
@@ -617,7 +617,7 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 
 	const handleDisableTotp = async () => {
 		try {
-			await request("v1/auth/mfa/totp/disable", {
+			await request("v1/auth/mfa/totp:disable", {
 				method: "POST",
 			});
 			await Promise.all([loadMfaStatus(), loadBackupCodeStatus()]);
@@ -629,13 +629,13 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 
 	const handleRegisterPasskey = async (): Promise<string | null> => {
 		try {
-			const options = await request<unknown>("v1/auth/mfa/passkey/register/start", {
+			const options = await request<unknown>("v1/auth/mfa/passkeys:startRegistration", {
 				method: "POST",
 			});
 			const browserResponse = await startRegistration({
 				optionsJSON: options as Parameters<typeof startRegistration>[0]["optionsJSON"],
 			});
-			const payload = await request<{ passkey?: { credentialId: string } }>("v1/auth/mfa/passkey/register/finish", {
+			const payload = await request<{ passkey?: { credentialId: string } }>("v1/auth/mfa/passkeys:finishRegistration", {
 				method: "POST",
 				body: {
 					response: browserResponse,
@@ -707,7 +707,7 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		}
 		try {
 			const payload = await request<{ codes: string[]; activeCount: number; generatedAt: string }>(
-				"v1/auth/mfa/backup-codes/regenerate",
+				"v1/auth/mfa/backup-codes:regenerate",
 				{
 					method: "POST",
 				},

@@ -49,7 +49,29 @@ type TypedOperation = {
 	responses?: Record<string, unknown>;
 };
 
-const normalizePath = (routePath: string) => routePath.replaceAll(/:([A-Za-z0-9_]+)/g, "{$1}");
+const normalizeRouteSegment = (segment: string) => {
+	if (!segment.startsWith(":")) {
+		return segment;
+	}
+
+	const secondColonIndex = segment.indexOf(":", 1);
+	if (secondColonIndex === -1) {
+		return `{${segment.slice(1)}}`;
+	}
+
+	return `{${segment.slice(1, secondColonIndex)}}${segment.slice(secondColonIndex)}`;
+};
+
+const normalizePath = (routePath: string) => {
+	if (routePath === "/") {
+		return routePath;
+	}
+
+	return routePath
+		.split("/")
+		.map((segment) => normalizeRouteSegment(segment))
+		.join("/");
+};
 
 const joinRoutePath = (prefix: string, child: string) => {
 	const normalizedPrefix = prefix.endsWith("/") && prefix !== "/" ? prefix.slice(0, -1) : prefix;
@@ -61,17 +83,25 @@ const joinRoutePath = (prefix: string, child: string) => {
 	return combined.startsWith("/") ? combined : `/${combined}`;
 };
 
-const parsePathParameters = (routePath: string): OpenApiParameter[] => {
-	const matches = [...routePath.matchAll(/\{([A-Za-z0-9_]+)\}/g)];
-	return matches.map((match) => ({
-		name: match[1] ?? "id",
-		in: "path",
-		required: true,
-		schema: {
-			type: "string",
-		},
-	}));
-};
+const parsePathParameters = (routePath: string): OpenApiParameter[] =>
+	routePath
+		.split("/")
+		.flatMap((segment) => {
+			const match = segment.match(/^\{([A-Za-z0-9_]+)\}(?::[A-Za-z0-9_]+)?$/);
+			if (!match) {
+				return [];
+			}
+			return [
+				{
+					name: match[1] ?? "id",
+					in: "path" as const,
+					required: true,
+					schema: {
+						type: "string",
+					},
+				},
+			];
+		});
 
 const toOperationId = (method: string, routePath: string) => {
 	const normalized = routePath
@@ -88,12 +118,12 @@ const toTag = (routePath: string) => {
 	}
 	const segments = routePath.split("/").filter((item) => item.length > 0);
 	if (segments[0] === "v1") {
-		return segments[1] ?? "v1";
+		return segments[1]?.split(":")[0] ?? "v1";
 	}
 	if (segments[0] === "internal") {
 		return "internal";
 	}
-	return segments[0] ?? "misc";
+	return segments[0]?.split(":")[0] ?? "misc";
 };
 
 const resolveServerUrl = (env: Env) => {

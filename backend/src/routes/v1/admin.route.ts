@@ -8,6 +8,7 @@ import type { AdminUserService } from "../../services/admin-user.service.js";
 import type { StaticBundleService } from "../../services/static-bundle.service.js";
 import { ok } from "../../http/response.js";
 import type { AppEnv } from "../../types/hono.js";
+import { readCustomMethodParam } from "../../utils/custom-method.js";
 
 const createCandidateSchema = z.object({
 	songIdentifier: z.string().min(1),
@@ -76,9 +77,8 @@ const staticBundleSchedulePatchSchema = z
 	.refine((value) => Object.keys(value).length > 0, "No field to update.");
 
 export const adminV1Route = new Hono<AppEnv>();
-adminV1Route.use("*", adminRequired);
 
-adminV1Route.get("/context", async (c) => {
+adminV1Route.get("/admin/context", adminRequired, async (c) => {
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
@@ -90,13 +90,13 @@ adminV1Route.get("/context", async (c) => {
 	});
 });
 
-adminV1Route.get("/dashboard", async (c) => {
+adminV1Route.get("/admin/dashboard", adminRequired, async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	const stats = await communityAliasService.adminDashboardStats();
 	return ok(c, stats);
 });
 
-adminV1Route.get("/candidates", async (c) => {
+adminV1Route.get("/admin/candidates", adminRequired, async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	const status = c.req.query("status");
 	const search = c.req.query("search");
@@ -115,7 +115,7 @@ adminV1Route.get("/candidates", async (c) => {
 	return ok(c, { rows });
 });
 
-adminV1Route.post("/candidates", async (c) => {
+adminV1Route.post("/admin/candidates", adminRequired, async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	const auth = c.get("auth");
 	if (!auth) {
@@ -131,29 +131,29 @@ adminV1Route.post("/candidates", async (c) => {
 	return ok(c, { candidate }, 201);
 });
 
-adminV1Route.patch("/candidates/:candidateId/status", async (c) => {
+adminV1Route.post("/admin/candidates/:candidateId:setStatus", adminRequired, async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
-	const candidateId = c.req.param("candidateId");
+	const candidateId = z.string().uuid().parse(readCustomMethodParam(c, "candidateId", "setStatus"));
 	const body = setStatusSchema.parse(await c.req.json());
 	const candidate = await communityAliasService.adminSetStatus(candidateId, body.status);
 	return ok(c, { candidate });
 });
 
-adminV1Route.patch("/candidates/:candidateId/vote-window", async (c) => {
+adminV1Route.post("/admin/candidates/:candidateId:updateVoteWindow", adminRequired, async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
-	const candidateId = c.req.param("candidateId");
+	const candidateId = z.string().uuid().parse(readCustomMethodParam(c, "candidateId", "updateVoteWindow"));
 	const body = voteWindowSchema.parse(await c.req.json());
 	const candidate = await communityAliasService.adminUpdateVoteWindow(candidateId, new Date(body.voteCloseAt));
 	return ok(c, { candidate });
 });
 
-adminV1Route.post("/roll-cycle", async (c) => {
+adminV1Route.post("/admin:rollCycle", adminRequired, async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	const result = await communityAliasService.rollCycle();
 	return ok(c, result);
 });
 
-adminV1Route.get("/users", async (c) => {
+adminV1Route.get("/admin/users", adminRequired, async (c) => {
 	const adminUserService = di.resolve<AdminUserService>(TOKENS.AdminUserService);
 	const query = listUsersQuerySchema.parse(c.req.query());
 	const result = await adminUserService.listUsers({
@@ -163,27 +163,27 @@ adminV1Route.get("/users", async (c) => {
 	return ok(c, result);
 });
 
-adminV1Route.post("/users", async (c) => {
+adminV1Route.post("/admin/users", adminRequired, async (c) => {
 	const adminUserService = di.resolve<AdminUserService>(TOKENS.AdminUserService);
 	const body = createUserSchema.parse(await c.req.json());
 	const user = await adminUserService.createUser(body);
 	return ok(c, { user }, 201);
 });
 
-adminV1Route.delete("/users/:userId", async (c) => {
+adminV1Route.delete("/admin/users/:userId", adminRequired, async (c) => {
 	const adminUserService = di.resolve<AdminUserService>(TOKENS.AdminUserService);
 	const userId = c.req.param("userId");
 	const result = await adminUserService.deleteUser(userId);
 	return ok(c, result);
 });
 
-adminV1Route.get("/static-sources", async (c) => {
+adminV1Route.get("/admin/static-sources", adminRequired, async (c) => {
 	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
 	const sources = await staticBundleService.listSources();
 	return ok(c, { sources });
 });
 
-adminV1Route.post("/static-sources", async (c) => {
+adminV1Route.post("/admin/static-sources", adminRequired, async (c) => {
 	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
 	const body = staticSourceCreateSchema.parse(await c.req.json());
 	const source = await staticBundleService.createSource({
@@ -196,7 +196,7 @@ adminV1Route.post("/static-sources", async (c) => {
 	return ok(c, { source }, 201);
 });
 
-adminV1Route.patch("/static-sources/:sourceId", async (c) => {
+adminV1Route.patch("/admin/static-sources/:sourceId", adminRequired, async (c) => {
 	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
 	const sourceId = c.req.param("sourceId");
 	const body = staticSourcePatchSchema.parse(await c.req.json());
@@ -217,26 +217,26 @@ adminV1Route.patch("/static-sources/:sourceId", async (c) => {
 	return ok(c, { source });
 });
 
-adminV1Route.post("/static-bundles/build", async (c) => {
+adminV1Route.post("/admin/static-bundles:build", adminRequired, async (c) => {
 	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
 	const body = bundleBuildSchema.parse(await c.req.json());
 	const result = await staticBundleService.buildBundle(body.force);
 	return ok(c, result);
 });
 
-adminV1Route.get("/static-bundles", async (c) => {
+adminV1Route.get("/admin/static-bundles", adminRequired, async (c) => {
 	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
 	const bundles = await staticBundleService.listBundles();
 	return ok(c, { bundles });
 });
 
-adminV1Route.get("/static-bundle-schedule", async (c) => {
+adminV1Route.get("/admin/static-bundle-schedule", adminRequired, async (c) => {
 	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
 	const schedule = await staticBundleService.getPeriodicBuildSchedule();
 	return ok(c, { schedule });
 });
 
-adminV1Route.patch("/static-bundle-schedule", async (c) => {
+adminV1Route.patch("/admin/static-bundle-schedule", adminRequired, async (c) => {
 	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
 	const body = staticBundleSchedulePatchSchema.parse(await c.req.json());
 	const patch: Parameters<StaticBundleService["updatePeriodicBuildSchedule"]>[0] = {};

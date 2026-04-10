@@ -126,7 +126,6 @@ private struct BackendRemotePlayRecord: Decodable {
 }
 
 private struct BackendProfileUpsertRequest: Encodable {
-    let profileId: String
     let name: String
     let server: String
     let isActive: Bool
@@ -235,9 +234,9 @@ enum BackendCloudSyncService {
 
         for profile in profiles {
             let profileId = profile.id.uuidString.lowercased()
+            let escapedProfileId = profileId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? profileId
             
             let initialUpsertPayload = BackendProfileUpsertRequest(
-                profileId: profileId,
                 name: profile.name,
                 server: profile.server,
                 isActive: profile.isActive,
@@ -253,8 +252,8 @@ enum BackendCloudSyncService {
             )
 
             let _: BackendProfileUpsertResponse = try await BackendAPIClient.request(
-                path: "v1/profiles/upsert",
-                method: "POST",
+                path: "v1/profiles/\(escapedProfileId)",
+                method: "PUT",
                 body: initialUpsertPayload,
                 authentication: .required
             )
@@ -262,10 +261,9 @@ enum BackendCloudSyncService {
             if let resolvedAvatarURL = try await uploadAvatarIfNeeded(for: profile), resolvedAvatarURL != profile.avatarUrl {
                 // Perform a quick patch if the avatar URL was generated
                 let _: BackendProfileUpsertResponse = try await BackendAPIClient.request(
-                    path: "v1/profiles/upsert",
-                    method: "POST",
+                    path: "v1/profiles/\(escapedProfileId)",
+                    method: "PUT",
                     body: BackendProfileUpsertRequest(
-                        profileId: profileId,
                         name: profile.name,
                         server: profile.server,
                         isActive: profile.isActive,
@@ -303,14 +301,14 @@ enum BackendCloudSyncService {
             }
 
             let _: BackendOverwriteAck = try await BackendAPIClient.request(
-                path: "v1/scores/overwrite",
+                path: "v1/scores:replace",
                 method: "POST",
                 body: BackendScoresOverwriteRequest(profileId: profileId, scores: scoreEntries),
                 authentication: .required
             )
 
             let _: BackendOverwriteAck = try await BackendAPIClient.request(
-                path: "v1/scores/play-records/overwrite",
+                path: "v1/play-records:replace",
                 method: "POST",
                 body: BackendPlayRecordsOverwriteRequest(profileId: profileId, records: recordEntries),
                 authentication: .required
@@ -343,7 +341,6 @@ enum BackendCloudSyncService {
         let escapedProfileId = profile.id.uuidString.lowercased()
 
         let initialUpsertPayload = BackendProfileUpsertRequest(
-            profileId: escapedProfileId,
             name: profile.name,
             server: profile.server,
             isActive: profile.isActive,
@@ -359,18 +356,17 @@ enum BackendCloudSyncService {
         )
 
         let _: BackendProfileUpsertResponse = try await BackendAPIClient.request(
-            path: "v1/profiles/upsert",
-            method: "POST",
+            path: "v1/profiles/\(escapedProfileId)",
+            method: "PUT",
             body: initialUpsertPayload,
             authentication: .required
         )
         
         if let resolvedAvatarURL = try await uploadAvatarIfNeeded(for: profile), resolvedAvatarURL != profile.avatarUrl {
             let _: BackendProfileUpsertResponse = try await BackendAPIClient.request(
-                path: "v1/profiles/upsert",
-                method: "POST",
+                path: "v1/profiles/\(escapedProfileId)",
+                method: "PUT",
                 body: BackendProfileUpsertRequest(
-                    profileId: escapedProfileId,
                     name: profile.name,
                     server: profile.server,
                     isActive: profile.isActive,
@@ -403,14 +399,14 @@ enum BackendCloudSyncService {
         }
 
         let _: BackendOverwriteAck = try await BackendAPIClient.request(
-            path: "v1/scores/overwrite",
+            path: "v1/scores:replace",
             method: "POST",
             body: BackendScoresOverwriteRequest(profileId: escapedProfileId, scores: scoreEntries),
             authentication: .required
         )
 
         let _: BackendOverwriteAck = try await BackendAPIClient.request(
-            path: "v1/scores/play-records/overwrite",
+            path: "v1/play-records:replace",
             method: "POST",
             body: BackendPlayRecordsOverwriteRequest(profileId: escapedProfileId, records: recordEntries),
             authentication: .required
@@ -463,7 +459,7 @@ enum BackendCloudSyncService {
             )
 
             let recordsResponse: BackendPlayRecordsResponse = try await BackendAPIClient.request(
-                path: "v1/scores/play-records?profileId=\(escapedProfileId)&limit=5000",
+                path: "v1/play-records?profileId=\(escapedProfileId)&limit=5000",
                 method: "GET",
                 authentication: .required
             )
@@ -489,7 +485,7 @@ enum BackendCloudSyncService {
         let profileId = profile.id.uuidString.lowercased()
         let escapedProfileId = profileId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? profileId
         let uploadResponse: BackendAvatarUploadUrlResponse = try await BackendAPIClient.request(
-            path: "v1/profiles/\(escapedProfileId)/avatar/upload-url",
+            path: "v1/profiles/\(escapedProfileId)/avatar:createUploadUrl",
             method: "POST",
             body: BackendAvatarUploadUrlRequest(contentType: optimizedAvatar.contentType),
             authentication: .required
@@ -669,7 +665,7 @@ enum BackendCloudSyncService {
             )
 
             let recordsResponse: BackendPlayRecordsResponse = try await BackendAPIClient.request(
-                path: "v1/scores/play-records?profileId=\(escapedProfileId)&limit=5000",
+                path: "v1/play-records?profileId=\(escapedProfileId)&limit=5000",
                 method: "GET",
                 authentication: .required
             )

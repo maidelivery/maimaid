@@ -13,8 +13,7 @@ const createProfileSchema = z.object({
 	server: z.enum(["jp", "intl", "usa", "cn"]).default("jp"),
 });
 
-const upsertProfileSchema = z.object({
-	profileId: z.string().uuid(),
+const putProfileSchema = z.object({
 	name: z.string().min(1).max(40),
 	server: z.enum(["jp", "intl", "usa", "cn"]).default("jp"),
 	isActive: z.boolean().optional(),
@@ -116,14 +115,15 @@ profilesV1Route.post("/", async (c) => {
 	return ok(c, { profile }, 201);
 });
 
-profilesV1Route.post("/upsert", async (c) => {
+profilesV1Route.put("/:profileId", async (c) => {
 	const profileService = di.resolve<ProfileService>(TOKENS.ProfileService);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const body = upsertProfileSchema.parse(await c.req.json());
+	const profileId = c.req.param("profileId");
+	const body = putProfileSchema.parse(await c.req.json());
 	const payload: Parameters<ProfileService["upsertByClientId"]>[2] = {
 		name: body.name,
 		server: body.server,
@@ -138,7 +138,7 @@ profilesV1Route.post("/upsert", async (c) => {
 	if (body.b35RecLimit !== undefined) payload.b35RecLimit = body.b35RecLimit;
 	if (body.b15RecLimit !== undefined) payload.b15RecLimit = body.b15RecLimit;
 	if (body.createdAt !== undefined) payload.createdAt = body.createdAt;
-	const profile = await profileService.upsertByClientId(auth.userId, body.profileId, payload);
+	const profile = await profileService.upsertByClientId(auth.userId, profileId, payload);
 	await syncService.recordEvent({
 		userId: auth.userId,
 		profileId: profile.id,
@@ -221,7 +221,7 @@ profilesV1Route.delete("/:profileId", async (c) => {
 	return ok(c, { profileId: deleted.id });
 });
 
-profilesV1Route.post("/:profileId/avatar/upload-url", async (c) => {
+profilesV1Route.post("/:profileId/avatar:createUploadUrl", async (c) => {
 	const profileService = di.resolve<ProfileService>(TOKENS.ProfileService);
 	const auth = c.get("auth");
 	if (!auth) {

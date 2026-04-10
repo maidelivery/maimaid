@@ -112,9 +112,7 @@ const mapPlayRecords = (records: PlayRecordBody[]): Parameters<ScoreService["bul
 		return mapped;
 	});
 
-scoresV1Route.use("*", authRequired);
-
-scoresV1Route.get("/", async (c) => {
+scoresV1Route.get("/scores", authRequired, async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const auth = c.get("auth");
 	if (!auth) {
@@ -129,7 +127,7 @@ scoresV1Route.get("/", async (c) => {
 	return ok(c, { scores });
 });
 
-scoresV1Route.patch("/:scoreId", async (c) => {
+scoresV1Route.patch("/scores/:scoreId", authRequired, async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const auth = c.get("auth");
@@ -159,7 +157,7 @@ scoresV1Route.patch("/:scoreId", async (c) => {
 	return ok(c, { score: updated });
 });
 
-scoresV1Route.delete("/:scoreId", async (c) => {
+scoresV1Route.delete("/scores/:scoreId", authRequired, async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const auth = c.get("auth");
@@ -181,7 +179,7 @@ scoresV1Route.delete("/:scoreId", async (c) => {
 	return ok(c, result);
 });
 
-scoresV1Route.post("/bulk-upsert", async (c) => {
+scoresV1Route.post("/scores:batchUpsert", authRequired, async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const auth = c.get("auth");
@@ -207,7 +205,7 @@ scoresV1Route.post("/bulk-upsert", async (c) => {
 	return ok(c, result);
 });
 
-scoresV1Route.post("/overwrite", async (c) => {
+scoresV1Route.post("/scores:replace", authRequired, async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const auth = c.get("auth");
@@ -232,7 +230,7 @@ scoresV1Route.post("/overwrite", async (c) => {
 	return ok(c, result);
 });
 
-scoresV1Route.get("/play-records", async (c) => {
+scoresV1Route.get("/play-records", authRequired, async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const auth = c.get("auth");
 	if (!auth) {
@@ -248,7 +246,7 @@ scoresV1Route.get("/play-records", async (c) => {
 	return ok(c, { records });
 });
 
-scoresV1Route.post("/play-records/bulk-upsert", async (c) => {
+scoresV1Route.post("/play-records:batchUpsert", authRequired, async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const auth = c.get("auth");
@@ -274,7 +272,7 @@ scoresV1Route.post("/play-records/bulk-upsert", async (c) => {
 	return ok(c, result);
 });
 
-scoresV1Route.post("/play-records/overwrite", async (c) => {
+scoresV1Route.post("/play-records:replace", authRequired, async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const auth = c.get("auth");
@@ -299,7 +297,7 @@ scoresV1Route.post("/play-records/overwrite", async (c) => {
 	return ok(c, result);
 });
 
-scoresV1Route.delete("/play-records/:recordId", async (c) => {
+scoresV1Route.delete("/play-records/:recordId", authRequired, async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const auth = c.get("auth");

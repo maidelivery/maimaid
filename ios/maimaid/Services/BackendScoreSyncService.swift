@@ -41,7 +41,6 @@ private struct BackendBulkRecordSyncRequest: Encodable {
 }
 
 private struct BackendProfileUpsertPayload: Encodable {
-    let profileId: String
     let name: String
     let server: String
     let isActive: Bool
@@ -68,8 +67,9 @@ enum BackendScoreSyncService {
             throw BackendAPIError.unauthorized
         }
 
+        let profileId = profile.id.uuidString.lowercased()
+        let escapedProfileId = profileId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? profileId
         let profileUpsert = BackendProfileUpsertPayload(
-            profileId: profile.id.uuidString.lowercased(),
             name: profile.name,
             server: profile.server,
             isActive: profile.isActive,
@@ -85,8 +85,8 @@ enum BackendScoreSyncService {
         )
 
         let _: BackendScoreSyncAck = try await BackendAPIClient.request(
-            path: "v1/profiles/upsert",
-            method: "POST",
+            path: "v1/profiles/\(escapedProfileId)",
+            method: "PUT",
             body: profileUpsert,
             authentication: .required
         )
@@ -150,13 +150,13 @@ enum BackendScoreSyncService {
 
         try await ensureProfileExists(profile: profile)
         let _: BackendScoreSyncAck = try await BackendAPIClient.request(
-            path: "v1/scores/bulk-upsert",
+            path: "v1/scores:batchUpsert",
             method: "POST",
             body: upsertRequest,
             authentication: .required
         )
         let _: BackendScoreSyncAck = try await BackendAPIClient.request(
-            path: "v1/scores/play-records/bulk-upsert",
+            path: "v1/play-records:batchUpsert",
             method: "POST",
             body: recordRequest,
             authentication: .required

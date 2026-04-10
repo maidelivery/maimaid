@@ -985,23 +985,21 @@ function App() {
 		}
 		const [scorePayload, recordPayload] = await Promise.all([
 			request<{ scores: ScoreRow[] }>(`v1/scores?profileId=${encodeURIComponent(activeProfileId)}`),
-			request<{ records: PlayRecordRow[] }>(
-				`v1/scores/play-records?profileId=${encodeURIComponent(activeProfileId)}&limit=300`,
-			),
+			request<{ records: PlayRecordRow[] }>(`v1/play-records?profileId=${encodeURIComponent(activeProfileId)}&limit=300`),
 		]);
 		setScores(scorePayload.scores);
 		setPlayRecords(recordPayload.records);
 	}, [activeProfileId, request, session, setPlayRecords, setScores]);
 
 	const loadCommunity = useCallback(async () => {
-		const boardPromise = request<{ rows: CommunityCandidate[] }>("v1/community/aliases/voting-board?limit=120&offset=0", {
+		const boardPromise = request<{ rows: CommunityCandidate[] }>("v1/community/candidates:votingBoard?limit=120&offset=0", {
 			auth: Boolean(session),
 		});
-		const approvedPromise = request<{ rows: ApprovedAliasSyncRow[] }>("v1/community/aliases/approved-sync?limit=80", {
+		const approvedPromise = request<{ rows: ApprovedAliasSyncRow[] }>("v1/community/aliases:sync?limit=80", {
 			auth: false,
 		});
 		const dailyPromise = session
-			? request<{ count: number }>("v1/community/aliases/daily-count")
+			? request<{ count: number }>("v1/community/candidates:dailyCount")
 			: Promise.resolve<{ count: number }>({ count: 0 });
 		const [boardPayload, approvedPayload, dailyPayload] = await Promise.all([boardPromise, approvedPromise, dailyPromise]);
 		setCommunityRows(boardPayload.rows);
@@ -1021,7 +1019,7 @@ function App() {
 			return;
 		}
 		const suffix = matchedSong ? `?songIdentifier=${encodeURIComponent(matchedSong.songIdentifier)}&limit=30` : "?limit=30";
-		const payload = await request<{ rows: MyCommunityCandidate[] }>(`v1/community/aliases/my-candidates${suffix}`);
+		const payload = await request<{ rows: MyCommunityCandidate[] }>(`v1/community/candidates:my${suffix}`);
 		setMyCommunityRows(payload.rows);
 	}, [myCandidateSongName, request, resolveSongByName, session, setMyCommunityRows, showToast, t]);
 

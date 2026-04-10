@@ -78,11 +78,11 @@ export const createApp = () => {
 	app.route("/v1/auth", authV1Route);
 	app.route("/v1/profiles", profilesV1Route);
 	app.route("/v1/catalog", catalogV1Route);
-	app.route("/v1/scores", scoresV1Route);
-	app.route("/v1/import", importsV1Route);
+	app.route("/v1", scoresV1Route);
+	app.route("/v1", importsV1Route);
 	app.route("/v1/community", communityV1Route);
-	app.route("/v1/admin", adminV1Route);
-	app.route("/v1/sync", syncV1Route);
+	app.route("/v1", adminV1Route);
+	app.route("/v1", syncV1Route);
 	app.route("/v1/static", staticV1Route);
 	app.route("/internal/jobs", jobsInternalRoute);
 

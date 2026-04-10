@@ -99,7 +99,6 @@ private struct CommunityAliasSubmitPayload: Encodable {
 }
 
 private struct CommunityAliasVotePayload: Encodable {
-    let candidateId: String
     let vote: Int
 }
 
@@ -163,7 +162,7 @@ final class CommunityAliasService {
                 tzOffsetMinutes: TimeZone.current.secondsFromGMT() / 60
             )
             let response: CommunityAliasSubmitResponse = try await BackendAPIClient.request(
-                path: "v1/community/aliases/submit",
+                path: "v1/community/candidates",
                 method: "POST",
                 body: payload,
                 authentication: .required
@@ -210,7 +209,7 @@ final class CommunityAliasService {
         let safeOffset = max(0, offset)
         do {
             let response: CommunityAliasRowsResponse<CommunityAliasVotingBoardItem> = try await BackendAPIClient.request(
-                path: "v1/community/aliases/voting-board?limit=\(safeLimit)&offset=\(safeOffset)",
+                path: "v1/community/candidates:votingBoard?limit=\(safeLimit)&offset=\(safeOffset)",
                 method: "GET",
                 authentication: .optional
             )
@@ -227,7 +226,7 @@ final class CommunityAliasService {
         let escapedSongIdentifier = songIdentifier.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? songIdentifier
         do {
             let response: CommunityAliasRowsResponse<CommunityAliasMyCandidate> = try await BackendAPIClient.request(
-                path: "v1/community/aliases/my-candidates?songIdentifier=\(escapedSongIdentifier)&limit=\(safeLimit)",
+                path: "v1/community/candidates:my?songIdentifier=\(escapedSongIdentifier)&limit=\(safeLimit)",
                 method: "GET",
                 authentication: .required
             )
@@ -249,7 +248,7 @@ final class CommunityAliasService {
         )
         do {
             let response: CommunityAliasDailyCountResponse = try await BackendAPIClient.request(
-                path: "v1/community/aliases/daily-count?localDate=\(formattedDate)",
+                path: "v1/community/candidates:dailyCount?localDate=\(formattedDate)",
                 method: "GET",
                 authentication: .required
             )
@@ -269,9 +268,11 @@ final class CommunityAliasService {
         lastVoteErrorMessage = nil
 
         do {
-            let payload = CommunityAliasVotePayload(candidateId: candidateId.uuidString.lowercased(), vote: support ? 1 : -1)
+            let escapedCandidateId = candidateId.uuidString.lowercased().addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
+                ?? candidateId.uuidString.lowercased()
+            let payload = CommunityAliasVotePayload(vote: support ? 1 : -1)
             let response: CommunityAliasVoteResult = try await BackendAPIClient.request(
-                path: "v1/community/aliases/vote",
+                path: "v1/community/candidates/\(escapedCandidateId):vote",
                 method: "POST",
                 body: payload,
                 authentication: .required
@@ -317,9 +318,9 @@ final class CommunityAliasService {
         let path: String
         if let since {
             let encoded = since.ISO8601Format().addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? since.ISO8601Format()
-            path = "v1/community/aliases/approved-sync?since=\(encoded)&limit=1000"
+            path = "v1/community/aliases:sync?since=\(encoded)&limit=1000"
         } else {
-            path = "v1/community/aliases/approved-sync?limit=1000"
+            path = "v1/community/aliases:sync?limit=1000"
         }
 
         let response: CommunityAliasRowsResponse<CommunityAliasApprovedSyncRow>

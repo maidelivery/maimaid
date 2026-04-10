@@ -27,7 +27,7 @@ enum BackendImportService {
     ) async throws -> BackendImportRunResponse {
         let request = DivingFishImportRequest(profileId: profileId, username: username, qq: qq)
         return try await BackendAPIClient.request(
-            path: "v1/import/df",
+            path: "v1/imports:importDf",
             method: "POST",
             body: request,
             authentication: .required
@@ -37,7 +37,7 @@ enum BackendImportService {
     static func importLxns(profileId: String, accessToken: String) async throws -> BackendImportRunResponse {
         let request = LxnsImportRequest(profileId: profileId, accessToken: accessToken)
         return try await BackendAPIClient.request(
-            path: "v1/import/lxns",
+            path: "v1/imports:importLxns",
             method: "POST",
             body: request,
             authentication: .required

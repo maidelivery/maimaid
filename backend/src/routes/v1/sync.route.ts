@@ -184,14 +184,13 @@ const mapPlayRecords = (records: PlayRecordBody[]) =>
 	});
 
 export const syncV1Route = new Hono<AppEnv>();
-syncV1Route.use("*", authRequired);
 
 function isWebClient(c: Context<AppEnv>) {
 	const client = c.req.header("x-maimaid-client");
 	return client?.trim().toLowerCase() === "web";
 }
 
-syncV1Route.post("/push", async (c) => {
+syncV1Route.post("/sync:push", authRequired, async (c) => {
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
@@ -352,7 +351,7 @@ syncV1Route.post("/push", async (c) => {
 	return ok(c, result);
 });
 
-syncV1Route.get("/pull", async (c) => {
+syncV1Route.get("/sync:pull", authRequired, async (c) => {
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);

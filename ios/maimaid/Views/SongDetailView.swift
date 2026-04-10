@@ -900,6 +900,24 @@ struct SongDetailContent: View {
         localizedChartType(selectedType)
     }
 
+    private var chartTypeVersions: [String: String] {
+        song.sheets.reduce(into: [:]) { versions, sheet in
+            let type = sheet.type.lowercased()
+            guard versions[type] == nil, let version = normalizedChartVersion(sheet.version) else {
+                return
+            }
+            versions[type] = version
+        }
+    }
+
+    private var currentChartTypeAccessibilityText: String {
+        guard availableTypes.count > 1, let version = chartTypeVersionAbbreviation(for: selectedType) else {
+            return currentChartTypeText
+        }
+
+        return "\(currentChartTypeText)，\(version)"
+    }
+
     private var currentChartTypeColor: Color {
         ThemeUtils.badgeColorForChartType(selectedType, colorScheme)
     }
@@ -915,6 +933,28 @@ struct SongDetailContent: View {
         }
     }
 
+    private func normalizedChartVersion(_ version: String?) -> String? {
+        guard let version else { return nil }
+
+        let trimmedVersion = version.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedVersion.isEmpty ? nil : trimmedVersion
+    }
+
+    private func chartTypeVersionAbbreviation(for type: String) -> String? {
+        guard let version = chartTypeVersions[type.lowercased()] else { return nil }
+        return ThemeUtils.versionAbbreviation(version)
+    }
+
+    private func chartTypePickerTitle(_ type: String) -> String {
+        let localizedType = localizedChartType(type)
+        guard type.lowercased() == selectedType,
+              let version = chartTypeVersionAbbreviation(for: type) else {
+            return localizedType
+        }
+
+        return "\(localizedType) / \(version)"
+    }
+
     private var chartTypeSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             if availableTypes.count > 1 {
@@ -924,13 +964,13 @@ struct SongDetailContent: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(chartTypeLabel)，\(currentChartTypeText)")
+        .accessibilityLabel("\(chartTypeLabel)，\(currentChartTypeAccessibilityText)")
     }
 
     private var typePicker: some View {
         Picker("Version", selection: $selectedType) {
             ForEach(availableTypes, id: \.self) { type in
-                Text(localizedChartType(type)).tag(type)
+                Text(chartTypePickerTitle(type)).tag(type)
             }
         }
         .pickerStyle(.segmented)

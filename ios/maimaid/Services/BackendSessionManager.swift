@@ -276,7 +276,7 @@ final class BackendSessionManager {
 
     func resendVerification(email: String) async throws -> Bool {
         let payload: BackendResendVerificationPayload = try await BackendAPIClient.request(
-            path: "v1/auth/resend-verification",
+            path: "v1/auth/verification:resend",
             method: "POST",
             body: ["email": email],
             authentication: .none
@@ -415,7 +415,7 @@ final class BackendSessionManager {
         if let sessionCode = value(of: "sessionCode", from: url), sessionCode.count >= 20 {
             do {
                 let payload: BackendAuthPayload = try await BackendAPIClient.request(
-                    path: "v1/auth/session/exchange",
+                    path: "v1/auth/session:exchange",
                     method: "POST",
                     body: BackendSessionExchangeRequest(sessionCode: sessionCode),
                     authentication: .none

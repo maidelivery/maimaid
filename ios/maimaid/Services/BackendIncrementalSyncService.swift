@@ -253,7 +253,7 @@ enum BackendIncrementalSyncService {
         )
 
         let response: BackendSyncPushResponse = try await BackendAPIClient.request(
-            path: "v1/sync/push",
+            path: "v1/sync:push",
             method: "POST",
             body: payload,
             authentication: .required
@@ -298,7 +298,7 @@ enum BackendIncrementalSyncService {
         )
 
         let response: BackendSyncPushResponse = try await BackendAPIClient.request(
-            path: "v1/sync/push",
+            path: "v1/sync:push",
             method: "POST",
             body: payload,
             authentication: .required
@@ -455,7 +455,7 @@ enum BackendIncrementalSyncService {
             .joined(separator: "&")
 
         return try await BackendAPIClient.request(
-            path: "v1/sync/pull?\(query)",
+            path: "v1/sync:pull?\(query)",
             method: "GET",
             authentication: .required
         )

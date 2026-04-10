@@ -122,13 +122,15 @@ See `backend/.env.example`:
   - `POST /v1/auth/*`
   - `GET /v1/auth/verify-email?token=...`
   - `GET /v1/auth/password-reset?token=...`
-  - `GET/POST/PATCH /v1/profiles/*`
+  - `GET/POST/PUT/PATCH /v1/profiles/*`
   - `GET/POST /v1/catalog/*`
-  - `GET/POST /v1/scores/*`
-  - `POST /v1/scores/overwrite`
-  - `POST /v1/scores/play-records/overwrite`
-  - `POST /v1/import/df`
-  - `POST /v1/import/lxns`
+  - `GET/PATCH/DELETE /v1/scores/*`
+  - `POST /v1/scores:batchUpsert`
+  - `POST /v1/scores:replace`
+  - `GET/DELETE /v1/play-records/*`
+  - `POST /v1/play-records:batchUpsert`
+  - `POST /v1/play-records:replace`
+  - `POST /v1/imports:*`
   - `GET/POST /v1/community/*`
   - `GET/POST/PATCH /v1/admin/*`
 - Internal jobs:

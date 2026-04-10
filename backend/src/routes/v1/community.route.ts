@@ -7,6 +7,7 @@ import type { CommunityAliasService } from "../../services/community-alias.servi
 import { ok } from "../../http/response.js";
 import type { AppEnv } from "../../types/hono.js";
 import type { RateLimitService } from "../../services/rate-limit.service.js";
+import { readCustomMethodParam } from "../../utils/custom-method.js";
 
 const submitSchema = z.object({
 	songIdentifier: z.string().min(1),
@@ -16,7 +17,6 @@ const submitSchema = z.object({
 });
 
 const voteSchema = z.object({
-	candidateId: z.string().uuid(),
 	vote: z
 		.number()
 		.int()
@@ -63,7 +63,7 @@ const enforceRateLimit = async (input: { bucket: string; key: string; limit: num
 	});
 };
 
-communityV1Route.post("/aliases/submit", authRequired, async (c) => {
+communityV1Route.post("/candidates", authRequired, async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	const auth = c.get("auth");
 	if (!auth) {
@@ -81,7 +81,7 @@ communityV1Route.post("/aliases/submit", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-communityV1Route.get("/aliases/voting-board", authOptional, async (c) => {
+communityV1Route.get("/candidates:votingBoard", authOptional, async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	const auth = c.get("auth");
 	const limit = Number(c.req.query("limit") ?? 120);
@@ -90,7 +90,7 @@ communityV1Route.get("/aliases/voting-board", authOptional, async (c) => {
 	return ok(c, { rows });
 });
 
-communityV1Route.get("/aliases/my-candidates", authRequired, async (c) => {
+communityV1Route.get("/candidates:my", authRequired, async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	const auth = c.get("auth");
 	if (!auth) {
@@ -102,7 +102,7 @@ communityV1Route.get("/aliases/my-candidates", authRequired, async (c) => {
 	return ok(c, { rows });
 });
 
-communityV1Route.get("/aliases/daily-count", authRequired, async (c) => {
+communityV1Route.get("/candidates:dailyCount", authRequired, async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	const auth = c.get("auth");
 	if (!auth) {
@@ -113,18 +113,19 @@ communityV1Route.get("/aliases/daily-count", authRequired, async (c) => {
 	return ok(c, { count });
 });
 
-communityV1Route.post("/aliases/vote", authRequired, async (c) => {
+communityV1Route.post("/candidates/:candidateId:vote", authRequired, async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
+	const candidateId = z.string().uuid().parse(readCustomMethodParam(c, "candidateId", "vote"));
 	const body = voteSchema.parse(await c.req.json());
-	const result = await communityAliasService.vote(auth.userId, body.candidateId, body.vote);
+	const result = await communityAliasService.vote(auth.userId, candidateId, body.vote);
 	return ok(c, result);
 });
 
-communityV1Route.get("/aliases/approved-sync", async (c) => {
+communityV1Route.get("/aliases:sync", async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	await enforceRateLimit({
 		...COMMUNITY_RATE_LIMIT.approvedSyncIp,

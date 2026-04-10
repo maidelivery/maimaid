@@ -227,7 +227,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 	};
 
 	const createAppSessionCode = async (accessToken: string): Promise<string> => {
-		const payload = await request<{ sessionCode: string }>("v1/auth/session/create", {
+		const payload = await request<{ sessionCode: string }>("v1/auth/session:create", {
 			method: "POST",
 			auth: true,
 			retry: false,
@@ -376,7 +376,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 		}
 		setLoading(true);
 		try {
-			const payload = await request<LoginResponse>("v1/auth/mfa/challenge/totp", {
+			const payload = await request<LoginResponse>("v1/auth/mfa/challenges:verifyTotp", {
 				method: "POST",
 				auth: false,
 				body: {
@@ -399,7 +399,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 		}
 		setLoading(true);
 		try {
-			const options = await request<unknown>("v1/auth/mfa/challenge/passkey/start", {
+			const options = await request<unknown>("v1/auth/mfa/challenges:startPasskeyLogin", {
 				method: "POST",
 				auth: false,
 				body: {
@@ -409,7 +409,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 			const browserResponse = await startAuthentication({
 				optionsJSON: options as Parameters<typeof startAuthentication>[0]["optionsJSON"],
 			});
-			const payload = await request<LoginResponse>("v1/auth/mfa/challenge/passkey", {
+			const payload = await request<LoginResponse>("v1/auth/mfa/challenges:verifyPasskey", {
 				method: "POST",
 				auth: false,
 				body: {
@@ -433,7 +433,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 		}
 		setLoading(true);
 		try {
-			const payload = await request<LoginResponse>("v1/auth/mfa/challenge/backup-code", {
+			const payload = await request<LoginResponse>("v1/auth/mfa/challenges:verifyBackupCode", {
 				method: "POST",
 				auth: false,
 				body: {
@@ -452,7 +452,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 	const handleDirectPasskeyLogin = async () => {
 		setLoading(true);
 		try {
-			const startPayload = await request<PasskeyLoginStartResponse>("v1/auth/passkey/login/start", {
+			const startPayload = await request<PasskeyLoginStartResponse>("v1/auth/passkeys:startLogin", {
 				method: "POST",
 				auth: false,
 				body: {
@@ -462,7 +462,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 			const browserResponse = await startAuthentication({
 				optionsJSON: startPayload.options as Parameters<typeof startAuthentication>[0]["optionsJSON"],
 			});
-			const payload = await request<LoginResponse>("v1/auth/passkey/login/finish", {
+			const payload = await request<LoginResponse>("v1/auth/passkeys:finishLogin", {
 				method: "POST",
 				auth: false,
 				body: {
@@ -537,7 +537,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 
 		setLoading(true);
 		try {
-			const payload = await request<RegisterResponse>("v1/auth/resend-verification", {
+			const payload = await request<RegisterResponse>("v1/auth/verification:resend", {
 				method: "POST",
 				auth: false,
 				body: {

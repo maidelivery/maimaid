@@ -40,15 +40,27 @@ describe("openapi document generation", () => {
 			await next();
 		});
 		app.patch("/v1/items/:itemId", (c) => c.json({ ok: true }));
+		app.post("/v1/items/:itemId:archive", (c) => c.json({ ok: true }));
 		app.get("/health", (c) => c.json({ ok: true }));
 
 		const document = buildOpenApiDocument(app, createEnv());
 
 		expect(document.openapi).toBe("3.1.0");
 		expect(document.paths["/v1/items/{itemId}"]).toBeDefined();
+		expect(document.paths["/v1/items/{itemId}:archive"]).toBeDefined();
 		expect(document.paths["/*"]).toBeUndefined();
 		expect(document.paths["/v1/items/{itemId}"]?.patch).toBeDefined();
+		expect(document.paths["/v1/items/{itemId}:archive"]?.post).toBeDefined();
 		expect((document.paths["/v1/items/{itemId}"] as Record<string, unknown>)?.patch).toMatchObject({
+			parameters: [
+				{
+					name: "itemId",
+					in: "path",
+					required: true,
+				},
+			],
+		});
+		expect((document.paths["/v1/items/{itemId}:archive"] as Record<string, unknown>)?.post).toMatchObject({
 			parameters: [
 				{
 					name: "itemId",
@@ -89,7 +101,7 @@ describe("openapi document generation", () => {
 		const app = createApp();
 		const document = buildOpenApiDocument(app, createEnv());
 
-		const submitOperation = (document.paths["/v1/community/aliases/submit"] as Record<string, any>)?.post;
+		const submitOperation = (document.paths["/v1/community/candidates"] as Record<string, any>)?.post;
 		const submitBodySchema = submitOperation.requestBody.content["application/json"].schema;
 		expect(Object.keys(submitBodySchema.properties)).toEqual([
 			"songIdentifier",
@@ -98,12 +110,24 @@ describe("openapi document generation", () => {
 			"tzOffsetMinutes",
 		]);
 
-		const votingOperation = (document.paths["/v1/community/aliases/voting-board"] as Record<string, any>)?.get;
+		const votingOperation = (document.paths["/v1/community/candidates:votingBoard"] as Record<string, any>)?.get;
 		const limitParam = votingOperation.parameters.find((item: any) => item.name === "limit");
 		expect(limitParam.schema.type).toBe("number");
 
 		const rowItemSchema = votingOperation.responses["200"].content["application/json"].schema.properties.rows.items;
 		expect(Object.keys(rowItemSchema.properties)).toContain("candidateId");
 		expect(Object.keys(rowItemSchema.properties)).toContain("aliasText");
+
+		const voteOperation = (document.paths["/v1/community/candidates/{candidateId}:vote"] as Record<string, any>)?.post;
+		expect(voteOperation.parameters).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					name: "candidateId",
+					in: "path",
+					required: true,
+				}),
+			]),
+		);
+		expect(Object.keys(voteOperation.requestBody.content["application/json"].schema.properties)).toEqual(["vote"]);
 	});
 });

@@ -213,7 +213,7 @@ authV1Route.post("/refresh", async (c) => {
 	});
 });
 
-authV1Route.post("/session/exchange", async (c) => {
+authV1Route.post("/session:exchange", async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
 	const body = sessionExchangeSchema.parse(await c.req.json());
 	const { user, tokens } = await authService.exchangeSessionCode(body.sessionCode);
@@ -227,7 +227,7 @@ authV1Route.post("/session/exchange", async (c) => {
 	});
 });
 
-authV1Route.post("/session/create", authRequired, async (c) => {
+authV1Route.post("/session:create", authRequired, async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
 	const auth = c.get("auth");
 	if (!auth) {
@@ -248,7 +248,7 @@ authV1Route.post("/logout", async (c) => {
 	return ok(c, { success: true });
 });
 
-authV1Route.post("/resend-verification", async (c) => {
+authV1Route.post("/verification:resend", async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
 	const body = resendVerificationSchema.parse(await c.req.json());
 	await enforceRateLimit(c, {
@@ -395,7 +395,7 @@ authV1Route.get("/mfa/status", authRequired, async (c) => {
 	return ok(c, status);
 });
 
-authV1Route.post("/mfa/totp/setup/start", authRequired, async (c) => {
+authV1Route.post("/mfa/totp:startSetup", authRequired, async (c) => {
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
@@ -407,7 +407,7 @@ authV1Route.post("/mfa/totp/setup/start", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-authV1Route.post("/mfa/totp/setup/confirm", authRequired, async (c) => {
+authV1Route.post("/mfa/totp:confirmSetup", authRequired, async (c) => {
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
@@ -420,7 +420,7 @@ authV1Route.post("/mfa/totp/setup/confirm", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-authV1Route.post("/mfa/totp/disable", authRequired, async (c) => {
+authV1Route.post("/mfa/totp:disable", authRequired, async (c) => {
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
@@ -430,7 +430,7 @@ authV1Route.post("/mfa/totp/disable", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-authV1Route.post("/mfa/passkey/register/start", authRequired, async (c) => {
+authV1Route.post("/mfa/passkeys:startRegistration", authRequired, async (c) => {
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
@@ -442,7 +442,7 @@ authV1Route.post("/mfa/passkey/register/start", authRequired, async (c) => {
 	return ok(c, options);
 });
 
-authV1Route.post("/mfa/passkey/register/finish", authRequired, async (c) => {
+authV1Route.post("/mfa/passkeys:finishRegistration", authRequired, async (c) => {
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
@@ -463,7 +463,7 @@ authV1Route.get("/mfa/backup-codes", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-authV1Route.post("/mfa/backup-codes/regenerate", authRequired, async (c) => {
+authV1Route.post("/mfa/backup-codes:regenerate", authRequired, async (c) => {
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
@@ -506,14 +506,14 @@ authV1Route.delete("/mfa/passkey/:credentialId", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-authV1Route.post("/mfa/challenge/passkey/start", async (c) => {
+authV1Route.post("/mfa/challenges:startPasskeyLogin", async (c) => {
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
 	const body = mfaPasskeyStartSchema.parse(await c.req.json());
 	const options = await mfaService.startPasskeyLogin(body.challengeToken);
 	return ok(c, options);
 });
 
-authV1Route.post("/mfa/challenge/totp", async (c) => {
+authV1Route.post("/mfa/challenges:verifyTotp", async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
 	const body = mfaTotpLoginSchema.parse(await c.req.json());
@@ -530,7 +530,7 @@ authV1Route.post("/mfa/challenge/totp", async (c) => {
 	});
 });
 
-authV1Route.post("/mfa/challenge/backup-code", async (c) => {
+authV1Route.post("/mfa/challenges:verifyBackupCode", async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
 	const body = mfaBackupCodeLoginSchema.parse(await c.req.json());
@@ -547,7 +547,7 @@ authV1Route.post("/mfa/challenge/backup-code", async (c) => {
 	});
 });
 
-authV1Route.post("/mfa/challenge/passkey", async (c) => {
+authV1Route.post("/mfa/challenges:verifyPasskey", async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
 	const body = mfaPasskeyLoginSchema.parse(await c.req.json());
@@ -564,14 +564,14 @@ authV1Route.post("/mfa/challenge/passkey", async (c) => {
 	});
 });
 
-authV1Route.post("/passkey/login/start", async (c) => {
+authV1Route.post("/passkeys:startLogin", async (c) => {
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
 	passkeyLoginStartSchema.parse(await c.req.json());
 	const payload = await mfaService.startDirectPasskeyLogin(resolveLoginChannel(c.req.header("X-Maimaid-Client")));
 	return ok(c, payload);
 });
 
-authV1Route.post("/passkey/login/finish", async (c) => {
+authV1Route.post("/passkeys:finishLogin", async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
 	const body = passkeyLoginFinishSchema.parse(await c.req.json());

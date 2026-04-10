@@ -38,7 +38,7 @@ const lxnsOauthTokenSchema = z.object({
 	codeVerifier: z.string().min(20),
 });
 
-importsV1Route.post("/df/transform", authRequired, async (c) => {
+importsV1Route.post("/imports:transformDf", authRequired, async (c) => {
 	const importService = di.resolve<ImportService>(TOKENS.ImportService);
 	const body = dfTransformSchema.parse(await c.req.json());
 	const payload: Parameters<ImportService["transformFromDivingFish"]>[0] = {};
@@ -49,7 +49,7 @@ importsV1Route.post("/df/transform", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-importsV1Route.post("/lxns/transform", authRequired, async (c) => {
+importsV1Route.post("/imports:transformLxns", authRequired, async (c) => {
 	const importService = di.resolve<ImportService>(TOKENS.ImportService);
 	const body = lxnsTransformSchema.parse(await c.req.json());
 	const result = await importService.transformFromLxns({
@@ -58,7 +58,7 @@ importsV1Route.post("/lxns/transform", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-importsV1Route.post("/lxns/oauth/token", authRequired, async (c) => {
+importsV1Route.post("/imports:exchangeLxnsToken", authRequired, async (c) => {
 	const importService = di.resolve<ImportService>(TOKENS.ImportService);
 	const auth = c.get("auth");
 	if (!auth) {
@@ -72,7 +72,7 @@ importsV1Route.post("/lxns/oauth/token", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-importsV1Route.post("/df", authRequired, async (c) => {
+importsV1Route.post("/imports:importDf", authRequired, async (c) => {
 	const importService = di.resolve<ImportService>(TOKENS.ImportService);
 	const auth = c.get("auth");
 	if (!auth) {
@@ -90,7 +90,7 @@ importsV1Route.post("/df", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-importsV1Route.post("/lxns", authRequired, async (c) => {
+importsV1Route.post("/imports:importLxns", authRequired, async (c) => {
 	const importService = di.resolve<ImportService>(TOKENS.ImportService);
 	const auth = c.get("auth");
 	if (!auth) {
