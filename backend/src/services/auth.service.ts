@@ -130,7 +130,7 @@ export class AuthService {
 			throw new AppError(400, "invalid_verification_token", "Verification token is invalid.");
 		}
 
-		const tokenHash = sha256Hex(normalizedToken);
+		const tokenHash = await sha256Hex(normalizedToken);
 		const record = await this.prisma.emailVerificationToken.findUnique({
 			where: { tokenHash },
 		});
@@ -154,7 +154,7 @@ export class AuthService {
 	}
 
 	async refresh(refreshToken: string): Promise<{ user: User; tokens: TokenPair }> {
-		const refreshHash = sha256Hex(refreshToken);
+		const refreshHash = await sha256Hex(refreshToken);
 		const record = await this.prisma.refreshToken.findUnique({
 			where: { tokenHash: refreshHash },
 			include: { user: true },
@@ -173,7 +173,7 @@ export class AuthService {
 	}
 
 	async logout(refreshToken: string): Promise<void> {
-		const refreshHash = sha256Hex(refreshToken);
+		const refreshHash = await sha256Hex(refreshToken);
 		await this.prisma.refreshToken.updateMany({
 			where: {
 				tokenHash: refreshHash,
@@ -260,7 +260,7 @@ export class AuthService {
 
 	async createSessionCodeForUser(userId: string): Promise<string> {
 		const sessionCode = randomToken(36);
-		const codeHash = sha256Hex(sessionCode);
+		const codeHash = await sha256Hex(sessionCode);
 		const expiresAt = new Date(Date.now() + APP_SESSION_CODE_TTL_SECONDS * 1000);
 
 		await this.prisma.authSessionCode.create({
@@ -295,7 +295,7 @@ export class AuthService {
 		});
 
 		const refreshToken = randomToken();
-		const refreshHash = sha256Hex(refreshToken);
+		const refreshHash = await sha256Hex(refreshToken);
 		const expiresAt = new Date(Date.now() + this.env.JWT_REFRESH_TTL_SECONDS * 1000);
 
 		await this.prisma.refreshToken.create({
@@ -329,7 +329,7 @@ export class AuthService {
 
 	private async createPasswordResetToken(userId: string): Promise<string> {
 		const token = randomToken();
-		const tokenHash = sha256Hex(token);
+		const tokenHash = await sha256Hex(token);
 		const expiresAt = new Date(Date.now() + 15 * 60_000);
 
 		await this.prisma.passwordResetToken.create({
@@ -491,7 +491,7 @@ export class AuthService {
 		}
 
 		const token = randomToken();
-		const tokenHash = sha256Hex(token);
+		const tokenHash = await sha256Hex(token);
 		const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_TTL_MS);
 		await this.prisma.emailVerificationToken.create({
 			data: {
@@ -509,7 +509,7 @@ export class AuthService {
 			throw new AppError(400, "invalid_reset_token", "Password reset token is invalid.");
 		}
 
-		const tokenHash = sha256Hex(normalizedToken);
+		const tokenHash = await sha256Hex(normalizedToken);
 		const record = await this.prisma.passwordResetToken.findUnique({
 			where: { tokenHash },
 		});
@@ -526,7 +526,7 @@ export class AuthService {
 			throw new AppError(400, "invalid_session_code", "Session code is invalid.");
 		}
 
-		const codeHash = sha256Hex(normalizedCode);
+		const codeHash = await sha256Hex(normalizedCode);
 		const record = await this.prisma.authSessionCode.findUnique({
 			where: { codeHash },
 			include: { user: true },

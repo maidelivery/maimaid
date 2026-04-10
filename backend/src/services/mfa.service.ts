@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { inject, injectable } from "tsyringe";
 import type { PrismaClient, User } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
@@ -68,7 +67,7 @@ export class MfaService {
 		await this.prisma.mfaChallenge.create({
 			data: {
 				userId: user.id,
-				tokenHash: sha256Hex(challengeToken),
+				tokenHash: await sha256Hex(challengeToken),
 				purpose: "login",
 				channel,
 				challenge: null,
@@ -196,11 +195,13 @@ export class MfaService {
 				where: { userId },
 			}),
 			this.prisma.userMfaBackupCode.createMany({
-				data: codes.map((code) => ({
-					userId,
-					codeHash: sha256Hex(this.normalizeBackupCode(code)),
-					createdAt: now,
-				})),
+				data: await Promise.all(
+					codes.map(async (code) => ({
+						userId,
+						codeHash: await sha256Hex(this.normalizeBackupCode(code)),
+						createdAt: now,
+					})),
+				),
 			}),
 		]);
 
@@ -253,7 +254,7 @@ export class MfaService {
 		await this.prisma.mfaChallenge.create({
 			data: {
 				userId: user.id,
-				tokenHash: sha256Hex(randomToken(36)),
+				tokenHash: await sha256Hex(randomToken(36)),
 				purpose: "passkey_registration",
 				channel: "web",
 				challenge: options.challenge,
@@ -420,7 +421,7 @@ export class MfaService {
 		const challengeToken = randomToken(36);
 		await this.prisma.directPasskeyChallenge.create({
 			data: {
-				tokenHash: sha256Hex(challengeToken),
+				tokenHash: await sha256Hex(challengeToken),
 				challenge: options.challenge,
 				channel,
 				expiresAt: this.nextExpiry(),
@@ -478,7 +479,7 @@ export class MfaService {
 		const consumed = await this.prisma.userMfaBackupCode.updateMany({
 			where: {
 				userId: challenge.userId,
-				codeHash: sha256Hex(normalizedCode),
+				codeHash: await sha256Hex(normalizedCode),
 				consumedAt: null,
 			},
 			data: {
@@ -502,7 +503,7 @@ export class MfaService {
 
 	async verifyPasskeyLogin(challengeToken: string, response: unknown) {
 		const token = challengeToken.trim();
-		const tokenHash = sha256Hex(token);
+		const tokenHash = await sha256Hex(token);
 		const challenge = await this.prisma.mfaChallenge.findUnique({
 			where: { tokenHash },
 		});
@@ -551,7 +552,7 @@ export class MfaService {
 	}
 
 	private async findLoginChallenge(challengeToken: string) {
-		const tokenHash = sha256Hex(challengeToken.trim());
+		const tokenHash = await sha256Hex(challengeToken.trim());
 		const challenge = await this.prisma.mfaChallenge.findUnique({
 			where: { tokenHash },
 		});
@@ -620,7 +621,7 @@ export class MfaService {
 	private generateBackupCodes(count: number): string[] {
 		const values = new Set<string>();
 		while (values.size < count) {
-			const raw = randomBytes(BACKUP_CODE_GROUP_SIZE).toString("hex").toUpperCase();
+			const raw = crypto.getRandomValues(new Uint8Array(BACKUP_CODE_GROUP_SIZE)).toHex().toUpperCase();
 			const code = `${raw.slice(0, BACKUP_CODE_GROUP_SIZE)}-${raw.slice(BACKUP_CODE_GROUP_SIZE, BACKUP_CODE_GROUP_SIZE * 2)}`;
 			values.add(code);
 		}
@@ -671,7 +672,7 @@ export class MfaService {
 
 		const challenge = await this.prisma.directPasskeyChallenge.findUnique({
 			where: {
-				tokenHash: sha256Hex(token),
+				tokenHash: await sha256Hex(token),
 			},
 		});
 		if (!challenge || challenge.consumedAt) {

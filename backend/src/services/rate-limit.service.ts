@@ -25,7 +25,7 @@ export class RateLimitService {
 			throw new AppError(500, "rate_limit_config_invalid", "Rate limit bucket is invalid.");
 		}
 
-		const keyHash = sha256Hex(input.key.trim().toLowerCase() || "unknown");
+		const keyHash = await sha256Hex(input.key.trim().toLowerCase() || "unknown");
 		const nowMs = Date.now();
 		const windowMs = input.windowSeconds * 1000;
 		const windowStartMs = Math.floor(nowMs / windowMs) * windowMs;

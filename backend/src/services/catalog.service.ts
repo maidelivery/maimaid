@@ -228,7 +228,7 @@ export class CatalogService {
 
 		const force = options.force ?? false;
 		const applyWhenUnchanged = options.applyWhenUnchanged ?? false;
-		const payloadHash = sha256Hex(JSON.stringify(payload));
+		const payloadHash = await sha256Hex(JSON.stringify(payload));
 		const metadata = this.buildSnapshotMetadata(payload, options.metadata);
 
 		const existed = await this.prisma.catalogSnapshot.findFirst({
