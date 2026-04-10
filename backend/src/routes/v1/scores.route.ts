@@ -6,6 +6,7 @@ import { authRequired } from "../../middleware/auth.js";
 import type { ScoreService } from "../../services/score.service.js";
 import type { SyncService } from "../../services/sync.service.js";
 import { ok } from "../../http/response.js";
+import { standardValidator, validationHook } from "../../http/validation.js";
 import type { AppEnv } from "../../types/hono.js";
 
 const BULK_ARRAY_MAX = 10_000;
@@ -35,22 +36,22 @@ const playRecordSchema = scoreEntrySchema.extend({
 });
 
 const bulkScoreSchema = z.object({
-	profileId: z.string().uuid(),
+	profileId: z.uuid(),
 	scores: z.array(scoreEntrySchema).min(1).max(BULK_ARRAY_MAX),
 });
 
 const overwriteScoreSchema = z.object({
-	profileId: z.string().uuid(),
+	profileId: z.uuid(),
 	scores: z.array(scoreEntrySchema),
 });
 
 const bulkRecordSchema = z.object({
-	profileId: z.string().uuid(),
+	profileId: z.uuid(),
 	records: z.array(playRecordSchema).min(1).max(BULK_ARRAY_MAX),
 });
 
 const overwriteRecordSchema = z.object({
-	profileId: z.string().uuid(),
+	profileId: z.uuid(),
 	records: z.array(playRecordSchema),
 });
 
@@ -64,6 +65,30 @@ const patchScoreSchema = z
 		achievedAt: z.coerce.date().optional(),
 	})
 	.refine((value) => Object.keys(value).length > 0, "No field to update.");
+
+const profileScoresQuerySchema = z.object({
+	profileId: z.uuid().optional(),
+});
+
+const playRecordsQuerySchema = z.object({
+	profileId: z.uuid().optional(),
+	limit: z
+		.string()
+		.optional()
+		.transform((value) => {
+			const parsed = Number(value ?? 100);
+			if (!Number.isFinite(parsed)) return 100;
+			return Math.max(1, Math.min(5000, Math.trunc(parsed)));
+		}),
+});
+
+const scoreIdParamSchema = z.object({
+	scoreId: z.uuid(),
+});
+
+const recordIdParamSchema = z.object({
+	recordId: z.uuid(),
+});
 
 export const scoresV1Route = new Hono<AppEnv>();
 
@@ -112,30 +137,35 @@ const mapPlayRecords = (records: PlayRecordBody[]): Parameters<ScoreService["bul
 		return mapped;
 	});
 
-scoresV1Route.get("/scores", authRequired, async (c) => {
+scoresV1Route.get("/scores", authRequired, standardValidator("query", profileScoresQuerySchema, validationHook), async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const profileId = c.req.query("profileId");
-	if (!profileId) {
+	const query = c.req.valid("query");
+	if (!query.profileId) {
 		return ok(c, { scores: [] });
 	}
-	await scoreService.requireProfileOwnership(profileId, auth.userId);
-	const scores = await scoreService.listBestScores(profileId);
+	await scoreService.requireProfileOwnership(query.profileId, auth.userId);
+	const scores = await scoreService.listBestScores(query.profileId);
 	return ok(c, { scores });
 });
 
-scoresV1Route.patch("/scores/:scoreId", authRequired, async (c) => {
+scoresV1Route.patch(
+	"/scores/:scoreId",
+	authRequired,
+	standardValidator("param", scoreIdParamSchema, validationHook),
+	standardValidator("json", patchScoreSchema, validationHook),
+	async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const scoreId = c.req.param("scoreId");
-	const body = patchScoreSchema.parse(await c.req.json());
+	const params = c.req.valid("param");
+	const body = c.req.valid("json");
 	const patch: Parameters<ScoreService["updateBestScore"]>[2] = {};
 	if (body.achievements !== undefined) patch.achievements = body.achievements;
 	if (body.rank !== undefined) patch.rank = body.rank;
@@ -143,7 +173,7 @@ scoresV1Route.patch("/scores/:scoreId", authRequired, async (c) => {
 	if (body.fc !== undefined) patch.fc = body.fc;
 	if (body.fs !== undefined) patch.fs = body.fs;
 	if (body.achievedAt !== undefined) patch.achievedAt = body.achievedAt;
-	const updated = await scoreService.updateBestScore(scoreId, auth.userId, patch);
+	const updated = await scoreService.updateBestScore(params.scoreId, auth.userId, patch);
 	await syncService.recordEvent({
 		userId: auth.userId,
 		profileId: updated.profileId,
@@ -155,22 +185,23 @@ scoresV1Route.patch("/scores/:scoreId", authRequired, async (c) => {
 		},
 	});
 	return ok(c, { score: updated });
-});
+	},
+);
 
-scoresV1Route.delete("/scores/:scoreId", authRequired, async (c) => {
+scoresV1Route.delete("/scores/:scoreId", authRequired, standardValidator("param", scoreIdParamSchema, validationHook), async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const scoreId = c.req.param("scoreId");
-	const result = await scoreService.deleteBestScore(scoreId, auth.userId);
+	const params = c.req.valid("param");
+	const result = await scoreService.deleteBestScore(params.scoreId, auth.userId);
 	await syncService.recordEvent({
 		userId: auth.userId,
 		profileId: result.profileId,
 		entityType: "best_scores",
-		entityId: scoreId,
+		entityId: params.scoreId,
 		op: "delete",
 		payload: {
 			profileId: result.profileId,
@@ -179,14 +210,14 @@ scoresV1Route.delete("/scores/:scoreId", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-scoresV1Route.post("/scores:batchUpsert", authRequired, async (c) => {
+scoresV1Route.post("/scores:batchUpsert", authRequired, standardValidator("json", bulkScoreSchema, validationHook), async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const body = bulkScoreSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	await scoreService.requireProfileOwnership(body.profileId, auth.userId);
 	const scores = mapScoresForUpsert(body.scores);
 	const result = await scoreService.bulkUpsertBestScores(body.profileId, scores, "canonical");
@@ -205,14 +236,14 @@ scoresV1Route.post("/scores:batchUpsert", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-scoresV1Route.post("/scores:replace", authRequired, async (c) => {
+scoresV1Route.post("/scores:replace", authRequired, standardValidator("json", overwriteScoreSchema, validationHook), async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const body = overwriteScoreSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	await scoreService.requireProfileOwnership(body.profileId, auth.userId);
 	const scores = mapScoresForUpsert(body.scores);
 	const result = await scoreService.replaceBestScores(body.profileId, scores, "overwrite");
@@ -230,30 +261,33 @@ scoresV1Route.post("/scores:replace", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-scoresV1Route.get("/play-records", authRequired, async (c) => {
+scoresV1Route.get("/play-records", authRequired, standardValidator("query", playRecordsQuerySchema, validationHook), async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const profileId = c.req.query("profileId");
-	const limit = Number(c.req.query("limit") ?? 100);
-	if (!profileId) {
+	const query = c.req.valid("query");
+	if (!query.profileId) {
 		return ok(c, { records: [] });
 	}
-	await scoreService.requireProfileOwnership(profileId, auth.userId);
-	const records = await scoreService.listPlayRecords(profileId, Math.max(1, Math.min(limit, 5000)));
+	await scoreService.requireProfileOwnership(query.profileId, auth.userId);
+	const records = await scoreService.listPlayRecords(query.profileId, query.limit);
 	return ok(c, { records });
 });
 
-scoresV1Route.post("/play-records:batchUpsert", authRequired, async (c) => {
+scoresV1Route.post(
+	"/play-records:batchUpsert",
+	authRequired,
+	standardValidator("json", bulkRecordSchema, validationHook),
+	async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const body = bulkRecordSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	await scoreService.requireProfileOwnership(body.profileId, auth.userId);
 	const records = mapPlayRecords(body.records);
 	const result = await scoreService.bulkInsertPlayRecords(body.profileId, records, "canonical");
@@ -270,16 +304,17 @@ scoresV1Route.post("/play-records:batchUpsert", authRequired, async (c) => {
 		});
 	}
 	return ok(c, result);
-});
+	},
+);
 
-scoresV1Route.post("/play-records:replace", authRequired, async (c) => {
+scoresV1Route.post("/play-records:replace", authRequired, standardValidator("json", overwriteRecordSchema, validationHook), async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const body = overwriteRecordSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	await scoreService.requireProfileOwnership(body.profileId, auth.userId);
 	const records = mapPlayRecords(body.records);
 	const result = await scoreService.replacePlayRecords(body.profileId, records, "overwrite");
@@ -297,24 +332,29 @@ scoresV1Route.post("/play-records:replace", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-scoresV1Route.delete("/play-records/:recordId", authRequired, async (c) => {
+scoresV1Route.delete(
+	"/play-records/:recordId",
+	authRequired,
+	standardValidator("param", recordIdParamSchema, validationHook),
+	async (c) => {
 	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const recordId = c.req.param("recordId");
-	const result = await scoreService.deletePlayRecord(recordId, auth.userId);
+	const params = c.req.valid("param");
+	const result = await scoreService.deletePlayRecord(params.recordId, auth.userId);
 	await syncService.recordEvent({
 		userId: auth.userId,
 		profileId: result.profileId,
 		entityType: "play_records",
-		entityId: recordId,
+		entityId: params.recordId,
 		op: "delete",
 		payload: {
 			profileId: result.profileId,
 		},
 	});
 	return ok(c, result);
-});
+	},
+);

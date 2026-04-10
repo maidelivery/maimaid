@@ -7,8 +7,8 @@ import type { CommunityAliasService } from "../../services/community-alias.servi
 import type { AdminUserService } from "../../services/admin-user.service.js";
 import type { StaticBundleService } from "../../services/static-bundle.service.js";
 import { ok } from "../../http/response.js";
+import { createCustomMethodParamSchema, standardValidator, validationHook } from "../../http/validation.js";
 import type { AppEnv } from "../../types/hono.js";
-import { readCustomMethodParam } from "../../utils/custom-method.js";
 
 const createCandidateSchema = z.object({
 	songIdentifier: z.string().min(1),
@@ -21,7 +21,7 @@ const setStatusSchema = z.object({
 });
 
 const voteWindowSchema = z.object({
-	voteCloseAt: z.string().datetime(),
+	voteCloseAt: z.iso.datetime(),
 });
 
 const listUsersQuerySchema = z.object({
@@ -44,22 +44,22 @@ const listUsersQuerySchema = z.object({
 });
 
 const createUserSchema = z.object({
-	email: z.string().email(),
+	email: z.email(),
 	password: z.string().min(8),
 });
 
 const staticSourceCreateSchema = z.object({
 	category: z.string().min(1),
-	activeUrl: z.string().url(),
-	fallbackUrls: z.array(z.string().url()).default([]),
+	activeUrl: z.url(),
+	fallbackUrls: z.array(z.url()).default([]),
 	enabled: z.boolean().default(true),
 	metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 const staticSourcePatchSchema = z
 	.object({
-		activeUrl: z.string().url().optional(),
-		fallbackUrls: z.array(z.string().url()).optional(),
+		activeUrl: z.url().optional(),
+		fallbackUrls: z.array(z.url()).optional(),
 		enabled: z.boolean().optional(),
 		metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 	})
@@ -75,6 +75,40 @@ const staticBundleSchedulePatchSchema = z
 		intervalHours: z.coerce.number().int().positive().optional(),
 	})
 	.refine((value) => Object.keys(value).length > 0, "No field to update.");
+
+const listCandidatesQuerySchema = z.object({
+	status: z.string().optional(),
+	search: z.string().optional(),
+	sort: z.string().optional(),
+	limit: z
+		.string()
+		.optional()
+		.transform((value) => {
+			const parsed = Number(value ?? 30);
+			if (!Number.isFinite(parsed)) return 30;
+			return Math.max(1, Math.min(200, Math.trunc(parsed)));
+		}),
+	offset: z
+		.string()
+		.optional()
+		.transform((value) => {
+			const parsed = Number(value ?? 0);
+			if (!Number.isFinite(parsed)) return 0;
+			return Math.max(0, Math.trunc(parsed));
+		}),
+});
+
+const candidateSetStatusParamSchema = createCustomMethodParamSchema("candidateId", "setStatus", z.uuid());
+
+const candidateVoteWindowParamSchema = createCustomMethodParamSchema("candidateId", "updateVoteWindow", z.uuid());
+
+const userIdParamSchema = z.object({
+	userId: z.uuid(),
+});
+
+const sourceIdParamSchema = z.object({
+	sourceId: z.uuid(),
+});
 
 export const adminV1Route = new Hono<AppEnv>();
 
@@ -96,56 +130,74 @@ adminV1Route.get("/admin/dashboard", adminRequired, async (c) => {
 	return ok(c, stats);
 });
 
-adminV1Route.get("/admin/candidates", adminRequired, async (c) => {
-	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
-	const status = c.req.query("status");
-	const search = c.req.query("search");
-	const sort = c.req.query("sort");
-	const limit = Number(c.req.query("limit") ?? 30);
-	const offset = Number(c.req.query("offset") ?? 0);
+adminV1Route.get(
+	"/admin/candidates",
+	adminRequired,
+	standardValidator("query", listCandidatesQuerySchema, validationHook),
+	async (c) => {
+		const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
+		const query = c.req.valid("query");
 
-	const input: Parameters<CommunityAliasService["adminListCandidates"]>[0] = {
-		limit: Math.max(1, Math.min(limit, 200)),
-		offset: Math.max(0, offset),
-	};
-	if (status !== undefined) input.status = status;
-	if (search !== undefined) input.search = search;
-	if (sort !== undefined) input.sort = sort;
-	const rows = await communityAliasService.adminListCandidates(input);
-	return ok(c, { rows });
-});
+		const input: Parameters<CommunityAliasService["adminListCandidates"]>[0] = {
+			limit: query.limit,
+			offset: query.offset,
+		};
+		if (query.status !== undefined) input.status = query.status;
+		if (query.search !== undefined) input.search = query.search;
+		if (query.sort !== undefined) input.sort = query.sort;
+		const rows = await communityAliasService.adminListCandidates(input);
+		return ok(c, { rows });
+	},
+);
 
-adminV1Route.post("/admin/candidates", adminRequired, async (c) => {
-	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
-	const auth = c.get("auth");
-	if (!auth) {
-		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
-	}
-	const body = createCandidateSchema.parse(await c.req.json());
-	const candidate = await communityAliasService.adminCreateCandidate({
-		submitterId: auth.userId,
-		songIdentifier: body.songIdentifier,
-		aliasText: body.aliasText,
-		status: body.status,
-	});
-	return ok(c, { candidate }, 201);
-});
+adminV1Route.post(
+	"/admin/candidates",
+	adminRequired,
+	standardValidator("json", createCandidateSchema, validationHook),
+	async (c) => {
+		const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
+		const auth = c.get("auth");
+		if (!auth) {
+			return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+		}
+		const body = c.req.valid("json");
+		const candidate = await communityAliasService.adminCreateCandidate({
+			submitterId: auth.userId,
+			songIdentifier: body.songIdentifier,
+			aliasText: body.aliasText,
+			status: body.status,
+		});
+		return ok(c, { candidate }, 201);
+	},
+);
 
-adminV1Route.post("/admin/candidates/:candidateId:setStatus", adminRequired, async (c) => {
-	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
-	const candidateId = z.string().uuid().parse(readCustomMethodParam(c, "candidateId", "setStatus"));
-	const body = setStatusSchema.parse(await c.req.json());
-	const candidate = await communityAliasService.adminSetStatus(candidateId, body.status);
-	return ok(c, { candidate });
-});
+adminV1Route.post(
+	"/admin/candidates/:candidateId:setStatus",
+	adminRequired,
+	standardValidator("param", candidateSetStatusParamSchema, validationHook),
+	standardValidator("json", setStatusSchema, validationHook),
+	async (c) => {
+		const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
+		const params = c.req.valid("param");
+		const body = c.req.valid("json");
+		const candidate = await communityAliasService.adminSetStatus(params.candidateId, body.status);
+		return ok(c, { candidate });
+	},
+);
 
-adminV1Route.post("/admin/candidates/:candidateId:updateVoteWindow", adminRequired, async (c) => {
-	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
-	const candidateId = z.string().uuid().parse(readCustomMethodParam(c, "candidateId", "updateVoteWindow"));
-	const body = voteWindowSchema.parse(await c.req.json());
-	const candidate = await communityAliasService.adminUpdateVoteWindow(candidateId, new Date(body.voteCloseAt));
-	return ok(c, { candidate });
-});
+adminV1Route.post(
+	"/admin/candidates/:candidateId:updateVoteWindow",
+	adminRequired,
+	standardValidator("param", candidateVoteWindowParamSchema, validationHook),
+	standardValidator("json", voteWindowSchema, validationHook),
+	async (c) => {
+		const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
+		const params = c.req.valid("param");
+		const body = c.req.valid("json");
+		const candidate = await communityAliasService.adminUpdateVoteWindow(params.candidateId, new Date(body.voteCloseAt));
+		return ok(c, { candidate });
+	},
+);
 
 adminV1Route.post("/admin:rollCycle", adminRequired, async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
@@ -153,9 +205,9 @@ adminV1Route.post("/admin:rollCycle", adminRequired, async (c) => {
 	return ok(c, result);
 });
 
-adminV1Route.get("/admin/users", adminRequired, async (c) => {
+adminV1Route.get("/admin/users", adminRequired, standardValidator("query", listUsersQuerySchema, validationHook), async (c) => {
 	const adminUserService = di.resolve<AdminUserService>(TOKENS.AdminUserService);
-	const query = listUsersQuerySchema.parse(c.req.query());
+	const query = c.req.valid("query");
 	const result = await adminUserService.listUsers({
 		limit: query.limit,
 		offset: query.offset,
@@ -163,19 +215,24 @@ adminV1Route.get("/admin/users", adminRequired, async (c) => {
 	return ok(c, result);
 });
 
-adminV1Route.post("/admin/users", adminRequired, async (c) => {
+adminV1Route.post("/admin/users", adminRequired, standardValidator("json", createUserSchema, validationHook), async (c) => {
 	const adminUserService = di.resolve<AdminUserService>(TOKENS.AdminUserService);
-	const body = createUserSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const user = await adminUserService.createUser(body);
 	return ok(c, { user }, 201);
 });
 
-adminV1Route.delete("/admin/users/:userId", adminRequired, async (c) => {
-	const adminUserService = di.resolve<AdminUserService>(TOKENS.AdminUserService);
-	const userId = c.req.param("userId");
-	const result = await adminUserService.deleteUser(userId);
-	return ok(c, result);
-});
+adminV1Route.delete(
+	"/admin/users/:userId",
+	adminRequired,
+	standardValidator("param", userIdParamSchema, validationHook),
+	async (c) => {
+		const adminUserService = di.resolve<AdminUserService>(TOKENS.AdminUserService);
+		const params = c.req.valid("param");
+		const result = await adminUserService.deleteUser(params.userId);
+		return ok(c, result);
+	},
+);
 
 adminV1Route.get("/admin/static-sources", adminRequired, async (c) => {
 	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
@@ -183,46 +240,62 @@ adminV1Route.get("/admin/static-sources", adminRequired, async (c) => {
 	return ok(c, { sources });
 });
 
-adminV1Route.post("/admin/static-sources", adminRequired, async (c) => {
-	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
-	const body = staticSourceCreateSchema.parse(await c.req.json());
-	const source = await staticBundleService.createSource({
-		category: body.category,
-		activeUrl: body.activeUrl,
-		fallbackUrls: body.fallbackUrls,
-		enabled: body.enabled,
-		metadata: body.metadata ?? null,
-	});
-	return ok(c, { source }, 201);
-});
+adminV1Route.post(
+	"/admin/static-sources",
+	adminRequired,
+	standardValidator("json", staticSourceCreateSchema, validationHook),
+	async (c) => {
+		const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+		const body = c.req.valid("json");
+		const source = await staticBundleService.createSource({
+			category: body.category,
+			activeUrl: body.activeUrl,
+			fallbackUrls: body.fallbackUrls,
+			enabled: body.enabled,
+			metadata: body.metadata ?? null,
+		});
+		return ok(c, { source }, 201);
+	},
+);
 
-adminV1Route.patch("/admin/static-sources/:sourceId", adminRequired, async (c) => {
-	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
-	const sourceId = c.req.param("sourceId");
-	const body = staticSourcePatchSchema.parse(await c.req.json());
-	const patch: Parameters<StaticBundleService["updateSource"]>[1] = {};
-	if (body.activeUrl !== undefined) {
-		patch.activeUrl = body.activeUrl;
-	}
-	if (body.fallbackUrls !== undefined) {
-		patch.fallbackUrls = body.fallbackUrls;
-	}
-	if (body.enabled !== undefined) {
-		patch.enabled = body.enabled;
-	}
-	if (body.metadata !== undefined) {
-		patch.metadata = body.metadata;
-	}
-	const source = await staticBundleService.updateSource(sourceId, patch);
-	return ok(c, { source });
-});
+adminV1Route.patch(
+	"/admin/static-sources/:sourceId",
+	adminRequired,
+	standardValidator("param", sourceIdParamSchema, validationHook),
+	standardValidator("json", staticSourcePatchSchema, validationHook),
+	async (c) => {
+		const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+		const params = c.req.valid("param");
+		const body = c.req.valid("json");
+		const patch: Parameters<StaticBundleService["updateSource"]>[1] = {};
+		if (body.activeUrl !== undefined) {
+			patch.activeUrl = body.activeUrl;
+		}
+		if (body.fallbackUrls !== undefined) {
+			patch.fallbackUrls = body.fallbackUrls;
+		}
+		if (body.enabled !== undefined) {
+			patch.enabled = body.enabled;
+		}
+		if (body.metadata !== undefined) {
+			patch.metadata = body.metadata;
+		}
+		const source = await staticBundleService.updateSource(params.sourceId, patch);
+		return ok(c, { source });
+	},
+);
 
-adminV1Route.post("/admin/static-bundles:build", adminRequired, async (c) => {
-	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
-	const body = bundleBuildSchema.parse(await c.req.json());
-	const result = await staticBundleService.buildBundle(body.force);
-	return ok(c, result);
-});
+adminV1Route.post(
+	"/admin/static-bundles:build",
+	adminRequired,
+	standardValidator("json", bundleBuildSchema, validationHook),
+	async (c) => {
+		const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+		const body = c.req.valid("json");
+		const result = await staticBundleService.buildBundle(body.force);
+		return ok(c, result);
+	},
+);
 
 adminV1Route.get("/admin/static-bundles", adminRequired, async (c) => {
 	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
@@ -236,16 +309,21 @@ adminV1Route.get("/admin/static-bundle-schedule", adminRequired, async (c) => {
 	return ok(c, { schedule });
 });
 
-adminV1Route.patch("/admin/static-bundle-schedule", adminRequired, async (c) => {
-	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
-	const body = staticBundleSchedulePatchSchema.parse(await c.req.json());
-	const patch: Parameters<StaticBundleService["updatePeriodicBuildSchedule"]>[0] = {};
-	if (body.enabled !== undefined) {
-		patch.enabled = body.enabled;
-	}
-	if (body.intervalHours !== undefined) {
-		patch.intervalHours = body.intervalHours;
-	}
-	const schedule = await staticBundleService.updatePeriodicBuildSchedule(patch);
-	return ok(c, { schedule });
-});
+adminV1Route.patch(
+	"/admin/static-bundle-schedule",
+	adminRequired,
+	standardValidator("json", staticBundleSchedulePatchSchema, validationHook),
+	async (c) => {
+		const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+		const body = c.req.valid("json");
+		const patch: Parameters<StaticBundleService["updatePeriodicBuildSchedule"]>[0] = {};
+		if (body.enabled !== undefined) {
+			patch.enabled = body.enabled;
+		}
+		if (body.intervalHours !== undefined) {
+			patch.intervalHours = body.intervalHours;
+		}
+		const schedule = await staticBundleService.updatePeriodicBuildSchedule(patch);
+		return ok(c, { schedule });
+	},
+);

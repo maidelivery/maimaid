@@ -4,6 +4,7 @@ import { di } from "../../di/container.js";
 import { TOKENS } from "../../di/tokens.js";
 import { authRequired } from "../../middleware/auth.js";
 import { ok } from "../../http/response.js";
+import { standardValidator, validationHook } from "../../http/validation.js";
 import type { AppEnv } from "../../types/hono.js";
 import type { SyncService } from "../../services/sync.service.js";
 import type { ProfileService } from "../../services/profile.service.js";
@@ -41,13 +42,13 @@ const pushSchema = z.object({
 	profileUpserts: z
 		.array(
 			z.object({
-				profileId: z.string().uuid(),
+				profileId: z.uuid(),
 				name: z.string().min(1).max(40),
 				server: z.enum(["jp", "intl", "usa", "cn"]).default("jp"),
 				isActive: z.boolean().optional(),
 				playerRating: z.number().int().nonnegative().optional(),
 				plate: z.string().nullable().optional(),
-				avatarUrl: z.string().url().nullable().optional(),
+				avatarUrl: z.url().nullable().optional(),
 				dfUsername: z.string().optional(),
 				b35Count: z.number().int().positive().optional(),
 				b15Count: z.number().int().positive().optional(),
@@ -62,7 +63,7 @@ const pushSchema = z.object({
 	scoreUpserts: z
 		.array(
 			z.object({
-				profileId: z.string().uuid(),
+				profileId: z.uuid(),
 				scores: z.array(scoreEntrySchema).min(1).max(BULK_ARRAY_MAX),
 			}),
 		)
@@ -71,7 +72,7 @@ const pushSchema = z.object({
 	playRecordUpserts: z
 		.array(
 			z.object({
-				profileId: z.string().uuid(),
+				profileId: z.uuid(),
 				records: z.array(playRecordSchema).min(1).max(BULK_ARRAY_MAX),
 			}),
 		)
@@ -88,7 +89,7 @@ const pullQuerySchema = z.object({
 			if (!/^\d+$/.test(value)) return 0n;
 			return BigInt(value);
 		}),
-	profileId: z.string().uuid().optional(),
+	profileId: z.uuid().optional(),
 	limit: z
 		.string()
 		.optional()
@@ -190,12 +191,12 @@ function isWebClient(c: Context<AppEnv>) {
 	return client?.trim().toLowerCase() === "web";
 }
 
-syncV1Route.post("/sync:push", authRequired, async (c) => {
+syncV1Route.post("/sync:push", authRequired, standardValidator("json", pushSchema, validationHook), async (c) => {
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const body = pushSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const webClient = isWebClient(c);
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
 	const profileService = di.resolve<ProfileService>(TOKENS.ProfileService);
@@ -351,13 +352,13 @@ syncV1Route.post("/sync:push", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-syncV1Route.get("/sync:pull", authRequired, async (c) => {
+syncV1Route.get("/sync:pull", authRequired, standardValidator("query", pullQuerySchema, validationHook), async (c) => {
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
 	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
-	const query = pullQuerySchema.parse(c.req.query());
+	const query = c.req.valid("query");
 	const listInput: Parameters<SyncService["listEvents"]>[0] = {
 		userId: auth.userId,
 		sinceRevision: query.sinceRevision,

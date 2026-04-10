@@ -6,6 +6,7 @@ import type { AuthEmailLinkContext, AuthService } from "../../services/auth.serv
 import type { MfaService } from "../../services/mfa.service.js";
 import { authRequired } from "../../middleware/auth.js";
 import { ok } from "../../http/response.js";
+import { standardValidator, validationHook, type ValidationHook } from "../../http/validation.js";
 import { isAppError } from "../../lib/errors.js";
 import { isPasswordComplexEnough, MAX_PASSWORD_LENGTH, PASSWORD_COMPLEXITY_ERROR_MESSAGE } from "../../lib/auth-validation.js";
 import type { AppEnv } from "../../types/hono.js";
@@ -13,7 +14,7 @@ import type { Env } from "../../env.js";
 import type { RateLimitService } from "../../services/rate-limit.service.js";
 
 const registerSchema = z.object({
-	email: z.string().email(),
+	email: z.email(),
 	password: z
 		.string()
 		.min(1)
@@ -26,7 +27,7 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-	email: z.string().email(),
+	email: z.email(),
 	password: z.string().min(1).max(MAX_PASSWORD_LENGTH),
 });
 const refreshSchema = z.object({
@@ -34,13 +35,13 @@ const refreshSchema = z.object({
 });
 
 const forgotPasswordSchema = z.object({
-	email: z.string().email(),
+	email: z.email(),
 	channel: z.enum(["web", "app"]).optional(),
 	redirectUri: z.string().trim().optional(),
 });
 
 const resendVerificationSchema = z.object({
-	email: z.string().email(),
+	email: z.email(),
 	channel: z.enum(["web", "app"]).optional(),
 	redirectUri: z.string().trim().optional(),
 });
@@ -106,6 +107,10 @@ const sessionExchangeSchema = z.object({
 	sessionCode: z.string().min(20),
 });
 
+const credentialIdParamSchema = z.object({
+	credentialId: z.string().min(1),
+});
+
 export const authV1Route = new Hono<AppEnv>();
 
 const AUTH_RATE_LIMIT = {
@@ -136,9 +141,43 @@ const enforceRateLimit = async (
 	});
 };
 
-authV1Route.post("/register", async (c) => {
+const invalidVerifyEmailQueryHook: ValidationHook<z.infer<typeof verifyEmailQuerySchema>, AppEnv> = (result, c) => {
+	if (result.success) {
+		return;
+	}
+
+	const rawQuery = result.data as Record<string, string | undefined>;
+	const callbackTarget = resolveAuthCallbackTarget(rawQuery.client, rawQuery.redirect_uri);
+	return c.redirect(
+		buildAuthCallbackUrl(callbackTarget, {
+			action: "verify-email",
+			status: "error",
+			code: "invalid_verification_token",
+		}),
+		302,
+	);
+};
+
+const invalidPasswordResetQueryHook: ValidationHook<z.infer<typeof passwordResetQuerySchema>, AppEnv> = (result, c) => {
+	if (result.success) {
+		return;
+	}
+
+	const rawQuery = result.data as Record<string, string | undefined>;
+	const callbackTarget = resolveAuthCallbackTarget(rawQuery.client, rawQuery.redirect_uri);
+	return c.redirect(
+		buildPasswordResetCallbackUrl(callbackTarget, {
+			action: "reset-password",
+			status: "error",
+			code: "invalid_reset_token",
+		}),
+		302,
+	);
+};
+
+authV1Route.post("/register", standardValidator("json", registerSchema, validationHook), async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
-	const body = registerSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	await enforceRateLimit(c, {
 		...AUTH_RATE_LIMIT.registerIp,
 		key: resolveClientIp(c),
@@ -158,10 +197,10 @@ authV1Route.post("/register", async (c) => {
 	});
 });
 
-authV1Route.post("/login", async (c) => {
+authV1Route.post("/login", standardValidator("json", loginSchema, validationHook), async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
-	const body = loginSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	await enforceRateLimit(c, {
 		...AUTH_RATE_LIMIT.loginIp,
 		key: resolveClientIp(c),
@@ -195,9 +234,9 @@ authV1Route.post("/login", async (c) => {
 	});
 });
 
-authV1Route.post("/refresh", async (c) => {
+authV1Route.post("/refresh", standardValidator("json", refreshSchema, validationHook), async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
-	const body = refreshSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	await enforceRateLimit(c, {
 		...AUTH_RATE_LIMIT.refreshIp,
 		key: resolveClientIp(c),
@@ -213,9 +252,9 @@ authV1Route.post("/refresh", async (c) => {
 	});
 });
 
-authV1Route.post("/session:exchange", async (c) => {
+authV1Route.post("/session:exchange", standardValidator("json", sessionExchangeSchema, validationHook), async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
-	const body = sessionExchangeSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const { user, tokens } = await authService.exchangeSessionCode(body.sessionCode);
 	return ok(c, {
 		user: {
@@ -241,16 +280,16 @@ authV1Route.post("/session:create", authRequired, async (c) => {
 	return ok(c, { sessionCode });
 });
 
-authV1Route.post("/logout", async (c) => {
+authV1Route.post("/logout", standardValidator("json", refreshSchema, validationHook), async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
-	const body = refreshSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	await authService.logout(body.refreshToken);
 	return ok(c, { success: true });
 });
 
-authV1Route.post("/verification:resend", async (c) => {
+authV1Route.post("/verification:resend", standardValidator("json", resendVerificationSchema, validationHook), async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
-	const body = resendVerificationSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	await enforceRateLimit(c, {
 		...AUTH_RATE_LIMIT.resendIp,
 		key: resolveClientIp(c),
@@ -266,24 +305,14 @@ authV1Route.post("/verification:resend", async (c) => {
 	return ok(c, result);
 });
 
-authV1Route.get("/verify-email", async (c) => {
+authV1Route.get("/verify-email", standardValidator("query", verifyEmailQuerySchema, invalidVerifyEmailQueryHook), async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
-	const query = c.req.query();
-	const callbackTarget = resolveAuthCallbackTarget(query.client, query.redirect_uri);
-	const parsed = verifyEmailQuerySchema.safeParse(query);
-	if (!parsed.success) {
-		return c.redirect(
-			buildAuthCallbackUrl(callbackTarget, {
-				action: "verify-email",
-				status: "error",
-				code: "invalid_verification_token",
-			}),
-			302,
-		);
-	}
+	const rawQuery = c.req.query();
+	const query = c.req.valid("query");
+	const callbackTarget = resolveAuthCallbackTarget(rawQuery.client, rawQuery.redirect_uri);
 
 	try {
-		const user = await authService.verifyEmail(parsed.data.token);
+		const user = await authService.verifyEmail(query.token);
 		if (callbackTarget.kind === "app") {
 			const sessionCode = await authService.createSessionCodeForUser(user.id);
 			return c.redirect(
@@ -317,30 +346,23 @@ authV1Route.get("/verify-email", async (c) => {
 	}
 });
 
-authV1Route.get("/password-reset", async (c) => {
+authV1Route.get(
+	"/password-reset",
+	standardValidator("query", passwordResetQuerySchema, invalidPasswordResetQueryHook),
+	async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
-	const query = c.req.query();
-	const callbackTarget = resolveAuthCallbackTarget(query.client, query.redirect_uri);
-	const parsed = passwordResetQuerySchema.safeParse(query);
-	if (!parsed.success) {
-		return c.redirect(
-			buildPasswordResetCallbackUrl(callbackTarget, {
-				action: "reset-password",
-				status: "error",
-				code: "invalid_reset_token",
-			}),
-			302,
-		);
-	}
+	const rawQuery = c.req.query();
+	const query = c.req.valid("query");
+	const callbackTarget = resolveAuthCallbackTarget(rawQuery.client, rawQuery.redirect_uri);
 
 	try {
-		const resetContext = await authService.validatePasswordResetToken(parsed.data.token);
+		const resetContext = await authService.validatePasswordResetToken(query.token);
 		return c.redirect(
 			buildPasswordResetCallbackUrl(callbackTarget, {
 				action: "reset-password",
 				status: "success",
 				code: "recovery_ready",
-				token: parsed.data.token,
+				token: query.token,
 				email: resetContext.email,
 			}),
 			302,
@@ -358,11 +380,12 @@ authV1Route.get("/password-reset", async (c) => {
 		}
 		throw error;
 	}
-});
+	},
+);
 
-authV1Route.post("/forgot-password", async (c) => {
+authV1Route.post("/forgot-password", standardValidator("json", forgotPasswordSchema, validationHook), async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
-	const body = forgotPasswordSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	await enforceRateLimit(c, {
 		...AUTH_RATE_LIMIT.forgotIp,
 		key: resolveClientIp(c),
@@ -378,9 +401,9 @@ authV1Route.post("/forgot-password", async (c) => {
 	return ok(c, { success: true, ...result });
 });
 
-authV1Route.post("/reset-password", async (c) => {
+authV1Route.post("/reset-password", standardValidator("json", resetPasswordSchema, validationHook), async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
-	const body = resetPasswordSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	await authService.resetPassword(body.token, body.newPassword);
 	return ok(c, { success: true });
 });
@@ -407,7 +430,7 @@ authV1Route.post("/mfa/totp:startSetup", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-authV1Route.post("/mfa/totp:confirmSetup", authRequired, async (c) => {
+authV1Route.post("/mfa/totp:confirmSetup", authRequired, standardValidator("json", totpCodeSchema, validationHook), async (c) => {
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
@@ -415,7 +438,7 @@ authV1Route.post("/mfa/totp:confirmSetup", authRequired, async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
 	const user = await authService.findActiveUserById(auth.userId);
-	const body = totpCodeSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const result = await mfaService.confirmTotpSetup(user, body.code);
 	return ok(c, result);
 });
@@ -442,16 +465,21 @@ authV1Route.post("/mfa/passkeys:startRegistration", authRequired, async (c) => {
 	return ok(c, options);
 });
 
-authV1Route.post("/mfa/passkeys:finishRegistration", authRequired, async (c) => {
+authV1Route.post(
+	"/mfa/passkeys:finishRegistration",
+	authRequired,
+	standardValidator("json", passkeyFinishSchema, validationHook),
+	async (c) => {
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
-	const body = passkeyFinishSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const result = await mfaService.finishPasskeyRegistration(auth.userId, body.response);
 	return ok(c, result);
-});
+	},
+);
 
 authV1Route.get("/mfa/backup-codes", authRequired, async (c) => {
 	const auth = c.get("auth");
@@ -483,40 +511,46 @@ authV1Route.get("/mfa/passkeys", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-authV1Route.patch("/mfa/passkey/:credentialId", authRequired, async (c) => {
+authV1Route.patch(
+	"/mfa/passkey/:credentialId",
+	authRequired,
+	standardValidator("param", credentialIdParamSchema, validationHook),
+	standardValidator("json", passkeyRenameSchema, validationHook),
+	async (c) => {
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
-	const credentialId = c.req.param("credentialId");
-	const body = passkeyRenameSchema.parse(await c.req.json());
-	const result = await mfaService.renamePasskey(auth.userId, credentialId, body.name);
+	const params = c.req.valid("param");
+	const body = c.req.valid("json");
+	const result = await mfaService.renamePasskey(auth.userId, params.credentialId, body.name);
 	return ok(c, result);
-});
+	},
+);
 
-authV1Route.delete("/mfa/passkey/:credentialId", authRequired, async (c) => {
+authV1Route.delete("/mfa/passkey/:credentialId", authRequired, standardValidator("param", credentialIdParamSchema, validationHook), async (c) => {
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
-	const credentialId = c.req.param("credentialId");
-	const result = await mfaService.removePasskey(auth.userId, credentialId);
+	const params = c.req.valid("param");
+	const result = await mfaService.removePasskey(auth.userId, params.credentialId);
 	return ok(c, result);
 });
 
-authV1Route.post("/mfa/challenges:startPasskeyLogin", async (c) => {
+authV1Route.post("/mfa/challenges:startPasskeyLogin", standardValidator("json", mfaPasskeyStartSchema, validationHook), async (c) => {
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
-	const body = mfaPasskeyStartSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const options = await mfaService.startPasskeyLogin(body.challengeToken);
 	return ok(c, options);
 });
 
-authV1Route.post("/mfa/challenges:verifyTotp", async (c) => {
+authV1Route.post("/mfa/challenges:verifyTotp", standardValidator("json", mfaTotpLoginSchema, validationHook), async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
-	const body = mfaTotpLoginSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const user = await mfaService.verifyTotpLogin(body.challengeToken, body.code);
 	const tokens = await authService.issueTokensForUser(user);
 	return ok(c, {
@@ -530,10 +564,13 @@ authV1Route.post("/mfa/challenges:verifyTotp", async (c) => {
 	});
 });
 
-authV1Route.post("/mfa/challenges:verifyBackupCode", async (c) => {
+authV1Route.post(
+	"/mfa/challenges:verifyBackupCode",
+	standardValidator("json", mfaBackupCodeLoginSchema, validationHook),
+	async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
-	const body = mfaBackupCodeLoginSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const user = await mfaService.verifyBackupCodeLogin(body.challengeToken, body.code);
 	const tokens = await authService.issueTokensForUser(user);
 	return ok(c, {
@@ -545,12 +582,13 @@ authV1Route.post("/mfa/challenges:verifyBackupCode", async (c) => {
 		mfaRequired: false,
 		...tokens,
 	});
-});
+	},
+);
 
-authV1Route.post("/mfa/challenges:verifyPasskey", async (c) => {
+authV1Route.post("/mfa/challenges:verifyPasskey", standardValidator("json", mfaPasskeyLoginSchema, validationHook), async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
-	const body = mfaPasskeyLoginSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const user = await mfaService.verifyPasskeyLogin(body.challengeToken, body.response);
 	const tokens = await authService.issueTokensForUser(user);
 	return ok(c, {
@@ -564,17 +602,17 @@ authV1Route.post("/mfa/challenges:verifyPasskey", async (c) => {
 	});
 });
 
-authV1Route.post("/passkeys:startLogin", async (c) => {
+authV1Route.post("/passkeys:startLogin", standardValidator("json", passkeyLoginStartSchema, validationHook), async (c) => {
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
-	passkeyLoginStartSchema.parse(await c.req.json());
+	c.req.valid("json");
 	const payload = await mfaService.startDirectPasskeyLogin(resolveLoginChannel(c.req.header("X-Maimaid-Client")));
 	return ok(c, payload);
 });
 
-authV1Route.post("/passkeys:finishLogin", async (c) => {
+authV1Route.post("/passkeys:finishLogin", standardValidator("json", passkeyLoginFinishSchema, validationHook), async (c) => {
 	const authService = di.resolve<AuthService>(TOKENS.AuthService);
 	const mfaService = di.resolve<MfaService>(TOKENS.MfaService);
-	const body = passkeyLoginFinishSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const user = await mfaService.verifyPasskeyLogin(body.challengeToken, body.response);
 	const tokens = await authService.issueTokensForUser(user);
 	return ok(c, {

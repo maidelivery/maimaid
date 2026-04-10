@@ -5,9 +5,9 @@ import { TOKENS } from "../../di/tokens.js";
 import { authOptional, authRequired } from "../../middleware/auth.js";
 import type { CommunityAliasService } from "../../services/community-alias.service.js";
 import { ok } from "../../http/response.js";
+import { createCustomMethodParamSchema, standardValidator, validationHook } from "../../http/validation.js";
 import type { AppEnv } from "../../types/hono.js";
 import type { RateLimitService } from "../../services/rate-limit.service.js";
-import { readCustomMethodParam } from "../../utils/custom-method.js";
 
 const submitSchema = z.object({
 	songIdentifier: z.string().min(1),
@@ -22,6 +22,64 @@ const voteSchema = z.object({
 		.int()
 		.refine((value) => value === -1 || value === 1),
 });
+
+const votingBoardQuerySchema = z.object({
+	limit: z
+		.string()
+		.optional()
+		.transform((value) => {
+			const parsed = Number(value ?? 120);
+			if (!Number.isFinite(parsed)) return 120;
+			return Math.max(1, Math.min(200, Math.trunc(parsed)));
+		}),
+	offset: z
+		.string()
+		.optional()
+		.transform((value) => {
+			const parsed = Number(value ?? 0);
+			if (!Number.isFinite(parsed)) return 0;
+			return Math.max(0, Math.trunc(parsed));
+		}),
+});
+
+const myCandidatesQuerySchema = z.object({
+	songIdentifier: z.string().optional(),
+	limit: z
+		.string()
+		.optional()
+		.transform((value) => {
+			const parsed = Number(value ?? 50);
+			if (!Number.isFinite(parsed)) return 50;
+			return Math.max(1, Math.min(200, Math.trunc(parsed)));
+		}),
+});
+
+const dailyCountQuerySchema = z.object({
+	localDate: z.string().default(new Date().toISOString().slice(0, 10)),
+});
+
+const approvedSyncQuerySchema = z.object({
+	since: z
+		.string()
+		.optional()
+		.transform((value) => {
+			if (!value) {
+				return null;
+			}
+			const parsed = new Date(value);
+			return Number.isNaN(parsed.getTime()) ? null : parsed;
+		}),
+	limit: z
+		.string()
+		.optional()
+		.transform((value) => {
+			const parsed = Number(value ?? 1000);
+			if (!Number.isFinite(parsed)) return 1000;
+			return Math.max(1, Math.trunc(parsed));
+		}),
+});
+
+const candidateVoteParamSchema = createCustomMethodParamSchema("candidateId", "vote", z.uuid());
 
 export const communityV1Route = new Hono<AppEnv>();
 const COMMUNITY_RATE_LIMIT = {
@@ -63,13 +121,13 @@ const enforceRateLimit = async (input: { bucket: string; key: string; limit: num
 	});
 };
 
-communityV1Route.post("/candidates", authRequired, async (c) => {
+communityV1Route.post("/candidates", authRequired, standardValidator("json", submitSchema, validationHook), async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const body = submitSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const result = await communityAliasService.submitAlias({
 		userId: auth.userId,
 		isAdmin: auth.isAdmin,
@@ -81,59 +139,71 @@ communityV1Route.post("/candidates", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-communityV1Route.get("/candidates:votingBoard", authOptional, async (c) => {
+communityV1Route.get(
+	"/candidates:votingBoard",
+	authOptional,
+	standardValidator("query", votingBoardQuerySchema, validationHook),
+	async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	const auth = c.get("auth");
-	const limit = Number(c.req.query("limit") ?? 120);
-	const offset = Number(c.req.query("offset") ?? 0);
-	const rows = await communityAliasService.fetchVotingBoard(auth?.userId ?? null, limit, offset);
+	const query = c.req.valid("query");
+	const rows = await communityAliasService.fetchVotingBoard(auth?.userId ?? null, query.limit, query.offset);
 	return ok(c, { rows });
-});
+	},
+);
 
-communityV1Route.get("/candidates:my", authRequired, async (c) => {
+communityV1Route.get("/candidates:my", authRequired, standardValidator("query", myCandidatesQuerySchema, validationHook), async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const songIdentifier = c.req.query("songIdentifier");
-	const limit = Number(c.req.query("limit") ?? 50);
-	const rows = await communityAliasService.fetchMyCandidates(auth.userId, limit, songIdentifier);
+	const query = c.req.valid("query");
+	const rows = await communityAliasService.fetchMyCandidates(auth.userId, query.limit, query.songIdentifier);
 	return ok(c, { rows });
 });
 
-communityV1Route.get("/candidates:dailyCount", authRequired, async (c) => {
+communityV1Route.get(
+	"/candidates:dailyCount",
+	authRequired,
+	standardValidator("query", dailyCountQuerySchema, validationHook),
+	async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const localDate = c.req.query("localDate") ?? new Date().toISOString().slice(0, 10);
-	const count = await communityAliasService.fetchMyDailyCount(auth.userId, localDate);
+	const query = c.req.valid("query");
+	const count = await communityAliasService.fetchMyDailyCount(auth.userId, query.localDate);
 	return ok(c, { count });
-});
+	},
+);
 
-communityV1Route.post("/candidates/:candidateId:vote", authRequired, async (c) => {
+communityV1Route.post(
+	"/candidates/:candidateId:vote",
+	authRequired,
+	standardValidator("param", candidateVoteParamSchema, validationHook),
+	standardValidator("json", voteSchema, validationHook),
+	async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const candidateId = z.string().uuid().parse(readCustomMethodParam(c, "candidateId", "vote"));
-	const body = voteSchema.parse(await c.req.json());
-	const result = await communityAliasService.vote(auth.userId, candidateId, body.vote);
+	const params = c.req.valid("param");
+	const body = c.req.valid("json");
+	const result = await communityAliasService.vote(auth.userId, params.candidateId, body.vote);
 	return ok(c, result);
-});
+	},
+);
 
-communityV1Route.get("/aliases:sync", async (c) => {
+communityV1Route.get("/aliases:sync", standardValidator("query", approvedSyncQuerySchema, validationHook), async (c) => {
 	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
 	await enforceRateLimit({
 		...COMMUNITY_RATE_LIMIT.approvedSyncIp,
 		key: resolveClientIp(c),
 	});
-	const sinceQuery = c.req.query("since");
-	const since = sinceQuery ? new Date(sinceQuery) : null;
-	const limit = Number(c.req.query("limit") ?? 1000);
-	const rows = await communityAliasService.approvedSync(since && !Number.isNaN(since.getTime()) ? since : null, limit);
+	const query = c.req.valid("query");
+	const rows = await communityAliasService.approvedSync(query.since, query.limit);
 	return ok(c, { rows });
 });

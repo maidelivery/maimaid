@@ -5,17 +5,18 @@ import { TOKENS } from "../../di/tokens.js";
 import type { ImportService } from "../../services/import.service.js";
 import { authRequired } from "../../middleware/auth.js";
 import { ok } from "../../http/response.js";
+import { standardValidator, validationHook } from "../../http/validation.js";
 import type { AppEnv } from "../../types/hono.js";
 
 const dfSchema = z.object({
-	profileId: z.string().uuid(),
+	profileId: z.uuid(),
 	username: z.string().optional(),
 	qq: z.string().optional(),
 	importToken: z.string().optional(),
 });
 
 const lxnsSchema = z.object({
-	profileId: z.string().uuid(),
+	profileId: z.uuid(),
 	accessToken: z.string().min(8),
 });
 
@@ -38,9 +39,9 @@ const lxnsOauthTokenSchema = z.object({
 	codeVerifier: z.string().min(20),
 });
 
-importsV1Route.post("/imports:transformDf", authRequired, async (c) => {
+importsV1Route.post("/imports:transformDf", authRequired, standardValidator("json", dfTransformSchema, validationHook), async (c) => {
 	const importService = di.resolve<ImportService>(TOKENS.ImportService);
-	const body = dfTransformSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const payload: Parameters<ImportService["transformFromDivingFish"]>[0] = {};
 	if (body.username !== undefined) payload.username = body.username;
 	if (body.qq !== undefined) payload.qq = body.qq;
@@ -49,36 +50,41 @@ importsV1Route.post("/imports:transformDf", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-importsV1Route.post("/imports:transformLxns", authRequired, async (c) => {
+importsV1Route.post("/imports:transformLxns", authRequired, standardValidator("json", lxnsTransformSchema, validationHook), async (c) => {
 	const importService = di.resolve<ImportService>(TOKENS.ImportService);
-	const body = lxnsTransformSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const result = await importService.transformFromLxns({
 		accessToken: body.accessToken,
 	});
 	return ok(c, result);
 });
 
-importsV1Route.post("/imports:exchangeLxnsToken", authRequired, async (c) => {
+importsV1Route.post(
+	"/imports:exchangeLxnsToken",
+	authRequired,
+	standardValidator("json", lxnsOauthTokenSchema, validationHook),
+	async (c) => {
 	const importService = di.resolve<ImportService>(TOKENS.ImportService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const body = lxnsOauthTokenSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const result = await importService.exchangeLxnsAuthorizationCode({
 		code: body.code,
 		codeVerifier: body.codeVerifier,
 	});
 	return ok(c, result);
-});
+	},
+);
 
-importsV1Route.post("/imports:importDf", authRequired, async (c) => {
+importsV1Route.post("/imports:importDf", authRequired, standardValidator("json", dfSchema, validationHook), async (c) => {
 	const importService = di.resolve<ImportService>(TOKENS.ImportService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const body = dfSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const payload: Parameters<ImportService["importFromDivingFish"]>[0] = {
 		userId: auth.userId,
 		profileId: body.profileId,
@@ -90,13 +96,13 @@ importsV1Route.post("/imports:importDf", authRequired, async (c) => {
 	return ok(c, result);
 });
 
-importsV1Route.post("/imports:importLxns", authRequired, async (c) => {
+importsV1Route.post("/imports:importLxns", authRequired, standardValidator("json", lxnsSchema, validationHook), async (c) => {
 	const importService = di.resolve<ImportService>(TOKENS.ImportService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const body = lxnsSchema.parse(await c.req.json());
+	const body = c.req.valid("json");
 	const result = await importService.importFromLxns({
 		userId: auth.userId,
 		profileId: body.profileId,

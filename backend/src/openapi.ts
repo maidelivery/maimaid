@@ -457,6 +457,24 @@ const isReqMethodCall = (node: ts.Node, method: "json" | "query" | "param") => {
 	return ts.isPropertyAccessExpression(reqRef) && reqRef.name.text === "req";
 };
 
+const readReqValidTarget = (node: ts.Node): "json" | "query" | "param" | null => {
+	if (!ts.isCallExpression(node)) {
+		return null;
+	}
+	if (!ts.isPropertyAccessExpression(node.expression)) {
+		return null;
+	}
+	if (node.expression.name.text !== "valid") {
+		return null;
+	}
+	const reqRef = node.expression.expression;
+	if (!ts.isPropertyAccessExpression(reqRef) || reqRef.name.text !== "req") {
+		return null;
+	}
+	const target = readStringLiteral(node.arguments[0]);
+	return target === "json" || target === "query" || target === "param" ? target : null;
+};
+
 const hasUndefined = (type: ts.Type) =>
 	type.isUnion()
 		? type.types.some((item) => (item.flags & ts.TypeFlags.Undefined) !== 0)
@@ -864,6 +882,26 @@ const analyzeHandlerWithTypes = (
 
 	const visit = (node: ts.Node) => {
 		if (ts.isVariableDeclaration(node) && node.initializer) {
+			const validTarget = readReqValidTarget(node.initializer);
+			if (validTarget === "json") {
+				const bodyType = checker.getTypeAtLocation(node.name);
+				requestBody = {
+					required: true,
+					content: {
+						"application/json": {
+							schema: typeToSchema(bodyType, checker, node.name, new Set()),
+						},
+					},
+				};
+			}
+
+			if (validTarget === "query") {
+				const queryType = checker.getTypeAtLocation(node.name);
+				for (const parameter of extractObjectTypeParameters(queryType, checker, node.name, "query")) {
+					queryParameters.set(parameter.name, parameter);
+				}
+			}
+
 			if (
 				ts.isCallExpression(node.initializer) &&
 				ts.isPropertyAccessExpression(node.initializer.expression) &&

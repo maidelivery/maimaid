@@ -7,6 +7,7 @@ import { Scalar } from "@scalar/hono-api-reference";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { ZodError } from "zod";
 import { isAppError } from "./lib/errors.js";
+import { buildValidationDetails } from "./http/validation.js";
 import { healthRoute } from "./routes/health.route.js";
 import { authV1Route } from "./routes/v1/auth.route.js";
 import { profilesV1Route } from "./routes/v1/profiles.route.js";
@@ -134,7 +135,7 @@ export const createApp = () => {
 				{
 					code: "validation_error",
 					message: "Request validation failed.",
-					details: error.flatten(),
+					details: buildValidationDetails(error.issues),
 				},
 				400,
 			);
