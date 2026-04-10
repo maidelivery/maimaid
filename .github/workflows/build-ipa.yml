@@ -2,6 +2,8 @@ name: Build maimaid IPA
 
 "on":
   push:
+    paths:
+      - ios/**
   workflow_dispatch:
 
 jobs:
