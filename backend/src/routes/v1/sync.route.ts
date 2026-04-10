@@ -1,15 +1,14 @@
 import { Hono, type Context } from "hono";
 import { z } from "zod";
-import { di } from "../../di/container.js";
 import { TOKENS } from "../../di/tokens.js";
 import { authRequired } from "../../middleware/auth.js";
 import { ok } from "../../http/response.js";
 import { standardValidator, validationHook } from "../../http/validation.js";
 import type { AppEnv } from "../../types/hono.js";
-import type { SyncService } from "../../services/sync.service.js";
-import type { ProfileService } from "../../services/profile.service.js";
-import type { ScoreService } from "../../services/score.service.js";
-import type { PrismaClient } from "@prisma/client";
+import { SyncService } from "../../services/sync.service.js";
+import { ProfileService } from "../../services/profile.service.js";
+import { ScoreService } from "../../services/score.service.js";
+import { PrismaClient } from "@prisma/client";
 
 const BULK_ARRAY_MAX = 10_000;
 
@@ -198,10 +197,10 @@ syncV1Route.post("/sync:push", authRequired, standardValidator("json", pushSchem
 	}
 	const body = c.req.valid("json");
 	const webClient = isWebClient(c);
-	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
-	const profileService = di.resolve<ProfileService>(TOKENS.ProfileService);
-	const scoreService = di.resolve<ScoreService>(TOKENS.ScoreService);
-	const prisma = di.resolve<PrismaClient>(TOKENS.Prisma);
+	const syncService = c.var.resolve(SyncService);
+	const profileService = c.var.resolve(ProfileService);
+	const scoreService = c.var.resolve(ScoreService);
+	const prisma = c.var.resolve<PrismaClient>(TOKENS.Prisma);
 
 	const existing = await syncService.findMutation(auth.userId, body.idempotencyKey);
 	if (existing) {
@@ -357,7 +356,7 @@ syncV1Route.get("/sync:pull", authRequired, standardValidator("query", pullQuery
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
+	const syncService = c.var.resolve(SyncService);
 	const query = c.req.valid("query");
 	const listInput: Parameters<SyncService["listEvents"]>[0] = {
 		userId: auth.userId,

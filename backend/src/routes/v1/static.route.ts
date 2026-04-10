@@ -1,9 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { di } from "../../di/container.js";
-import { TOKENS } from "../../di/tokens.js";
-import type { StaticBundleService } from "../../services/static-bundle.service.js";
-import type { ChartFitService } from "../../services/chart-fit.service.js";
+import { StaticBundleService } from "../../services/static-bundle.service.js";
+import { ChartFitService } from "../../services/chart-fit.service.js";
 import { ok } from "../../http/response.js";
 import { standardValidator, validationHook } from "../../http/validation.js";
 import type { AppEnv } from "../../types/hono.js";
@@ -15,13 +13,13 @@ const bundleParamSchema = z.object({
 });
 
 staticV1Route.get("/manifest", async (c) => {
-	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+	const staticBundleService = c.var.resolve(StaticBundleService);
 	const manifest = await staticBundleService.manifest();
 	return ok(c, manifest);
 });
 
 staticV1Route.get("/bundle/:version", standardValidator("param", bundleParamSchema, validationHook), async (c) => {
-	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+	const staticBundleService = c.var.resolve(StaticBundleService);
 	const params = c.req.valid("param");
 	const bundle = await staticBundleService.getBundle(params.version);
 	return ok(c, {
@@ -33,13 +31,13 @@ staticV1Route.get("/bundle/:version", standardValidator("param", bundleParamSche
 });
 
 staticV1Route.get("/songid-items", async (c) => {
-	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+	const staticBundleService = c.var.resolve(StaticBundleService);
 	const items = await staticBundleService.listSongIdItems();
 	return ok(c, { items });
 });
 
 staticV1Route.get("/chart_stats", async (c) => {
-	const chartFitService = di.resolve<ChartFitService>(TOKENS.ChartFitService);
+	const chartFitService = c.var.resolve(ChartFitService);
 	const snapshot = await chartFitService.getLatestSnapshotOrRefresh();
 	return ok(c, snapshot.payload);
 });

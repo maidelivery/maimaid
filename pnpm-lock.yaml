@@ -47,6 +47,9 @@ importers:
       '@hono/standard-validator':
         specifier: ^0.2.2
         version: 0.2.2(@standard-schema/spec@1.1.0)(hono@4.12.9)
+      '@hono/tsyringe':
+        specifier: ^1.0.1
+        version: 1.0.1(hono@4.12.9)(tsyringe@4.10.0)
       '@prisma/adapter-pg':
         specifier: ^7.5.0
         version: 7.5.0
@@ -1199,6 +1202,12 @@ packages:
     peerDependencies:
       '@standard-schema/spec': ^1.0.0
       hono: '>=3.9.0'
+
+  '@hono/tsyringe@1.0.1':
+    resolution: {integrity: sha512-DBKabjYEXFjNVpherMziWos9fnP1GcSbLbarPpc1pq+w4lWdfzFhn9E9bq9CbWb80q7UikCVs9peFAKWenKS/Q==}
+    peerDependencies:
+      hono: '>=4.*'
+      tsyringe: '>=4.*'
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -7876,6 +7885,11 @@ snapshots:
     dependencies:
       '@standard-schema/spec': 1.1.0
       hono: 4.12.9
+
+  '@hono/tsyringe@1.0.1(hono@4.12.9)(tsyringe@4.10.0)':
+    dependencies:
+      hono: 4.12.9
+      tsyringe: 4.10.0
 
   '@humanfs/core@0.19.1': {}
 

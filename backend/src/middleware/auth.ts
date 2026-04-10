@@ -1,10 +1,9 @@
 import type { Context, Next } from "hono";
 import { createMiddleware } from "hono/factory";
-import { di } from "../di/container.js";
-import { TOKENS } from "../di/tokens.js";
-import type { JwtService } from "../services/jwt.service.js";
+import { JwtService } from "../services/jwt.service.js";
 import { AppError } from "../lib/errors.js";
 import type { AppEnv, AuthContext } from "../types/hono.js";
+import { container } from "tsyringe";
 
 const resolveAuthContext = async (c: Context<AppEnv>): Promise<AuthContext | null> => {
 	const authorization = c.req.header("Authorization");
@@ -13,7 +12,7 @@ const resolveAuthContext = async (c: Context<AppEnv>): Promise<AuthContext | nul
 	}
 
 	const token = authorization.replace(/^Bearer\s+/i, "");
-	const jwt = di.resolve<JwtService>(TOKENS.JwtService);
+	const jwt = container.resolve(JwtService);
 	const payload = await jwt.verifyAccessToken(token);
 	return {
 		userId: payload.sub,

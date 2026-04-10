@@ -5,8 +5,8 @@ import { parse as parseYaml } from "yaml";
 import { TOKENS } from "../di/tokens.js";
 import type { Env } from "../env.js";
 import { AppError } from "../lib/errors.js";
-import type { ChartFitService } from "./chart-fit.service.js";
-import type { CatalogService } from "./catalog.service.js";
+import { ChartFitService } from "./chart-fit.service.js";
+import { CatalogService } from "./catalog.service.js";
 
 const STATIC_SOURCE_DEFAULTS: Array<{ category: string; activeUrl: string; fallbackUrls: string[] }> = [
 	{
@@ -57,8 +57,8 @@ export class StaticBundleService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
 		@inject(TOKENS.Env) private readonly env: Env,
-		@inject(TOKENS.ChartFitService) private readonly chartFitService: ChartFitService,
-		@inject(TOKENS.CatalogService) private readonly catalogService: CatalogService,
+		@inject(ChartFitService) private readonly chartFitService: ChartFitService,
+		@inject(CatalogService) private readonly catalogService: CatalogService,
 	) {}
 
 	private toJsonValue(value: unknown): Prisma.InputJsonValue {

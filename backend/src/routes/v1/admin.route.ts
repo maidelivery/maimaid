@@ -1,11 +1,9 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { di } from "../../di/container.js";
-import { TOKENS } from "../../di/tokens.js";
 import { adminRequired } from "../../middleware/auth.js";
-import type { CommunityAliasService } from "../../services/community-alias.service.js";
-import type { AdminUserService } from "../../services/admin-user.service.js";
-import type { StaticBundleService } from "../../services/static-bundle.service.js";
+import { CommunityAliasService } from "../../services/community-alias.service.js";
+import { AdminUserService } from "../../services/admin-user.service.js";
+import { StaticBundleService } from "../../services/static-bundle.service.js";
 import { ok } from "../../http/response.js";
 import { createCustomMethodParamSchema, standardValidator, validationHook } from "../../http/validation.js";
 import type { AppEnv } from "../../types/hono.js";
@@ -125,7 +123,7 @@ adminV1Route.get("/admin/context", adminRequired, async (c) => {
 });
 
 adminV1Route.get("/admin/dashboard", adminRequired, async (c) => {
-	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
+	const communityAliasService = c.var.resolve(CommunityAliasService);
 	const stats = await communityAliasService.adminDashboardStats();
 	return ok(c, stats);
 });
@@ -135,7 +133,7 @@ adminV1Route.get(
 	adminRequired,
 	standardValidator("query", listCandidatesQuerySchema, validationHook),
 	async (c) => {
-		const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
+		const communityAliasService = c.var.resolve(CommunityAliasService);
 		const query = c.req.valid("query");
 
 		const input: Parameters<CommunityAliasService["adminListCandidates"]>[0] = {
@@ -155,7 +153,7 @@ adminV1Route.post(
 	adminRequired,
 	standardValidator("json", createCandidateSchema, validationHook),
 	async (c) => {
-		const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
+		const communityAliasService = c.var.resolve(CommunityAliasService);
 		const auth = c.get("auth");
 		if (!auth) {
 			return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
@@ -177,7 +175,7 @@ adminV1Route.post(
 	standardValidator("param", candidateSetStatusParamSchema, validationHook),
 	standardValidator("json", setStatusSchema, validationHook),
 	async (c) => {
-		const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
+		const communityAliasService = c.var.resolve(CommunityAliasService);
 		const params = c.req.valid("param");
 		const body = c.req.valid("json");
 		const candidate = await communityAliasService.adminSetStatus(params.candidateId, body.status);
@@ -191,7 +189,7 @@ adminV1Route.post(
 	standardValidator("param", candidateVoteWindowParamSchema, validationHook),
 	standardValidator("json", voteWindowSchema, validationHook),
 	async (c) => {
-		const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
+		const communityAliasService = c.var.resolve(CommunityAliasService);
 		const params = c.req.valid("param");
 		const body = c.req.valid("json");
 		const candidate = await communityAliasService.adminUpdateVoteWindow(params.candidateId, new Date(body.voteCloseAt));
@@ -200,13 +198,13 @@ adminV1Route.post(
 );
 
 adminV1Route.post("/admin:rollCycle", adminRequired, async (c) => {
-	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
+	const communityAliasService = c.var.resolve(CommunityAliasService);
 	const result = await communityAliasService.rollCycle();
 	return ok(c, result);
 });
 
 adminV1Route.get("/admin/users", adminRequired, standardValidator("query", listUsersQuerySchema, validationHook), async (c) => {
-	const adminUserService = di.resolve<AdminUserService>(TOKENS.AdminUserService);
+	const adminUserService = c.var.resolve(AdminUserService);
 	const query = c.req.valid("query");
 	const result = await adminUserService.listUsers({
 		limit: query.limit,
@@ -216,7 +214,7 @@ adminV1Route.get("/admin/users", adminRequired, standardValidator("query", listU
 });
 
 adminV1Route.post("/admin/users", adminRequired, standardValidator("json", createUserSchema, validationHook), async (c) => {
-	const adminUserService = di.resolve<AdminUserService>(TOKENS.AdminUserService);
+	const adminUserService = c.var.resolve(AdminUserService);
 	const body = c.req.valid("json");
 	const user = await adminUserService.createUser(body);
 	return ok(c, { user }, 201);
@@ -227,7 +225,7 @@ adminV1Route.delete(
 	adminRequired,
 	standardValidator("param", userIdParamSchema, validationHook),
 	async (c) => {
-		const adminUserService = di.resolve<AdminUserService>(TOKENS.AdminUserService);
+		const adminUserService = c.var.resolve(AdminUserService);
 		const params = c.req.valid("param");
 		const result = await adminUserService.deleteUser(params.userId);
 		return ok(c, result);
@@ -235,7 +233,7 @@ adminV1Route.delete(
 );
 
 adminV1Route.get("/admin/static-sources", adminRequired, async (c) => {
-	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+	const staticBundleService = c.var.resolve(StaticBundleService);
 	const sources = await staticBundleService.listSources();
 	return ok(c, { sources });
 });
@@ -245,7 +243,7 @@ adminV1Route.post(
 	adminRequired,
 	standardValidator("json", staticSourceCreateSchema, validationHook),
 	async (c) => {
-		const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+		const staticBundleService = c.var.resolve(StaticBundleService);
 		const body = c.req.valid("json");
 		const source = await staticBundleService.createSource({
 			category: body.category,
@@ -264,7 +262,7 @@ adminV1Route.patch(
 	standardValidator("param", sourceIdParamSchema, validationHook),
 	standardValidator("json", staticSourcePatchSchema, validationHook),
 	async (c) => {
-		const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+		const staticBundleService = c.var.resolve(StaticBundleService);
 		const params = c.req.valid("param");
 		const body = c.req.valid("json");
 		const patch: Parameters<StaticBundleService["updateSource"]>[1] = {};
@@ -290,7 +288,7 @@ adminV1Route.post(
 	adminRequired,
 	standardValidator("json", bundleBuildSchema, validationHook),
 	async (c) => {
-		const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+		const staticBundleService = c.var.resolve(StaticBundleService);
 		const body = c.req.valid("json");
 		const result = await staticBundleService.buildBundle(body.force);
 		return ok(c, result);
@@ -298,13 +296,13 @@ adminV1Route.post(
 );
 
 adminV1Route.get("/admin/static-bundles", adminRequired, async (c) => {
-	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+	const staticBundleService = c.var.resolve(StaticBundleService);
 	const bundles = await staticBundleService.listBundles();
 	return ok(c, { bundles });
 });
 
 adminV1Route.get("/admin/static-bundle-schedule", adminRequired, async (c) => {
-	const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+	const staticBundleService = c.var.resolve(StaticBundleService);
 	const schedule = await staticBundleService.getPeriodicBuildSchedule();
 	return ok(c, { schedule });
 });
@@ -314,7 +312,7 @@ adminV1Route.patch(
 	adminRequired,
 	standardValidator("json", staticBundleSchedulePatchSchema, validationHook),
 	async (c) => {
-		const staticBundleService = di.resolve<StaticBundleService>(TOKENS.StaticBundleService);
+		const staticBundleService = c.var.resolve(StaticBundleService);
 		const body = c.req.valid("json");
 		const patch: Parameters<StaticBundleService["updatePeriodicBuildSchedule"]>[0] = {};
 		if (body.enabled !== undefined) {

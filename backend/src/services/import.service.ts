@@ -142,8 +142,8 @@ export class ImportService {
 
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
-		@inject(TOKENS.ScoreService) private readonly scoreService: ScoreService,
-		@inject(TOKENS.SyncService) private readonly syncService: SyncService,
+		@inject(ScoreService) private readonly scoreService: ScoreService,
+		@inject(SyncService) private readonly syncService: SyncService,
 	) {}
 
 	async transformFromDivingFish(input: {

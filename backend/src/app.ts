@@ -22,6 +22,7 @@ import { jobsInternalRoute } from "./routes/internal/jobs.route.js";
 import type { AppEnv } from "./types/hono.js";
 import { getEnv } from "./env.js";
 import { buildOpenApiDocument } from "./openapi.js";
+import { tsyringe } from "@hono/tsyringe";
 
 const resolvePrebuiltOpenApiPath = () => {
 	const currentFilePath = fileURLToPath(import.meta.url);
@@ -59,7 +60,6 @@ export const createApp = () => {
 	const app = new Hono<AppEnv>();
 
 	app.use(
-		"*",
 		cors({
 			origin: (origin) => {
 				if (!origin) {
@@ -74,6 +74,8 @@ export const createApp = () => {
 			allowHeaders: ["Content-Type", "Authorization", "X-Maimaid-Client"],
 		}),
 	);
+
+	app.use(tsyringe());
 
 	app.route("/health", healthRoute);
 	app.route("/v1/auth", authV1Route);

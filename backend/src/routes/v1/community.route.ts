@@ -1,13 +1,12 @@
 import { Hono, type Context } from "hono";
 import { z } from "zod";
-import { di } from "../../di/container.js";
-import { TOKENS } from "../../di/tokens.js";
 import { authOptional, authRequired } from "../../middleware/auth.js";
-import type { CommunityAliasService } from "../../services/community-alias.service.js";
+import { CommunityAliasService } from "../../services/community-alias.service.js";
 import { ok } from "../../http/response.js";
 import { createCustomMethodParamSchema, standardValidator, validationHook } from "../../http/validation.js";
 import type { AppEnv } from "../../types/hono.js";
-import type { RateLimitService } from "../../services/rate-limit.service.js";
+import { RateLimitService } from "../../services/rate-limit.service.js";
+import { container } from "tsyringe";
 
 const submitSchema = z.object({
 	songIdentifier: z.string().min(1),
@@ -112,7 +111,7 @@ const resolveClientIp = (c: Context<AppEnv>): string => {
 };
 
 const enforceRateLimit = async (input: { bucket: string; key: string; limit: number; windowSeconds: number }) => {
-	const rateLimitService = di.resolve<RateLimitService>(TOKENS.RateLimitService);
+	const rateLimitService = container.resolve(RateLimitService);
 	await rateLimitService.consume({
 		bucket: input.bucket,
 		key: input.key,
@@ -122,7 +121,7 @@ const enforceRateLimit = async (input: { bucket: string; key: string; limit: num
 };
 
 communityV1Route.post("/candidates", authRequired, standardValidator("json", submitSchema, validationHook), async (c) => {
-	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
+	const communityAliasService = c.var.resolve(CommunityAliasService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
@@ -144,38 +143,43 @@ communityV1Route.get(
 	authOptional,
 	standardValidator("query", votingBoardQuerySchema, validationHook),
 	async (c) => {
-	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
-	const auth = c.get("auth");
-	const query = c.req.valid("query");
-	const rows = await communityAliasService.fetchVotingBoard(auth?.userId ?? null, query.limit, query.offset);
-	return ok(c, { rows });
+		const communityAliasService = c.var.resolve(CommunityAliasService);
+		const auth = c.get("auth");
+		const query = c.req.valid("query");
+		const rows = await communityAliasService.fetchVotingBoard(auth?.userId ?? null, query.limit, query.offset);
+		return ok(c, { rows });
 	},
 );
 
-communityV1Route.get("/candidates:my", authRequired, standardValidator("query", myCandidatesQuerySchema, validationHook), async (c) => {
-	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
-	const auth = c.get("auth");
-	if (!auth) {
-		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
-	}
-	const query = c.req.valid("query");
-	const rows = await communityAliasService.fetchMyCandidates(auth.userId, query.limit, query.songIdentifier);
-	return ok(c, { rows });
-});
+communityV1Route.get(
+	"/candidates:my",
+	authRequired,
+	standardValidator("query", myCandidatesQuerySchema, validationHook),
+	async (c) => {
+		const communityAliasService = c.var.resolve(CommunityAliasService);
+		const auth = c.get("auth");
+		if (!auth) {
+			return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+		}
+		const query = c.req.valid("query");
+		const rows = await communityAliasService.fetchMyCandidates(auth.userId, query.limit, query.songIdentifier);
+		return ok(c, { rows });
+	},
+);
 
 communityV1Route.get(
 	"/candidates:dailyCount",
 	authRequired,
 	standardValidator("query", dailyCountQuerySchema, validationHook),
 	async (c) => {
-	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
-	const auth = c.get("auth");
-	if (!auth) {
-		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
-	}
-	const query = c.req.valid("query");
-	const count = await communityAliasService.fetchMyDailyCount(auth.userId, query.localDate);
-	return ok(c, { count });
+		const communityAliasService = c.var.resolve(CommunityAliasService);
+		const auth = c.get("auth");
+		if (!auth) {
+			return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+		}
+		const query = c.req.valid("query");
+		const count = await communityAliasService.fetchMyDailyCount(auth.userId, query.localDate);
+		return ok(c, { count });
 	},
 );
 
@@ -185,20 +189,20 @@ communityV1Route.post(
 	standardValidator("param", candidateVoteParamSchema, validationHook),
 	standardValidator("json", voteSchema, validationHook),
 	async (c) => {
-	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
-	const auth = c.get("auth");
-	if (!auth) {
-		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
-	}
-	const params = c.req.valid("param");
-	const body = c.req.valid("json");
-	const result = await communityAliasService.vote(auth.userId, params.candidateId, body.vote);
-	return ok(c, result);
+		const communityAliasService = c.var.resolve(CommunityAliasService);
+		const auth = c.get("auth");
+		if (!auth) {
+			return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+		}
+		const params = c.req.valid("param");
+		const body = c.req.valid("json");
+		const result = await communityAliasService.vote(auth.userId, params.candidateId, body.vote);
+		return ok(c, result);
 	},
 );
 
 communityV1Route.get("/aliases:sync", standardValidator("query", approvedSyncQuerySchema, validationHook), async (c) => {
-	const communityAliasService = di.resolve<CommunityAliasService>(TOKENS.CommunityAliasService);
+	const communityAliasService = c.var.resolve(CommunityAliasService);
 	await enforceRateLimit({
 		...COMMUNITY_RATE_LIMIT.approvedSyncIp,
 		key: resolveClientIp(c),

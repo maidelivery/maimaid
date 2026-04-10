@@ -1,10 +1,8 @@
 import { Hono, type Context } from "hono";
 import { z } from "zod";
-import { di } from "../../di/container.js";
-import { TOKENS } from "../../di/tokens.js";
 import { authRequired } from "../../middleware/auth.js";
-import type { ProfileService } from "../../services/profile.service.js";
-import type { SyncService } from "../../services/sync.service.js";
+import { ProfileService } from "../../services/profile.service.js";
+import { SyncService } from "../../services/sync.service.js";
 import { ok } from "../../http/response.js";
 import { standardValidator, validationHook } from "../../http/validation.js";
 import type { AppEnv } from "../../types/hono.js";
@@ -60,7 +58,7 @@ function isWebClient(c: Context<AppEnv>) {
 }
 
 profilesV1Route.get("/:profileId/avatar", standardValidator("param", profileIdParamSchema, validationHook), async (c) => {
-	const profileService = di.resolve<ProfileService>(TOKENS.ProfileService);
+	const profileService = c.var.resolve(ProfileService);
 	const params = c.req.valid("param");
 	const avatar = await profileService.getAvatar(params.profileId);
 
@@ -89,7 +87,7 @@ profilesV1Route.get("/:profileId/avatar", standardValidator("param", profileIdPa
 profilesV1Route.use("*", authRequired);
 
 profilesV1Route.get("/", async (c) => {
-	const profileService = di.resolve<ProfileService>(TOKENS.ProfileService);
+	const profileService = c.var.resolve(ProfileService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
@@ -99,8 +97,8 @@ profilesV1Route.get("/", async (c) => {
 });
 
 profilesV1Route.post("/", standardValidator("json", createProfileSchema, validationHook), async (c) => {
-	const profileService = di.resolve<ProfileService>(TOKENS.ProfileService);
-	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
+	const profileService = c.var.resolve(ProfileService);
+	const syncService = c.var.resolve(SyncService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
@@ -125,52 +123,52 @@ profilesV1Route.put(
 	standardValidator("param", profileIdParamSchema, validationHook),
 	standardValidator("json", putProfileSchema, validationHook),
 	async (c) => {
-	const profileService = di.resolve<ProfileService>(TOKENS.ProfileService);
-	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
-	const auth = c.get("auth");
-	if (!auth) {
-		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
-	}
-	const params = c.req.valid("param");
-	const body = c.req.valid("json");
-	const payload: Parameters<ProfileService["upsertByClientId"]>[2] = {
-		name: body.name,
-		server: body.server,
-	};
-	if (body.isActive !== undefined && !isWebClient(c)) payload.isActive = body.isActive;
-	if (body.playerRating !== undefined) payload.playerRating = body.playerRating;
-	if (body.plate !== undefined) payload.plate = body.plate;
-	if (body.avatarUrl !== undefined) payload.avatarUrl = body.avatarUrl;
-	if (body.dfUsername !== undefined) payload.dfUsername = body.dfUsername;
-	if (body.b35Count !== undefined) payload.b35Count = body.b35Count;
-	if (body.b15Count !== undefined) payload.b15Count = body.b15Count;
-	if (body.b35RecLimit !== undefined) payload.b35RecLimit = body.b35RecLimit;
-	if (body.b15RecLimit !== undefined) payload.b15RecLimit = body.b15RecLimit;
-	if (body.createdAt !== undefined) payload.createdAt = body.createdAt;
-	const profile = await profileService.upsertByClientId(auth.userId, params.profileId, payload);
-	await syncService.recordEvent({
-		userId: auth.userId,
-		profileId: profile.id,
-		entityType: "profile",
-		entityId: profile.id,
-		op: "upsert",
-		payload: {
-			updatedAt: profile.updatedAt.toISOString(),
-		},
-	});
-	if (body.avatarUrl !== undefined) {
+		const profileService = c.var.resolve(ProfileService);
+		const syncService = c.var.resolve(SyncService);
+		const auth = c.get("auth");
+		if (!auth) {
+			return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+		}
+		const params = c.req.valid("param");
+		const body = c.req.valid("json");
+		const payload: Parameters<ProfileService["upsertByClientId"]>[2] = {
+			name: body.name,
+			server: body.server,
+		};
+		if (body.isActive !== undefined && !isWebClient(c)) payload.isActive = body.isActive;
+		if (body.playerRating !== undefined) payload.playerRating = body.playerRating;
+		if (body.plate !== undefined) payload.plate = body.plate;
+		if (body.avatarUrl !== undefined) payload.avatarUrl = body.avatarUrl;
+		if (body.dfUsername !== undefined) payload.dfUsername = body.dfUsername;
+		if (body.b35Count !== undefined) payload.b35Count = body.b35Count;
+		if (body.b15Count !== undefined) payload.b15Count = body.b15Count;
+		if (body.b35RecLimit !== undefined) payload.b35RecLimit = body.b35RecLimit;
+		if (body.b15RecLimit !== undefined) payload.b15RecLimit = body.b15RecLimit;
+		if (body.createdAt !== undefined) payload.createdAt = body.createdAt;
+		const profile = await profileService.upsertByClientId(auth.userId, params.profileId, payload);
 		await syncService.recordEvent({
 			userId: auth.userId,
 			profileId: profile.id,
-			entityType: "avatar",
+			entityType: "profile",
 			entityId: profile.id,
 			op: "upsert",
 			payload: {
-				avatarUrl: body.avatarUrl,
+				updatedAt: profile.updatedAt.toISOString(),
 			},
 		});
-	}
-	return ok(c, { profile });
+		if (body.avatarUrl !== undefined) {
+			await syncService.recordEvent({
+				userId: auth.userId,
+				profileId: profile.id,
+				entityType: "avatar",
+				entityId: profile.id,
+				op: "upsert",
+				payload: {
+					avatarUrl: body.avatarUrl,
+				},
+			});
+		}
+		return ok(c, { profile });
 	},
 );
 
@@ -179,46 +177,46 @@ profilesV1Route.patch(
 	standardValidator("param", profileIdParamSchema, validationHook),
 	standardValidator("json", updateProfileSchema, validationHook),
 	async (c) => {
-	const profileService = di.resolve<ProfileService>(TOKENS.ProfileService);
-	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
-	const auth = c.get("auth");
-	if (!auth) {
-		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
-	}
-	const body = c.req.valid("json");
-	const params = c.req.valid("param");
-	const payload: Parameters<ProfileService["update"]>[2] = {};
-	if (body.name !== undefined) payload.name = body.name;
-	if (body.server !== undefined) payload.server = body.server;
-	if (body.isActive !== undefined && !isWebClient(c)) payload.isActive = body.isActive;
-	if (body.playerRating !== undefined) payload.playerRating = body.playerRating;
-	if (body.plate !== undefined) payload.plate = body.plate;
-	if (body.dfUsername !== undefined) payload.dfUsername = body.dfUsername;
-	if (body.b35Count !== undefined) payload.b35Count = body.b35Count;
-	if (body.b15Count !== undefined) payload.b15Count = body.b15Count;
-	if (body.b35RecLimit !== undefined) payload.b35RecLimit = body.b35RecLimit;
-	if (body.b15RecLimit !== undefined) payload.b15RecLimit = body.b15RecLimit;
-	if (Object.keys(payload).length === 0 && body.isActive !== undefined && isWebClient(c)) {
-		return ok(c, { code: "forbidden", message: "Only app client can change active profile." }, 403);
-	}
-	const profile = await profileService.update(auth.userId, params.profileId, payload);
-	await syncService.recordEvent({
-		userId: auth.userId,
-		profileId: profile.id,
-		entityType: "profile",
-		entityId: profile.id,
-		op: "upsert",
-		payload: {
-			updatedAt: profile.updatedAt.toISOString(),
-		},
-	});
-	return ok(c, { profile });
+		const profileService = c.var.resolve(ProfileService);
+		const syncService = c.var.resolve(SyncService);
+		const auth = c.get("auth");
+		if (!auth) {
+			return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+		}
+		const body = c.req.valid("json");
+		const params = c.req.valid("param");
+		const payload: Parameters<ProfileService["update"]>[2] = {};
+		if (body.name !== undefined) payload.name = body.name;
+		if (body.server !== undefined) payload.server = body.server;
+		if (body.isActive !== undefined && !isWebClient(c)) payload.isActive = body.isActive;
+		if (body.playerRating !== undefined) payload.playerRating = body.playerRating;
+		if (body.plate !== undefined) payload.plate = body.plate;
+		if (body.dfUsername !== undefined) payload.dfUsername = body.dfUsername;
+		if (body.b35Count !== undefined) payload.b35Count = body.b35Count;
+		if (body.b15Count !== undefined) payload.b15Count = body.b15Count;
+		if (body.b35RecLimit !== undefined) payload.b35RecLimit = body.b35RecLimit;
+		if (body.b15RecLimit !== undefined) payload.b15RecLimit = body.b15RecLimit;
+		if (Object.keys(payload).length === 0 && body.isActive !== undefined && isWebClient(c)) {
+			return ok(c, { code: "forbidden", message: "Only app client can change active profile." }, 403);
+		}
+		const profile = await profileService.update(auth.userId, params.profileId, payload);
+		await syncService.recordEvent({
+			userId: auth.userId,
+			profileId: profile.id,
+			entityType: "profile",
+			entityId: profile.id,
+			op: "upsert",
+			payload: {
+				updatedAt: profile.updatedAt.toISOString(),
+			},
+		});
+		return ok(c, { profile });
 	},
 );
 
 profilesV1Route.delete("/:profileId", standardValidator("param", profileIdParamSchema, validationHook), async (c) => {
-	const profileService = di.resolve<ProfileService>(TOKENS.ProfileService);
-	const syncService = di.resolve<SyncService>(TOKENS.SyncService);
+	const profileService = c.var.resolve(ProfileService);
+	const syncService = c.var.resolve(SyncService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
@@ -241,14 +239,14 @@ profilesV1Route.post(
 	standardValidator("param", profileIdParamSchema, validationHook),
 	standardValidator("json", avatarUploadSchema, validationHook),
 	async (c) => {
-	const profileService = di.resolve<ProfileService>(TOKENS.ProfileService);
-	const auth = c.get("auth");
-	if (!auth) {
-		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
-	}
-	const params = c.req.valid("param");
-	const body = c.req.valid("json");
-	const result = await profileService.createAvatarUploadUrl(auth.userId, params.profileId, body.contentType);
-	return ok(c, result);
+		const profileService = c.var.resolve(ProfileService);
+		const auth = c.get("auth");
+		if (!auth) {
+			return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+		}
+		const params = c.req.valid("param");
+		const body = c.req.valid("json");
+		const result = await profileService.createAvatarUploadUrl(auth.userId, params.profileId, body.contentType);
+		return ok(c, result);
 	},
 );

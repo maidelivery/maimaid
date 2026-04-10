@@ -9,9 +9,9 @@ import { StaticBundleService } from "./static-bundle.service.js";
 export class JobService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
-		@inject(TOKENS.CatalogService) private readonly catalogService: CatalogService,
-		@inject(TOKENS.CommunityAliasService) private readonly communityAliasService: CommunityAliasService,
-		@inject(TOKENS.StaticBundleService) private readonly staticBundleService: StaticBundleService,
+		@inject(CatalogService) private readonly catalogService: CatalogService,
+		@inject(CommunityAliasService) private readonly communityAliasService: CommunityAliasService,
+		@inject(StaticBundleService) private readonly staticBundleService: StaticBundleService,
 	) {}
 
 	async enqueue(jobType: string, payload: Record<string, unknown> = {}) {

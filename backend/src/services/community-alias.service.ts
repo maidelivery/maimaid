@@ -2,7 +2,7 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { inject, injectable } from "tsyringe";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
-import type { CatalogService } from "./catalog.service.js";
+import { CatalogService } from "./catalog.service.js";
 
 const SHANGHAI_TIMEZONE = "Asia/Shanghai";
 type DuplicateReason = "lxns_existing" | "community_existing" | "admin_rejected_locked";
@@ -11,7 +11,7 @@ type DuplicateReason = "lxns_existing" | "community_existing" | "admin_rejected_
 export class CommunityAliasService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
-		@inject(TOKENS.CatalogService) private readonly catalogService: CatalogService,
+		@inject(CatalogService) private readonly catalogService: CatalogService,
 	) {}
 
 	normalizeAlias(raw: string): string {

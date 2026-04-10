@@ -8,7 +8,7 @@ import { StorageService } from "./storage.service.js";
 export class ProfileService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
-		@inject(TOKENS.StorageService) private readonly storageService: StorageService,
+		@inject(StorageService) private readonly storageService: StorageService,
 	) {}
 
 	async list(userId: string) {

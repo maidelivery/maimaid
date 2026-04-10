@@ -1,8 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { di } from "../../di/container.js";
-import { TOKENS } from "../../di/tokens.js";
-import type { JobService } from "../../services/job.service.js";
+import { JobService } from "../../services/job.service.js";
 import { adminRequired } from "../../middleware/auth.js";
 import { ok } from "../../http/response.js";
 import { standardValidator, validationHook } from "../../http/validation.js";
@@ -22,14 +20,14 @@ jobsInternalRoute.use("*", adminRequired);
 
 jobsInternalRoute.post("/dispatch", standardValidator("json", dispatchSchema, validationHook), async (c) => {
 	const body = c.req.valid("json");
-	const jobService = di.resolve<JobService>(TOKENS.JobService);
+	const jobService = c.var.resolve(JobService);
 	const result = await jobService.dispatch(body.limit);
 	return ok(c, { jobs: result });
 });
 
 jobsInternalRoute.post("/enqueue", standardValidator("json", enqueueSchema, validationHook), async (c) => {
 	const body = c.req.valid("json");
-	const jobService = di.resolve<JobService>(TOKENS.JobService);
+	const jobService = c.var.resolve(JobService);
 	const job = await jobService.enqueue(body.jobType, body.payload);
 	return ok(c, { job }, 201);
 });

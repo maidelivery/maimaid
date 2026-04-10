@@ -29,6 +29,7 @@
 		"@aws-sdk/s3-request-presigner": "^3.908.0",
 		"@hono/node-server": "^1.14.4",
 		"@hono/standard-validator": "^0.2.2",
+		"@hono/tsyringe": "^1.0.1",
 		"@prisma/adapter-pg": "^7.5.0",
 		"@prisma/client": "^7.5.0",
 		"@scalar/hono-api-reference": "^0.10.5",

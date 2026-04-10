@@ -1,8 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { di } from "../../di/container.js";
-import { TOKENS } from "../../di/tokens.js";
-import type { ImportService } from "../../services/import.service.js";
+import { ImportService } from "../../services/import.service.js";
 import { authRequired } from "../../middleware/auth.js";
 import { ok } from "../../http/response.js";
 import { standardValidator, validationHook } from "../../http/validation.js";
@@ -39,47 +37,57 @@ const lxnsOauthTokenSchema = z.object({
 	codeVerifier: z.string().min(20),
 });
 
-importsV1Route.post("/imports:transformDf", authRequired, standardValidator("json", dfTransformSchema, validationHook), async (c) => {
-	const importService = di.resolve<ImportService>(TOKENS.ImportService);
-	const body = c.req.valid("json");
-	const payload: Parameters<ImportService["transformFromDivingFish"]>[0] = {};
-	if (body.username !== undefined) payload.username = body.username;
-	if (body.qq !== undefined) payload.qq = body.qq;
-	if (body.importToken !== undefined) payload.importToken = body.importToken;
-	const result = await importService.transformFromDivingFish(payload);
-	return ok(c, result);
-});
+importsV1Route.post(
+	"/imports:transformDf",
+	authRequired,
+	standardValidator("json", dfTransformSchema, validationHook),
+	async (c) => {
+		const importService = c.var.resolve(ImportService);
+		const body = c.req.valid("json");
+		const payload: Parameters<ImportService["transformFromDivingFish"]>[0] = {};
+		if (body.username !== undefined) payload.username = body.username;
+		if (body.qq !== undefined) payload.qq = body.qq;
+		if (body.importToken !== undefined) payload.importToken = body.importToken;
+		const result = await importService.transformFromDivingFish(payload);
+		return ok(c, result);
+	},
+);
 
-importsV1Route.post("/imports:transformLxns", authRequired, standardValidator("json", lxnsTransformSchema, validationHook), async (c) => {
-	const importService = di.resolve<ImportService>(TOKENS.ImportService);
-	const body = c.req.valid("json");
-	const result = await importService.transformFromLxns({
-		accessToken: body.accessToken,
-	});
-	return ok(c, result);
-});
+importsV1Route.post(
+	"/imports:transformLxns",
+	authRequired,
+	standardValidator("json", lxnsTransformSchema, validationHook),
+	async (c) => {
+		const importService = c.var.resolve(ImportService);
+		const body = c.req.valid("json");
+		const result = await importService.transformFromLxns({
+			accessToken: body.accessToken,
+		});
+		return ok(c, result);
+	},
+);
 
 importsV1Route.post(
 	"/imports:exchangeLxnsToken",
 	authRequired,
 	standardValidator("json", lxnsOauthTokenSchema, validationHook),
 	async (c) => {
-	const importService = di.resolve<ImportService>(TOKENS.ImportService);
-	const auth = c.get("auth");
-	if (!auth) {
-		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
-	}
-	const body = c.req.valid("json");
-	const result = await importService.exchangeLxnsAuthorizationCode({
-		code: body.code,
-		codeVerifier: body.codeVerifier,
-	});
-	return ok(c, result);
+		const importService = c.var.resolve(ImportService);
+		const auth = c.get("auth");
+		if (!auth) {
+			return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+		}
+		const body = c.req.valid("json");
+		const result = await importService.exchangeLxnsAuthorizationCode({
+			code: body.code,
+			codeVerifier: body.codeVerifier,
+		});
+		return ok(c, result);
 	},
 );
 
 importsV1Route.post("/imports:importDf", authRequired, standardValidator("json", dfSchema, validationHook), async (c) => {
-	const importService = di.resolve<ImportService>(TOKENS.ImportService);
+	const importService = c.var.resolve(ImportService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
@@ -97,7 +105,7 @@ importsV1Route.post("/imports:importDf", authRequired, standardValidator("json",
 });
 
 importsV1Route.post("/imports:importLxns", authRequired, standardValidator("json", lxnsSchema, validationHook), async (c) => {
-	const importService = di.resolve<ImportService>(TOKENS.ImportService);
+	const importService = c.var.resolve(ImportService);
 	const auth = c.get("auth");
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);

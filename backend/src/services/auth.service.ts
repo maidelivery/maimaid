@@ -29,7 +29,7 @@ export type AuthEmailLinkContext = {
 export class AuthService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
-		@inject(TOKENS.JwtService) private readonly jwtService: JwtService,
+		@inject(JwtService) private readonly jwtService: JwtService,
 		@inject(TOKENS.Env) private readonly env: Env,
 	) {}
 
