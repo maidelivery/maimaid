@@ -123,6 +123,7 @@ type TabPanelContentProps = {
 	handleStartTotpSetup: () => Promise<void>;
 	handleDisableTotp: () => Promise<void>;
 	handleConfirmTotpSetup: () => Promise<void>;
+	handleUpdateUsername: (username: string) => Promise<boolean>;
 	handleRegisterPasskey: () => Promise<string | null>;
 	handleRenamePasskey: (credentialId: string, name: string) => Promise<boolean>;
 	handleDeletePasskey: (credentialId: string) => Promise<void>;
@@ -235,6 +236,7 @@ export function TabPanelContent(props: TabPanelContentProps) {
 		handleStartTotpSetup,
 		handleDisableTotp,
 		handleConfirmTotpSetup,
+		handleUpdateUsername,
 		handleRegisterPasskey,
 		handleRenamePasskey,
 		handleDeletePasskey,
@@ -402,6 +404,7 @@ export function TabPanelContent(props: TabPanelContentProps) {
 				onDisableTotp={handleDisableTotp}
 				onMfaSetupCodeChange={setMfaSetupCode}
 				onConfirmTotpSetup={handleConfirmTotpSetup}
+				onUpdateUsername={handleUpdateUsername}
 				onRegisterPasskey={handleRegisterPasskey}
 				onRenamePasskey={handleRenamePasskey}
 				onDeletePasskey={handleDeletePasskey}

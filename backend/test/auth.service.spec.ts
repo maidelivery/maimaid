@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import type { PrismaClient } from "@prisma/client";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Env } from "../src/env.js";
 import { AuthService } from "../src/services/auth.service.js";
 import { JwtService } from "../src/services/jwt.service.js";
@@ -61,5 +61,123 @@ describe("AuthService", () => {
 		expect(url.searchParams.get("token")).toBe("reset-token");
 		expect(url.searchParams.get("client")).toBe("app");
 		expect(url.searchParams.get("redirect_uri")).toBe("maimaid://auth/callback");
+	});
+
+	it("stores username fields during registration", async () => {
+		const createdUser = {
+			id: "user-1",
+			email: "alice@example.com",
+			passwordHash: "hash",
+			username: "Alice",
+			usernameNormalized: "alice",
+			usernameDiscriminator: "0001",
+			isAdmin: false,
+			status: "active",
+		};
+		const tx = {
+			user: {
+				findMany: vi.fn().mockResolvedValue([]),
+				create: vi.fn().mockResolvedValue(createdUser),
+			},
+			profile: {
+				create: vi.fn().mockResolvedValue({}),
+			},
+		};
+		const prisma = {
+			user: {
+				findUnique: vi.fn().mockResolvedValue(null),
+			},
+			$transaction: vi.fn(async (callback: (client: unknown) => Promise<unknown>) => callback(tx)),
+		};
+		const env = createEnv();
+		const service = new AuthService(prisma as never, new JwtService(env), env);
+		vi.spyOn(service as never, "sendVerificationEmail").mockResolvedValue(true);
+
+		const result = await service.register("Alice@example.com", "Password1!", "Alice");
+
+		expect(result.verificationEmailSent).toBe(true);
+		expect(tx.user.create).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: expect.objectContaining({
+					email: "alice@example.com",
+					username: "Alice",
+					usernameNormalized: "alice",
+					usernameDiscriminator: "0001",
+				}),
+			}),
+		);
+	});
+
+	it("preserves the discriminator when only username casing changes", async () => {
+		const tx = {
+			user: {
+				findUnique: vi.fn().mockResolvedValue({
+					id: "user-1",
+					status: "active",
+					usernameNormalized: "alice",
+					usernameDiscriminator: "0042",
+				}),
+				update: vi.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
+					id: "user-1",
+					email: "alice@example.com",
+					passwordHash: "hash",
+					username: data.username,
+					usernameNormalized: data.usernameNormalized,
+					usernameDiscriminator: data.usernameDiscriminator,
+					isAdmin: false,
+					status: "active",
+				})),
+			},
+			$transaction: vi.fn(async (callback: (client: unknown) => Promise<unknown>) => callback(tx)),
+		};
+		const env = createEnv();
+		const service = new AuthService(tx as never, new JwtService(env), env);
+
+		const result = await service.updateUsername("user-1", "ALICE");
+
+		expect(result.username).toBe("ALICE");
+		expect(result.usernameDiscriminator).toBe("0042");
+		expect(tx.user.update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: expect.objectContaining({
+					usernameDiscriminator: "0042",
+				}),
+			}),
+		);
+	});
+
+	it("reassigns the next available discriminator when renaming to a different username", async () => {
+		const tx = {
+			user: {
+				findUnique: vi.fn().mockResolvedValue({
+					id: "user-1",
+					status: "active",
+					usernameNormalized: "alice",
+					usernameDiscriminator: "0042",
+				}),
+				findMany: vi.fn().mockResolvedValue([{ usernameDiscriminator: "0001" }]),
+				update: vi.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
+					id: "user-1",
+					email: "alice@example.com",
+					passwordHash: "hash",
+					username: data.username,
+					usernameNormalized: data.usernameNormalized,
+					usernameDiscriminator: data.usernameDiscriminator,
+					isAdmin: false,
+					status: "active",
+				})),
+			},
+			$transaction: vi.fn(async (callback: (client: unknown) => Promise<unknown>) => callback(tx)),
+		};
+		const env = createEnv();
+		const service = new AuthService(tx as never, new JwtService(env), env);
+
+		const result = await service.updateUsername("user-1", "Bob");
+
+		expect(result).toMatchObject({
+			username: "Bob",
+			usernameNormalized: "bob",
+			usernameDiscriminator: "0002",
+		});
 	});
 });

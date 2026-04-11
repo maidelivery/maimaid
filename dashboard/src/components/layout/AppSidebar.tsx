@@ -14,6 +14,7 @@ type AppSidebarProps = {
 	setTab: Dispatch<SetStateAction<string>>;
 	setMobileDrawerOpen: Dispatch<SetStateAction<boolean>>;
 	enabledProfileName: string;
+	sessionHandle: string;
 	sessionEmail: string;
 	roleLabel: string;
 	RoleIcon: LucideIcon;
@@ -29,6 +30,7 @@ export function AppSidebar(props: AppSidebarProps) {
 		setTab,
 		setMobileDrawerOpen,
 		enabledProfileName,
+		sessionHandle,
 		sessionEmail,
 		roleLabel,
 		RoleIcon,
@@ -97,12 +99,14 @@ export function AppSidebar(props: AppSidebarProps) {
 			<div className="border-t border-border/60 px-3 py-3">
 				<div className="mb-3 flex items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-2">
 					<UiAvatar className="size-8 rounded-md">
-						<AvatarImage src={activeProfileAvatarUrl ?? undefined} alt={sessionEmail} />
-						<AvatarFallback>{sessionEmail.slice(0, 1).toUpperCase()}</AvatarFallback>
+						<AvatarImage src={activeProfileAvatarUrl ?? undefined} alt={sessionHandle} />
+						<AvatarFallback>{sessionHandle.slice(0, 1).toUpperCase()}</AvatarFallback>
 					</UiAvatar>
 					<div className="min-w-0 flex-1">
-						<p className="truncate text-xs">{sessionEmail}</p>
-						<p className="text-[11px] text-muted-foreground">{roleLabel}</p>
+						<p className="truncate text-xs font-medium">{sessionHandle}</p>
+						<p className="truncate text-[11px] text-muted-foreground">
+							{sessionEmail} · {roleLabel}
+						</p>
 					</div>
 					<RoleIcon className="size-4 text-muted-foreground" />
 				</div>

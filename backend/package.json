@@ -21,6 +21,7 @@
 		"prisma:generate": "prisma generate",
 		"prisma:migrate:dev": "prisma migrate dev",
 		"prisma:migrate:deploy": "prisma migrate deploy",
+		"user-handles:backfill": "tsx scripts/backfill-user-handles.ts",
 		"prisma:studio": "prisma studio",
 		"migrate": "prisma migrate deploy"
 	},

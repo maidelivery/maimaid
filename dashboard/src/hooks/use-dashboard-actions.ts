@@ -1,8 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { startRegistration } from "@simplewebauthn/browser";
-import { useState } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import type { Song } from "@/components/songs/types";
 import type { ConfirmDialogOptions } from "@/hooks/use-confirm-dialog";
+import { isValidUsername, normalizeUsername, USERNAME_HINT } from "@/lib/app-helpers";
 import type {
 	BackupCodeStatus,
 	MfaSetup,
@@ -12,6 +13,7 @@ import type {
 	StaticBundleSchedule,
 	ToastSeverity,
 } from "@/lib/app-types";
+import type { Session } from "@/lib/session";
 
 type RequestOptions = {
 	method?: "GET" | "POST" | "PATCH" | "DELETE";
@@ -25,6 +27,8 @@ type RequestFn = <T>(path: string, options?: RequestOptions) => Promise<T>;
 type UseDashboardActionsInput = {
 	request: RequestFn;
 	showToast: (message: string, severity?: ToastSeverity) => void;
+	session: Session | null;
+	setSession: Dispatch<SetStateAction<Session | null>>;
 	activeProfileId: string;
 	scoreSongName: string;
 	scoreType: string;
@@ -70,6 +74,8 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 	const {
 		request,
 		showToast,
+		session,
+		setSession,
 		activeProfileId,
 		scoreSongName,
 		scoreType,
@@ -459,6 +465,44 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		}
 	};
 
+	const handleUpdateUsername = async (username: string) => {
+		const normalizedUsername = normalizeUsername(username);
+		if (!isValidUsername(normalizedUsername)) {
+			showToast(t("actionHandleInvalid") || USERNAME_HINT, "warning");
+			return false;
+		}
+
+		try {
+			const user = await request<Session["user"]>("v1/auth/me", {
+				method: "PATCH",
+				body: {
+					username: normalizedUsername,
+				},
+			});
+
+			setSession((current) => {
+				if (!current) {
+					return current;
+				}
+				return {
+					...current,
+					user,
+				};
+			});
+
+			const followUpLoads = [loadCommunity()];
+			if (session?.user.isAdmin) {
+				followUpLoads.push(loadAdminCandidates(), loadAdminUsers());
+			}
+			await Promise.allSettled(followUpLoads);
+			showToast(t("actionHandleUpdated"), "success");
+			return true;
+		} catch (error) {
+			showToast((error as Error).message, "error");
+			return false;
+		}
+	};
+
 	const handleDeleteUser = async (userId: string) => {
 		const confirmed = await confirmAction({
 			title: t("actionUserDelTitle"),
@@ -744,6 +788,7 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		handleAdminRollCycle,
 		handleAdminVoteWindowUpdate,
 		handleCreateUser,
+		handleUpdateUsername,
 		handleDeleteUser,
 		handleToggleSource,
 		handleCreateSource,

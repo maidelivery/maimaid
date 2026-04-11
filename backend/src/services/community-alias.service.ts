@@ -3,6 +3,7 @@ import { inject, singleton } from "tsyringe";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
 import { CatalogService } from "./catalog.service.js";
+import { buildHandle } from "../lib/user-handle.js";
 
 const SHANGHAI_TIMEZONE = "Asia/Shanghai";
 type DuplicateReason = "lxns_existing" | "community_existing" | "admin_rejected_locked";
@@ -143,6 +144,12 @@ export class CommunityAliasService {
 				AND: [{ OR: [{ voteCloseAt: null }, { voteCloseAt: { gte: new Date() } }] }],
 			},
 			include: {
+				submitter: {
+					select: {
+						username: true,
+						usernameDiscriminator: true,
+					},
+				},
 				votes: true,
 			},
 			orderBy: [{ voteCloseAt: "asc" }, { createdAt: "desc" }],
@@ -159,6 +166,7 @@ export class CommunityAliasService {
 				songIdentifier: row.songIdentifier,
 				aliasText: row.aliasText,
 				submitterId: row.submitterId,
+				submitterHandle: buildHandle(row.submitter.username, row.submitter.usernameDiscriminator),
 				voteOpenAt: row.voteOpenAt,
 				voteCloseAt: row.voteCloseAt,
 				supportCount,
@@ -454,6 +462,7 @@ export class CommunityAliasService {
 			aliasText: row.aliasText,
 			submitterId: row.submitterId,
 			submitterEmail: row.submitter.email,
+			submitterHandle: buildHandle(row.submitter.username, row.submitter.usernameDiscriminator),
 			status: row.status,
 			voteOpenAt: row.voteOpenAt,
 			voteCloseAt: row.voteCloseAt,

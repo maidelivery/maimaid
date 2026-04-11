@@ -149,13 +149,22 @@ struct BackendAuthView: View {
                 accountSummaryCard(
                     icon: "person.crop.circle.badge.checkmark",
                     iconTint: .blue,
-                    title: user.email,
-                    subtitle: String(localized: "settings.cloud.status.loggedIn")
+                    title: user.handle,
+                    subtitle: user.email
                 )
             }
             .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
             .listRowBackground(Color.clear)
             .listSectionSeparator(.hidden)
+
+            Section("settings.cloud.account.section") {
+                LabeledContent("settings.cloud.account.handle", value: user.handle)
+                LabeledContent("settings.cloud.account.email", value: user.email)
+                LabeledContent("settings.cloud.account.status") {
+                    Text("settings.cloud.status.loggedIn")
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             Section("settings.cloud.section.sync") {
                 actionRow(

@@ -12,9 +12,16 @@ import type { AppEnv } from "../../types/hono.js";
 import type { Env } from "../../env.js";
 import { RateLimitService } from "../../services/rate-limit.service.js";
 import { container } from "tsyringe";
+import {
+	INVALID_USERNAME_MESSAGE,
+	USERNAME_MAX_LENGTH,
+	USERNAME_MIN_LENGTH,
+	serializeUserIdentity,
+} from "../../lib/user-handle.js";
 
 const registerSchema = z.object({
 	email: z.email(),
+	username: z.string().trim().min(USERNAME_MIN_LENGTH).max(USERNAME_MAX_LENGTH),
 	password: z
 		.string()
 		.min(1)
@@ -107,6 +114,14 @@ const sessionExchangeSchema = z.object({
 	sessionCode: z.string().min(20),
 });
 
+const updateMeSchema = z.object({
+	username: z
+		.string()
+		.trim()
+		.min(USERNAME_MIN_LENGTH, INVALID_USERNAME_MESSAGE)
+		.max(USERNAME_MAX_LENGTH, INVALID_USERNAME_MESSAGE),
+});
+
 const credentialIdParamSchema = z.object({
 	credentialId: z.string().min(1),
 });
@@ -185,14 +200,11 @@ authV1Route.post("/register", standardValidator("json", registerSchema, validati
 	const { user, verificationEmailSent } = await authService.register(
 		body.email,
 		body.password,
+		body.username,
 		resolveEmailLinkContext(body.channel, body.redirectUri, c.req.header("X-Maimaid-Client")),
 	);
 	return ok(c, {
-		user: {
-			id: user.id,
-			email: user.email,
-			isAdmin: user.isAdmin,
-		},
+		user: serializeAuthUser(user),
 		verificationEmailSent,
 	});
 });
@@ -212,11 +224,7 @@ authV1Route.post("/login", standardValidator("json", loginSchema, validationHook
 	if (requiresMfa) {
 		const challenge = await mfaService.createLoginChallenge(user, loginChannel);
 		return ok(c, {
-			user: {
-				id: user.id,
-				email: user.email,
-				isAdmin: user.isAdmin,
-			},
+			user: serializeAuthUser(user),
 			mfaRequired: true,
 			challengeToken: challenge.challengeToken,
 			methods: challenge.methods,
@@ -224,11 +232,7 @@ authV1Route.post("/login", standardValidator("json", loginSchema, validationHook
 	}
 	const tokens = await authService.issueTokensForUser(user);
 	return ok(c, {
-		user: {
-			id: user.id,
-			email: user.email,
-			isAdmin: user.isAdmin,
-		},
+		user: serializeAuthUser(user),
 		mfaRequired: false,
 		...tokens,
 	});
@@ -243,11 +247,7 @@ authV1Route.post("/refresh", standardValidator("json", refreshSchema, validation
 	});
 	const { user, tokens } = await authService.refresh(body.refreshToken);
 	return ok(c, {
-		user: {
-			id: user.id,
-			email: user.email,
-			isAdmin: user.isAdmin,
-		},
+		user: serializeAuthUser(user),
 		...tokens,
 	});
 });
@@ -257,11 +257,7 @@ authV1Route.post("/session:exchange", standardValidator("json", sessionExchangeS
 	const body = c.req.valid("json");
 	const { user, tokens } = await authService.exchangeSessionCode(body.sessionCode);
 	return ok(c, {
-		user: {
-			id: user.id,
-			email: user.email,
-			isAdmin: user.isAdmin,
-		},
+		user: serializeAuthUser(user),
 		...tokens,
 	});
 });
@@ -568,11 +564,7 @@ authV1Route.post("/mfa/challenges:verifyTotp", standardValidator("json", mfaTotp
 	const user = await mfaService.verifyTotpLogin(body.challengeToken, body.code);
 	const tokens = await authService.issueTokensForUser(user);
 	return ok(c, {
-		user: {
-			id: user.id,
-			email: user.email,
-			isAdmin: user.isAdmin,
-		},
+		user: serializeAuthUser(user),
 		mfaRequired: false,
 		...tokens,
 	});
@@ -588,11 +580,7 @@ authV1Route.post(
 		const user = await mfaService.verifyBackupCodeLogin(body.challengeToken, body.code);
 		const tokens = await authService.issueTokensForUser(user);
 		return ok(c, {
-			user: {
-				id: user.id,
-				email: user.email,
-				isAdmin: user.isAdmin,
-			},
+			user: serializeAuthUser(user),
 			mfaRequired: false,
 			...tokens,
 		});
@@ -609,11 +597,7 @@ authV1Route.post(
 		const user = await mfaService.verifyPasskeyLogin(body.challengeToken, body.response);
 		const tokens = await authService.issueTokensForUser(user);
 		return ok(c, {
-			user: {
-				id: user.id,
-				email: user.email,
-				isAdmin: user.isAdmin,
-			},
+			user: serializeAuthUser(user),
 			mfaRequired: false,
 			...tokens,
 		});
@@ -634,11 +618,7 @@ authV1Route.post("/passkeys:finishLogin", standardValidator("json", passkeyLogin
 	const user = await mfaService.verifyPasskeyLogin(body.challengeToken, body.response);
 	const tokens = await authService.issueTokensForUser(user);
 	return ok(c, {
-		user: {
-			id: user.id,
-			email: user.email,
-			isAdmin: user.isAdmin,
-		},
+		user: serializeAuthUser(user),
 		mfaRequired: false,
 		...tokens,
 	});
@@ -649,11 +629,20 @@ authV1Route.get("/me", authRequired, async (c) => {
 	if (!auth) {
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
-	return ok(c, {
-		id: auth.userId,
-		email: auth.email,
-		isAdmin: auth.isAdmin,
-	});
+	const authService = c.var.resolve(AuthService);
+	const user = await authService.findActiveUserById(auth.userId);
+	return ok(c, serializeAuthUser(user));
+});
+
+authV1Route.patch("/me", authRequired, standardValidator("json", updateMeSchema, validationHook), async (c) => {
+	const auth = c.get("auth");
+	if (!auth) {
+		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+	}
+	const authService = c.var.resolve(AuthService);
+	const body = c.req.valid("json");
+	const user = await authService.updateUsername(auth.userId, body.username);
+	return ok(c, serializeAuthUser(user));
 });
 
 type AuthCallbackInput = {
@@ -825,3 +814,11 @@ const resolveAppRedirectUri = (redirectUri: string | undefined): string => {
 
 	return fallback;
 };
+
+const serializeAuthUser = (user: {
+	id: string;
+	email: string;
+	username: string;
+	usernameDiscriminator: string;
+	isAdmin: boolean;
+}) => serializeUserIdentity(user);

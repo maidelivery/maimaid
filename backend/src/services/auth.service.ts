@@ -7,6 +7,7 @@ import { JwtService } from "./jwt.service.js";
 import type { Env } from "../env.js";
 import { randomToken, sha256Hex } from "../lib/crypto.js";
 import { isPasswordComplexEnough, PASSWORD_COMPLEXITY_ERROR_MESSAGE } from "../lib/auth-validation.js";
+import { assignUserHandle } from "../lib/user-handle.js";
 
 type TokenPair = {
 	accessToken: string;
@@ -36,6 +37,7 @@ export class AuthService {
 	async register(
 		email: string,
 		password: string,
+		username: string,
 		emailLinkContext?: AuthEmailLinkContext,
 	): Promise<{ user: User; verificationEmailSent: boolean }> {
 		const normalized = this.normalizeEmail(email);
@@ -48,10 +50,14 @@ export class AuthService {
 
 		const passwordHash = await hash(password, 12);
 		const user = await this.prisma.$transaction(async (tx) => {
+			const assignedHandle = await assignUserHandle(tx, {
+				requestedUsername: username,
+			});
 			const createdUser = await tx.user.create({
 				data: {
 					email: normalized,
 					passwordHash,
+					...assignedHandle,
 				},
 			});
 
@@ -108,6 +114,33 @@ export class AuthService {
 			throw new AppError(401, "invalid_credentials", "User is not active.");
 		}
 		return user;
+	}
+
+	async updateUsername(userId: string, username: string): Promise<User> {
+		return this.prisma.$transaction(async (tx) => {
+			const existing = await tx.user.findUnique({
+				where: { id: userId },
+				select: {
+					id: true,
+					status: true,
+					usernameNormalized: true,
+					usernameDiscriminator: true,
+				},
+			});
+			if (!existing || existing.status !== "active") {
+				throw new AppError(401, "invalid_credentials", "User is not active.");
+			}
+
+			const assignedHandle = await assignUserHandle(tx, {
+				requestedUsername: username,
+				existingUser: existing,
+			});
+
+			return tx.user.update({
+				where: { id: userId },
+				data: assignedHandle,
+			});
+		});
 	}
 
 	async resendVerification(

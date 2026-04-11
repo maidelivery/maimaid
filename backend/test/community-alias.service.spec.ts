@@ -140,4 +140,82 @@ describe("community alias submit duplicate rules", () => {
 		expect(result.status).toBe("created");
 		expect(mocks.listAliases).toHaveBeenCalledWith("123", "lxns");
 	});
+
+	it("serializes submitterHandle on the public voting board", async () => {
+		const prisma = {
+			communityAliasCandidate: {
+				findMany: vi.fn().mockResolvedValue([
+					{
+						id: "candidate-1",
+						songIdentifier: "123",
+						aliasText: "Alias-X",
+						submitterId: "user-1",
+						submitter: {
+							username: "Alice",
+							usernameDiscriminator: "0042",
+						},
+						voteOpenAt: null,
+						voteCloseAt: null,
+						createdAt: new Date("2026-04-12T10:00:00Z"),
+						votes: [
+							{ voterId: "user-1", vote: 1 },
+							{ voterId: "user-2", vote: -1 },
+						],
+					},
+				]),
+			},
+		};
+		const service = new CommunityAliasService(prisma as never, { listAliases: vi.fn() } as never);
+
+		const rows = await service.fetchVotingBoard("user-1", 20, 0);
+
+		expect(rows[0]).toMatchObject({
+			candidateId: "candidate-1",
+			submitterHandle: "Alice#0042",
+			supportCount: 1,
+			opposeCount: 1,
+			myVote: 1,
+		});
+	});
+
+	it("keeps submitterEmail for admins while adding submitterHandle", async () => {
+		const prisma = {
+			communityAliasCandidate: {
+				findMany: vi.fn().mockResolvedValue([
+					{
+						id: "candidate-1",
+						songIdentifier: "123",
+						aliasText: "Alias-X",
+						submitterId: "user-1",
+						submitter: {
+							email: "alice@example.com",
+							username: "Alice",
+							usernameDiscriminator: "0042",
+						},
+						status: "voting",
+						voteOpenAt: null,
+						voteCloseAt: null,
+						approvedAt: null,
+						rejectedAt: null,
+						createdAt: new Date("2026-04-12T10:00:00Z"),
+						updatedAt: new Date("2026-04-12T10:05:00Z"),
+						votes: [{ vote: 1 }],
+					},
+				]),
+				count: vi.fn().mockResolvedValue(1),
+			},
+		};
+		const service = new CommunityAliasService(prisma as never, { listAliases: vi.fn() } as never);
+
+		const rows = await service.adminListCandidates({
+			limit: 20,
+			offset: 0,
+		});
+
+		expect(rows[0]).toMatchObject({
+			submitterEmail: "alice@example.com",
+			submitterHandle: "Alice#0042",
+			totalCount: 1,
+		});
+	});
 });

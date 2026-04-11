@@ -419,6 +419,10 @@
 // MARK: - Cloud Sync
 "settings.cloud.title" = "Cloud Account";
 "settings.cloud.status.loggedIn" = "Logged In";
+"settings.cloud.account.section" = "Account";
+"settings.cloud.account.handle" = "Handle";
+"settings.cloud.account.email" = "Email";
+"settings.cloud.account.status" = "Status";
 "settings.cloud.section.sync" = "Data Sync";
 "settings.cloud.section.autoBackup" = "Auto Backup";
 "settings.cloud.backup" = "Backup to Cloud";

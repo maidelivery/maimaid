@@ -5,22 +5,10 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { AdminUserRow } from "@/lib/app-types";
 import { useTablePagination } from "@/lib/use-table-pagination";
 import { RefreshCwIcon, Trash2Icon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-
-type AdminUserRow = {
-	id: string;
-	email: string;
-	isAdmin: boolean;
-	status: string;
-	createdAt: string;
-	mfa: {
-		enabled: boolean;
-		totpEnabled: boolean;
-		passkeyCount: number;
-	};
-};
 
 type AdminUsersPageProps = {
 	newUserEmail: string;
@@ -55,6 +43,7 @@ export function AdminUsersPage({
 			<CardContent className="flex flex-col gap-6">
 				<section className="rounded-lg border p-4">
 					<div className="mb-3 text-sm font-medium">{t("sectionCreateUser")}</div>
+					<p className="mb-3 text-sm text-muted-foreground">{t("createHandleHint")}</p>
 					<FieldGroup className="gap-3 md:flex-row md:items-end">
 						<Field className="min-w-0 flex-1">
 							<FieldLabel htmlFor="create-user-email">{t("labelEmail")}</FieldLabel>
@@ -105,7 +94,8 @@ export function AdminUsersPage({
 						<div className="space-y-3 md:hidden">
 							{pagination.pagedItems.map((row) => (
 								<article key={row.id} className="rounded-lg border p-3">
-									<p className="break-all text-sm font-medium">{row.email}</p>
+									<p className="break-all text-sm font-medium">{row.handle}</p>
+									<p className="mt-1 break-all text-xs text-muted-foreground">{row.email}</p>
 									<div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
 										<span className="rounded-md border px-2 py-1">
 											{t("statusPrefix")}
@@ -138,6 +128,7 @@ export function AdminUsersPage({
 							<Table>
 								<TableHeader>
 									<TableRow>
+										<TableHead>{t("colHandle")}</TableHead>
 										<TableHead>{t("colEmail")}</TableHead>
 										<TableHead>{t("colStatus")}</TableHead>
 										<TableHead>{t("colAdmin")}</TableHead>
@@ -149,6 +140,7 @@ export function AdminUsersPage({
 								<TableBody>
 									{pagination.pagedItems.map((row) => (
 										<TableRow key={row.id}>
+											<TableCell className="max-w-[220px] truncate font-medium">{row.handle}</TableCell>
 											<TableCell className="max-w-[280px] truncate">{row.email}</TableCell>
 											<TableCell>{row.status}</TableCell>
 											<TableCell>{row.isAdmin ? t("yes") : t("no")}</TableCell>

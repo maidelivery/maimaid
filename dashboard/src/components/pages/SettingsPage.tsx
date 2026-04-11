@@ -10,6 +10,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isValidUsername, normalizeUsername } from "@/lib/app-helpers";
 import { CopyIcon, KeyRoundIcon, Link2Icon, RefreshCwIcon, ShieldCheckIcon, ShieldOffIcon, SmartphoneIcon } from "lucide-react";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { useTranslation } from "react-i18next";
@@ -48,6 +49,10 @@ type PasskeyCredential = {
 
 type SessionUser = {
 	email: string;
+	username: string;
+	usernameDiscriminator: string;
+	handle: string;
+	isAdmin: boolean;
 };
 
 type SettingsPageProps = {
@@ -68,6 +73,7 @@ type SettingsPageProps = {
 	onDisableTotp: () => void | Promise<void>;
 	onMfaSetupCodeChange: (value: string) => void;
 	onConfirmTotpSetup: () => void | Promise<void>;
+	onUpdateUsername: (username: string) => Promise<boolean>;
 	onRegisterPasskey: () => Promise<string | null>;
 	onRenamePasskey: (credentialId: string, name: string) => Promise<boolean>;
 	onDeletePasskey: (credentialId: string) => Promise<void>;
@@ -120,6 +126,7 @@ export function SettingsPage({
 	onDisableTotp,
 	onMfaSetupCodeChange,
 	onConfirmTotpSetup,
+	onUpdateUsername,
 	onRegisterPasskey,
 	onRenamePasskey,
 	onDeletePasskey,
@@ -135,6 +142,8 @@ export function SettingsPage({
 	const [backupCodes, setBackupCodes] = useState<string[]>([]);
 	const [backupCodesGeneratedAt, setBackupCodesGeneratedAt] = useState<string | null>(null);
 	const [generatingBackupCodes, setGeneratingBackupCodes] = useState(false);
+	const [usernameDraft, setUsernameDraft] = useState(sessionUser.username);
+	const [savingUsername, setSavingUsername] = useState(false);
 
 	useEffect(() => {
 		const otpauthUrl = mfaSetup?.otpauthUrl?.trim();
@@ -165,7 +174,17 @@ export function SettingsPage({
 		};
 	}, [mfaSetup?.otpauthUrl]);
 
+	useEffect(() => {
+		setUsernameDraft(sessionUser.username);
+	}, [sessionUser.username]);
+
 	const passkeyNamedCount = useMemo(() => passkeys.filter((item) => Boolean(item.name?.trim())).length, [passkeys]);
+	const normalizedUsernameDraft = normalizeUsername(usernameDraft);
+	const usernameIsValid = isValidUsername(normalizedUsernameDraft);
+	const usernameChanged =
+		normalizedUsernameDraft !== normalizeUsername(sessionUser.username) || normalizedUsernameDraft !== sessionUser.username;
+	const roleLabel = sessionUser.isAdmin ? t("roleAdmin") : t("roleUser");
+	const handlePreview = usernameChanged ? `${normalizedUsernameDraft || sessionUser.username}#xxxx` : sessionUser.handle;
 
 	const openRenameDialog = (credentialId: string, currentName?: string | null) => {
 		setRenameTargetId(credentialId);
@@ -216,6 +235,21 @@ export function SettingsPage({
 		}
 	};
 
+	const handleUsernameSave = async () => {
+		if (!usernameIsValid || !usernameChanged) {
+			return;
+		}
+		setSavingUsername(true);
+		try {
+			const updated = await onUpdateUsername(normalizedUsernameDraft);
+			if (updated) {
+				setUsernameDraft(normalizedUsernameDraft);
+			}
+		} finally {
+			setSavingUsername(false);
+		}
+	};
+
 	return (
 		<Card size="sm">
 			<CardHeader>
@@ -234,17 +268,59 @@ export function SettingsPage({
 							<div className="flex items-center gap-3">
 								<Avatar className="size-12 rounded-md">
 									<AvatarImage src={activeProfileAvatarUrl ?? undefined} />
-									<AvatarFallback>{sessionUser.email.slice(0, 1).toUpperCase()}</AvatarFallback>
+									<AvatarFallback>{sessionUser.handle.slice(0, 1).toUpperCase()}</AvatarFallback>
 								</Avatar>
 								<div className="min-w-0">
-									<p className="truncate text-sm font-medium">{sessionUser.email}</p>
-									<p className="truncate text-xs text-muted-foreground">{t("currentSessionIdentity")}</p>
+									<p className="truncate text-sm font-medium">{sessionUser.handle}</p>
+									<p className="truncate text-xs text-muted-foreground">{sessionUser.email}</p>
+									<div className="mt-2 flex flex-wrap gap-2">
+										<Badge variant="secondary">{roleLabel}</Badge>
+										<Badge variant="outline">{t("currentSessionIdentity")}</Badge>
+									</div>
 								</div>
 							</div>
 
 							<div className="mt-4 rounded-xl border border-border/70 p-4">
 								<LanguageSwitcher />
 							</div>
+						</section>
+
+						<section className="mt-4 rounded-xl border border-border/70 p-4">
+							<h3 className="text-sm font-medium">{t("accountHandleTitle")}</h3>
+							<p className="mt-1 text-sm text-muted-foreground">{t("accountHandleDesc")}</p>
+
+							<div className="mt-4 grid gap-3 sm:grid-cols-2">
+								<div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+									<p className="text-xs text-muted-foreground">{t("currentHandleLabel")}</p>
+									<p className="mt-1 truncate text-sm font-medium">{sessionUser.handle}</p>
+								</div>
+								<div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+									<p className="text-xs text-muted-foreground">{t("handlePreviewLabel")}</p>
+									<p className="mt-1 truncate text-sm font-medium">{handlePreview}</p>
+								</div>
+							</div>
+
+							<FieldGroup className="mt-4 gap-3 md:flex-row md:items-end">
+								<Field className="min-w-0 flex-1">
+									<FieldLabel htmlFor="settings-username">{t("usernameLabel")}</FieldLabel>
+									<Input
+										id="settings-username"
+										value={usernameDraft}
+										onChange={(event) => setUsernameDraft(event.target.value)}
+									/>
+									<p className="mt-2 text-sm text-muted-foreground">{t("usernameHint")}</p>
+									{normalizedUsernameDraft && !usernameIsValid ? (
+										<p className="mt-2 text-sm text-destructive">{t("usernameInvalid")}</p>
+									) : null}
+								</Field>
+								<Button
+									className="w-full md:w-auto md:shrink-0"
+									onClick={() => void handleUsernameSave()}
+									disabled={savingUsername || !usernameChanged || !usernameIsValid}
+								>
+									{savingUsername ? t("saving") : t("saveHandle")}
+								</Button>
+							</FieldGroup>
 						</section>
 
 						<section className="mt-4 rounded-xl border border-border/70 p-4">

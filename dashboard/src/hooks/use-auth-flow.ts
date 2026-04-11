@@ -1,7 +1,14 @@
 import { useTranslation } from "react-i18next";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { type Dispatch, type SetStateAction, useCallback, useEffect, useState } from "react";
-import { isPasswordComplexEnough, isValidEmailAddress, PASSWORD_COMPLEXITY_HINT } from "@/lib/app-helpers";
+import {
+	isPasswordComplexEnough,
+	isValidEmailAddress,
+	isValidUsername,
+	normalizeUsername,
+	PASSWORD_COMPLEXITY_HINT,
+	USERNAME_HINT,
+} from "@/lib/app-helpers";
 import type {
 	AuthMode,
 	ForgotPasswordResponse,
@@ -175,6 +182,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 	const [loginEmail, setLoginEmail] = useState("");
 	const [loginPassword, setLoginPassword] = useState("");
 	const [registerEmail, setRegisterEmail] = useState("");
+	const [registerUsername, setRegisterUsername] = useState("");
 	const [registerPassword, setRegisterPassword] = useState("");
 	const [registerConfirmPassword, setRegisterConfirmPassword] = useState("");
 	const [forgotEmail, setForgotEmail] = useState("");
@@ -480,8 +488,13 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 
 	const handleRegister = async () => {
 		const normalizedEmail = registerEmail.trim().toLowerCase();
+		const normalizedUsername = normalizeUsername(registerUsername);
 		if (!isValidEmailAddress(normalizedEmail)) {
 			showToast(t("flowInvalidEmail"), "warning");
+			return;
+		}
+		if (!isValidUsername(normalizedUsername)) {
+			showToast(t("flowInvalidUsername") || USERNAME_HINT, "warning");
 			return;
 		}
 		if (!isPasswordComplexEnough(registerPassword)) {
@@ -500,6 +513,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 				auth: false,
 				body: {
 					email: normalizedEmail,
+					username: normalizedUsername,
 					password: registerPassword,
 					...(isAppAuthFlow && appAuthRequest
 						? {
@@ -512,6 +526,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 			setVerificationEmail(normalizedEmail);
 			setVerificationEmailSent(payload.verificationEmailSent);
 			setVerificationResult(null);
+			setRegisterUsername(normalizedUsername);
 			setRegisterPassword("");
 			setRegisterConfirmPassword("");
 			setAuthMode("verify-email");
@@ -819,6 +834,8 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 		setLoginPassword,
 		registerEmail,
 		setRegisterEmail,
+		registerUsername,
+		setRegisterUsername,
 		registerPassword,
 		setRegisterPassword,
 		registerConfirmPassword,

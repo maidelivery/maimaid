@@ -23,6 +23,8 @@ type AuthScreenProps = {
 	setLoginPassword: Dispatch<SetStateAction<string>>;
 	registerEmail: string;
 	setRegisterEmail: Dispatch<SetStateAction<string>>;
+	registerUsername: string;
+	setRegisterUsername: Dispatch<SetStateAction<string>>;
 	registerPassword: string;
 	setRegisterPassword: Dispatch<SetStateAction<string>>;
 	registerConfirmPassword: string;
@@ -78,6 +80,8 @@ export function AuthScreen(props: AuthScreenProps) {
 		setLoginPassword,
 		registerEmail,
 		setRegisterEmail,
+		registerUsername,
+		setRegisterUsername,
 		registerPassword,
 		setRegisterPassword,
 		registerConfirmPassword,
@@ -348,6 +352,15 @@ export function AuthScreen(props: AuthScreenProps) {
 											value={registerEmail}
 											onChange={(event) => setRegisterEmail(event.target.value)}
 										/>
+									</Field>
+									<Field>
+										<FieldLabel htmlFor="register-username">{t("auth:username")}</FieldLabel>
+										<Input
+											id="register-username"
+											value={registerUsername}
+											onChange={(event) => setRegisterUsername(event.target.value)}
+										/>
+										<p className="mt-2 text-sm text-muted-foreground">{t("auth:usernameHint")}</p>
 									</Field>
 									<Field>
 										<FieldLabel htmlFor="register-password">{t("auth:password")}</FieldLabel>

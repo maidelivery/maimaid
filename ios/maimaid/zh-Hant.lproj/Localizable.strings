@@ -418,6 +418,10 @@
 // MARK: - Cloud Sync
 "settings.cloud.title" = "雲端帳戶";
 "settings.cloud.status.loggedIn" = "已登入";
+"settings.cloud.account.section" = "帳戶";
+"settings.cloud.account.handle" = "句柄";
+"settings.cloud.account.email" = "電子郵件";
+"settings.cloud.account.status" = "狀態";
 "settings.cloud.section.sync" = "資料同步";
 "settings.cloud.section.autoBackup" = "自動備份";
 "settings.cloud.backup" = "備份到雲端";

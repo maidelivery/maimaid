@@ -419,6 +419,10 @@
 // MARK: - Cloud Sync
 "settings.cloud.title" = "云端账户";
 "settings.cloud.status.loggedIn" = "已登录";
+"settings.cloud.account.section" = "账户";
+"settings.cloud.account.handle" = "句柄";
+"settings.cloud.account.email" = "邮箱";
+"settings.cloud.account.status" = "状态";
 "settings.cloud.section.sync" = "数据同步";
 "settings.cloud.section.autoBackup" = "自动备份";
 "settings.cloud.backup" = "备份到云端";

@@ -57,6 +57,7 @@ export type CommunityCandidate = {
 	supportCount: number;
 	opposeCount: number;
 	submitterId: string;
+	submitterHandle: string;
 	voteOpenAt: string | null;
 	voteCloseAt: string | null;
 	myVote?: number | null;
@@ -90,6 +91,7 @@ export type AdminCandidate = {
 	supportCount: number;
 	opposeCount: number;
 	submitterId: string;
+	submitterHandle: string;
 	submitterEmail: string | null;
 	voteCloseAt: string | null;
 	createdAt: string;
@@ -109,6 +111,7 @@ export type AdminDashboardStats = {
 export type AdminUserRow = {
 	id: string;
 	email: string;
+	handle: string;
 	isAdmin: boolean;
 	status: string;
 	createdAt: string;

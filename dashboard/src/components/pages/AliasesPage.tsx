@@ -10,47 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { AdminCandidate, AdminDashboardStats, CommunityCandidate } from "@/lib/app-types";
 import { useTablePagination } from "@/lib/use-table-pagination";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-
-type CommunityCandidate = {
-	candidateId: string;
-	songIdentifier: string;
-	aliasText: string;
-	status?: string;
-	supportCount: number;
-	opposeCount: number;
-	voteOpenAt: string | null;
-	voteCloseAt: string | null;
-	myVote?: number | null;
-	submitterId: string;
-	createdAt?: string;
-};
-
-type AdminCandidate = {
-	candidateId: string;
-	songIdentifier: string;
-	aliasText: string;
-	status: string;
-	supportCount: number;
-	opposeCount: number;
-	submitterId: string;
-	submitterEmail: string | null;
-	voteCloseAt: string | null;
-	createdAt: string;
-	updatedAt: string;
-};
-
-type AdminDashboardStats = {
-	totalCount: number;
-	votingCount: number;
-	approvedCount: number;
-	rejectedCount: number;
-	closingSoonCount: number;
-	expiredVotingCount: number;
-	todaySubmissions: number;
-};
 
 type AliasesPageProps = {
 	isAdmin: boolean;
@@ -173,8 +136,8 @@ export function AliasesPage({
 	};
 
 	const submitterDisplay = isAdmin
-		? (selectedAdminCandidate?.submitterEmail ?? selectedCandidate?.submitterId ?? "-")
-		: (selectedCandidate?.submitterId ?? "-");
+		? [selectedAdminCandidate?.submitterHandle, selectedAdminCandidate?.submitterEmail].filter(Boolean).join(" · ") || "-"
+		: (selectedCandidate?.submitterHandle ?? "-");
 
 	const selectSongSuggestion = (title: string) => {
 		onCommunitySongNameChange(title);

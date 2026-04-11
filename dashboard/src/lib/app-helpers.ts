@@ -3,6 +3,7 @@ import type { CatalogVersionItem, SongFilterSnapshot, SongIdItem } from "@/lib/a
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
 const PASSWORD_COMPLEXITY_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,}$/u;
+const USERNAME_PATTERN = /^[\p{L}\p{N}_.-]+$/u;
 
 export const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "").trim().replace(/\/+$/u, "");
 export const LXNS_OAUTH_CLIENT_ID = (process.env.NEXT_PUBLIC_LXNS_CLIENT_ID ?? "").trim();
@@ -18,6 +19,7 @@ export const CHART_TYPE_ORDER: Record<string, number> = {
 	utage: 3,
 };
 export const PASSWORD_COMPLEXITY_HINT = "至少8字符，有大小写字母，数字和特殊符号";
+export const USERNAME_HINT = "2-32 个字符，可使用字母、数字、下划线、连字符和句点";
 export const DEFAULT_SONG_FILTERS: SongFilterSettings = {
 	selectedCategories: new Set<string>(),
 	selectedVersions: new Set<string>(),
@@ -65,6 +67,16 @@ export function isValidEmailAddress(value: string) {
 
 export function isPasswordComplexEnough(value: string) {
 	return PASSWORD_COMPLEXITY_PATTERN.test(value);
+}
+
+export function normalizeUsername(value: string) {
+	return value.normalize("NFKC").trim();
+}
+
+export function isValidUsername(value: string) {
+	const normalized = normalizeUsername(value);
+	const length = Array.from(normalized).length;
+	return length >= 2 && length <= 32 && !/\s/u.test(normalized) && USERNAME_PATTERN.test(normalized);
 }
 
 export function songSnapshotMatchesSearch(snapshot: SongFilterSnapshot, searchText: string) {

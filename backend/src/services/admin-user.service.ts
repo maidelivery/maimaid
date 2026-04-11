@@ -4,6 +4,7 @@ import type { PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
 import { isPasswordComplexEnough, PASSWORD_COMPLEXITY_ERROR_MESSAGE } from "../lib/auth-validation.js";
+import { assignUserHandle, buildUsernameBaseFromEmail, serializeUserIdentity } from "../lib/user-handle.js";
 
 @singleton()
 export class AdminUserService {
@@ -33,6 +34,9 @@ export class AdminUserService {
 			rows: rows.map((row) => ({
 				id: row.id,
 				email: row.email,
+				username: row.username,
+				usernameDiscriminator: row.usernameDiscriminator,
+				handle: `${row.username}#${row.usernameDiscriminator}`,
 				status: row.status,
 				isAdmin: row.isAdmin,
 				emailVerifiedAt: row.emailVerifiedAt,
@@ -66,11 +70,15 @@ export class AdminUserService {
 
 		const passwordHash = await hash(input.password, 12);
 		const user = await this.prisma.$transaction(async (tx) => {
+			const assignedHandle = await assignUserHandle(tx, {
+				requestedUsername: buildUsernameBaseFromEmail(normalizedEmail),
+			});
 			const created = await tx.user.create({
 				data: {
 					email: normalizedEmail,
 					passwordHash,
 					isAdmin: false,
+					...assignedHandle,
 				},
 			});
 			await tx.profile.create({
@@ -85,9 +93,7 @@ export class AdminUserService {
 		});
 
 		return {
-			id: user.id,
-			email: user.email,
-			isAdmin: user.isAdmin,
+			...serializeUserIdentity(user),
 			createdAt: user.createdAt,
 		};
 	}

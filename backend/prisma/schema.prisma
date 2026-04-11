@@ -67,6 +67,9 @@ enum MfaChallengePurpose {
 model User {
   id                     String                   @id @default(uuid()) @db.Uuid
   email                  String                   @unique
+  username               String
+  usernameNormalized     String
+  usernameDiscriminator  String
   passwordHash           String
   status                 UserStatus               @default(active)
   isAdmin                Boolean                  @default(false)
@@ -88,6 +91,7 @@ model User {
   syncMutations          SyncMutation[]
 
   @@map("users")
+  @@unique([usernameNormalized, usernameDiscriminator])
 }
 
 model RefreshToken {

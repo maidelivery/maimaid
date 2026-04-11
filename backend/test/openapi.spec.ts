@@ -110,6 +110,20 @@ describe("openapi document generation", () => {
 			"tzOffsetMinutes",
 		]);
 
+		const registerOperation = (document.paths["/v1/auth/register"] as Record<string, any>)?.post;
+		const registerBodySchema = registerOperation.requestBody.content["application/json"].schema;
+		expect(Object.keys(registerBodySchema.properties)).toContain("username");
+
+		const meGetOperation = (document.paths["/v1/auth/me"] as Record<string, any>)?.get;
+		const meGetSchema = meGetOperation.responses["200"].content["application/json"].schema;
+		expect(Object.keys(meGetSchema.properties)).toEqual(
+			expect.arrayContaining(["id", "email", "username", "usernameDiscriminator", "handle", "isAdmin"]),
+		);
+
+		const mePatchOperation = (document.paths["/v1/auth/me"] as Record<string, any>)?.patch;
+		const mePatchBodySchema = mePatchOperation.requestBody.content["application/json"].schema;
+		expect(Object.keys(mePatchBodySchema.properties)).toEqual(["username"]);
+
 		const votingOperation = (document.paths["/v1/community/candidates:votingBoard"] as Record<string, any>)?.get;
 		const limitParam = votingOperation.parameters.find((item: any) => item.name === "limit");
 		expect(limitParam.schema.type).toBe("number");
@@ -117,6 +131,11 @@ describe("openapi document generation", () => {
 		const rowItemSchema = votingOperation.responses["200"].content["application/json"].schema.properties.rows.items;
 		expect(Object.keys(rowItemSchema.properties)).toContain("candidateId");
 		expect(Object.keys(rowItemSchema.properties)).toContain("aliasText");
+		expect(Object.keys(rowItemSchema.properties)).toContain("submitterHandle");
+
+		const adminUsersOperation = (document.paths["/v1/admin/users"] as Record<string, any>)?.get;
+		const adminUserRowSchema = adminUsersOperation.responses["200"].content["application/json"].schema.properties.rows.items;
+		expect(Object.keys(adminUserRowSchema.properties)).toContain("handle");
 
 		const voteOperation = (document.paths["/v1/community/candidates/{candidateId}:vote"] as Record<string, any>)?.post;
 		expect(voteOperation.parameters).toEqual(

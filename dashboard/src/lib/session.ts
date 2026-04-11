@@ -1,6 +1,9 @@
 export type AuthUser = {
 	id: string;
 	email: string;
+	username: string;
+	usernameDiscriminator: string;
+	handle: string;
 	isAdmin: boolean;
 };
 

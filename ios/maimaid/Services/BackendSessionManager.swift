@@ -5,7 +5,56 @@ import Security
 struct BackendAuthUser: Codable, Equatable {
     let id: String
     let email: String
+    let username: String
+    let usernameDiscriminator: String
+    let handle: String
     let isAdmin: Bool
+
+    init(
+        id: String,
+        email: String,
+        username: String? = nil,
+        usernameDiscriminator: String? = nil,
+        handle: String? = nil,
+        isAdmin: Bool
+    ) {
+        let resolvedUsername = username?.isEmpty == false ? username ?? email : email
+        let resolvedDiscriminator = usernameDiscriminator ?? ""
+
+        self.id = id
+        self.email = email
+        self.username = resolvedUsername
+        self.usernameDiscriminator = resolvedDiscriminator
+
+        if let handle, !handle.isEmpty {
+            self.handle = handle
+        } else if !resolvedDiscriminator.isEmpty {
+            self.handle = "\(resolvedUsername)#\(resolvedDiscriminator)"
+        } else {
+            self.handle = email
+        }
+
+        self.isAdmin = isAdmin
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let id = try container.decode(String.self, forKey: .id)
+        let email = try container.decode(String.self, forKey: .email)
+        let username = try container.decodeIfPresent(String.self, forKey: .username)
+        let usernameDiscriminator = try container.decodeIfPresent(String.self, forKey: .usernameDiscriminator)
+        let handle = try container.decodeIfPresent(String.self, forKey: .handle)
+        let isAdmin = try container.decode(Bool.self, forKey: .isAdmin)
+
+        self.init(
+            id: id,
+            email: email,
+            username: username,
+            usernameDiscriminator: usernameDiscriminator,
+            handle: handle,
+            isAdmin: isAdmin
+        )
+    }
 }
 
 private struct BackendTokenBundle: Codable {
@@ -35,11 +84,7 @@ private struct BackendSuccessResponse: Codable {
     let success: Bool?
 }
 
-private struct BackendMePayload: Codable {
-    let id: String
-    let email: String
-    let isAdmin: Bool
-}
+private typealias BackendMePayload = BackendAuthUser
 
 private struct BackendRefreshRequest: Encodable {
     let refreshToken: String
@@ -228,22 +273,12 @@ final class BackendSessionManager {
         }
 
         do {
-            let me: BackendMePayload = try await BackendAPIClient.request(
-                path: "v1/auth/me",
-                method: "GET",
-                authentication: .required
-            )
-            currentUser = BackendAuthUser(id: me.id, email: me.email, isAdmin: me.isAdmin)
+            currentUser = try await loadCurrentUser()
             persistIfPossible()
         } catch {
             if await refreshSessionSilently() {
                 do {
-                    let me: BackendMePayload = try await BackendAPIClient.request(
-                        path: "v1/auth/me",
-                        method: "GET",
-                        authentication: .required
-                    )
-                    currentUser = BackendAuthUser(id: me.id, email: me.email, isAdmin: me.isAdmin)
+                    currentUser = try await loadCurrentUser()
                     persistIfPossible()
                 } catch {
                     clearSession()
@@ -264,11 +299,11 @@ final class BackendSessionManager {
         applyAuthPayload(payload)
     }
 
-    func register(email: String, password: String) async throws -> Bool {
+    func register(email: String, username: String, password: String) async throws -> Bool {
         let payload: BackendRegisterPayload = try await BackendAPIClient.request(
             path: "v1/auth/register",
             method: "POST",
-            body: ["email": email, "password": password],
+            body: ["email": email, "username": username, "password": password],
             authentication: .none
         )
         return payload.verificationEmailSent
@@ -354,6 +389,14 @@ final class BackendSessionManager {
         accessToken = payload.accessToken
         refreshToken = payload.refreshToken
         persistIfPossible(expiresIn: payload.expiresIn)
+    }
+
+    private func loadCurrentUser() async throws -> BackendMePayload {
+        try await BackendAPIClient.request(
+            path: "v1/auth/me",
+            method: "GET",
+            authentication: .required
+        )
     }
 
     private func persistIfPossible(expiresIn: Int = 0) {

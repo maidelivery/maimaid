@@ -1186,6 +1186,8 @@ function App() {
 		setLoginPassword,
 		registerEmail,
 		setRegisterEmail,
+		registerUsername,
+		setRegisterUsername,
 		registerPassword,
 		setRegisterPassword,
 		registerConfirmPassword,
@@ -1246,6 +1248,8 @@ function App() {
 	const dashboardActions = useDashboardActions({
 		request,
 		showToast,
+		session,
+		setSession,
 		activeProfileId,
 		scoreSongName,
 		scoreType,
@@ -1303,6 +1307,7 @@ function App() {
 		handleAdminRollCycle,
 		handleAdminVoteWindowUpdate,
 		handleCreateUser,
+		handleUpdateUsername,
 		handleDeleteUser,
 		handleToggleSource,
 		handleEditSourceUrl,
@@ -1375,6 +1380,8 @@ function App() {
 				setLoginPassword={setLoginPassword}
 				registerEmail={registerEmail}
 				setRegisterEmail={setRegisterEmail}
+				registerUsername={registerUsername}
+				setRegisterUsername={setRegisterUsername}
 				registerPassword={registerPassword}
 				setRegisterPassword={setRegisterPassword}
 				registerConfirmPassword={registerConfirmPassword}
@@ -1423,10 +1430,10 @@ function App() {
 				<main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-4 px-4 py-10">
 					<UiAlert>
 						<AlertTitle>{t("app:continueAppTitle")}</AlertTitle>
-						<AlertDescription>
-							{t("app:continueAppDesc1")}
-							{session.user.email}
-							{t("app:continueAppDesc2")}
+						<AlertDescription className="space-y-1">
+							<p>{t("app:continueAppSignedInAs", { handle: session.user.handle })}</p>
+							<p className="text-muted-foreground">{session.user.email}</p>
+							<p>{t("app:continueAppConfirmHint")}</p>
 						</AlertDescription>
 					</UiAlert>
 
@@ -1474,6 +1481,7 @@ function App() {
 			setTab={setTab}
 			setMobileDrawerOpen={setMobileDrawerOpen}
 			enabledProfileName={selectedProfileName}
+			sessionHandle={session.user.handle}
 			sessionEmail={session.user.email}
 			roleLabel={roleLabel}
 			RoleIcon={RoleIcon}
@@ -1572,6 +1580,7 @@ function App() {
 			handleStartTotpSetup={handleStartTotpSetup}
 			handleDisableTotp={handleDisableTotp}
 			handleConfirmTotpSetup={handleConfirmTotpSetup}
+			handleUpdateUsername={handleUpdateUsername}
 			handleRegisterPasskey={handleRegisterPasskey}
 			handleRenamePasskey={handleRenamePasskey}
 			handleDeletePasskey={handleDeletePasskey}
