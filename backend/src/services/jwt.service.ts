@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
-import { injectable, inject } from "tsyringe";
+import { inject, singleton } from "tsyringe";
 import type { Env } from "../env.js";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
@@ -10,7 +10,7 @@ export type AccessTokenPayload = {
 	isAdmin: boolean;
 };
 
-@injectable()
+@singleton()
 export class JwtService {
 	constructor(@inject(TOKENS.Env) private readonly env: Env) {}
 

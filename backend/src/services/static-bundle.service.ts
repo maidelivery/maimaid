@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { inject, injectable } from "tsyringe";
+import { inject, singleton } from "tsyringe";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { parse as parseYaml } from "yaml";
 import { TOKENS } from "../di/tokens.js";
@@ -52,7 +52,7 @@ export type StaticBundlePeriodicBuildSchedule = {
 	cronExpression: string;
 };
 
-@injectable()
+@singleton()
 export class StaticBundleService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,

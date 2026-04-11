@@ -1,4 +1,4 @@
-import { inject, injectable } from "tsyringe";
+import { inject, singleton } from "tsyringe";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 
@@ -11,7 +11,7 @@ type RecordEventInput = {
 	payload?: Record<string, unknown> | null;
 };
 
-@injectable()
+@singleton()
 export class SyncService {
 	constructor(@inject(TOKENS.Prisma) private readonly prisma: PrismaClient) {}
 

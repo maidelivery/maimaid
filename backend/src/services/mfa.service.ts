@@ -1,4 +1,4 @@
-import { inject, injectable } from "tsyringe";
+import { inject, singleton } from "tsyringe";
 import type { PrismaClient, User } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import type { Env } from "../env.js";
@@ -30,7 +30,7 @@ const PASSKEY_TRANSPORTS = new Set<PasskeyTransport>(["ble", "cable", "hybrid", 
 const BACKUP_CODE_COUNT = 10;
 const BACKUP_CODE_GROUP_SIZE = 4;
 
-@injectable()
+@singleton()
 export class MfaService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,

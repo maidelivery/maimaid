@@ -1,4 +1,4 @@
-import { inject, injectable } from "tsyringe";
+import { inject, singleton } from "tsyringe";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
@@ -57,7 +57,7 @@ type ResolvedSheet = {
 	} | null;
 };
 
-@injectable()
+@singleton()
 export class ScoreService {
 	constructor(@inject(TOKENS.Prisma) private readonly prisma: PrismaClient) {}
 

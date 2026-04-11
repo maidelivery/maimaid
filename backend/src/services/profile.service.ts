@@ -1,10 +1,10 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
-import { inject, injectable } from "tsyringe";
+import { inject, singleton } from "tsyringe";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
 import { StorageService } from "./storage.service.js";
 
-@injectable()
+@singleton()
 export class ProfileService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,

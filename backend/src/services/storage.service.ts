@@ -1,11 +1,11 @@
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { inject, injectable } from "tsyringe";
+import { inject, singleton } from "tsyringe";
 import type { Env } from "../env.js";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
 
-@injectable()
+@singleton()
 export class StorageService {
 	private readonly client: S3Client | null;
 	private readonly signingClient: S3Client | null;

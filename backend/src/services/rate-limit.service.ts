@@ -1,4 +1,4 @@
-import { inject, injectable } from "tsyringe";
+import { inject, singleton } from "tsyringe";
 import type { PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import { sha256Hex } from "../lib/crypto.js";
@@ -11,7 +11,7 @@ type ConsumeInput = {
 	windowSeconds: number;
 };
 
-@injectable()
+@singleton()
 export class RateLimitService {
 	constructor(@inject(TOKENS.Prisma) private readonly prisma: PrismaClient) {}
 

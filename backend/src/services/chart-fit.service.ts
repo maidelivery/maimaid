@@ -1,4 +1,4 @@
-import { inject, injectable } from "tsyringe";
+import { inject, singleton } from "tsyringe";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 
@@ -517,7 +517,7 @@ export const mergeChartStatsPayloads = (
 	};
 };
 
-@injectable()
+@singleton()
 export class ChartFitService {
 	constructor(@inject(TOKENS.Prisma) private readonly prisma: PrismaClient) {}
 

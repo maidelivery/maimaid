@@ -1,11 +1,11 @@
-import { inject, injectable } from "tsyringe";
+import { inject, singleton } from "tsyringe";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import { CatalogService } from "./catalog.service.js";
 import { CommunityAliasService } from "./community-alias.service.js";
 import { StaticBundleService } from "./static-bundle.service.js";
 
-@injectable()
+@singleton()
 export class JobService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,

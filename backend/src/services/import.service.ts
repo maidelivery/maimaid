@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { inject, injectable } from "tsyringe";
+import { inject, singleton } from "tsyringe";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
 import { ScoreService } from "./score.service.js";
@@ -135,7 +135,7 @@ type CatalogSheetCandidate = {
 	} | null;
 };
 
-@injectable()
+@singleton()
 export class ImportService {
 	private readonly lxnsClientId = "cfb7ef40-bc0f-4e3a-8258-9e5f52cd7338";
 	private readonly lxnsRedirectUri = "urn:ietf:wg:oauth:2.0:oob";

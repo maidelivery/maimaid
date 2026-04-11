@@ -1,11 +1,11 @@
 import { hash } from "bcryptjs";
-import { inject, injectable } from "tsyringe";
+import { inject, singleton } from "tsyringe";
 import type { PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
 import { isPasswordComplexEnough, PASSWORD_COMPLEXITY_ERROR_MESSAGE } from "../lib/auth-validation.js";
 
-@injectable()
+@singleton()
 export class AdminUserService {
 	constructor(@inject(TOKENS.Prisma) private readonly prisma: PrismaClient) {}
 
