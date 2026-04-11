@@ -1,8 +1,8 @@
-import { PrismaClient } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { assignUserHandle, buildUsernameBaseFromEmail } from "../src/lib/user-handle.js";
+import { getPrismaClient } from "../src/lib/prisma.js";
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 async function main() {
 	const users = await prisma.$queryRaw<
@@ -18,13 +18,13 @@ async function main() {
 			id,
 			email,
 			username,
-			username_normalized AS "usernameNormalized",
-			username_discriminator AS "usernameDiscriminator"
+			"usernameNormalized",
+			"usernameDiscriminator"
 		FROM users
 		WHERE username IS NULL
-			OR username_normalized IS NULL
-			OR username_discriminator IS NULL
-		ORDER BY created_at ASC, id ASC
+			OR "usernameNormalized" IS NULL
+			OR "usernameDiscriminator" IS NULL
+		ORDER BY "createdAt" ASC, id ASC
 	`);
 
 	for (const user of users) {
