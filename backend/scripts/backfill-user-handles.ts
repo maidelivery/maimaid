@@ -46,14 +46,18 @@ async function main() {
 				existingUser: current,
 			});
 
-			await tx.user.update({
+			const updated = await tx.user.update({
 				where: { id: user.id },
 				data: assigned,
+				select: {
+					username: true,
+					usernameDiscriminator: true,
+				},
 			});
 
 			return {
 				email: user.email,
-				handle: `${assigned.username}#${assigned.usernameDiscriminator}`,
+				handle: `${updated.username}#${updated.usernameDiscriminator}`,
 			};
 		});
 
