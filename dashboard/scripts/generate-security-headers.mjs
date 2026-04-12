@@ -35,7 +35,7 @@ const contentSecurityPolicy = [
 	`connect-src ${connectSources.join(" ")}`,
 	"img-src 'self' data: https://dp4p6x0xfi5o9.cloudfront.net",
 	"font-src 'self' data:",
-	"script-src 'self' 'unsafe-inline'",
+	"script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
 	"style-src 'self' 'unsafe-inline'",
 ].join("; ");
 

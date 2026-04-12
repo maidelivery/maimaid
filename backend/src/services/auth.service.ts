@@ -51,49 +51,6 @@ export class AuthService {
 		@inject(TOKENS.Env) private readonly env: Env,
 	) {}
 
-	async register(
-		email: string,
-		password: string,
-		username: string,
-		emailLinkContext?: AuthEmailLinkContext,
-	): Promise<{ user: User; verificationEmailSent: boolean }> {
-		const normalized = this.normalizeEmail(email);
-		this.validatePassword(password);
-
-		const existed = await this.prisma.user.findUnique({ where: { email: normalized } });
-		if (existed) {
-			throw new AppError(409, "email_exists", "Email already exists.");
-		}
-
-		const passwordHash = await hash(password, 12);
-		const user = await this.prisma.$transaction(async (tx) => {
-			const assignedHandle = await assignUserHandle(tx, {
-				requestedUsername: username,
-			});
-			const createdUser = await tx.user.create({
-				data: {
-					email: normalized,
-					passwordHash,
-					...assignedHandle,
-				},
-			});
-
-			await tx.profile.create({
-				data: {
-					userId: createdUser.id,
-					name: "Default",
-					server: "jp",
-					isActive: true,
-				},
-			});
-
-			return createdUser;
-		});
-
-		const verificationEmailSent = await this.sendVerificationEmail(user.id, user.email, false, emailLinkContext);
-		return { user, verificationEmailSent };
-	}
-
 	async login(email: string, password: string): Promise<{ user: User; tokens: TokenPair }> {
 		const user = await this.validateLoginCredentials(email, password);
 		const tokens = await this.issueTokensForUser(user);

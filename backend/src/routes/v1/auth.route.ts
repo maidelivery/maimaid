@@ -19,20 +19,6 @@ import {
 	serializeUserIdentity,
 } from "../../lib/user-handle.js";
 
-const registerSchema = z.object({
-	email: z.email(),
-	username: z.string().trim().min(USERNAME_MIN_LENGTH).max(USERNAME_MAX_LENGTH),
-	password: z
-		.string()
-		.min(1)
-		.max(MAX_PASSWORD_LENGTH)
-		.refine((value) => isPasswordComplexEnough(value), {
-			message: PASSWORD_COMPLEXITY_ERROR_MESSAGE,
-		}),
-	channel: z.enum(["web", "app"]).optional(),
-	redirectUri: z.string().trim().optional(),
-});
-
 const opaquePayloadSchema = z
 	.string()
 	.trim()
@@ -240,25 +226,6 @@ const invalidPasswordResetQueryHook: ValidationHook<z.infer<typeof passwordReset
 		302,
 	);
 };
-
-authV1Route.post("/register", standardValidator("json", registerSchema, validationHook), async (c) => {
-	const authService = c.var.resolve(AuthService);
-	const body = c.req.valid("json");
-	await enforceRateLimit(c, {
-		...AUTH_RATE_LIMIT.registerIp,
-		key: resolveClientIp(c),
-	});
-	const { user, verificationEmailSent } = await authService.register(
-		body.email,
-		body.password,
-		body.username,
-		resolveEmailLinkContext(body.channel, body.redirectUri, c.req.header("X-Maimaid-Client")),
-	);
-	return ok(c, {
-		user: serializeAuthUser(user),
-		verificationEmailSent,
-	});
-});
 
 authV1Route.post("/register:start", standardValidator("json", registerStartSchema, validationHook), async (c) => {
 	const authService = c.var.resolve(AuthService);

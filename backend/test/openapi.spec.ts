@@ -112,9 +112,7 @@ describe("openapi document generation", () => {
 			"tzOffsetMinutes",
 		]);
 
-		const registerOperation = (document.paths["/v1/auth/register"] as Record<string, any>)?.post;
-		const registerBodySchema = registerOperation.requestBody.content["application/json"].schema;
-		expect(Object.keys(registerBodySchema.properties)).toContain("username");
+		expect(document.paths["/v1/auth/register"]).toBeUndefined();
 
 		const registerStartOperation = (document.paths["/v1/auth/register:start"] as Record<string, any>)?.post;
 		expect(Object.keys(registerStartOperation.requestBody.content["application/json"].schema.properties)).toEqual([
