@@ -3,16 +3,25 @@ import { startRegistration } from "@simplewebauthn/browser";
 import { useState, type Dispatch, type SetStateAction } from "react";
 import type { Song } from "@/components/songs/types";
 import type { ConfirmDialogOptions } from "@/hooks/use-confirm-dialog";
-import { isValidUsername, normalizeUsername, USERNAME_HINT } from "@/lib/app-helpers";
+import {
+	isPasswordComplexEnough,
+	isValidEmailAddress,
+	isValidUsername,
+	normalizeUsername,
+	PASSWORD_COMPLEXITY_HINT,
+	USERNAME_HINT,
+} from "@/lib/app-helpers";
 import type {
 	BackupCodeStatus,
 	MfaSetup,
+	OpaqueRegistrationStartResponse,
 	ScoreEditState,
 	ScoreRow,
 	StaticSource,
 	StaticBundleSchedule,
 	ToastSeverity,
 } from "@/lib/app-types";
+import { finishOpaqueRegistration, startOpaqueRegistration } from "@/lib/opaque-password";
 import type { Session } from "@/lib/session";
 
 type RequestOptions = {
@@ -436,24 +445,45 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 	};
 
 	const handleCreateUser = async () => {
-		if (!newUserEmail.trim() || !newUserPassword.trim()) {
+		const normalizedEmail = newUserEmail.trim().toLowerCase();
+		const password = newUserPassword;
+
+		if (!isValidEmailAddress(normalizedEmail) || !password.trim()) {
 			showToast(t("actionUserReq"), "warning");
+			return;
+		}
+		if (!isPasswordComplexEnough(password)) {
+			showToast(PASSWORD_COMPLEXITY_HINT, "warning");
 			return;
 		}
 		const confirmed = await confirmAction({
 			title: t("actionUserCreateTitle"),
-			description: t("actionUserCreateDesc", { email: newUserEmail.trim() }),
+			description: t("actionUserCreateDesc", { email: normalizedEmail }),
 			confirmText: t("actionUserCreateConfirm"),
 		});
 		if (!confirmed) {
 			return;
 		}
 		try {
-			await request("v1/admin/users", {
+			const registrationState = await startOpaqueRegistration(password);
+			const startPayload = await request<OpaqueRegistrationStartResponse>("v1/admin/users:start", {
 				method: "POST",
 				body: {
-					email: newUserEmail.trim(),
-					password: newUserPassword,
+					email: normalizedEmail,
+					registrationRequest: registrationState.registrationRequest,
+				},
+			});
+			const finishPayload = await finishOpaqueRegistration({
+				password,
+				clientRegistrationState: registrationState.clientRegistrationState,
+				registrationResponse: startPayload.registrationResponse,
+			});
+			await request("v1/admin/users:finish", {
+				method: "POST",
+				body: {
+					email: normalizedEmail,
+					registrationRecord: finishPayload.registrationRecord,
+					passwordFingerprint: finishPayload.passwordFingerprint,
 				},
 			});
 			setNewUserEmail("");

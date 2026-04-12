@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { loadBackendEnvFiles } from "./lib/env-files.js";
 
 const EnvSchema = z.object({
 	NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -16,6 +17,7 @@ const EnvSchema = z.object({
 		.int()
 		.positive()
 		.default(60 * 60 * 24 * 30),
+	OPAQUE_SERVER_SETUP: z.string().min(1),
 	MFA_CHALLENGE_TTL_SECONDS: z.coerce.number().int().positive().default(300),
 	WEBAUTHN_RP_ID: z.string().optional(),
 	WEBAUTHN_RP_NAME: z.string().default("maimaid"),
@@ -41,6 +43,7 @@ export const getEnv = (): Env => {
 		return envCache;
 	}
 
+	loadBackendEnvFiles();
 	envCache = EnvSchema.parse(process.env);
 	return envCache;
 };

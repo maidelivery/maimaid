@@ -1,6 +1,10 @@
-import { defineConfig } from "prisma/config";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+let envFilesLoaded = false;
+
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
 const parseEnvValue = (rawValue: string): string => {
 	const trimmed = rawValue.trim();
@@ -35,26 +39,18 @@ const loadEnvFile = (filePath: string, protectedKeys: Set<string>) => {
 			continue;
 		}
 
-		process.env[key] = parseEnvValue(line.slice(separatorIndex + 1));
+		const rawValue = line.slice(separatorIndex + 1);
+		process.env[key] = parseEnvValue(rawValue);
 	}
 };
 
-const loadBackendEnvFiles = () => {
+export const loadBackendEnvFiles = () => {
+	if (envFilesLoaded) {
+		return;
+	}
+
 	const protectedKeys = new Set(Object.keys(process.env));
-	loadEnvFile(path.resolve(process.cwd(), ".env.docker"), protectedKeys);
-	loadEnvFile(path.resolve(process.cwd(), ".env.docker.local"), protectedKeys);
+	loadEnvFile(path.join(projectRoot, ".env.docker"), protectedKeys);
+	loadEnvFile(path.join(projectRoot, ".env.docker.local"), protectedKeys);
+	envFilesLoaded = true;
 };
-
-loadBackendEnvFiles();
-
-const databaseUrl = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/maimaid";
-
-export default defineConfig({
-	schema: "prisma/schema.prisma",
-	migrations: {
-		path: "prisma/migrations",
-	},
-	datasource: {
-		url: databaseUrl,
-	},
-});

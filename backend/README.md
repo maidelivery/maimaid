@@ -19,7 +19,13 @@ Self-hosted unified serverless-style backend for:
 1. Copy env file:
 
 ```bash
-cp backend/.env.example backend/.env
+cp backend/.env.docker.example backend/.env.docker
+```
+
+Optional for secrets and machine-local overrides:
+
+```bash
+cp backend/.env.docker backend/.env.docker.local
 ```
 
 2. Install dependencies:
@@ -60,7 +66,7 @@ This repo now includes a ready-to-run local stack:
 cp backend/.env.docker.example backend/.env.docker
 ```
 
-Optional (recommended for local secrets): create `backend/.env.docker.local` for overrides such as `RESEND_API_KEY`.
+Optional (recommended for local secrets): create `backend/.env.docker.local` for overrides such as `RESEND_API_KEY` or `OPAQUE_SERVER_SETUP`.
 If you change MinIO credentials, update both `MINIO_ROOT_*` and `S3_ACCESS_*` to the same values.
 
 2. Start stack:
@@ -101,13 +107,17 @@ At repository root:
 
 ## Environment variables
 
-See `backend/.env.example`:
+The backend reads `backend/.env.docker` first, then overlays `backend/.env.docker.local`.
+Values already present in the process environment still win over both files.
+
+See `backend/.env.docker.example`:
 
 - Network: `HOST`, `PORT`
 - Public URL: `APP_PUBLIC_URL` (used to build email verification links)
 - CORS: `CORS_ALLOWED_ORIGINS` (comma-separated exact web origins)
 - WebAuthn: `WEBAUTHN_ORIGIN`, `WEBAUTHN_RP_ID` (local dashboard with Next.js defaults to `http://localhost:3000`)
 - Auth: `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_ACCESS_SECRET`, `JWT_ACCESS_TTL_SECONDS`, `JWT_REFRESH_TTL_SECONDS`
+- OPAQUE: `OPAQUE_SERVER_SETUP` (stable secret; do not rotate casually or existing OPAQUE password records will stop working)
 - Database: `DATABASE_URL`
 - Catalog source override: `CATALOG_SOURCE_URL` (optional; used only for manual `/v1/catalog/sync` flow)
 - MinIO root credentials (local compose): `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`

@@ -1,10 +1,10 @@
-import { hash } from "bcryptjs";
-import { inject, singleton } from "tsyringe";
+import { container, inject, singleton } from "tsyringe";
 import type { PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
-import { isPasswordComplexEnough, PASSWORD_COMPLEXITY_ERROR_MESSAGE } from "../lib/auth-validation.js";
 import { assignUserHandle, buildUsernameBaseFromEmail, serializeUserIdentity } from "../lib/user-handle.js";
+import { createOpaqueRegistrationResponse, hashPasswordFingerprint, normalizeOpaqueEnvelope } from "../lib/opaque-password.js";
+import type { Env } from "../env.js";
 
 @singleton()
 export class AdminUserService {
@@ -52,13 +52,10 @@ export class AdminUserService {
 		};
 	}
 
-	async createUser(input: { email: string; password: string }) {
+	async startOpaqueCreateUser(input: { email: string; registrationRequest: string }) {
 		const normalizedEmail = input.email.trim().toLowerCase();
 		if (!normalizedEmail || !normalizedEmail.includes("@")) {
 			throw new AppError(400, "invalid_email", "A valid email is required.");
-		}
-		if (!isPasswordComplexEnough(input.password)) {
-			throw new AppError(400, "invalid_password", PASSWORD_COMPLEXITY_ERROR_MESSAGE);
 		}
 
 		const existed = await this.prisma.user.findUnique({
@@ -68,7 +65,31 @@ export class AdminUserService {
 			throw new AppError(409, "email_exists", "Email already exists.");
 		}
 
-		const passwordHash = await hash(input.password, 12);
+		const env = container.resolve<Env>(TOKENS.Env);
+		return {
+			registrationResponse: await createOpaqueRegistrationResponse({
+				serverSetup: env.OPAQUE_SERVER_SETUP,
+				userIdentifier: normalizedEmail,
+				registrationRequest: input.registrationRequest,
+			}),
+		};
+	}
+
+	async finishOpaqueCreateUser(input: { email: string; registrationRecord: string; passwordFingerprint: string }) {
+		const normalizedEmail = input.email.trim().toLowerCase();
+		if (!normalizedEmail || !normalizedEmail.includes("@")) {
+			throw new AppError(400, "invalid_email", "A valid email is required.");
+		}
+
+		const existed = await this.prisma.user.findUnique({
+			where: { email: normalizedEmail },
+		});
+		if (existed) {
+			throw new AppError(409, "email_exists", "Email already exists.");
+		}
+
+		const passwordFingerprintHash = await hashPasswordFingerprint(input.passwordFingerprint);
+		const opaqueRegistrationRecord = normalizeOpaqueEnvelope(input.registrationRecord);
 		const user = await this.prisma.$transaction(async (tx) => {
 			const assignedHandle = await assignUserHandle(tx, {
 				requestedUsername: buildUsernameBaseFromEmail(normalizedEmail),
@@ -76,7 +97,9 @@ export class AdminUserService {
 			const created = await tx.user.create({
 				data: {
 					email: normalizedEmail,
-					passwordHash,
+					passwordHash: null,
+					opaqueRegistrationRecord,
+					passwordFingerprintHash,
 					isAdmin: false,
 					...assignedHandle,
 				},

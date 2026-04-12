@@ -71,11 +71,6 @@ private struct BackendAuthPayload: Codable {
     let expiresIn: Int
 }
 
-private struct BackendRegisterPayload: Codable {
-    let user: BackendAuthUser
-    let verificationEmailSent: Bool
-}
-
 private struct BackendResendVerificationPayload: Codable {
     let verificationEmailSent: Bool
 }
@@ -168,7 +163,6 @@ final class BackendSessionManager {
     private(set) var currentUser: BackendAuthUser?
     private(set) var pendingMessage: String?
     private(set) var pendingMessageIsError = false
-    private(set) var passwordResetToken: String?
 
     private var accessToken: String?
     private var refreshToken: String?
@@ -180,10 +174,6 @@ final class BackendSessionManager {
 
     var isAuthenticated: Bool {
         currentUser != nil && accessToken != nil && refreshToken != nil
-    }
-
-    var isPasswordRecoveryFlow: Bool {
-        passwordResetToken != nil
     }
 
     private init() {
@@ -207,26 +197,11 @@ final class BackendSessionManager {
         let type = value(of: "type", from: url)?.lowercased()
         let result = value(of: "result", from: url)?.lowercased()
         let code = value(of: "code", from: url)?.lowercased()
-        let token = value(of: "token", from: url)
 
         if type == "session" {
             Task { @MainActor in
                 await handleSessionRedirect(result: result, from: url)
             }
-            return
-        }
-
-        if type == "recovery" {
-            if result == "success", let token, token.count >= 20 {
-                passwordResetToken = token
-                pendingMessage = "settings.cloud.message.recoveryLinkOpened"
-                pendingMessageIsError = false
-                return
-            }
-
-            passwordResetToken = nil
-            pendingMessage = "settings.cloud.message.recoveryLinkInvalid"
-            pendingMessageIsError = true
             return
         }
 
@@ -246,10 +221,6 @@ final class BackendSessionManager {
         pendingMessageIsError = true
     }
 
-    func clearPasswordRecoveryFlow() {
-        passwordResetToken = nil
-    }
-
     func accessTokenForRequest() -> String? {
         accessToken
     }
@@ -258,7 +229,6 @@ final class BackendSessionManager {
         currentUser = nil
         accessToken = nil
         refreshToken = nil
-        passwordResetToken = nil
         KeychainTokenStore.clear()
     }
 
@@ -289,26 +259,6 @@ final class BackendSessionManager {
         }
     }
 
-    func login(email: String, password: String) async throws {
-        let payload: BackendAuthPayload = try await BackendAPIClient.request(
-            path: "v1/auth/login",
-            method: "POST",
-            body: ["email": email, "password": password],
-            authentication: .none
-        )
-        applyAuthPayload(payload)
-    }
-
-    func register(email: String, username: String, password: String) async throws -> Bool {
-        let payload: BackendRegisterPayload = try await BackendAPIClient.request(
-            path: "v1/auth/register",
-            method: "POST",
-            body: ["email": email, "username": username, "password": password],
-            authentication: .none
-        )
-        return payload.verificationEmailSent
-    }
-
     func resendVerification(email: String) async throws -> Bool {
         let payload: BackendResendVerificationPayload = try await BackendAPIClient.request(
             path: "v1/auth/verification:resend",
@@ -317,24 +267,6 @@ final class BackendSessionManager {
             authentication: .none
         )
         return payload.verificationEmailSent
-    }
-
-    func forgotPassword(email: String) async throws {
-        let _: BackendSuccessResponse = try await BackendAPIClient.request(
-            path: "v1/auth/forgot-password",
-            method: "POST",
-            body: ["email": email],
-            authentication: .none
-        )
-    }
-
-    func resetPassword(token: String, newPassword: String) async throws {
-        let _: BackendSuccessResponse = try await BackendAPIClient.request(
-            path: "v1/auth/reset-password",
-            method: "POST",
-            body: ["token": token, "newPassword": newPassword],
-            authentication: .none
-        )
     }
 
     func logout() async {

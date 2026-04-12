@@ -170,7 +170,34 @@ export type BackupCodeStatus = {
 };
 
 export type RegisterResponse = {
+	user?: {
+		id: string;
+		email: string;
+		username: string;
+		usernameDiscriminator: string;
+		handle: string;
+		isAdmin: boolean;
+	};
 	verificationEmailSent: boolean;
+};
+
+export type OpaqueRegistrationStartResponse = {
+	registrationResponse: string;
+};
+
+export type OpaqueLoginStartResponse =
+	| {
+			protocol: "legacy-bcrypt";
+	  }
+	| {
+			protocol: "opaque";
+			challengeToken: string;
+			loginResponse: string;
+	  };
+
+export type OpaquePasswordResetStartResponse = {
+	registrationResponse: string;
+	email: string;
 };
 
 export type ForgotPasswordResponse = {

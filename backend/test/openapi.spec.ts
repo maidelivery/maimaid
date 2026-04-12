@@ -31,6 +31,7 @@ const createEnv = (): Env => ({
 	S3_SECRET_ACCESS_KEY: undefined,
 	CATALOG_SOURCE_URL: "https://example.com/catalog.json",
 	STATIC_SYNC_INTERVAL_HOURS: 6,
+	OPAQUE_SERVER_SETUP: "opaque-server-setup",
 });
 
 describe("openapi document generation", () => {
@@ -96,6 +97,7 @@ describe("openapi document generation", () => {
 	it("extracts typed schemas from real route source files", async () => {
 		process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgres://localhost:5432/maimaid";
 		process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? "1234567890123456";
+		process.env.OPAQUE_SERVER_SETUP = process.env.OPAQUE_SERVER_SETUP ?? "opaque-server-setup";
 
 		const { createApp } = await import("../src/app.js");
 		const app = createApp();
@@ -113,6 +115,58 @@ describe("openapi document generation", () => {
 		const registerOperation = (document.paths["/v1/auth/register"] as Record<string, any>)?.post;
 		const registerBodySchema = registerOperation.requestBody.content["application/json"].schema;
 		expect(Object.keys(registerBodySchema.properties)).toContain("username");
+
+		const registerStartOperation = (document.paths["/v1/auth/register:start"] as Record<string, any>)?.post;
+		expect(Object.keys(registerStartOperation.requestBody.content["application/json"].schema.properties)).toEqual([
+			"email",
+			"registrationRequest",
+		]);
+
+		const registerFinishOperation = (document.paths["/v1/auth/register:finish"] as Record<string, any>)?.post;
+		expect(Object.keys(registerFinishOperation.requestBody.content["application/json"].schema.properties)).toEqual([
+			"email",
+			"username",
+			"registrationRecord",
+			"passwordFingerprint",
+			"channel",
+			"redirectUri",
+		]);
+
+		const loginStartOperation = (document.paths["/v1/auth/login:start"] as Record<string, any>)?.post;
+		expect(Object.keys(loginStartOperation.requestBody.content["application/json"].schema.properties)).toEqual([
+			"email",
+			"startLoginRequest",
+		]);
+
+		const loginFinishOperation = (document.paths["/v1/auth/login:finish"] as Record<string, any>)?.post;
+		expect(Object.keys(loginFinishOperation.requestBody.content["application/json"].schema.properties)).toEqual([
+			"challengeToken",
+			"finishLoginRequest",
+		]);
+
+		const enrollOpaqueStartOperation = (document.paths["/v1/auth/password:enrollOpaque:start"] as Record<string, any>)?.post;
+		expect(Object.keys(enrollOpaqueStartOperation.requestBody.content["application/json"].schema.properties)).toEqual([
+			"registrationRequest",
+		]);
+
+		const enrollOpaqueFinishOperation = (document.paths["/v1/auth/password:enrollOpaque:finish"] as Record<string, any>)?.post;
+		expect(Object.keys(enrollOpaqueFinishOperation.requestBody.content["application/json"].schema.properties)).toEqual([
+			"registrationRecord",
+			"passwordFingerprint",
+		]);
+
+		const resetStartOperation = (document.paths["/v1/auth/reset-password:start"] as Record<string, any>)?.post;
+		expect(Object.keys(resetStartOperation.requestBody.content["application/json"].schema.properties)).toEqual([
+			"token",
+			"registrationRequest",
+		]);
+
+		const resetFinishOperation = (document.paths["/v1/auth/reset-password:finish"] as Record<string, any>)?.post;
+		expect(Object.keys(resetFinishOperation.requestBody.content["application/json"].schema.properties)).toEqual([
+			"token",
+			"registrationRecord",
+			"passwordFingerprint",
+		]);
 
 		const meGetOperation = (document.paths["/v1/auth/me"] as Record<string, any>)?.get;
 		const meGetSchema = meGetOperation.responses["200"].content["application/json"].schema;
@@ -136,6 +190,19 @@ describe("openapi document generation", () => {
 		const adminUsersOperation = (document.paths["/v1/admin/users"] as Record<string, any>)?.get;
 		const adminUserRowSchema = adminUsersOperation.responses["200"].content["application/json"].schema.properties.rows.items;
 		expect(Object.keys(adminUserRowSchema.properties)).toContain("handle");
+
+		const adminUsersStartOperation = (document.paths["/v1/admin/users:start"] as Record<string, any>)?.post;
+		expect(Object.keys(adminUsersStartOperation.requestBody.content["application/json"].schema.properties)).toEqual([
+			"email",
+			"registrationRequest",
+		]);
+
+		const adminUsersFinishOperation = (document.paths["/v1/admin/users:finish"] as Record<string, any>)?.post;
+		expect(Object.keys(adminUsersFinishOperation.requestBody.content["application/json"].schema.properties)).toEqual([
+			"email",
+			"registrationRecord",
+			"passwordFingerprint",
+		]);
 
 		const voteOperation = (document.paths["/v1/community/candidates/{candidateId}:vote"] as Record<string, any>)?.post;
 		expect(voteOperation.parameters).toEqual(

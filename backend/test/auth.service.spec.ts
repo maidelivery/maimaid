@@ -1,9 +1,16 @@
 import "reflect-metadata";
-import type { PrismaClient } from "@prisma/client";
+import * as opaque from "@serenity-kit/opaque";
+import type { PrismaClient, User } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 import type { Env } from "../src/env.js";
+import { hashPasswordFingerprint } from "../src/lib/opaque-password.js";
 import { AuthService } from "../src/services/auth.service.js";
 import { JwtService } from "../src/services/jwt.service.js";
+
+const OPAQUE_SERVER_SETUP = await (async () => {
+	await opaque.ready;
+	return opaque.server.createSetup();
+})();
 
 const createEnv = (): Env => ({
 	NODE_ENV: "test",
@@ -31,6 +38,7 @@ const createEnv = (): Env => ({
 	S3_SECRET_ACCESS_KEY: undefined,
 	CATALOG_SOURCE_URL: "https://example.com/catalog.json",
 	STATIC_SYNC_INTERVAL_HOURS: 6,
+	OPAQUE_SERVER_SETUP,
 });
 
 type AuthServicePrivateAPI = {
@@ -42,6 +50,41 @@ type AuthServicePrivateAPI = {
 			redirectUri?: string;
 		},
 	) => string;
+};
+
+const createUserRecord = (overrides: Partial<User> = {}): User => ({
+	id: "user-1",
+	email: "alice@example.com",
+	username: "Alice",
+	usernameNormalized: "alice",
+	usernameDiscriminator: "0001",
+	passwordHash: "hash",
+	opaqueRegistrationRecord: null,
+	passwordFingerprintHash: null,
+	status: "active",
+	isAdmin: false,
+	emailVerifiedAt: new Date("2026-04-12T10:00:00Z"),
+	createdAt: new Date("2026-04-12T10:00:00Z"),
+	updatedAt: new Date("2026-04-12T10:00:00Z"),
+	...overrides,
+});
+
+const createOpaqueRegistrationRecord = async (email: string, password: string) => {
+	const normalizedEmail = email.trim().toLowerCase();
+	const start = opaque.client.startRegistration({ password });
+	const response = opaque.server.createRegistrationResponse({
+		serverSetup: OPAQUE_SERVER_SETUP,
+		userIdentifier: normalizedEmail,
+		registrationRequest: start.registrationRequest,
+	});
+	const finish = opaque.client.finishRegistration({
+		password,
+		clientRegistrationState: start.clientRegistrationState,
+		registrationResponse: response.registrationResponse,
+		keyStretching: "memory-constrained",
+	});
+
+	return finish.registrationRecord;
 };
 
 describe("AuthService", () => {
@@ -63,17 +106,12 @@ describe("AuthService", () => {
 		expect(url.searchParams.get("redirect_uri")).toBe("maimaid://auth/callback");
 	});
 
-	it("stores username fields during registration", async () => {
-		const createdUser = {
-			id: "user-1",
-			email: "alice@example.com",
-			passwordHash: "hash",
-			username: "Alice",
-			usernameNormalized: "alice",
-			usernameDiscriminator: "0001",
-			isAdmin: false,
-			status: "active",
-		};
+	it("stores username and opaque password fields during registration finish", async () => {
+		const createdUser = createUserRecord({
+			passwordHash: null,
+			opaqueRegistrationRecord: "opaque-record",
+			passwordFingerprintHash: "fingerprint-hash",
+		});
 		const tx = {
 			user: {
 				findMany: vi.fn().mockResolvedValue([]),
@@ -93,7 +131,12 @@ describe("AuthService", () => {
 		const service = new AuthService(prisma as never, new JwtService(env), env);
 		vi.spyOn(service as never, "sendVerificationEmail").mockResolvedValue(true);
 
-		const result = await service.register("Alice@example.com", "Password1!", "Alice");
+		const result = await service.finishOpaqueRegistration(
+			"Alice@example.com",
+			"Alice",
+			"opaque-record",
+			"fingerprint-1",
+		);
 
 		expect(result.verificationEmailSent).toBe(true);
 		expect(tx.user.create).toHaveBeenCalledWith(
@@ -103,6 +146,9 @@ describe("AuthService", () => {
 					username: "Alice",
 					usernameNormalized: "alice",
 					usernameDiscriminator: "0001",
+					passwordHash: null,
+					opaqueRegistrationRecord: "opaque-record",
+					passwordFingerprintHash: expect.any(String),
 				}),
 			}),
 		);
@@ -118,14 +164,11 @@ describe("AuthService", () => {
 					usernameDiscriminator: "0042",
 				}),
 				update: vi.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
-					id: "user-1",
-					email: "alice@example.com",
-					passwordHash: "hash",
-					username: data.username,
-					usernameNormalized: data.usernameNormalized,
-					usernameDiscriminator: data.usernameDiscriminator,
-					isAdmin: false,
-					status: "active",
+					...createUserRecord({
+						username: data.username as string,
+						usernameNormalized: data.usernameNormalized as string,
+						usernameDiscriminator: data.usernameDiscriminator as string,
+					}),
 				})),
 			},
 			$transaction: vi.fn(async (callback: (client: unknown) => Promise<unknown>) => callback(tx)),
@@ -157,14 +200,11 @@ describe("AuthService", () => {
 				}),
 				findMany: vi.fn().mockResolvedValue([{ usernameDiscriminator: "0001" }]),
 				update: vi.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
-					id: "user-1",
-					email: "alice@example.com",
-					passwordHash: "hash",
-					username: data.username,
-					usernameNormalized: data.usernameNormalized,
-					usernameDiscriminator: data.usernameDiscriminator,
-					isAdmin: false,
-					status: "active",
+					...createUserRecord({
+						username: data.username as string,
+						usernameNormalized: data.usernameNormalized as string,
+						usernameDiscriminator: data.usernameDiscriminator as string,
+					}),
 				})),
 			},
 			$transaction: vi.fn(async (callback: (client: unknown) => Promise<unknown>) => callback(tx)),
@@ -178,6 +218,204 @@ describe("AuthService", () => {
 			username: "Bob",
 			usernameNormalized: "bob",
 			usernameDiscriminator: "0002",
+		});
+	});
+
+	it("returns legacy-bcrypt from opaque login start for unmigrated users", async () => {
+		const prisma = {
+			user: {
+				findUnique: vi.fn().mockResolvedValue(
+					createUserRecord({
+						passwordHash: "legacy-hash",
+						opaqueRegistrationRecord: null,
+					}),
+				),
+			},
+		};
+		const env = createEnv();
+		const service = new AuthService(prisma as never, new JwtService(env), env);
+
+		const result = await service.startOpaqueLogin("alice@example.com", "opaque-start-request");
+
+		expect(result).toEqual({ protocol: "legacy-bcrypt" });
+	});
+
+	it("completes an opaque login challenge and consumes it", async () => {
+		const password = "Password1!";
+		const registrationRecord = await createOpaqueRegistrationRecord("alice@example.com", password);
+		const user = createUserRecord({
+			passwordHash: null,
+			opaqueRegistrationRecord: registrationRecord,
+		});
+		let storedChallenge:
+			| {
+					id: string;
+					tokenHash: string;
+					serverLoginState: string;
+					expiresAt: Date;
+					consumedAt: Date | null;
+					user: User;
+			  }
+			| null = null;
+
+		const prisma = {
+			user: {
+				findUnique: vi.fn().mockResolvedValue(user),
+			},
+			opaqueLoginChallenge: {
+				create: vi.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
+					storedChallenge = {
+						id: "challenge-1",
+						tokenHash: data.tokenHash as string,
+						serverLoginState: data.serverLoginState as string,
+						expiresAt: data.expiresAt as Date,
+						consumedAt: null,
+						user,
+					};
+					return storedChallenge;
+				}),
+				findUnique: vi.fn().mockImplementation(async ({ where }: { where: { tokenHash: string } }) => {
+					if (!storedChallenge || where.tokenHash !== storedChallenge.tokenHash) {
+						return null;
+					}
+					return storedChallenge;
+				}),
+				updateMany: vi.fn().mockImplementation(async () => {
+					if (storedChallenge) {
+						storedChallenge = {
+							...storedChallenge,
+							consumedAt: new Date(),
+						};
+					}
+					return { count: 1 };
+				}),
+			},
+		};
+		const env = createEnv();
+		const service = new AuthService(prisma as never, new JwtService(env), env);
+
+		const clientStart = opaque.client.startLogin({ password });
+		const startPayload = await service.startOpaqueLogin(user.email, clientStart.startLoginRequest);
+		expect(startPayload.protocol).toBe("opaque");
+		if (startPayload.protocol !== "opaque") {
+			throw new Error("Expected opaque login flow.");
+		}
+
+		const clientFinish = opaque.client.finishLogin({
+			password,
+			clientLoginState: clientStart.clientLoginState,
+			loginResponse: startPayload.loginResponse,
+			keyStretching: "memory-constrained",
+		});
+		expect(clientFinish).toBeDefined();
+
+		const loggedInUser = await service.finishOpaqueLogin(startPayload.challengeToken, clientFinish!.finishLoginRequest);
+
+		expect(loggedInUser.id).toBe(user.id);
+		expect(prisma.opaqueLoginChallenge.updateMany).toHaveBeenCalledTimes(1);
+	});
+
+	it("enrolls opaque password material and clears legacy password hashes", async () => {
+		const user = createUserRecord({
+			passwordHash: "legacy-hash",
+			opaqueRegistrationRecord: null,
+			passwordFingerprintHash: null,
+		});
+		const prisma = {
+			user: {
+				findUnique: vi.fn().mockResolvedValue(user),
+				update: vi.fn().mockResolvedValue({}),
+			},
+		};
+		const env = createEnv();
+		const service = new AuthService(prisma as never, new JwtService(env), env);
+
+		await service.finishPasswordEnrollmentOpaque(user.id, "opaque-record", "fingerprint-1");
+
+		expect(prisma.user.update).toHaveBeenCalledWith({
+			where: { id: user.id },
+			data: {
+				opaqueRegistrationRecord: "opaque-record",
+				passwordFingerprintHash: expect.any(String),
+				passwordHash: null,
+			},
+		});
+	});
+
+	it("rejects reusing the same password fingerprint during opaque enrollment", async () => {
+		const fingerprintHash = await hashPasswordFingerprint("fingerprint-1");
+		const user = createUserRecord({
+			passwordFingerprintHash: fingerprintHash,
+		});
+		const prisma = {
+			user: {
+				findUnique: vi.fn().mockResolvedValue(user),
+				update: vi.fn(),
+			},
+		};
+		const env = createEnv();
+		const service = new AuthService(prisma as never, new JwtService(env), env);
+
+		await expect(
+			service.finishPasswordEnrollmentOpaque(user.id, "opaque-record", "fingerprint-1"),
+		).rejects.toMatchObject({
+			code: "password_reused",
+		});
+		expect(prisma.user.update).not.toHaveBeenCalled();
+	});
+
+	it("replaces password state and revokes refresh tokens during opaque password reset", async () => {
+		const passwordResetRecord = {
+			id: "reset-1",
+			userId: "user-1",
+			tokenHash: "hash",
+			expiresAt: new Date(Date.now() + 60_000),
+			consumedAt: null,
+			createdAt: new Date("2026-04-12T10:00:00Z"),
+		};
+		const user = createUserRecord({
+			passwordHash: "legacy-hash",
+			opaqueRegistrationRecord: null,
+		});
+		const prisma = {
+			passwordResetToken: {
+				findUnique: vi.fn().mockResolvedValue(passwordResetRecord),
+				update: vi.fn().mockResolvedValue({}),
+			},
+			user: {
+				findUnique: vi.fn().mockResolvedValue(user),
+				update: vi.fn().mockResolvedValue({}),
+			},
+			refreshToken: {
+				updateMany: vi.fn().mockResolvedValue({ count: 2 }),
+			},
+			$transaction: vi.fn(async (operations: Promise<unknown>[]) => Promise.all(operations)),
+		};
+		const env = createEnv();
+		const service = new AuthService(prisma as never, new JwtService(env), env);
+
+		await service.finishOpaquePasswordReset("reset-token-value-12345", "opaque-record", "fingerprint-2");
+
+		expect(prisma.user.update).toHaveBeenCalledWith({
+			where: { id: passwordResetRecord.userId },
+			data: {
+				passwordHash: null,
+				opaqueRegistrationRecord: "opaque-record",
+				passwordFingerprintHash: expect.any(String),
+			},
+		});
+		expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+			where: {
+				userId: passwordResetRecord.userId,
+				revokedAt: null,
+			},
+			data: {
+				revokedAt: expect.any(Date),
+			},
+		});
+		expect(prisma.passwordResetToken.update).toHaveBeenCalledWith({
+			where: { id: passwordResetRecord.id },
+			data: { consumedAt: expect.any(Date) },
 		});
 	});
 });

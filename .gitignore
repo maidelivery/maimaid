@@ -7,6 +7,7 @@ node_modules/
 vite.config.*.timestamp*
 
 backend/dist/
+backend/.env.docker
 backend/.env.docker.local
 
 # Xcode user-local files

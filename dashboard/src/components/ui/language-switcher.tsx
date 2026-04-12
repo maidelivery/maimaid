@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { GlobeIcon } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { changeDashboardLanguage, normalizeLanguage } from "@/lib/i18n";
 
 const languages = [
 	{ code: "zh-Hans", label: "简体中文" },
@@ -14,8 +15,10 @@ export function LanguageSwitcher() {
 	const { i18n, t } = useTranslation();
 
 	const handleLanguageChange = (value: string) => {
-		i18n.changeLanguage(value);
+		void changeDashboardLanguage(value);
 	};
+
+	const currentLanguage = normalizeLanguage(i18n.resolvedLanguage);
 
 	return (
 		<Field>
@@ -23,7 +26,7 @@ export function LanguageSwitcher() {
 				<GlobeIcon className="h-4 w-4" />
 				{t("language:language", "Language")}
 			</FieldLabel>
-			<Select value={i18n.language || "zh-Hans"} onValueChange={handleLanguageChange}>
+			<Select value={currentLanguage} onValueChange={handleLanguageChange}>
 				<SelectTrigger className="w-full">
 					<SelectValue placeholder="Select Language" />
 				</SelectTrigger>

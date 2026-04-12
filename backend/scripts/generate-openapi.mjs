@@ -7,6 +7,7 @@ process.env.DATABASE_URL ??= "postgresql://postgres:postgres@localhost:5432/maim
 process.env.JWT_ACCESS_SECRET ??= "openapi-build-secret-token";
 process.env.JWT_ISSUER ??= "maimaid-backend";
 process.env.JWT_AUDIENCE ??= "maimaid-clients";
+process.env.OPAQUE_SERVER_SETUP ??= "openapi-build-opaque-server-setup";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const scriptDirectory = path.dirname(scriptPath);

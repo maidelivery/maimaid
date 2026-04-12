@@ -70,7 +70,9 @@ model User {
   username               String
   usernameNormalized     String
   usernameDiscriminator  String
-  passwordHash           String
+  passwordHash           String?
+  opaqueRegistrationRecord String?
+  passwordFingerprintHash  String?
   status                 UserStatus               @default(active)
   isAdmin                Boolean                  @default(false)
   emailVerifiedAt        DateTime?
@@ -86,12 +88,29 @@ model User {
   passkeyCredentials     UserPasskeyCredential[]
   mfaBackupCodes         UserMfaBackupCode[]
   mfaChallenges          MfaChallenge[]
+  opaqueLoginChallenges  OpaqueLoginChallenge[]
   authSessionCodes       AuthSessionCode[]
   syncEvents             SyncEvent[]
   syncMutations          SyncMutation[]
 
   @@map("users")
   @@unique([usernameNormalized, usernameDiscriminator])
+}
+
+model OpaqueLoginChallenge {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  tokenHash       String   @unique
+  serverLoginState String
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("opaque_login_challenges")
 }
 
 model RefreshToken {

@@ -18,12 +18,10 @@ struct BackendAuthView: View {
     @Query private var configs: [SyncConfig]
 
     @State private var sessionManager = BackendSessionManager.shared
-    @State private var newPassword = ""
     @State private var webAuthenticationSession: ASWebAuthenticationSession?
 
     @State private var isOpeningWebAuth = false
     @State private var isSigningOut = false
-    @State private var isUpdatingRecoveryPassword = false
     @State private var isSyncing = false
     @State private var isResolvingAccountConflict = false
     @State private var showingLogoutOptions = false
@@ -49,11 +47,7 @@ struct BackendAuthView: View {
     private var config: SyncConfig? { configs.first }
 
     private var isBusy: Bool {
-        isOpeningWebAuth || isSigningOut || isUpdatingRecoveryPassword || isSyncing || isResolvingAccountConflict
-    }
-
-    private var showRecoveryPasswordRequirementAsError: Bool {
-        !newPassword.isEmpty && !meetsPasswordRequirement(newPassword)
+        isOpeningWebAuth || isSigningOut || isSyncing || isResolvingAccountConflict
     }
 
     var body: some View {
@@ -63,8 +57,6 @@ struct BackendAuthView: View {
                     configurationContent
                 } else if sessionManager.isAuthenticated, let user = sessionManager.currentUser {
                     authenticatedContent(user: user)
-                } else if sessionManager.isPasswordRecoveryFlow {
-                    passwordRecoveryContent
                 } else {
                     webAuthenticationContent
                 }
@@ -296,60 +288,6 @@ struct BackendAuthView: View {
         }
     }
 
-    private var passwordRecoveryContent: some View {
-        Group {
-            Section {
-                accountSummaryCard(
-                    icon: "key.fill",
-                    iconTint: .blue,
-                    title: String(localized: "settings.cloud.recovery.title"),
-                    subtitle: String(localized: "settings.cloud.recovery.subtitle")
-                )
-            }
-            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-            .listRowBackground(Color.clear)
-            .listSectionSeparator(.hidden)
-
-            Section {
-                HStack {
-                    settingsIcon(icon: "lock.rotation", tint: .gray)
-                    SecureField("settings.cloud.recovery.newPassword", text: $newPassword)
-                        .textContentType(.newPassword)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .onSubmit {
-                            Task { await completePasswordRecovery() }
-                        }
-                }
-                .padding(.vertical, 2)
-            } header: {
-                Text("settings.cloud.recovery.section")
-            } footer: {
-                Text("settings.cloud.signup.passwordRequirement")
-                    .font(.footnote)
-                    .foregroundStyle(showRecoveryPasswordRequirementAsError ? .red : .secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-            }
-
-            Section {
-                Button("settings.cloud.recovery.updateButton") {
-                    Task { await completePasswordRecovery() }
-                }
-                .disabled(newPassword.isEmpty || isBusy)
-            }
-            .listSectionSeparator(.hidden)
-
-            Section {
-                Button("settings.cloud.recovery.cancel", role: .cancel) {
-                    newPassword = ""
-                    sessionManager.clearPasswordRecoveryFlow()
-                }
-                .disabled(isBusy)
-            }
-        }
-    }
-
     private func accountSummaryCard<Title: View, Subtitle: View>(
         icon: String,
         iconTint: Color,
@@ -455,17 +393,6 @@ struct BackendAuthView: View {
         let newConfig = SyncConfig()
         modelContext.insert(newConfig)
         return newConfig
-    }
-
-    private func meetsPasswordRequirement(_ value: String) -> Bool {
-        guard value.count >= 8 else { return false }
-
-        let hasLowercase = value.contains { $0.isLowercase }
-        let hasUppercase = value.contains { $0.isUppercase }
-        let hasDigit = value.contains { $0.isNumber }
-        let hasSymbol = value.contains { !$0.isLetter && !$0.isNumber && !$0.isWhitespace }
-
-        return hasLowercase && hasUppercase && hasDigit && hasSymbol
     }
 
     @MainActor
@@ -633,30 +560,6 @@ struct BackendAuthView: View {
         queryItems.append(URLQueryItem(name: "client", value: "app"))
         components.queryItems = queryItems
         return components.url
-    }
-
-    @MainActor
-    private func completePasswordRecovery() async {
-        guard let resetToken = sessionManager.passwordResetToken, !newPassword.isEmpty else {
-            showToast(message: "settings.cloud.message.recoveryLinkInvalid", error: true)
-            return
-        }
-        guard meetsPasswordRequirement(newPassword) else {
-            showToast(message: "settings.cloud.message.passwordRequirementNotMet", error: true)
-            return
-        }
-
-        isUpdatingRecoveryPassword = true
-        defer { isUpdatingRecoveryPassword = false }
-
-        do {
-            try await sessionManager.resetPassword(token: resetToken, newPassword: newPassword)
-            newPassword = ""
-            sessionManager.clearPasswordRecoveryFlow()
-            showToast(message: "settings.cloud.message.passwordUpdated")
-        } catch {
-            showToast(message: error.localizedDescription, error: true)
-        }
     }
 
     @MainActor

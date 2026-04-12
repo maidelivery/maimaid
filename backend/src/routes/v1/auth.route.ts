@@ -33,10 +33,41 @@ const registerSchema = z.object({
 	redirectUri: z.string().trim().optional(),
 });
 
+const opaquePayloadSchema = z
+	.string()
+	.trim()
+	.min(1)
+	.refine((value) => !value.includes("__proto__"), "Opaque payload is invalid.");
+
+const registerStartSchema = z.object({
+	email: z.email(),
+	registrationRequest: opaquePayloadSchema,
+});
+
+const registerFinishSchema = z.object({
+	email: z.email(),
+	username: z.string().trim().min(USERNAME_MIN_LENGTH).max(USERNAME_MAX_LENGTH),
+	registrationRecord: opaquePayloadSchema,
+	passwordFingerprint: opaquePayloadSchema,
+	channel: z.enum(["web", "app"]).optional(),
+	redirectUri: z.string().trim().optional(),
+});
+
 const loginSchema = z.object({
 	email: z.email(),
 	password: z.string().min(1).max(MAX_PASSWORD_LENGTH),
 });
+
+const loginStartSchema = z.object({
+	email: z.email(),
+	startLoginRequest: opaquePayloadSchema,
+});
+
+const loginFinishSchema = z.object({
+	challengeToken: z.string().min(20),
+	finishLoginRequest: opaquePayloadSchema,
+});
+
 const refreshSchema = z.object({
 	refreshToken: z.string().min(20),
 });
@@ -62,6 +93,26 @@ const resetPasswordSchema = z.object({
 		.refine((value) => isPasswordComplexEnough(value), {
 			message: PASSWORD_COMPLEXITY_ERROR_MESSAGE,
 		}),
+});
+
+const resetPasswordStartSchema = z.object({
+	token: z.string().min(20),
+	registrationRequest: opaquePayloadSchema,
+});
+
+const resetPasswordFinishSchema = z.object({
+	token: z.string().min(20),
+	registrationRecord: opaquePayloadSchema,
+	passwordFingerprint: opaquePayloadSchema,
+});
+
+const enrollOpaqueStartSchema = z.object({
+	registrationRequest: opaquePayloadSchema,
+});
+
+const enrollOpaqueFinishSchema = z.object({
+	registrationRecord: opaquePayloadSchema,
+	passwordFingerprint: opaquePayloadSchema,
 });
 
 const passkeyLoginStartSchema = z.object({});
@@ -209,6 +260,33 @@ authV1Route.post("/register", standardValidator("json", registerSchema, validati
 	});
 });
 
+authV1Route.post("/register:start", standardValidator("json", registerStartSchema, validationHook), async (c) => {
+	const authService = c.var.resolve(AuthService);
+	const body = c.req.valid("json");
+	await enforceRateLimit(c, {
+		...AUTH_RATE_LIMIT.registerIp,
+		key: resolveClientIp(c),
+	});
+	const payload = await authService.startOpaqueRegistration(body.email, body.registrationRequest);
+	return ok(c, payload);
+});
+
+authV1Route.post("/register:finish", standardValidator("json", registerFinishSchema, validationHook), async (c) => {
+	const authService = c.var.resolve(AuthService);
+	const body = c.req.valid("json");
+	const { user, verificationEmailSent } = await authService.finishOpaqueRegistration(
+		body.email,
+		body.username,
+		body.registrationRecord,
+		body.passwordFingerprint,
+		resolveEmailLinkContext(body.channel, body.redirectUri, c.req.header("X-Maimaid-Client")),
+	);
+	return ok(c, {
+		user: serializeAuthUser(user),
+		verificationEmailSent,
+	});
+});
+
 authV1Route.post("/login", standardValidator("json", loginSchema, validationHook), async (c) => {
 	const authService = c.var.resolve(AuthService);
 	const mfaService = c.var.resolve(MfaService);
@@ -219,6 +297,41 @@ authV1Route.post("/login", standardValidator("json", loginSchema, validationHook
 	});
 
 	const user = await authService.validateLoginCredentials(body.email, body.password);
+	const loginChannel = resolveLoginChannel(c.req.header("X-Maimaid-Client"));
+	const requiresMfa = await mfaService.shouldEnforceMfa(user.id);
+	if (requiresMfa) {
+		const challenge = await mfaService.createLoginChallenge(user, loginChannel);
+		return ok(c, {
+			user: serializeAuthUser(user),
+			mfaRequired: true,
+			challengeToken: challenge.challengeToken,
+			methods: challenge.methods,
+		});
+	}
+	const tokens = await authService.issueTokensForUser(user);
+	return ok(c, {
+		user: serializeAuthUser(user),
+		mfaRequired: false,
+		...tokens,
+	});
+});
+
+authV1Route.post("/login:start", standardValidator("json", loginStartSchema, validationHook), async (c) => {
+	const authService = c.var.resolve(AuthService);
+	const body = c.req.valid("json");
+	await enforceRateLimit(c, {
+		...AUTH_RATE_LIMIT.loginIp,
+		key: resolveClientIp(c),
+	});
+	const payload = await authService.startOpaqueLogin(body.email, body.startLoginRequest);
+	return ok(c, payload);
+});
+
+authV1Route.post("/login:finish", standardValidator("json", loginFinishSchema, validationHook), async (c) => {
+	const authService = c.var.resolve(AuthService);
+	const mfaService = c.var.resolve(MfaService);
+	const body = c.req.valid("json");
+	const user = await authService.finishOpaqueLogin(body.challengeToken, body.finishLoginRequest);
 	const loginChannel = resolveLoginChannel(c.req.header("X-Maimaid-Client"));
 	const requiresMfa = await mfaService.shouldEnforceMfa(user.id);
 	if (requiresMfa) {
@@ -282,6 +395,38 @@ authV1Route.post("/logout", standardValidator("json", refreshSchema, validationH
 	await authService.logout(body.refreshToken);
 	return ok(c, { success: true });
 });
+
+authV1Route.post(
+	"/password:enrollOpaque:start",
+	authRequired,
+	standardValidator("json", enrollOpaqueStartSchema, validationHook),
+	async (c) => {
+		const auth = c.get("auth");
+		if (!auth) {
+			return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+		}
+		const authService = c.var.resolve(AuthService);
+		const body = c.req.valid("json");
+		const payload = await authService.startPasswordEnrollmentOpaque(auth.userId, body.registrationRequest);
+		return ok(c, payload);
+	},
+);
+
+authV1Route.post(
+	"/password:enrollOpaque:finish",
+	authRequired,
+	standardValidator("json", enrollOpaqueFinishSchema, validationHook),
+	async (c) => {
+		const auth = c.get("auth");
+		if (!auth) {
+			return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
+		}
+		const authService = c.var.resolve(AuthService);
+		const body = c.req.valid("json");
+		await authService.finishPasswordEnrollmentOpaque(auth.userId, body.registrationRecord, body.passwordFingerprint);
+		return ok(c, { success: true });
+	},
+);
 
 authV1Route.post("/verification:resend", standardValidator("json", resendVerificationSchema, validationHook), async (c) => {
 	const authService = c.var.resolve(AuthService);
@@ -395,6 +540,20 @@ authV1Route.post("/forgot-password", standardValidator("json", forgotPasswordSch
 		resolveEmailLinkContext(body.channel, body.redirectUri, c.req.header("X-Maimaid-Client")),
 	);
 	return ok(c, { success: true, ...result });
+});
+
+authV1Route.post("/reset-password:start", standardValidator("json", resetPasswordStartSchema, validationHook), async (c) => {
+	const authService = c.var.resolve(AuthService);
+	const body = c.req.valid("json");
+	const payload = await authService.startOpaquePasswordReset(body.token, body.registrationRequest);
+	return ok(c, payload);
+});
+
+authV1Route.post("/reset-password:finish", standardValidator("json", resetPasswordFinishSchema, validationHook), async (c) => {
+	const authService = c.var.resolve(AuthService);
+	const body = c.req.valid("json");
+	await authService.finishOpaquePasswordReset(body.token, body.registrationRecord, body.passwordFingerprint);
+	return ok(c, { success: true });
 });
 
 authV1Route.post("/reset-password", standardValidator("json", resetPasswordSchema, validationHook), async (c) => {

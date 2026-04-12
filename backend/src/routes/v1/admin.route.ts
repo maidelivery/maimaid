@@ -38,12 +38,24 @@ const listUsersQuerySchema = z.object({
 			const parsed = Number(value ?? 0);
 			if (!Number.isFinite(parsed)) return 0;
 			return Math.max(0, Math.trunc(parsed));
-		}),
+	}),
 });
 
-const createUserSchema = z.object({
+const opaquePayloadSchema = z
+	.string()
+	.trim()
+	.min(1)
+	.refine((value) => !value.includes("__proto__"), "Opaque payload is invalid.");
+
+const startCreateUserSchema = z.object({
 	email: z.email(),
-	password: z.string().min(8),
+	registrationRequest: opaquePayloadSchema,
+});
+
+const finishCreateUserSchema = z.object({
+	email: z.email(),
+	registrationRecord: opaquePayloadSchema,
+	passwordFingerprint: opaquePayloadSchema,
 });
 
 const staticSourceCreateSchema = z.object({
@@ -213,10 +225,17 @@ adminV1Route.get("/admin/users", adminRequired, standardValidator("query", listU
 	return ok(c, result);
 });
 
-adminV1Route.post("/admin/users", adminRequired, standardValidator("json", createUserSchema, validationHook), async (c) => {
+adminV1Route.post("/admin/users:start", adminRequired, standardValidator("json", startCreateUserSchema, validationHook), async (c) => {
 	const adminUserService = c.var.resolve(AdminUserService);
 	const body = c.req.valid("json");
-	const user = await adminUserService.createUser(body);
+	const payload = await adminUserService.startOpaqueCreateUser(body);
+	return ok(c, payload);
+});
+
+adminV1Route.post("/admin/users:finish", adminRequired, standardValidator("json", finishCreateUserSchema, validationHook), async (c) => {
+	const adminUserService = c.var.resolve(AdminUserService);
+	const body = c.req.valid("json");
+	const user = await adminUserService.finishOpaqueCreateUser(body);
 	return ok(c, { user }, 201);
 });
 

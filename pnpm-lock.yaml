@@ -59,6 +59,9 @@ importers:
       '@scalar/hono-api-reference':
         specifier: ^0.10.5
         version: 0.10.5(hono@4.12.9)
+      '@serenity-kit/opaque':
+        specifier: 1.1.0
+        version: 1.1.0
       '@simplewebauthn/server':
         specifier: ^12.0.0
         version: 12.0.0
@@ -129,6 +132,9 @@ importers:
 
   dashboard:
     dependencies:
+      '@serenity-kit/opaque':
+        specifier: 1.1.0
+        version: 1.1.0
       '@simplewebauthn/browser':
         specifier: ^12.0.0
         version: 12.0.0
@@ -2593,6 +2599,10 @@ packages:
 
   '@sec-ant/readable-stream@0.4.1':
     resolution: {integrity: sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg==}
+
+  '@serenity-kit/opaque@1.1.0':
+    resolution: {integrity: sha512-Y6v/+hRMn0MdMEk5+/ArM0vPIiFfFEbdTZc7oAx+cWyvGODGezAQ/sMjXBVogf7NsS9z9EV0Ve5paZCVULuedw==}
+    hasBin: true
 
   '@simplewebauthn/browser@12.0.0':
     resolution: {integrity: sha512-0w6W8qkACycyaRMb2XnHfpA9kkgs5e2Aw2Ul9ObBYmvFBbtzipyWu9u2+WP1wy98chM+GIlQFnPheUbiMBQr8w==}
@@ -9323,6 +9333,8 @@ snapshots:
       zod: 4.3.6
 
   '@sec-ant/readable-stream@0.4.1': {}
+
+  '@serenity-kit/opaque@1.1.0': {}
 
   '@simplewebauthn/browser@12.0.0':
     dependencies:

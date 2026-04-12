@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { startAuthentication } from "@simplewebauthn/browser";
-import { type Dispatch, type SetStateAction, useCallback, useEffect, useState } from "react";
+import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
 import {
 	isPasswordComplexEnough,
 	isValidEmailAddress,
@@ -13,11 +13,20 @@ import type {
 	AuthMode,
 	ForgotPasswordResponse,
 	LoginStep,
+	OpaqueLoginStartResponse,
+	OpaquePasswordResetStartResponse,
+	OpaqueRegistrationStartResponse,
 	PasskeyLoginStartResponse,
 	RegisterResponse,
 	ToastSeverity,
 	VerificationResult,
 } from "@/lib/app-types";
+import {
+	finishOpaqueLogin as finishOpaqueClientLogin,
+	finishOpaqueRegistration,
+	startOpaqueLogin as startOpaqueClientLogin,
+	startOpaqueRegistration,
+} from "@/lib/opaque-password";
 import { toSession, type LoginResponse, type Session } from "@/lib/session";
 
 type RequestOptions = {
@@ -205,9 +214,14 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 	const [mfaTotpCode, setMfaTotpCode] = useState("");
 	const [mfaBackupCode, setMfaBackupCode] = useState("");
 	const [appAuthRequest, setAppAuthRequest] = useState<AppAuthRequest | null>(null);
+	const legacyPasswordForUpgradeRef = useRef<string | null>(null);
 
 	const isAppAuthFlow = appAuthRequest !== null;
 	const appAuthRequestedMode = appAuthRequest?.requestedMode ?? null;
+
+	const clearPendingLegacyPasswordUpgrade = useCallback(() => {
+		legacyPasswordForUpgradeRef.current = null;
+	}, []);
 
 	const resetLoginChallenge = useCallback(() => {
 		setMfaChallengeToken("");
@@ -219,8 +233,9 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 	const resetLoginFlow = useCallback(() => {
 		setLoginStep("email");
 		setLoginPassword("");
+		clearPendingLegacyPasswordUpgrade();
 		resetLoginChallenge();
-	}, [resetLoginChallenge]);
+	}, [clearPendingLegacyPasswordUpgrade, resetLoginChallenge]);
 
 	const savePendingForgotEmail = (email: string) => {
 		setSessionStorageValue(APP_PENDING_FORGOT_EMAIL_KEY, email.trim().toLowerCase());
@@ -273,9 +288,106 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 		}
 	};
 
+	const silentlyUpgradeLegacyPassword = async (accessToken: string): Promise<void> => {
+		const password = legacyPasswordForUpgradeRef.current;
+		if (!password) {
+			return;
+		}
+
+		legacyPasswordForUpgradeRef.current = null;
+
+		try {
+			const registrationState = await startOpaqueRegistration(password);
+			const startPayload = await request<OpaqueRegistrationStartResponse>("v1/auth/password:enrollOpaque:start", {
+				method: "POST",
+				body: {
+					registrationRequest: registrationState.registrationRequest,
+				},
+				accessToken,
+			});
+			const finishPayload = await finishOpaqueRegistration({
+				password,
+				clientRegistrationState: registrationState.clientRegistrationState,
+				registrationResponse: startPayload.registrationResponse,
+			});
+			await request<{ success: boolean }>("v1/auth/password:enrollOpaque:finish", {
+				method: "POST",
+				body: {
+					registrationRecord: finishPayload.registrationRecord,
+					passwordFingerprint: finishPayload.passwordFingerprint,
+				},
+				accessToken,
+			});
+		} catch {
+			// Keep the current login session even if the silent legacy upgrade fails.
+		}
+	};
+
+	const transitionToMfaStep = (payload: LoginResponse, message: string, email?: string) => {
+		const methods = payload.methods ?? { totp: false, passkey: false, backupCode: false };
+		if (!payload.challengeToken || (!methods.totp && !methods.passkey && !methods.backupCode)) {
+			throw new Error(t("flowMfaInitFailed"));
+		}
+
+		if (email) {
+			setLoginEmail(email);
+		}
+		setMfaChallengeToken(payload.challengeToken);
+		setMfaMethods(methods);
+		setMfaTotpCode("");
+		setMfaBackupCode("");
+		setLoginStep("mfa");
+		setAuthMode("login");
+		showToast(message, "info");
+	};
+
+	const loginWithPasswordProtocol = async (email: string, password: string): Promise<LoginResponse> => {
+		clearPendingLegacyPasswordUpgrade();
+
+		const clientStart = await startOpaqueClientLogin(password);
+		const startPayload = await request<OpaqueLoginStartResponse>("v1/auth/login:start", {
+			method: "POST",
+			auth: false,
+			body: {
+				email,
+				startLoginRequest: clientStart.startLoginRequest,
+			},
+		});
+
+		if (startPayload.protocol === "legacy-bcrypt") {
+			const payload = await request<LoginResponse>("v1/auth/login", {
+				method: "POST",
+				auth: false,
+				body: {
+					email,
+					password,
+					channel: "web",
+				},
+			});
+			legacyPasswordForUpgradeRef.current = password;
+			return payload;
+		}
+
+		const finishPayload = await finishOpaqueClientLogin({
+			password,
+			clientLoginState: clientStart.clientLoginState,
+			loginResponse: startPayload.loginResponse,
+		});
+
+		return request<LoginResponse>("v1/auth/login:finish", {
+			method: "POST",
+			auth: false,
+			body: {
+				challengeToken: startPayload.challengeToken,
+				finishLoginRequest: finishPayload.finishLoginRequest,
+			},
+		});
+	};
+
 	const applyLoginPayload = async (payload: LoginResponse, message: string) => {
 		const nextSession = toSession(payload);
 		setSession(nextSession);
+		await silentlyUpgradeLegacyPassword(nextSession.accessToken);
 		setAuthMode("login");
 		resetLoginFlow();
 
@@ -291,6 +403,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 			return;
 		}
 
+		clearPendingLegacyPasswordUpgrade();
 		setLoading(true);
 		try {
 			const payload = await request<LoginResponse>("v1/auth/refresh", {
@@ -334,6 +447,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 
 	const handleLoginWithPassword = async () => {
 		const normalizedEmail = loginEmail.trim().toLowerCase();
+		const password = loginPassword;
 		if (!isValidEmailAddress(normalizedEmail) || !loginPassword.trim()) {
 			showToast(t("flowMissingEmailPass"), "warning");
 			return;
@@ -341,31 +455,11 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 
 		setLoading(true);
 		try {
-			const payload = await request<LoginResponse>("v1/auth/login", {
-				method: "POST",
-				auth: false,
-				body: {
-					email: normalizedEmail,
-					password: loginPassword,
-					channel: "web",
-				},
-			});
+			const payload = await loginWithPasswordProtocol(normalizedEmail, password);
 
 			if (payload.mfaRequired) {
 				const methods = payload.methods ?? { totp: false, passkey: false, backupCode: false };
-				if (!payload.challengeToken || (!methods.totp && !methods.passkey && !methods.backupCode)) {
-					throw new Error(t("flowMfaInitFailed"));
-				}
-				setMfaChallengeToken(payload.challengeToken);
-				setMfaMethods(methods);
-				setMfaTotpCode("");
-				setMfaBackupCode("");
-				setLoginStep("mfa");
-				if (methods.totp) {
-					showToast(t("flowMfaRequireTotp"), "info");
-				} else {
-					showToast(t("flowMfaRequirePasskey"), "info");
-				}
+				transitionToMfaStep(payload, methods.totp ? t("flowMfaRequireTotp") : t("flowMfaRequirePasskey"));
 				return;
 			}
 
@@ -458,6 +552,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 	};
 
 	const handleDirectPasskeyLogin = async () => {
+		clearPendingLegacyPasswordUpgrade();
 		setLoading(true);
 		try {
 			const startPayload = await request<PasskeyLoginStartResponse>("v1/auth/passkeys:startLogin", {
@@ -489,6 +584,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 	const handleRegister = async () => {
 		const normalizedEmail = registerEmail.trim().toLowerCase();
 		const normalizedUsername = normalizeUsername(registerUsername);
+		const password = registerPassword;
 		if (!isValidEmailAddress(normalizedEmail)) {
 			showToast(t("flowInvalidEmail"), "warning");
 			return;
@@ -508,13 +604,28 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 
 		setLoading(true);
 		try {
-			const payload = await request<RegisterResponse>("v1/auth/register", {
+			const registrationState = await startOpaqueRegistration(password);
+			const startPayload = await request<OpaqueRegistrationStartResponse>("v1/auth/register:start", {
+				method: "POST",
+				auth: false,
+				body: {
+					email: normalizedEmail,
+					registrationRequest: registrationState.registrationRequest,
+				},
+			});
+			const finishPayload = await finishOpaqueRegistration({
+				password,
+				clientRegistrationState: registrationState.clientRegistrationState,
+				registrationResponse: startPayload.registrationResponse,
+			});
+			const payload = await request<RegisterResponse>("v1/auth/register:finish", {
 				method: "POST",
 				auth: false,
 				body: {
 					email: normalizedEmail,
 					username: normalizedUsername,
-					password: registerPassword,
+					registrationRecord: finishPayload.registrationRecord,
+					passwordFingerprint: finishPayload.passwordFingerprint,
 					...(isAppAuthFlow && appAuthRequest
 						? {
 								channel: "app",
@@ -619,6 +730,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 	const handleResetPassword = async () => {
 		const token = resetToken.trim();
 		const normalizedResetEmail = resetEmail.trim().toLowerCase();
+		const password = resetPassword;
 
 		if (token.length < 20) {
 			showToast(t("flowResetInvalid"), "warning");
@@ -637,43 +749,45 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 
 		setLoading(true);
 		try {
-			await request<{ success: boolean }>("v1/auth/reset-password", {
+			const registrationState = await startOpaqueRegistration(password);
+			const startPayload = await request<OpaquePasswordResetStartResponse>("v1/auth/reset-password:start", {
 				method: "POST",
 				auth: false,
 				body: {
 					token,
-					newPassword: resetPassword,
+					registrationRequest: registrationState.registrationRequest,
+				},
+			});
+			const finishPayload = await finishOpaqueRegistration({
+				password,
+				clientRegistrationState: registrationState.clientRegistrationState,
+				registrationResponse: startPayload.registrationResponse,
+			});
+			await request<{ success: boolean }>("v1/auth/reset-password:finish", {
+				method: "POST",
+				auth: false,
+				body: {
+					token,
+					registrationRecord: finishPayload.registrationRecord,
+					passwordFingerprint: finishPayload.passwordFingerprint,
 				},
 			});
 
-			if (isAppAuthFlow && isValidEmailAddress(normalizedResetEmail)) {
-				const payload = await request<LoginResponse>("v1/auth/login", {
-					method: "POST",
-					auth: false,
-					body: {
-						email: normalizedResetEmail,
-						password: resetPassword,
-						channel: "web",
-					},
-				});
+			const resolvedResetEmail = startPayload.email.trim().toLowerCase();
+			if (isValidEmailAddress(resolvedResetEmail)) {
+				setResetEmail(resolvedResetEmail);
+			}
+			clearPendingForgotEmail();
+
+			if (isAppAuthFlow && isValidEmailAddress(resolvedResetEmail || normalizedResetEmail)) {
+				const loginEmailAddress = resolvedResetEmail || normalizedResetEmail;
+				const payload = await loginWithPasswordProtocol(loginEmailAddress, password);
 
 				if (payload.mfaRequired) {
-					const methods = payload.methods ?? { totp: false, passkey: false, backupCode: false };
-					if (!payload.challengeToken || (!methods.totp && !methods.passkey && !methods.backupCode)) {
-						throw new Error(t("flowMfaInitFailed"));
-					}
-					setMfaChallengeToken(payload.challengeToken);
-					setMfaMethods(methods);
-					setMfaTotpCode("");
-					setMfaBackupCode("");
-					setLoginEmail(normalizedResetEmail);
-					setLoginStep("mfa");
-					setAuthMode("login");
-					showToast(t("flowResetAppSuccess"), "info");
+					transitionToMfaStep(payload, t("flowResetAppSuccess"), loginEmailAddress);
 					return;
 				}
 
-				clearPendingForgotEmail();
 				setResetResultMessage(null);
 				setResetPassword("");
 				setResetConfirmPassword("");

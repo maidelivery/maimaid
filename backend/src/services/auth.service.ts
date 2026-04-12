@@ -8,12 +8,29 @@ import type { Env } from "../env.js";
 import { randomToken, sha256Hex } from "../lib/crypto.js";
 import { isPasswordComplexEnough, PASSWORD_COMPLEXITY_ERROR_MESSAGE } from "../lib/auth-validation.js";
 import { assignUserHandle } from "../lib/user-handle.js";
+import {
+	createOpaqueRegistrationResponse,
+	finishOpaqueLogin,
+	hashPasswordFingerprint,
+	normalizeOpaqueEnvelope,
+	startOpaqueLogin,
+} from "../lib/opaque-password.js";
 
 type TokenPair = {
 	accessToken: string;
 	refreshToken: string;
 	expiresIn: number;
 };
+
+type OpaqueLoginStartResult =
+	| {
+			protocol: "legacy-bcrypt";
+	  }
+	| {
+			protocol: "opaque";
+			challengeToken: string;
+			loginResponse: string;
+	  };
 
 const APP_SESSION_CODE_TTL_SECONDS = 120;
 const EMAIL_VERIFICATION_TOKEN_TTL_MS = 15 * 60_000;
@@ -89,6 +106,12 @@ export class AuthService {
 		if (!user || user.status !== "active") {
 			throw new AppError(401, "invalid_credentials", "Email or password is incorrect.");
 		}
+		if (user.opaqueRegistrationRecord) {
+			throw new AppError(400, "opaque_required", "This account requires the OPAQUE login flow.");
+		}
+		if (!user.passwordHash) {
+			throw new AppError(400, "opaque_required", "This account requires the OPAQUE login flow.");
+		}
 
 		const ok = await compare(password, user.passwordHash);
 		if (!ok) {
@@ -100,6 +123,215 @@ export class AuthService {
 		}
 
 		return user;
+	}
+
+	async startOpaqueRegistration(email: string, registrationRequest: string): Promise<{ registrationResponse: string }> {
+		const normalizedEmail = this.normalizeEmail(email);
+		const existing = await this.prisma.user.findUnique({
+			where: { email: normalizedEmail },
+			select: { id: true },
+		});
+		if (existing) {
+			throw new AppError(409, "email_exists", "Email already exists.");
+		}
+
+		return {
+			registrationResponse: await createOpaqueRegistrationResponse({
+				serverSetup: this.env.OPAQUE_SERVER_SETUP,
+				userIdentifier: normalizedEmail,
+				registrationRequest,
+			}),
+		};
+	}
+
+	async finishOpaqueRegistration(
+		email: string,
+		username: string,
+		registrationRecord: string,
+		passwordFingerprint: string,
+		emailLinkContext?: AuthEmailLinkContext,
+	): Promise<{ user: User; verificationEmailSent: boolean }> {
+		const normalizedEmail = this.normalizeEmail(email);
+		const existing = await this.prisma.user.findUnique({
+			where: { email: normalizedEmail },
+			select: { id: true },
+		});
+		if (existing) {
+			throw new AppError(409, "email_exists", "Email already exists.");
+		}
+
+		const fingerprintHash = await hashPasswordFingerprint(passwordFingerprint);
+		const normalizedRecord = normalizeOpaqueEnvelope(registrationRecord);
+		const user = await this.prisma.$transaction(async (tx) => {
+			const assignedHandle = await assignUserHandle(tx, {
+				requestedUsername: username,
+			});
+			const createdUser = await tx.user.create({
+				data: {
+					email: normalizedEmail,
+					passwordHash: null,
+					opaqueRegistrationRecord: normalizedRecord,
+					passwordFingerprintHash: fingerprintHash,
+					...assignedHandle,
+				},
+			});
+
+			await tx.profile.create({
+				data: {
+					userId: createdUser.id,
+					name: "Default",
+					server: "jp",
+					isActive: true,
+				},
+			});
+
+			return createdUser;
+		});
+
+		const verificationEmailSent = await this.sendVerificationEmail(user.id, user.email, false, emailLinkContext);
+		return { user, verificationEmailSent };
+	}
+
+	async startOpaqueLogin(email: string, startLoginRequest: string): Promise<OpaqueLoginStartResult> {
+		const normalizedEmail = this.normalizeEmail(email);
+		const user = await this.findActiveUserByEmail(normalizedEmail);
+		if (!user.emailVerifiedAt) {
+			throw new AppError(403, "email_not_verified", "Email is not verified. Please check your inbox.");
+		}
+		if (!user.opaqueRegistrationRecord) {
+			if (!user.passwordHash) {
+				throw new AppError(400, "opaque_required", "This account requires the OPAQUE login flow.");
+			}
+			return { protocol: "legacy-bcrypt" };
+		}
+
+		const challengeToken = randomToken(36);
+		const tokenHash = await sha256Hex(challengeToken);
+		const challenge = await startOpaqueLogin({
+			serverSetup: this.env.OPAQUE_SERVER_SETUP,
+			userIdentifier: normalizedEmail,
+			registrationRecord: user.opaqueRegistrationRecord,
+			startLoginRequest,
+		});
+
+		await this.prisma.opaqueLoginChallenge.create({
+			data: {
+				userId: user.id,
+				tokenHash,
+				serverLoginState: challenge.serverLoginState,
+				expiresAt: new Date(Date.now() + this.env.MFA_CHALLENGE_TTL_SECONDS * 1000),
+			},
+		});
+
+		return {
+			protocol: "opaque",
+			challengeToken,
+			loginResponse: challenge.loginResponse,
+		};
+	}
+
+	async finishOpaqueLogin(challengeToken: string, finishLoginRequest: string): Promise<User> {
+		const challenge = await this.findOpaqueLoginChallenge(challengeToken);
+
+		try {
+			await finishOpaqueLogin({
+				serverLoginState: challenge.serverLoginState,
+				finishLoginRequest,
+			});
+		} finally {
+			await this.consumeOpaqueLoginChallenge(challenge.id);
+		}
+
+		return challenge.user;
+	}
+
+	async startPasswordEnrollmentOpaque(userId: string, registrationRequest: string): Promise<{ registrationResponse: string }> {
+		const user = await this.findActiveUserById(userId);
+		return {
+			registrationResponse: await createOpaqueRegistrationResponse({
+				serverSetup: this.env.OPAQUE_SERVER_SETUP,
+				userIdentifier: user.email,
+				registrationRequest,
+			}),
+		};
+	}
+
+	async finishPasswordEnrollmentOpaque(userId: string, registrationRecord: string, passwordFingerprint: string): Promise<void> {
+		const user = await this.findActiveUserById(userId);
+		const normalizedRecord = normalizeOpaqueEnvelope(registrationRecord);
+		const fingerprintHash = await hashPasswordFingerprint(passwordFingerprint);
+
+		if (user.passwordFingerprintHash && user.passwordFingerprintHash === fingerprintHash) {
+			throw new AppError(400, "password_reused", "New password must be different from your current password.");
+		}
+
+		await this.prisma.user.update({
+			where: { id: user.id },
+			data: {
+				opaqueRegistrationRecord: normalizedRecord,
+				passwordFingerprintHash: fingerprintHash,
+				passwordHash: null,
+			},
+		});
+	}
+
+	async startOpaquePasswordReset(token: string, registrationRequest: string): Promise<{ registrationResponse: string; email: string }> {
+		const record = await this.getValidPasswordResetTokenRecord(token);
+		const user = await this.prisma.user.findUnique({
+			where: { id: record.userId },
+			select: { email: true, status: true },
+		});
+		if (!user || user.status !== "active") {
+			throw new AppError(400, "invalid_reset_token", "Password reset token is invalid.");
+		}
+		return {
+			registrationResponse: await createOpaqueRegistrationResponse({
+				serverSetup: this.env.OPAQUE_SERVER_SETUP,
+				userIdentifier: user.email,
+				registrationRequest,
+			}),
+			email: user.email,
+		};
+	}
+
+	async finishOpaquePasswordReset(token: string, registrationRecord: string, passwordFingerprint: string): Promise<void> {
+		const record = await this.getValidPasswordResetTokenRecord(token);
+		const user = await this.prisma.user.findUnique({
+			where: { id: record.userId },
+		});
+		if (!user || user.status !== "active") {
+			throw new AppError(400, "invalid_reset_token", "Password reset token is invalid.");
+		}
+
+		const normalizedRecord = normalizeOpaqueEnvelope(registrationRecord);
+		const fingerprintHash = await hashPasswordFingerprint(passwordFingerprint);
+		if (user.passwordFingerprintHash && user.passwordFingerprintHash === fingerprintHash) {
+			throw new AppError(400, "password_reused", "New password must be different from your current password.");
+		}
+
+		await this.prisma.$transaction([
+			this.prisma.user.update({
+				where: { id: record.userId },
+				data: {
+					passwordHash: null,
+					opaqueRegistrationRecord: normalizedRecord,
+					passwordFingerprintHash: fingerprintHash,
+				},
+			}),
+			this.prisma.refreshToken.updateMany({
+				where: {
+					userId: record.userId,
+					revokedAt: null,
+				},
+				data: {
+					revokedAt: new Date(),
+				},
+			}),
+			this.prisma.passwordResetToken.update({
+				where: { id: record.id },
+				data: { consumedAt: new Date() },
+			}),
+		]);
 	}
 
 	async issueTokensForUser(user: User): Promise<TokenPair> {
@@ -263,6 +495,9 @@ export class AuthService {
 		if (!user) {
 			throw new AppError(404, "user_not_found", "User not found.");
 		}
+		if (user.opaqueRegistrationRecord || !user.passwordHash) {
+			throw new AppError(400, "opaque_required", "This account requires the OPAQUE password reset flow.");
+		}
 
 		const sameAsCurrent = await compare(newPassword, user.passwordHash);
 		if (sameAsCurrent) {
@@ -318,6 +553,51 @@ export class AuthService {
 		}
 		const tokens = await this.issueTokenPair(user);
 		return { user, tokens };
+	}
+
+	private async findActiveUserByEmail(email: string): Promise<User> {
+		const user = await this.prisma.user.findUnique({
+			where: { email },
+		});
+		if (!user || user.status !== "active") {
+			throw new AppError(401, "invalid_credentials", "Email or password is incorrect.");
+		}
+		return user;
+	}
+
+	private async findOpaqueLoginChallenge(challengeToken: string) {
+		const normalizedToken = challengeToken.trim();
+		if (!normalizedToken || normalizedToken.length < 20) {
+			throw new AppError(400, "invalid_opaque_challenge", "Opaque login challenge is invalid.");
+		}
+
+		const tokenHash = await sha256Hex(normalizedToken);
+		const challenge = await this.prisma.opaqueLoginChallenge.findUnique({
+			where: { tokenHash },
+			include: { user: true },
+		});
+		if (!challenge || challenge.consumedAt || challenge.expiresAt <= new Date()) {
+			throw new AppError(400, "invalid_opaque_challenge", "Opaque login challenge is invalid.");
+		}
+		if (challenge.user.status !== "active") {
+			throw new AppError(401, "invalid_credentials", "Email or password is incorrect.");
+		}
+		if (!challenge.user.emailVerifiedAt) {
+			throw new AppError(403, "email_not_verified", "Email is not verified. Please check your inbox.");
+		}
+		return challenge;
+	}
+
+	private async consumeOpaqueLoginChallenge(challengeId: string): Promise<void> {
+		await this.prisma.opaqueLoginChallenge.updateMany({
+			where: {
+				id: challengeId,
+				consumedAt: null,
+			},
+			data: {
+				consumedAt: new Date(),
+			},
+		});
 	}
 
 	private async issueTokenPair(user: User): Promise<TokenPair> {
