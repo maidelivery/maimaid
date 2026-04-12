@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { HandleText } from "@/components/ui/handle-text";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -271,7 +272,7 @@ export function SettingsPage({
 									<AvatarFallback>{sessionUser.handle.slice(0, 1).toUpperCase()}</AvatarFallback>
 								</Avatar>
 								<div className="min-w-0">
-									<p className="truncate text-sm font-medium">{sessionUser.handle}</p>
+									<HandleText handle={sessionUser.handle} className="block truncate text-sm font-medium" />
 									<p className="truncate text-xs text-muted-foreground">{sessionUser.email}</p>
 									<div className="mt-2 flex flex-wrap gap-2">
 										<Badge variant="secondary">{roleLabel}</Badge>
@@ -292,11 +293,11 @@ export function SettingsPage({
 							<div className="mt-4 grid gap-3 sm:grid-cols-2">
 								<div className="rounded-lg border border-border/60 bg-muted/20 p-3">
 									<p className="text-xs text-muted-foreground">{t("currentHandleLabel")}</p>
-									<p className="mt-1 truncate text-sm font-medium">{sessionUser.handle}</p>
+									<HandleText handle={sessionUser.handle} className="mt-1 block truncate text-sm font-medium" />
 								</div>
 								<div className="rounded-lg border border-border/60 bg-muted/20 p-3">
 									<p className="text-xs text-muted-foreground">{t("handlePreviewLabel")}</p>
-									<p className="mt-1 truncate text-sm font-medium">{handlePreview}</p>
+									<HandleText handle={handlePreview} className="mt-1 block truncate text-sm font-medium" />
 								</div>
 							</div>
 

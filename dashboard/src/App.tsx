@@ -14,6 +14,7 @@ import {
 import { useShallow } from "zustand/react/shallow";
 import { Alert as UiAlert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { HandleText } from "@/components/ui/handle-text";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
@@ -1431,7 +1432,9 @@ function App() {
 					<UiAlert>
 						<AlertTitle>{t("app:continueAppTitle")}</AlertTitle>
 						<AlertDescription className="space-y-1">
-							<p>{t("app:continueAppSignedInAs", { handle: session.user.handle })}</p>
+							<p>
+								{t("app:continueAppSignedInAsLabel")} <HandleText handle={session.user.handle} />
+							</p>
 							<p className="text-muted-foreground">{session.user.email}</p>
 							<p>{t("app:continueAppConfirmHint")}</p>
 						</AlertDescription>

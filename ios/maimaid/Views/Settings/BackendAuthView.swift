@@ -146,19 +146,20 @@ struct BackendAuthView: View {
     private func authenticatedContent(user: BackendAuthUser) -> some View {
         Group {
             Section {
-                accountSummaryCard(
-                    icon: "person.crop.circle.badge.checkmark",
-                    iconTint: .blue,
-                    title: user.handle,
-                    subtitle: user.email
-                )
+                accountSummaryCard(icon: "person.crop.circle.badge.checkmark", iconTint: .blue) {
+                    HandleText(user: user)
+                } subtitle: {
+                    Text(verbatim: user.email)
+                }
             }
             .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
             .listRowBackground(Color.clear)
             .listSectionSeparator(.hidden)
 
             Section("settings.cloud.account.section") {
-                LabeledContent("settings.cloud.account.handle", value: user.handle)
+                LabeledContent("settings.cloud.account.handle") {
+                    HandleText(user: user)
+                }
                 LabeledContent("settings.cloud.account.email", value: user.email)
                 LabeledContent("settings.cloud.account.status") {
                     Text("settings.cloud.status.loggedIn")
@@ -349,7 +350,12 @@ struct BackendAuthView: View {
         }
     }
 
-    private func accountSummaryCard(icon: String, iconTint: Color, title: String, subtitle: String) -> some View {
+    private func accountSummaryCard<Title: View, Subtitle: View>(
+        icon: String,
+        iconTint: Color,
+        @ViewBuilder title: () -> Title,
+        @ViewBuilder subtitle: () -> Subtitle
+    ) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 14) {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -362,9 +368,9 @@ struct BackendAuthView: View {
                     }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(title)
+                    title()
                         .font(.system(size: 18, weight: .bold, design: .rounded))
-                    Text(subtitle)
+                    subtitle()
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -381,6 +387,14 @@ struct BackendAuthView: View {
         }
         .padding(20)
         .background(Color(uiColor: .secondarySystemGroupedBackground), in: .rect(cornerRadius: 28))
+    }
+
+    private func accountSummaryCard(icon: String, iconTint: Color, title: String, subtitle: String) -> some View {
+        accountSummaryCard(icon: icon, iconTint: iconTint) {
+            Text(verbatim: title)
+        } subtitle: {
+            Text(verbatim: subtitle)
+        }
     }
 
     private func actionRow(
@@ -675,6 +689,22 @@ struct BackendAuthView: View {
         } catch {
             let detail = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             showToast(message: String(localized: "settings.cloud.message.restoreFailed") + ": " + detail, error: true)
+        }
+    }
+}
+
+private struct HandleText: View {
+    let user: BackendAuthUser
+
+    var body: some View {
+        if user.usernameDiscriminator.isEmpty {
+            Text(verbatim: user.handle)
+        } else {
+            HStack(spacing: 0) {
+                Text(verbatim: user.username)
+                Text(verbatim: "#\(user.usernameDiscriminator)")
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }

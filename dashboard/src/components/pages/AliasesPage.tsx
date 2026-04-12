@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { HandleText } from "@/components/ui/handle-text";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -135,9 +136,8 @@ export function AliasesPage({
 		}
 	};
 
-	const submitterDisplay = isAdmin
-		? [selectedAdminCandidate?.submitterHandle, selectedAdminCandidate?.submitterEmail].filter(Boolean).join(" · ") || "-"
-		: (selectedCandidate?.submitterHandle ?? "-");
+	const submitterHandle = selectedAdminCandidate?.submitterHandle ?? selectedCandidate?.submitterHandle ?? null;
+	const submitterValue: ReactNode = submitterHandle ? <HandleText handle={submitterHandle} /> : "-";
 
 	const selectSongSuggestion = (title: string) => {
 		onCommunitySongNameChange(title);
@@ -421,7 +421,7 @@ export function AliasesPage({
 							<Separator />
 
 							<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-								<InfoBlock label={t("infoSubmitter")} value={submitterDisplay} />
+								<InfoBlock label={t("infoSubmitter")} value={submitterValue} />
 								<InfoBlock
 									label={t("infoSubmitTime")}
 									value={formatDateTime(selectedAdminCandidate?.createdAt ?? selectedCandidate.createdAt ?? null)}
@@ -443,7 +443,7 @@ export function AliasesPage({
 								/>
 								<InfoBlock label={t("infoCandidateId")} value={selectedCandidate.candidateId} />
 							</div>
-							<InfoBlock label={t("infoSongId")} value={selectedCandidate.songIdentifier} />
+							<InfoBlock label={t("infoAlias")} value={selectedCandidate.aliasText} />
 
 							<div className="flex flex-wrap gap-2">
 								<Button
@@ -523,7 +523,7 @@ export function AliasesPage({
 	);
 }
 
-function InfoBlock({ label, value }: { label: string; value: string }) {
+function InfoBlock({ label, value }: { label: string; value: ReactNode }) {
 	return (
 		<div className="rounded-md border p-2.5">
 			<p className="text-xs text-muted-foreground">{label}</p>

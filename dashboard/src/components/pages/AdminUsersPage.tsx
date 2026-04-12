@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { HandleText } from "@/components/ui/handle-text";
 import { Input } from "@/components/ui/input";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -94,7 +95,7 @@ export function AdminUsersPage({
 						<div className="space-y-3 md:hidden">
 							{pagination.pagedItems.map((row) => (
 								<article key={row.id} className="rounded-lg border p-3">
-									<p className="break-all text-sm font-medium">{row.handle}</p>
+									<HandleText handle={row.handle} className="block break-all text-sm font-medium" />
 									<p className="mt-1 break-all text-xs text-muted-foreground">{row.email}</p>
 									<div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
 										<span className="rounded-md border px-2 py-1">
@@ -140,7 +141,9 @@ export function AdminUsersPage({
 								<TableBody>
 									{pagination.pagedItems.map((row) => (
 										<TableRow key={row.id}>
-											<TableCell className="max-w-[220px] truncate font-medium">{row.handle}</TableCell>
+											<TableCell className="max-w-[220px] font-medium">
+												<HandleText handle={row.handle} className="block truncate" />
+											</TableCell>
 											<TableCell className="max-w-[280px] truncate">{row.email}</TableCell>
 											<TableCell>{row.status}</TableCell>
 											<TableCell>{row.isAdmin ? t("yes") : t("no")}</TableCell>

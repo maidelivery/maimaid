@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import { LogOutIcon } from "lucide-react";
 import { Avatar as UiAvatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { HandleText } from "@/components/ui/handle-text";
 import type { NavigationTabItem } from "@/lib/app-types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -103,7 +104,7 @@ export function AppSidebar(props: AppSidebarProps) {
 						<AvatarFallback>{sessionHandle.slice(0, 1).toUpperCase()}</AvatarFallback>
 					</UiAvatar>
 					<div className="min-w-0 flex-1">
-						<p className="truncate text-xs font-medium">{sessionHandle}</p>
+						<HandleText handle={sessionHandle} className="block truncate text-xs font-medium" />
 						<p className="truncate text-[11px] text-muted-foreground">
 							{sessionEmail} · {roleLabel}
 						</p>
