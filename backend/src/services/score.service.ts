@@ -692,6 +692,10 @@ export class ScoreService {
 							},
 						},
 					},
+					// Titles are not unique across songs and the map below keeps the first
+					// hit. Charts that vanished upstream are kept as `disabled` rather than
+					// deleted, so order them last to resolve scores onto a live chart.
+					orderBy: [{ disabled: "asc" }, { songIdentifier: "asc" }],
 				});
 				const byTitleKey = new Map<string, ResolvedSheet>();
 				for (const row of rows) {

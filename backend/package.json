@@ -9,6 +9,7 @@
 		"build": "tsc -p tsconfig.build.json && pnpm run openapi:build",
 		"openapi:build": "node scripts/generate-openapi.mjs",
 		"lint": "eslint .",
+		"typecheck:scripts": "tsc -p tsconfig.scripts.json",
 		"format": "prettier . --ignore-path ../.prettierignore --write",
 		"format:check": "prettier . --ignore-path ../.prettierignore --check",
 		"start": "node dist/server.js",
@@ -22,6 +23,7 @@
 		"prisma:migrate:dev": "prisma migrate dev",
 		"prisma:migrate:deploy": "prisma migrate deploy",
 		"user-handles:backfill": "tsx scripts/backfill-user-handles.ts",
+		"static-bundle:build": "tsx scripts/build-static-bundle.ts",
 		"prisma:studio": "prisma studio",
 		"migrate": "prisma migrate deploy"
 	},

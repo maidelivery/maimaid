@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { loadBackendEnvFiles } from "./lib/env-files.js";
 
+/** Treats a blank value the same as an absent one. */
+const optionalString = z
+	.string()
+	.optional()
+	.transform((value) => {
+		const trimmed = value?.trim();
+		return trimmed ? trimmed : undefined;
+	});
+
 const EnvSchema = z.object({
 	NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 	HOST: z.string().min(1).default("0.0.0.0"),
@@ -24,14 +33,39 @@ const EnvSchema = z.object({
 	WEBAUTHN_ORIGIN: z.url().optional(),
 	RESEND_API_KEY: z.string().optional(),
 	RESEND_FROM_EMAIL: z.email().default("no-reply@example.com"),
-	S3_ENDPOINT: z.string().optional(),
-	S3_PUBLIC_ENDPOINT: z.string().optional(),
+	// `.env` files carry these as empty strings when unset rather than omitting
+	// them, and "" is not the same as undefined downstream: S3_PUBLIC_ENDPOINT is
+	// read as `S3_PUBLIC_ENDPOINT ?? S3_ENDPOINT`, so an empty value would win the
+	// `??` and silently disable storage even with valid credentials.
+	S3_ENDPOINT: optionalString,
+	// Only for setups that sign on one host and serve on another, as MinIO did.
+	// R2 uses one host, so leave it unset there.
+	S3_PUBLIC_ENDPOINT: optionalString,
+	// R2 only accepts "auto".
 	S3_REGION: z.string().default("auto"),
 	S3_BUCKET: z.string().min(1).default("maimaid-assets"),
-	S3_ACCESS_KEY_ID: z.string().optional(),
-	S3_SECRET_ACCESS_KEY: z.string().optional(),
+	S3_ACCESS_KEY_ID: optionalString,
+	S3_SECRET_ACCESS_KEY: optionalString,
 	CATALOG_SOURCE_URL: z.url().optional(),
 	STATIC_SYNC_INTERVAL_HOURS: z.coerce.number().int().positive().default(6),
+	// pg_cron enqueues into "job_queue" but nothing consumed it, so scheduled
+	// catalog syncs and bundle builds never ran. This runs a consumer inside the
+	// API process. Off by default: a bundle build fetches every upstream source
+	// and recomputes chart stats, which is the heaviest thing this server does,
+	// so enabling it is a deliberate choice about the host's capacity.
+	JOB_DISPATCHER_ENABLED: z
+		.enum(["true", "false"])
+		.default("false")
+		.transform((value) => value === "true"),
+	JOB_DISPATCHER_INTERVAL_SECONDS: z.coerce.number().int().positive().default(60),
+	JOB_DISPATCHER_BATCH_SIZE: z.coerce.number().int().positive().max(50).default(5),
+	// Shared secret for `/internal/*`, so the GitHub Actions bundle builder can
+	// authenticate without holding a user account. Unset means those routes accept
+	// only an admin JWT, exactly as before. Long enough that guessing is not a
+	// concern, since this grants what an admin token grants on those routes.
+	INTERNAL_JOB_TOKEN: optionalString.refine((value) => value === undefined || value.length >= 32, {
+		message: "INTERNAL_JOB_TOKEN must be at least 32 characters.",
+	}),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

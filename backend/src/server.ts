@@ -5,6 +5,7 @@ import { TOKENS } from "./di/tokens.js";
 import { getEnv } from "./env.js";
 import type { PrismaClient } from "@prisma/client";
 import { CatalogService } from "./services/catalog.service.js";
+import { JobService } from "./services/job.service.js";
 import { StaticBundleService } from "./services/static-bundle.service.js";
 import { container } from "tsyringe";
 import { getPrismaClient } from "./lib/prisma.js";
@@ -88,6 +89,56 @@ const bootstrapStaticBundleSchedule = async () => {
 	);
 };
 
+/**
+ * Drain "job_queue" on a timer. pg_cron only enqueues; without a consumer the
+ * scheduled catalog sync and bundle build never happen.
+ *
+ * A tick is skipped while the previous one is still running: a bundle build can
+ * easily outlast the interval, and overlapping ticks would pile concurrent
+ * builds onto the same host. Claiming is atomic in the database, so a second
+ * process (or a manual POST to /internal/jobs/dispatch) cannot double-run a job.
+ */
+const startJobDispatcher = () => {
+	if (!env.JOB_DISPATCHER_ENABLED) {
+		console.log("[jobs] dispatcher disabled (JOB_DISPATCHER_ENABLED=false); scheduled jobs will not run");
+		return () => {};
+	}
+
+	const jobService = container.resolve(JobService);
+	let running = false;
+
+	const tick = async () => {
+		if (running) {
+			return;
+		}
+		running = true;
+		try {
+			const results = await jobService.dispatch(env.JOB_DISPATCHER_BATCH_SIZE);
+			for (const result of results) {
+				if (result.status === "failed") {
+					console.error(`[jobs] ${result.jobType} (${result.jobId.toString()}) failed: ${result.error}`);
+				} else {
+					console.log(`[jobs] ${result.jobType} (${result.jobId.toString()}) succeeded`);
+				}
+			}
+		} catch (error) {
+			console.error("[jobs] dispatch tick failed:", error);
+		} finally {
+			running = false;
+		}
+	};
+
+	const intervalMs = env.JOB_DISPATCHER_INTERVAL_SECONDS * 1000;
+	const timer = setInterval(() => void tick(), intervalMs);
+	// Don't hold the process open on shutdown just because a timer is pending.
+	timer.unref();
+	console.log(
+		`[jobs] dispatcher started (every ${env.JOB_DISPATCHER_INTERVAL_SECONDS}s, up to ${env.JOB_DISPATCHER_BATCH_SIZE} jobs per tick)`,
+	);
+
+	return () => clearInterval(timer);
+};
+
 const start = async () => {
 	try {
 		await bootstrapCatalogIfEmpty();
@@ -101,7 +152,9 @@ const start = async () => {
 		console.error("[bootstrap] static bundle auto-build schedule sync failed:", error);
 	}
 
-	serve(
+	const stopJobDispatcher = startJobDispatcher();
+
+	const server = serve(
 		{
 			fetch: app.fetch,
 			hostname: env.HOST,
@@ -111,6 +164,24 @@ const start = async () => {
 			console.log(`maimaid-backend listening on http://${env.HOST}:${info.port}`);
 		},
 	);
+
+	// The container stops the process with SIGTERM; without a handler Node exits
+	// immediately and an in-flight job stays stuck in 'running'.
+	let shuttingDown = false;
+	const shutdown = (signal: string) => {
+		if (shuttingDown) {
+			return;
+		}
+		shuttingDown = true;
+		console.log(`[shutdown] received ${signal}, closing server`);
+		stopJobDispatcher();
+		server.close(() => {
+			void prisma.$disconnect().finally(() => process.exit(0));
+		});
+	};
+
+	process.on("SIGTERM", () => shutdown("SIGTERM"));
+	process.on("SIGINT", () => shutdown("SIGINT"));
 };
 
 void start();
