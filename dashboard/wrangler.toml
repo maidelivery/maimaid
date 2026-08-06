@@ -1,3 +1,6 @@
 name = "maimaid-dashboard"
 compatibility_date = "2026-03-24"
-pages_build_output_dir = "./dist"
+# Next.js static export writes to `out`, not `dist`. The deploy script passes the
+# directory explicitly, so this only mattered for `wrangler pages deploy` with no
+# path argument — where it pointed at a directory that never exists.
+pages_build_output_dir = "./out"
