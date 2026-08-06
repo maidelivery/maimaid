@@ -18,13 +18,15 @@
  *   MAIMAID_INTERNAL_JOB_TOKEN=... \
  *   pnpm run static-bundle:build [-- --force]
  */
+// Must be the first import: tsyringe checks for this polyfill on load, before
+// any of the service imports below can pull it in transitively.
+import "reflect-metadata";
 import {
 	buildSongIdMapping,
 	serializeSongIdMapping,
 	type SerializedChartFitSongIdMapping,
 } from "../src/services/chart-fit.service.js";
 import { composeBundlePayload, type StaticSourceTarget } from "../src/services/static-bundle.utils.js";
-import "reflect-metadata";
 
 const apiBaseUrl = process.env.MAIMAID_API_URL?.trim().replace(/\/+$/u, "");
 const jobToken = process.env.MAIMAID_INTERNAL_JOB_TOKEN?.trim();
