@@ -8,7 +8,9 @@
 	"sidebar": {
 		"workspace": "工作区",
 		"management": "管理",
-		"logout": "退出登录"
+		"logout": "退出登录",
+		"navMenu": "导航菜单",
+		"openNavMenu": "打开导航菜单"
 	},
 	"auth": {
 		"titleRegister": "创建账户",
@@ -428,6 +430,7 @@
 	},
 	"adminUsers": {
 		"pageTitle": "用户管理",
+		"sectionUserList": "用户列表",
 		"pageDesc": "创建用户、查看状态并进行清理。",
 		"sectionCreateUser": "新建普通用户",
 		"createHandleHint": "管理员仍只需填写邮箱和密码，用户句柄由后端自动生成。",
@@ -474,6 +477,7 @@
 	},
 	"aliases": {
 		"pageTitle": "别名社区",
+		"sectionCandidates": "投票中的候选",
 		"pageDesc": "查看候选别名并进行投票。",
 		"badgeDailySubmit": "今日投稿: {{count}}/5",
 		"badgeCurrentCandidates": "当期候选: {{count}}",

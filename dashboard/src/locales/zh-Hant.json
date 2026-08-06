@@ -8,7 +8,9 @@
 	"sidebar": {
 		"workspace": "工作區",
 		"management": "管理",
-		"logout": "登出"
+		"logout": "登出",
+		"navMenu": "導覽選單",
+		"openNavMenu": "開啟導覽選單"
 	},
 	"auth": {
 		"titleRegister": "建立帳戶",
@@ -428,6 +430,7 @@
 	},
 	"adminUsers": {
 		"pageTitle": "使用者管理",
+		"sectionUserList": "使用者清單",
 		"pageDesc": "建立使用者、檢視狀態並進行清理。",
 		"sectionCreateUser": "建立一般使用者",
 		"createHandleHint": "管理員仍只需填寫 Email 與密碼，使用者句柄會由後端自動產生。",
@@ -474,6 +477,7 @@
 	},
 	"aliases": {
 		"pageTitle": "別名社群",
+		"sectionCandidates": "投票中的候選",
 		"pageDesc": "檢視候選別名並進行投票。",
 		"badgeDailySubmit": "今日投稿: {{count}}/5",
 		"badgeCurrentCandidates": "當期候選: {{count}}",

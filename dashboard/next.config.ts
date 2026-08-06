@@ -16,8 +16,12 @@ function resolveBackendOrigin() {
 
 const backendOrigin = resolveBackendOrigin();
 const connectSources = ["'self'"];
+// Profile avatars are streamed from the backend (`GET /v1/profiles/:id/avatar`),
+// so the backend origin has to be an allowed image source too.
+const imageSources = ["'self'", "data:", "https://dp4p6x0xfi5o9.cloudfront.net"];
 if (backendOrigin) {
 	connectSources.push(backendOrigin);
+	imageSources.push(backendOrigin);
 }
 
 const contentSecurityPolicy = [
@@ -27,7 +31,7 @@ const contentSecurityPolicy = [
 	"object-src 'none'",
 	"form-action 'self'",
 	`connect-src ${connectSources.join(" ")}`,
-	"img-src 'self' data: https://dp4p6x0xfi5o9.cloudfront.net",
+	`img-src ${imageSources.join(" ")}`,
 	"font-src 'self' data:",
 	"script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
 	"style-src 'self' 'unsafe-inline'",

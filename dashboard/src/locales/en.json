@@ -8,7 +8,9 @@
 	"sidebar": {
 		"workspace": "Workspace",
 		"management": "Management",
-		"logout": "Log Out"
+		"logout": "Log Out",
+		"navMenu": "Navigation menu",
+		"openNavMenu": "Open navigation menu"
 	},
 	"auth": {
 		"titleRegister": "Create an account",
@@ -428,6 +430,7 @@
 	},
 	"adminUsers": {
 		"pageTitle": "User Management",
+		"sectionUserList": "User List",
 		"pageDesc": "Create users, view statuses, and perform cleanups.",
 		"sectionCreateUser": "Create Standard User",
 		"createHandleHint": "Admins only enter email and password. The backend generates the user's handle automatically.",
@@ -474,6 +477,7 @@
 	},
 	"aliases": {
 		"pageTitle": "Aliases Community",
+		"sectionCandidates": "Candidates in Voting",
 		"pageDesc": "View candidate aliases and cast your vote.",
 		"badgeDailySubmit": "Submitted Today: {{count}}/5",
 		"badgeCurrentCandidates": "Current Candidates: {{count}}",

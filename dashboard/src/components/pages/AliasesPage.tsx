@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { AdminCandidate, AdminDashboardStats, CommunityCandidate } from "@/lib/app-types";
 import { useTablePagination } from "@/lib/use-table-pagination";
 import { cn } from "@/lib/utils";
+import { ChevronRightIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 type AliasesPageProps = {
@@ -146,20 +147,19 @@ export function AliasesPage({
 	};
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>{t("pageTitle")}</CardTitle>
-				<CardDescription>{t("pageDesc")}</CardDescription>
-			</CardHeader>
-			<CardContent className="flex flex-col gap-6">
-				<div className="flex flex-wrap gap-2">
-					<Badge variant="secondary">{t("badgeDailySubmit", { count: communityDailyCount })}</Badge>
-					<Badge variant="secondary">{t("badgeCurrentCandidates", { count: communityRows.length })}</Badge>
-					{isAdmin ? <Badge>{t("badgePendingSettle", { count: adminStats?.expiredVotingCount ?? 0 })}</Badge> : null}
-				</div>
+		<div className="flex min-w-0 flex-col gap-4">
+			<div className="flex flex-wrap gap-2">
+				<Badge variant="secondary">{t("badgeDailySubmit", { count: communityDailyCount })}</Badge>
+				<Badge variant="secondary">{t("badgeCurrentCandidates", { count: communityRows.length })}</Badge>
+				{isAdmin ? <Badge>{t("badgePendingSettle", { count: adminStats?.expiredVotingCount ?? 0 })}</Badge> : null}
+			</div>
 
-				<section className="rounded-lg border p-4">
-					<div className="mb-3 text-sm font-medium">{t("sectionSubmit")}</div>
+			<Card size="sm">
+				<CardHeader>
+					<CardTitle>{t("sectionSubmit")}</CardTitle>
+					<CardDescription>{t("pageDesc")}</CardDescription>
+				</CardHeader>
+				<CardContent>
 					<FieldGroup className="gap-3 md:flex-row md:items-end">
 						<Field className="relative min-w-0 flex-1">
 							<FieldLabel htmlFor="alias-song-name">{t("labelSongName")}</FieldLabel>
@@ -268,23 +268,30 @@ export function AliasesPage({
 							{t("btnSubmit")}
 						</Button>
 					</FieldGroup>
-				</section>
+				</CardContent>
+			</Card>
 
-				{isAdmin ? (
-					<section className="rounded-lg border p-4">
-						<div className="mb-3 text-sm font-medium">{t("sectionAdminQuickActions")}</div>
-						<div className="flex flex-wrap gap-2">
-							<Button className="h-9 w-full sm:w-auto" variant="outline" onClick={() => void onLoadAdminCandidates()}>
-								{t("btnRefreshAdminData")}
-							</Button>
-							<Button className="h-9 w-full sm:w-auto" onClick={() => void onAdminRollCycle()}>
-								{t("btnManualSettle")}
-							</Button>
-						</div>
-					</section>
-				) : null}
+			{isAdmin ? (
+				<Card size="sm">
+					<CardHeader>
+						<CardTitle>{t("sectionAdminQuickActions")}</CardTitle>
+					</CardHeader>
+					<CardContent className="flex flex-wrap gap-2">
+						<Button className="h-9 w-full sm:w-auto" variant="outline" onClick={() => void onLoadAdminCandidates()}>
+							{t("btnRefreshAdminData")}
+						</Button>
+						<Button className="h-9 w-full sm:w-auto" onClick={() => void onAdminRollCycle()}>
+							{t("btnManualSettle")}
+						</Button>
+					</CardContent>
+				</Card>
+			) : null}
 
-				<section className="flex flex-col gap-3">
+			<Card size="sm">
+				<CardHeader>
+					<CardTitle>{t("sectionCandidates")}</CardTitle>
+				</CardHeader>
+				<CardContent>
 					{communityRows.length === 0 ? (
 						<Empty>
 							<EmptyHeader>
@@ -293,12 +300,12 @@ export function AliasesPage({
 						</Empty>
 					) : (
 						<div className="flex flex-col gap-3">
-							<div className="space-y-3 md:hidden">
+							<div className="-mt-1 divide-y divide-border/60 md:hidden">
 								{communityPagination.pagedItems.map((row) => (
 									<button
 										key={row.candidateId}
 										type="button"
-										className="w-full rounded-lg border p-3 text-left"
+										className="w-full py-3 text-left"
 										onClick={() => handleOpenDetail(row)}
 									>
 										<div className="flex items-start gap-3">
@@ -315,21 +322,18 @@ export function AliasesPage({
 													{t("aliasPrefix")}
 													{row.aliasText}
 												</p>
-												<div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-													<span className="rounded-md border px-2 py-1">
-														{t("supportCountPrefix", { count: row.supportCount })}
-													</span>
-													<span className="rounded-md border px-2 py-1">
-														{t("opposeCountPrefix", { count: row.opposeCount })}
+												<div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+													<span>{t("supportCountPrefix", { count: row.supportCount })}</span>
+													<span>{t("opposeCountPrefix", { count: row.opposeCount })}</span>
+													<span>
+														{t("closeAtPrefix")}
+														{formatDateTime(row.voteCloseAt)}
 													</span>
 												</div>
-												<p className="mt-2 text-xs text-muted-foreground">
-													{t("closeAtPrefix")}
-													{formatDateTime(row.voteCloseAt)}
-												</p>
 											</div>
+											<ChevronRightIcon className="mt-1 size-4 shrink-0 text-muted-foreground" />
 										</div>
-										<span className="mt-3 block rounded-md border px-3 py-2 text-center text-sm">{t("btnViewDetails")}</span>
+										<span className="sr-only">{t("btnViewDetails")}</span>
 									</button>
 								))}
 							</div>
@@ -379,8 +383,8 @@ export function AliasesPage({
 							/>
 						</div>
 					)}
-				</section>
-			</CardContent>
+				</CardContent>
+			</Card>
 
 			<Dialog open={Boolean(selectedCandidate)} onOpenChange={(open) => !open && setSelectedCandidateId(null)}>
 				<DialogContent className="max-h-[calc(100dvh-1.5rem)] gap-3 overflow-y-auto sm:!max-w-3xl">
@@ -420,7 +424,7 @@ export function AliasesPage({
 
 							<Separator />
 
-							<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+							<div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
 								<InfoBlock label={t("infoSubmitter")} value={submitterValue} />
 								<InfoBlock
 									label={t("infoSubmitTime")}
@@ -519,15 +523,15 @@ export function AliasesPage({
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-		</Card>
+		</div>
 	);
 }
 
 function InfoBlock({ label, value }: { label: string; value: ReactNode }) {
 	return (
-		<div className="rounded-md border p-2.5">
+		<div>
 			<p className="text-xs text-muted-foreground">{label}</p>
-			<p className="mt-1 break-all text-[13px] leading-5">{value}</p>
+			<p className="mt-0.5 break-all text-[13px] leading-5">{value}</p>
 		</div>
 	);
 }

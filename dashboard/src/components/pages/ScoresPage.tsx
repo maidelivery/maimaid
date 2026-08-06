@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DifficultyBadge } from "@/components/ui/difficulty-badge";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -152,33 +153,31 @@ export function ScoresPage({
 	};
 
 	return (
-		<Card size="sm">
-			<CardHeader>
-				<CardTitle>{t("scores:title")}</CardTitle>
-				<CardDescription>{t("scores:desc")}</CardDescription>
-			</CardHeader>
-			<CardContent className="flex flex-col gap-4">
-				<section className="rounded-lg border p-3">
-					<FieldGroup className="gap-2">
-						<div className="flex flex-col gap-2 md:flex-row md:items-end">
-							<Field className="flex-1">
-								<FieldLabel htmlFor="score-search">{t("scores:searchScore")}</FieldLabel>
-								<Input
-									id="score-search"
-									value={scoreSearchKeyword}
-									onChange={(event) => onScoreSearchKeywordChange(event.target.value)}
-								/>
-							</Field>
-							<Button className="h-9 w-full md:h-7 md:w-auto" size="sm" variant="outline" onClick={() => void onReload()}>
-								<RefreshCwIcon data-icon="inline-start" />
-								{t("scores:btnRefresh")}
-							</Button>
-						</div>
-					</FieldGroup>
-				</section>
+		<div className="flex min-w-0 flex-col gap-4">
+			<section>
+				<FieldGroup className="gap-2">
+					<div className="flex flex-col gap-2 md:flex-row md:items-end">
+						<Field className="flex-1">
+							<FieldLabel htmlFor="score-search">{t("scores:searchScore")}</FieldLabel>
+							<Input
+								id="score-search"
+								value={scoreSearchKeyword}
+								onChange={(event) => onScoreSearchKeywordChange(event.target.value)}
+							/>
+						</Field>
+						<Button className="h-9 w-full md:h-7 md:w-auto" size="sm" variant="outline" onClick={() => void onReload()}>
+							<RefreshCwIcon data-icon="inline-start" />
+							{t("scores:btnRefresh")}
+						</Button>
+					</div>
+				</FieldGroup>
+			</section>
 
-				<section className="rounded-lg border p-3">
-					<div className="mb-2 text-sm font-medium">{t("scores:addScore")}</div>
+			<Card size="sm">
+				<CardHeader>
+					<CardTitle>{t("scores:addScore")}</CardTitle>
+				</CardHeader>
+				<CardContent>
 					<FieldGroup className="gap-3 md:flex-row md:items-end">
 						<Field className="relative min-w-0 md:flex-[2]">
 							<FieldLabel htmlFor="score-song">{t("scores:songName")}</FieldLabel>
@@ -319,10 +318,14 @@ export function ScoresPage({
 							{t("scores:btnSubmit")}
 						</Button>
 					</FieldGroup>
-				</section>
+				</CardContent>
+			</Card>
 
-				<section className="flex flex-col gap-3">
-					<h3 className="text-sm font-medium">{t("scores:bestScores")}</h3>
+			<Card size="sm">
+				<CardHeader>
+					<CardTitle>{t("scores:bestScores")}</CardTitle>
+				</CardHeader>
+				<CardContent>
 					{scores.length === 0 ? (
 						<Empty>
 							<EmptyHeader>
@@ -331,12 +334,12 @@ export function ScoresPage({
 						</Empty>
 					) : (
 						<div className="flex flex-col gap-3">
-							<div className="space-y-3 md:hidden">
+							<div className="-mt-1 divide-y divide-border/60 md:hidden">
 								{scoresPagination.pagedItems.map((row) => {
 									const songIdentifier = row.sheet?.songIdentifier ?? "";
 									const songTitle = resolveSongDisplayTitle(row, resolveSongTitle, t);
 									return (
-										<article key={row.id} className="rounded-lg border p-3">
+										<article key={row.id} className="py-3">
 											<div className="flex items-start gap-3">
 												<Avatar className="size-11 rounded-md">
 													<AvatarImage src={songIdentifier ? (resolveSongCoverUrl(songIdentifier) ?? undefined) : undefined} />
@@ -344,17 +347,23 @@ export function ScoresPage({
 												</Avatar>
 												<div className="min-w-0 flex-1">
 													<p className="truncate text-sm font-medium">{songTitle}</p>
-													<p className="mt-1 text-xs text-muted-foreground">
-														{`${formatChartType(row.sheet?.chartType)} / ${formatDifficulty(row.sheet?.difficulty)}`}
-													</p>
-													<div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-														<span className="rounded-md border px-2 py-1">
+													<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+														<span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+															{formatChartType(row.sheet?.chartType)}
+														</span>
+														<DifficultyBadge
+															difficulty={row.sheet?.difficulty}
+															label={formatDifficulty(row.sheet?.difficulty)}
+														/>
+													</div>
+													<div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+														<span className="tabular-nums">
 															{t("scores:achievements")} {String(row.achievements)}
 														</span>
-														<span className="rounded-md border px-2 py-1">
+														<span className="tabular-nums">
 															{t("scores:rank")} {row.rank || "-"}
 														</span>
-														<span className="rounded-md border px-2 py-1">
+														<span className="tabular-nums">
 															{t("scores:dxScore")} {row.dxScore}
 														</span>
 													</div>
@@ -402,8 +411,18 @@ export function ScoresPage({
 															<span className="max-w-[300px] truncate font-medium">{songTitle}</span>
 														</div>
 													</TableCell>
-													<TableCell>{`${formatChartType(row.sheet?.chartType)} / ${formatDifficulty(row.sheet?.difficulty)}`}</TableCell>
-													<TableCell>{String(row.achievements)}</TableCell>
+													<TableCell>
+														<div className="flex flex-wrap items-center gap-1.5">
+															<span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+																{formatChartType(row.sheet?.chartType)}
+															</span>
+															<DifficultyBadge
+																difficulty={row.sheet?.difficulty}
+																label={formatDifficulty(row.sheet?.difficulty)}
+															/>
+														</div>
+													</TableCell>
+													<TableCell className="tabular-nums">{String(row.achievements)}</TableCell>
 													<TableCell>{row.rank || "-"}</TableCell>
 													<TableCell>{row.dxScore}</TableCell>
 													<TableCell className="flex flex-wrap gap-2">
@@ -430,10 +449,14 @@ export function ScoresPage({
 							/>
 						</div>
 					)}
-				</section>
+				</CardContent>
+			</Card>
 
-				<section className="flex flex-col gap-3">
-					<h3 className="text-sm font-medium">{t("scores:recentPlays")}</h3>
+			<Card size="sm">
+				<CardHeader>
+					<CardTitle>{t("scores:recentPlays")}</CardTitle>
+				</CardHeader>
+				<CardContent>
 					{playRecords.length === 0 ? (
 						<Empty>
 							<EmptyHeader>
@@ -442,12 +465,12 @@ export function ScoresPage({
 						</Empty>
 					) : (
 						<div className="flex flex-col gap-3">
-							<div className="space-y-3 md:hidden">
+							<div className="-mt-1 divide-y divide-border/60 md:hidden">
 								{playRecordsPagination.pagedItems.map((row) => {
 									const songIdentifier = row.sheet?.songIdentifier ?? "";
 									const songTitle = resolveSongDisplayTitle(row, resolveSongTitle, t);
 									return (
-										<article key={row.id} className="rounded-lg border p-3">
+										<article key={row.id} className="py-3">
 											<div className="flex items-start gap-3">
 												<Avatar className="size-11 rounded-md">
 													<AvatarImage src={songIdentifier ? (resolveSongCoverUrl(songIdentifier) ?? undefined) : undefined} />
@@ -455,17 +478,23 @@ export function ScoresPage({
 												</Avatar>
 												<div className="min-w-0 flex-1">
 													<p className="truncate text-sm font-medium">{songTitle}</p>
-													<p className="mt-1 text-xs text-muted-foreground">
-														{`${formatChartType(row.sheet?.chartType)} / ${formatDifficulty(row.sheet?.difficulty)}`}
-													</p>
-													<div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-														<span className="rounded-md border px-2 py-1">
+													<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+														<span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+															{formatChartType(row.sheet?.chartType)}
+														</span>
+														<DifficultyBadge
+															difficulty={row.sheet?.difficulty}
+															label={formatDifficulty(row.sheet?.difficulty)}
+														/>
+													</div>
+													<div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+														<span className="tabular-nums">
 															{t("scores:achievements")} {String(row.achievements)}
 														</span>
-														<span className="rounded-md border px-2 py-1">
+														<span className="tabular-nums">
 															{t("scores:dxScore")} {row.dxScore}
 														</span>
-														<span className="rounded-md border px-2 py-1">
+														<span className="tabular-nums">
 															{t("scores:time")} {formatDate(row.playTime)}
 														</span>
 													</div>
@@ -508,10 +537,20 @@ export function ScoresPage({
 															<span className="max-w-[300px] truncate font-medium">{songTitle}</span>
 														</div>
 													</TableCell>
-													<TableCell>{`${formatChartType(row.sheet?.chartType)} / ${formatDifficulty(row.sheet?.difficulty)}`}</TableCell>
-													<TableCell>{String(row.achievements)}</TableCell>
-													<TableCell>{row.dxScore}</TableCell>
-													<TableCell>{formatDate(row.playTime)}</TableCell>
+													<TableCell>
+														<div className="flex flex-wrap items-center gap-1.5">
+															<span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+																{formatChartType(row.sheet?.chartType)}
+															</span>
+															<DifficultyBadge
+																difficulty={row.sheet?.difficulty}
+																label={formatDifficulty(row.sheet?.difficulty)}
+															/>
+														</div>
+													</TableCell>
+													<TableCell className="tabular-nums">{String(row.achievements)}</TableCell>
+													<TableCell className="tabular-nums">{row.dxScore}</TableCell>
+													<TableCell className="tabular-nums">{formatDate(row.playTime)}</TableCell>
 													<TableCell>
 														<Button size="sm" variant="outline" onClick={() => void onDeletePlayRecord(row.id)}>
 															{t("scores:btnDelete")}
@@ -533,8 +572,8 @@ export function ScoresPage({
 							/>
 						</div>
 					)}
-				</section>
-			</CardContent>
-		</Card>
+				</CardContent>
+			</Card>
+		</div>
 	);
 }

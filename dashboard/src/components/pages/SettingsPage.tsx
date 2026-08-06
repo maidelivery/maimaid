@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import QRCode from "qrcode";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { HandleText } from "@/components/ui/handle-text";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isValidUsername, normalizeUsername } from "@/lib/app-helpers";
 import { CopyIcon, KeyRoundIcon, Link2Icon, RefreshCwIcon, ShieldCheckIcon, ShieldOffIcon, SmartphoneIcon } from "lucide-react";
@@ -100,6 +101,15 @@ function summarizeCredentialId(credentialId: string) {
 		return credentialId;
 	}
 	return `${credentialId.slice(0, 9)}…${credentialId.slice(-6)}`;
+}
+
+function InfoField({ label, children }: { label: string; children: ReactNode }) {
+	return (
+		<div className="min-w-0">
+			<p className="text-xs text-muted-foreground">{label}</p>
+			<div className="mt-1 min-w-0">{children}</div>
+		</div>
+	);
 }
 
 function sanitizeBackupCode(value: string) {
@@ -252,56 +262,51 @@ export function SettingsPage({
 	};
 
 	return (
-		<Card size="sm">
-			<CardHeader>
-				<CardTitle>{t("title")}</CardTitle>
-				<CardDescription>{t("desc")}</CardDescription>
-			</CardHeader>
-			<CardContent className="flex flex-col gap-4">
-				<Tabs defaultValue="overview" className="w-full">
-					<TabsList variant="line" className="w-full justify-start rounded-lg border border-border/70 bg-muted/20 p-1">
-						<TabsTrigger value="overview">{t("tabOverview")}</TabsTrigger>
-						<TabsTrigger value="security">{t("tabSecurity")}</TabsTrigger>
-					</TabsList>
+		<div className="flex min-w-0 flex-col gap-4">
+			<Tabs defaultValue="overview" className="w-full gap-4">
+				<TabsList variant="line" className="w-full justify-start">
+					<TabsTrigger value="overview">{t("tabOverview")}</TabsTrigger>
+					<TabsTrigger value="security">{t("tabSecurity")}</TabsTrigger>
+				</TabsList>
 
-					<TabsContent value="overview" className="mt-4">
-						<section className="rounded-xl border border-border/70 bg-card/30 p-4">
-							<div className="flex items-center gap-3">
-								<Avatar className="size-12 rounded-md">
-									<AvatarImage src={activeProfileAvatarUrl ?? undefined} />
+				<TabsContent value="overview" className="flex flex-col gap-4">
+					<Card size="sm">
+						<CardContent className="flex flex-col gap-5">
+							<div className="flex flex-wrap items-center gap-3">
+								<Avatar className="size-12 rounded-xl">
+									<AvatarImage src={activeProfileAvatarUrl ?? undefined} alt="" />
 									<AvatarFallback>{sessionUser.handle.slice(0, 1).toUpperCase()}</AvatarFallback>
 								</Avatar>
-								<div className="min-w-0">
+								<div className="min-w-0 flex-1">
 									<HandleText handle={sessionUser.handle} className="block truncate text-sm font-medium" />
 									<p className="truncate text-xs text-muted-foreground">{sessionUser.email}</p>
-									<div className="mt-2 flex flex-wrap gap-2">
-										<Badge variant="secondary">{roleLabel}</Badge>
-										<Badge variant="outline">{t("currentSessionIdentity")}</Badge>
-									</div>
+								</div>
+								<div className="flex flex-wrap gap-2">
+									<Badge variant="secondary">{roleLabel}</Badge>
+									<Badge variant="outline">{t("currentSessionIdentity")}</Badge>
 								</div>
 							</div>
 
-							<div className="mt-4 rounded-xl border border-border/70 p-4">
-								<LanguageSwitcher />
+							<LanguageSwitcher />
+						</CardContent>
+					</Card>
+
+					<Card size="sm">
+						<CardHeader>
+							<CardTitle className="text-sm">{t("accountHandleTitle")}</CardTitle>
+							<CardDescription>{t("accountHandleDesc")}</CardDescription>
+						</CardHeader>
+						<CardContent className="flex flex-col gap-5">
+							<div className="grid gap-4 sm:grid-cols-2">
+								<InfoField label={t("currentHandleLabel")}>
+									<HandleText handle={sessionUser.handle} className="block truncate text-sm font-medium" />
+								</InfoField>
+								<InfoField label={t("handlePreviewLabel")}>
+									<HandleText handle={handlePreview} className="block truncate text-sm font-medium" />
+								</InfoField>
 							</div>
-						</section>
 
-						<section className="mt-4 rounded-xl border border-border/70 p-4">
-							<h3 className="text-sm font-medium">{t("accountHandleTitle")}</h3>
-							<p className="mt-1 text-sm text-muted-foreground">{t("accountHandleDesc")}</p>
-
-							<div className="mt-4 grid gap-3 sm:grid-cols-2">
-								<div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-									<p className="text-xs text-muted-foreground">{t("currentHandleLabel")}</p>
-									<HandleText handle={sessionUser.handle} className="mt-1 block truncate text-sm font-medium" />
-								</div>
-								<div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-									<p className="text-xs text-muted-foreground">{t("handlePreviewLabel")}</p>
-									<HandleText handle={handlePreview} className="mt-1 block truncate text-sm font-medium" />
-								</div>
-							</div>
-
-							<FieldGroup className="mt-4 gap-3 md:flex-row md:items-end">
+							<FieldGroup className="gap-3 md:flex-row md:items-end">
 								<Field className="min-w-0 flex-1">
 									<FieldLabel htmlFor="settings-username">{t("usernameLabel")}</FieldLabel>
 									<Input
@@ -322,88 +327,93 @@ export function SettingsPage({
 									{savingUsername ? t("saving") : t("saveHandle")}
 								</Button>
 							</FieldGroup>
-						</section>
+						</CardContent>
+					</Card>
 
-						<section className="mt-4 rounded-xl border border-border/70 p-4">
-							<h3 className="text-sm font-medium">{t("profileScopeTitle")}</h3>
-							<p className="mt-1 text-sm text-muted-foreground">{t("profileScopeDesc")}</p>
+					<Card size="sm">
+						<CardHeader>
+							<CardTitle className="text-sm">{t("profileScopeTitle")}</CardTitle>
+							<CardDescription>{t("profileScopeDesc")}</CardDescription>
+						</CardHeader>
+						<CardContent className="flex flex-col gap-5">
+							<Field>
+								<FieldLabel>{t("switchViewProfile")}</FieldLabel>
+								<Select value={activeProfileId} onValueChange={onActiveProfileIdChange}>
+									<SelectTrigger className="w-full">
+										<SelectValue placeholder={t("selectViewProfile")} />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectGroup>
+											{profiles.map((profile) => (
+												<SelectItem key={profile.id} value={profile.id}>
+													{profile.name} {profile.isActive ? ` ${t("iosActiveLabel")}` : ""}
+												</SelectItem>
+											))}
+										</SelectGroup>
+									</SelectContent>
+								</Select>
+							</Field>
 
-							<div className="mt-4 flex flex-col gap-4">
-								<div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-									<p className="text-xs text-muted-foreground">{t("currentViewProfile")}</p>
-									<p className="mt-1 truncate text-sm font-medium">{selectedProfile?.name ?? t("unselected")}</p>
-									<p className="truncate text-xs text-muted-foreground">
+							<Separator />
+
+							<div className="grid gap-4 sm:grid-cols-2">
+								<InfoField label={t("currentViewProfile")}>
+									<p className="truncate text-sm font-medium">{selectedProfile?.name ?? t("unselected")}</p>
+									<p className="truncate font-mono text-xs text-muted-foreground">
 										{selectedProfile?.id ?? t("pleaseSelectViewProfile")}
 									</p>
-								</div>
-
-								<FieldGroup className="gap-2 rounded-lg border border-border/60 p-3">
-									<Field>
-										<FieldLabel>{t("switchViewProfile")}</FieldLabel>
-										<Select value={activeProfileId} onValueChange={onActiveProfileIdChange}>
-											<SelectTrigger className="w-full">
-												<SelectValue placeholder={t("selectViewProfile")} />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectGroup>
-													{profiles.map((profile) => (
-														<SelectItem key={profile.id} value={profile.id}>
-															{profile.name} {profile.isActive ? ` ${t("iosActiveLabel")}` : ""}
-														</SelectItem>
-													))}
-												</SelectGroup>
-											</SelectContent>
-										</Select>
-									</Field>
-								</FieldGroup>
-
-								<div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-									<p className="text-xs text-muted-foreground">{t("iosEnabledProfile")}</p>
-									<p className="mt-1 truncate text-sm font-medium">{enabledProfile?.name ?? t("noEnabledProfile")}</p>
-									<p className="truncate text-xs text-muted-foreground">{enabledProfile?.id ?? t("manageOnIos")}</p>
-								</div>
+								</InfoField>
+								<InfoField label={t("iosEnabledProfile")}>
+									<p className="truncate text-sm font-medium">{enabledProfile?.name ?? t("noEnabledProfile")}</p>
+									<p className="truncate font-mono text-xs text-muted-foreground">{enabledProfile?.id ?? t("manageOnIos")}</p>
+								</InfoField>
 							</div>
 
-							<div className="mt-4">
+							<div>
 								<Button size="sm" variant="outline" onClick={() => void onReloadProfiles()}>
 									<RefreshCwIcon data-icon="inline-start" />
 									{t("refreshProfiles")}
 								</Button>
 							</div>
-						</section>
-					</TabsContent>
+						</CardContent>
+					</Card>
+				</TabsContent>
 
-					<TabsContent value="security" className="mt-4">
-						<section className="rounded-xl border border-border/70 p-4">
-							<h3 className="text-sm font-medium">{t("securityOverview")}</h3>
-							<div className="mt-3 flex flex-wrap gap-2">
+				<TabsContent value="security" className="flex flex-col gap-4">
+					<Card size="sm">
+						<CardHeader>
+							<CardTitle className="text-sm">{t("securityOverview")}</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<div className="flex flex-wrap gap-2">
 								<Badge variant="secondary">MFA: {mfaStatus?.mfaEnabled ? "Enabled" : "Disabled"}</Badge>
 								<Badge variant="secondary">TOTP: {mfaStatus?.totpEnabled ? "On" : "Off"}</Badge>
 								<Badge variant="secondary">Passkey: {mfaStatus?.passkeyCount ?? 0}</Badge>
 								<Badge variant="secondary">Backup Codes: {backupCodeStatus.activeCount}</Badge>
 							</div>
-						</section>
+						</CardContent>
+					</Card>
 
-						<section className="mt-4 rounded-xl border border-border/70 p-4">
-							<div className="mb-3 flex items-start justify-between gap-3">
-								<div>
-									<h3 className="text-sm font-medium">{t("totpTitle")}</h3>
-									<p className="text-sm text-muted-foreground">{t("totpDesc")}</p>
-								</div>
-								<div className="flex w-full flex-wrap gap-2 md:w-auto">
-									<Button className="h-9 w-full sm:w-auto" size="sm" variant="outline" onClick={() => void onStartTotpSetup()}>
-										<ShieldCheckIcon data-icon="inline-start" />
-										{t("generateTotpKey")}
-									</Button>
-									<Button className="h-9 w-full sm:w-auto" size="sm" variant="outline" onClick={() => void onDisableTotp()}>
-										<ShieldOffIcon data-icon="inline-start" />
-										{t("disableTotp")}
-									</Button>
-								</div>
+					<Card size="sm">
+						<CardHeader>
+							<CardTitle className="text-sm">{t("totpTitle")}</CardTitle>
+							<CardDescription>{t("totpDesc")}</CardDescription>
+						</CardHeader>
+						<CardContent className="flex flex-col gap-5">
+							<div className="flex flex-wrap gap-2">
+								<Button className="w-full sm:w-auto" size="sm" variant="outline" onClick={() => void onStartTotpSetup()}>
+									<ShieldCheckIcon data-icon="inline-start" />
+									{t("generateTotpKey")}
+								</Button>
+								<Button className="w-full sm:w-auto" size="sm" variant="outline" onClick={() => void onDisableTotp()}>
+									<ShieldOffIcon data-icon="inline-start" />
+									{t("disableTotp")}
+								</Button>
 							</div>
 
 							{mfaSetup ? (
-								<div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+								<>
+									<Separator />
 									<div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
 										<div className="space-y-3">
 											<Field>
@@ -458,10 +468,12 @@ export function SettingsPage({
 											<p className="text-xs text-muted-foreground">{t("scanQrDesc")}</p>
 										</div>
 									</div>
-								</div>
+								</>
 							) : null}
 
-							<div className="mt-4 rounded-lg border border-border/60 p-3">
+							<Separator />
+
+							<div className="flex flex-col gap-3">
 								<div className="flex flex-wrap items-start justify-between gap-3">
 									<div>
 										<p className="text-sm font-medium">{t("totpBackupCodes")}</p>
@@ -483,7 +495,7 @@ export function SettingsPage({
 								</div>
 
 								{backupCodes.length > 0 ? (
-									<div className="mt-3 rounded-lg border border-border/60 bg-muted/20 p-3">
+									<div className="rounded-lg bg-muted/40 p-3">
 										<div className="mb-2 flex flex-wrap items-center justify-between gap-2">
 											<p className="text-xs text-muted-foreground">
 												{t("newBackupCodesDesc", { generatedAt: formatDateTime(backupCodesGeneratedAt, t) })}
@@ -516,35 +528,33 @@ export function SettingsPage({
 									</div>
 								) : null}
 							</div>
-						</section>
+						</CardContent>
+					</Card>
 
-						<section className="mt-4 rounded-xl border border-border/70 p-4">
-							<div className="mb-3 flex items-start justify-between gap-3">
-								<div>
-									<h3 className="text-sm font-medium">{t("passkeyTitle")}</h3>
-									<p className="text-sm text-muted-foreground">
-										{t("passkeyDesc", { namedCount: passkeyNamedCount, totalCount: passkeys.length })}
-									</p>
-								</div>
+					<Card size="sm">
+						<CardHeader>
+							<CardTitle>{t("passkeyTitle")}</CardTitle>
+							<CardDescription>
+								{t("passkeyDesc", { namedCount: passkeyNamedCount, totalCount: passkeys.length })}
+							</CardDescription>
+							<CardAction>
 								<Button size="sm" onClick={() => void handlePasskeyRegister()} disabled={registeringPasskey}>
 									<SmartphoneIcon data-icon="inline-start" />
 									{registeringPasskey ? t("registering") : t("registerPasskey")}
 								</Button>
-							</div>
-
+							</CardAction>
+						</CardHeader>
+						<CardContent>
 							{passkeys.length === 0 ? (
-								<div className="rounded-lg border border-dashed border-border/70 p-4 text-sm text-muted-foreground">
+								<p className="rounded-lg border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
 									{t("noPasskeyDesc")}
-								</div>
+								</p>
 							) : (
-								<div className="rounded-lg border border-border/60">
-									{passkeys.map((item, index) => (
+								<div className="divide-y divide-border/60">
+									{passkeys.map((item) => (
 										<div
 											key={item.credentialId}
-											className={[
-												"flex flex-wrap items-center justify-between gap-3 p-3",
-												index < passkeys.length - 1 ? "border-b border-border/60" : "",
-											].join(" ")}
+											className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
 										>
 											<div className="min-w-0">
 												<p className="truncate text-sm font-medium">{item.name?.trim() || t("unnamedPasskey")}</p>
@@ -565,10 +575,10 @@ export function SettingsPage({
 									))}
 								</div>
 							)}
-						</section>
-					</TabsContent>
-				</Tabs>
-			</CardContent>
+						</CardContent>
+					</Card>
+				</TabsContent>
+			</Tabs>
 
 			<Dialog
 				open={renameDialogOpen}
@@ -607,6 +617,6 @@ export function SettingsPage({
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-		</Card>
+		</div>
 	);
 }

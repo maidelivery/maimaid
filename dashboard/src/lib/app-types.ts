@@ -9,6 +9,12 @@ export type Profile = {
 	id: string;
 	name: string;
 	avatarUrl?: string | null;
+	/**
+	 * Set when an avatar has been uploaded to object storage. iOS uploads only populate this
+	 * key, never `avatarUrl`, so the rendered avatar must fall back to the backend's
+	 * `GET /v1/profiles/:id/avatar` endpoint whenever this is present.
+	 */
+	avatarObjectKey?: string | null;
 	isActive: boolean;
 };
 

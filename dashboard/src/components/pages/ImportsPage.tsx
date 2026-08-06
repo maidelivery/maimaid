@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ExternalLinkIcon, UploadIcon } from "lucide-react";
@@ -81,25 +81,25 @@ export function ImportsPage({
 	};
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>{t("pageTitle")}</CardTitle>
-				<CardDescription>{t("pageDesc")}</CardDescription>
-			</CardHeader>
-			<CardContent className="flex flex-col gap-6">
-				<Alert>
-					<AlertTitle>{t("alertTitleInfo")}</AlertTitle>
-					<AlertDescription>{t("alertDescInfo")}</AlertDescription>
-				</Alert>
-				{!hasLxnsClientId ? (
-					<Alert variant="destructive">
-						<AlertTitle>{t("alertTitleError")}</AlertTitle>
-						<AlertDescription>{t("alertDescError")}</AlertDescription>
-					</Alert>
-				) : null}
+		<div className="flex min-w-0 flex-col gap-4">
+			<p className="text-sm text-muted-foreground">{t("pageDesc")}</p>
 
-				<section className="rounded-lg border p-4">
-					<h3 className="mb-3 text-sm font-medium">{t("sectionDf")}</h3>
+			<Alert>
+				<AlertTitle>{t("alertTitleInfo")}</AlertTitle>
+				<AlertDescription>{t("alertDescInfo")}</AlertDescription>
+			</Alert>
+			{!hasLxnsClientId ? (
+				<Alert variant="destructive">
+					<AlertTitle>{t("alertTitleError")}</AlertTitle>
+					<AlertDescription>{t("alertDescError")}</AlertDescription>
+				</Alert>
+			) : null}
+
+			<Card size="sm">
+				<CardHeader>
+					<CardTitle>{t("sectionDf")}</CardTitle>
+				</CardHeader>
+				<CardContent>
 					<FieldGroup>
 						<Field>
 							<FieldLabel htmlFor="df-qq">{t("labelQq")}</FieldLabel>
@@ -119,10 +119,14 @@ export function ImportsPage({
 						<UploadIcon data-icon="inline-start" />
 						{t("btnImportDf")}
 					</Button>
-				</section>
+				</CardContent>
+			</Card>
 
-				<section className="rounded-lg border p-4">
-					<h3 className="mb-3 text-sm font-medium">{t("sectionLxns")}</h3>
+			<Card size="sm">
+				<CardHeader>
+					<CardTitle>{t("sectionLxns")}</CardTitle>
+				</CardHeader>
+				<CardContent>
 					<FieldGroup>
 						<Field>
 							<FieldLabel>{t("labelLxnsAuth")}</FieldLabel>
@@ -149,8 +153,8 @@ export function ImportsPage({
 						<UploadIcon data-icon="inline-start" />
 						{t("btnImportLxns")}
 					</Button>
-				</section>
-			</CardContent>
-		</Card>
+				</CardContent>
+			</Card>
+		</div>
 	);
 }
