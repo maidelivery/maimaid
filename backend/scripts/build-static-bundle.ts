@@ -24,6 +24,7 @@ import {
 	type SerializedChartFitSongIdMapping,
 } from "../src/services/chart-fit.service.js";
 import { composeBundlePayload, type StaticSourceTarget } from "../src/services/static-bundle.utils.js";
+import "reflect-metadata";
 
 const apiBaseUrl = process.env.MAIMAID_API_URL?.trim().replace(/\/+$/u, "");
 const jobToken = process.env.MAIMAID_INTERNAL_JOB_TOKEN?.trim();
