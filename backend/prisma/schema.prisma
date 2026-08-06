@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  engineType = "binary"
 }
 
 datasource db {
@@ -274,6 +273,7 @@ model Sheet {
   regionUsa          Boolean    @default(false)
   regionCn           Boolean    @default(false)
   isSpecial          Boolean    @default(false)
+  disabled           Boolean    @default(false)
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
   song               Song       @relation(fields: [songIdentifier], references: [songIdentifier], onDelete: Cascade)
@@ -283,6 +283,7 @@ model Sheet {
   @@unique([songIdentifier, chartType, difficulty])
   @@index([songId])
   @@index([chartType, difficulty])
+  @@index([disabled])
   @@map("sheets")
 }
 
@@ -619,5 +620,6 @@ model JobQueue {
   updatedAt  DateTime  @updatedAt
 
   @@index([status, scheduledAt])
+  @@index([jobType, status])
   @@map("job_queue")
 }

@@ -1,9 +1,11 @@
 import { inject, injectable } from "tsyringe";
-import type { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import type { Env } from "../env.js";
 import { AppError } from "../lib/errors.js";
 import { sha256Hex } from "../lib/crypto.js";
+import { chunk, dedupeFirstWins, dedupeLastWins, sheetUpsertKey, songUpsertKey } from "./catalog.utils.js";
 
 export type RemoteDataResponse = {
 	songs: RemoteSong[];
@@ -72,6 +74,170 @@ type CatalogVersionItem = {
 const SONG_IDENTIFIER_BY_NAME_CACHE_TTL_MS = 5 * 60_000;
 const LXNS_REMOTE_ALIAS_CACHE_TTL_MS = 2 * 60_000;
 
+type SongUpsertRow = {
+	songIdentifier: string;
+	category: string;
+	title: string;
+	artist: string;
+	imageName: string;
+	version: string | null;
+	releaseDate: Date | null;
+	sortOrder: number;
+	bpm: number | null;
+	isNew: boolean;
+	isLocked: boolean;
+	comment: string | null;
+	snapshotId: bigint;
+};
+
+type SheetUpsertRow = {
+	songIdentifier: string;
+	chartType: string;
+	difficulty: string;
+	version: string | null;
+	level: string;
+	levelValue: number | null;
+	internalLevel: string | null;
+	internalLevelValue: number | null;
+	noteDesigner: string | null;
+	tap: number | null;
+	hold: number | null;
+	slide: number | null;
+	touch: number | null;
+	breakCount: number | null;
+	total: number | null;
+	regionJp: boolean;
+	regionIntl: boolean;
+	regionUsa: boolean;
+	regionCn: boolean;
+	isSpecial: boolean;
+};
+
+// PostgreSQL caps a statement at 65535 bind parameters. Songs bind 13 per row
+// and sheets 20, so these chunk sizes stay far below the ceiling while keeping
+// the number of round trips low enough for a single-core host.
+const SONG_UPSERT_CHUNK_SIZE = 500;
+const SHEET_UPSERT_CHUNK_SIZE = 500;
+
+// A full apply is a handful of batched statements now, but it still rewrites
+// every song and sheet. Leave generous headroom for a 1 vCPU box where Postgres
+// and the API contend for the same core.
+const CATALOG_APPLY_TIMEOUT_MS = 120_000;
+const CATALOG_APPLY_MAX_WAIT_MS = 15_000;
+
+/**
+ * Upsert songs on their primary key. `searchKeywords` and `songId` are
+ * deliberately absent from the conflict target so values maintained elsewhere
+ * survive a catalog apply.
+ */
+const buildSongUpsertQuery = (rows: SongUpsertRow[]) => Prisma.sql`
+	INSERT INTO "songs" (
+		"songIdentifier", "category", "title", "artist", "imageName", "version",
+		"releaseDate", "sortOrder", "bpm", "isNew", "isLocked", "comment",
+		"disabled", "snapshotId", "updatedAt"
+	)
+	VALUES ${Prisma.join(
+		rows.map(
+			(row) => Prisma.sql`(
+				${row.songIdentifier},
+				${row.category},
+				${row.title},
+				${row.artist},
+				${row.imageName},
+				${row.version},
+				${row.releaseDate}::timestamptz,
+				${row.sortOrder},
+				${row.bpm}::double precision,
+				${row.isNew},
+				${row.isLocked},
+				${row.comment},
+				false,
+				${row.snapshotId}::bigint,
+				now()
+			)`,
+		),
+	)}
+	ON CONFLICT ("songIdentifier") DO UPDATE SET
+		"category" = EXCLUDED."category",
+		"title" = EXCLUDED."title",
+		"artist" = EXCLUDED."artist",
+		"imageName" = EXCLUDED."imageName",
+		"version" = EXCLUDED."version",
+		"releaseDate" = EXCLUDED."releaseDate",
+		"sortOrder" = EXCLUDED."sortOrder",
+		"bpm" = EXCLUDED."bpm",
+		"isNew" = EXCLUDED."isNew",
+		"isLocked" = EXCLUDED."isLocked",
+		"comment" = EXCLUDED."comment",
+		"disabled" = false,
+		"snapshotId" = EXCLUDED."snapshotId",
+		"updatedAt" = now()
+`;
+
+/**
+ * Upsert sheets on the stable business key ("songIdentifier", "chartType",
+ * "difficulty") rather than deleting and recreating them, so the bigserial
+ * "id" — referenced by "best_scores" and "play_records" via ON DELETE CASCADE —
+ * stays stable and user scores are preserved.
+ */
+const buildSheetUpsertQuery = (rows: SheetUpsertRow[]) => Prisma.sql`
+	INSERT INTO "sheets" (
+		"songIdentifier", "chartType", "difficulty", "version", "level",
+		"levelValue", "internalLevel", "internalLevelValue", "noteDesigner",
+		"tap", "hold", "slide", "touch", "breakCount", "total",
+		"regionJp", "regionIntl", "regionUsa", "regionCn", "isSpecial",
+		"disabled", "updatedAt"
+	)
+	VALUES ${Prisma.join(
+		rows.map(
+			(row) => Prisma.sql`(
+				${row.songIdentifier},
+				${row.chartType},
+				${row.difficulty},
+				${row.version},
+				${row.level},
+				${row.levelValue}::numeric,
+				${row.internalLevel},
+				${row.internalLevelValue}::numeric,
+				${row.noteDesigner},
+				${row.tap},
+				${row.hold},
+				${row.slide},
+				${row.touch},
+				${row.breakCount},
+				${row.total},
+				${row.regionJp},
+				${row.regionIntl},
+				${row.regionUsa},
+				${row.regionCn},
+				${row.isSpecial},
+				false,
+				now()
+			)`,
+		),
+	)}
+	ON CONFLICT ("songIdentifier", "chartType", "difficulty") DO UPDATE SET
+		"version" = EXCLUDED."version",
+		"level" = EXCLUDED."level",
+		"levelValue" = EXCLUDED."levelValue",
+		"internalLevel" = EXCLUDED."internalLevel",
+		"internalLevelValue" = EXCLUDED."internalLevelValue",
+		"noteDesigner" = EXCLUDED."noteDesigner",
+		"tap" = EXCLUDED."tap",
+		"hold" = EXCLUDED."hold",
+		"slide" = EXCLUDED."slide",
+		"touch" = EXCLUDED."touch",
+		"breakCount" = EXCLUDED."breakCount",
+		"total" = EXCLUDED."total",
+		"regionJp" = EXCLUDED."regionJp",
+		"regionIntl" = EXCLUDED."regionIntl",
+		"regionUsa" = EXCLUDED."regionUsa",
+		"regionCn" = EXCLUDED."regionCn",
+		"isSpecial" = EXCLUDED."isSpecial",
+		"disabled" = false,
+		"updatedAt" = now()
+`;
+
 @injectable()
 export class CatalogService {
 	private songIdentifierByNameCache: { expiresAt: number; value: Map<string, string> } | null = null;
@@ -101,8 +267,11 @@ export class CatalogService {
 		});
 	}
 
-	async listSheets(songIdentifier?: string) {
+	async listSheets(songIdentifier?: string, includeDisabled = false) {
 		const where: Prisma.SheetWhereInput = {};
+		if (!includeDisabled) {
+			where.disabled = false;
+		}
 		if (songIdentifier !== undefined) {
 			where.songIdentifier = songIdentifier;
 		}
@@ -343,102 +512,78 @@ export class CatalogService {
 
 	private async applySnapshotPayload(snapshotId: bigint, payload: RemoteDataResponse) {
 		const songs = payload.songs;
+
+		const songRows: SongUpsertRow[] = songs.map((song, index) => ({
+			songIdentifier: `${song.songId}`,
+			category: (song.category ?? "").trim(),
+			title: (song.title ?? "").trim(),
+			artist: (song.artist ?? "").trim(),
+			imageName: (song.imageName ?? "").trim(),
+			version: song.version ?? null,
+			releaseDate: this.parseDate(song.releaseDate),
+			sortOrder: index,
+			bpm: song.bpm ?? null,
+			isNew: song.isNew ?? false,
+			isLocked: song.isLocked ?? false,
+			comment: song.comment ?? null,
+			snapshotId,
+		}));
+
+		const sheetRows: SheetUpsertRow[] = [];
+		for (const song of songs) {
+			const songIdentifier = `${song.songId}`;
+			for (const sheet of song.sheets) {
+				sheetRows.push({
+					songIdentifier,
+					chartType: this.normalizeChartType(sheet.type),
+					difficulty: sheet.difficulty,
+					version: sheet.version ?? null,
+					level: sheet.level,
+					levelValue: sheet.levelValue ?? null,
+					internalLevel: sheet.internalLevel ?? null,
+					internalLevelValue: sheet.internalLevelValue ?? null,
+					noteDesigner: sheet.noteDesigner ?? null,
+					tap: sheet.noteCounts?.tap ?? null,
+					hold: sheet.noteCounts?.hold ?? null,
+					slide: sheet.noteCounts?.slide ?? null,
+					touch: sheet.noteCounts?.touch ?? null,
+					breakCount: sheet.noteCounts?.break ?? null,
+					total: sheet.noteCounts?.total ?? null,
+					regionJp: sheet.regions?.jp ?? false,
+					regionIntl: sheet.regions?.intl ?? false,
+					regionUsa: sheet.regions?.usa ?? false,
+					regionCn: sheet.regions?.cn ?? false,
+					isSpecial: sheet.isSpecial ?? false,
+				});
+			}
+		}
+
+		const dedupedSongRows = dedupeLastWins(songRows, songUpsertKey);
+		const dedupedSheetRows = dedupeFirstWins(sheetRows, sheetUpsertKey);
+
 		await this.prisma.$transaction(
 			async (tx) => {
-				await tx.song.updateMany({
-					data: { disabled: true },
-				});
+				// Mark everything disabled first, then re-enable exactly what the
+				// snapshot contains. Rows that vanished upstream stay disabled rather
+				// than being deleted: "best_scores"."sheetId" and
+				// "play_records"."sheetId" reference "sheets"("id") ON DELETE CASCADE,
+				// so deleting a sheet destroys every user's score for it.
+				await tx.song.updateMany({ data: { disabled: true } });
+				await tx.sheet.updateMany({ data: { disabled: true } });
 
-				for (let index = 0; index < songs.length; index += 1) {
-					const song = songs[index]!;
-					const songIdentifier = `${song.songId}`;
-
-					await tx.song.upsert({
-						where: { songIdentifier },
-						create: {
-							songIdentifier,
-							songId: 0,
-							category: (song.category ?? "").trim(),
-							title: (song.title ?? "").trim(),
-							artist: (song.artist ?? "").trim(),
-							imageName: (song.imageName ?? "").trim(),
-							version: song.version ?? null,
-							releaseDate: this.parseDate(song.releaseDate),
-							sortOrder: index,
-							bpm: song.bpm ?? null,
-							isNew: song.isNew ?? false,
-							isLocked: song.isLocked ?? false,
-							comment: song.comment ?? null,
-							disabled: false,
-							snapshotId,
-						},
-						update: {
-							category: (song.category ?? "").trim(),
-							title: (song.title ?? "").trim(),
-							artist: (song.artist ?? "").trim(),
-							imageName: (song.imageName ?? "").trim(),
-							version: song.version ?? null,
-							releaseDate: this.parseDate(song.releaseDate),
-							sortOrder: index,
-							bpm: song.bpm ?? null,
-							isNew: song.isNew ?? false,
-							isLocked: song.isLocked ?? false,
-							comment: song.comment ?? null,
-							disabled: false,
-							snapshotId,
-						},
-					});
+				for (const batch of chunk(dedupedSongRows, SONG_UPSERT_CHUNK_SIZE)) {
+					await tx.$executeRaw(buildSongUpsertQuery(batch));
 				}
 
-				await tx.sheet.deleteMany({});
-
-				const chunks: Prisma.SheetCreateManyInput[][] = [];
-				const buffer: Prisma.SheetCreateManyInput[] = [];
-				for (const song of songs) {
-					const songIdentifier = `${song.songId}`;
-					for (const sheet of song.sheets) {
-						buffer.push({
-							songIdentifier,
-							songId: 0,
-							chartType: this.normalizeChartType(sheet.type),
-							difficulty: sheet.difficulty,
-							version: sheet.version ?? null,
-							level: sheet.level,
-							levelValue: sheet.levelValue ?? null,
-							internalLevel: sheet.internalLevel ?? null,
-							internalLevelValue: sheet.internalLevelValue ?? null,
-							noteDesigner: sheet.noteDesigner ?? null,
-							tap: sheet.noteCounts?.tap ?? null,
-							hold: sheet.noteCounts?.hold ?? null,
-							slide: sheet.noteCounts?.slide ?? null,
-							touch: sheet.noteCounts?.touch ?? null,
-							breakCount: sheet.noteCounts?.break ?? null,
-							total: sheet.noteCounts?.total ?? null,
-							regionJp: sheet.regions?.jp ?? false,
-							regionIntl: sheet.regions?.intl ?? false,
-							regionUsa: sheet.regions?.usa ?? false,
-							regionCn: sheet.regions?.cn ?? false,
-							isSpecial: sheet.isSpecial ?? false,
-						});
-						if (buffer.length >= 1000) {
-							chunks.push([...buffer]);
-							buffer.length = 0;
-						}
-					}
-				}
-				if (buffer.length > 0) {
-					chunks.push([...buffer]);
-				}
-
-				for (const batch of chunks) {
-					await tx.sheet.createMany({
-						data: batch,
-						skipDuplicates: true,
-					});
+				// Upserted on the stable business key so "sheets"."id" survives and
+				// existing score rows keep pointing at the right chart.
+				for (const batch of chunk(dedupedSheetRows, SHEET_UPSERT_CHUNK_SIZE)) {
+					await tx.$executeRaw(buildSheetUpsertQuery(batch));
 				}
 			},
 			{
-				timeout: 10_000,
+				timeout: CATALOG_APPLY_TIMEOUT_MS,
+				maxWait: CATALOG_APPLY_MAX_WAIT_MS,
 			},
 		);
 	}

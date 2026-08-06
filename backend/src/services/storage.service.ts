@@ -27,7 +27,16 @@ export class StorageService {
 				accessKeyId,
 				secretAccessKey,
 			},
+			// R2 supports path style, and MinIO required it.
 			forcePathStyle: true,
+			// Without this the SDK computes a CRC32 over the *empty* body at signing
+			// time and bakes `x-amz-checksum-crc32` into the presigned query string.
+			// The client then PUTs real bytes against a signature that promises an
+			// empty-body checksum, and R2 rejects the upload. The parameter is signed,
+			// so the client can neither drop it nor satisfy it.
+			requestChecksumCalculation: "WHEN_REQUIRED",
+			// R2 does not return the trailing checksums the SDK would try to validate.
+			responseChecksumValidation: "WHEN_REQUIRED",
 		} as const;
 
 		this.client = new S3Client({
