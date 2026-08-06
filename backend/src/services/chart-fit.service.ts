@@ -6,7 +6,7 @@ const CHART_SLOT_COUNT = 5;
 const DIST_BUCKET_COUNT = 14;
 const FC_BUCKET_COUNT = 5;
 const DEFAULT_DATA_JSON_URL = "https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json";
-const DEFAULT_SONGID_JSON_URL = "https://maimaid.shikoch.in/songid.json";
+const DEFAULT_SONGID_JSON_URL = "https://static.shikoch.in/songid.json";
 
 const DIFFICULTY_INDEX_MAP: Record<string, number> = {
 	basic: 0,
