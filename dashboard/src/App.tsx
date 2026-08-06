@@ -359,7 +359,17 @@ function App() {
 		() => profiles.find((item) => item.id === activeProfileId) ?? null,
 		[activeProfileId, profiles],
 	);
-	const activeProfileAvatarUrl = selectedProfile?.avatarUrl ?? enabledProfile?.avatarUrl ?? null;
+	const activeProfileAvatarUrl = useMemo(() => {
+		// iOS uploads populate `avatarObjectKey` only, so fall back to the backend's
+		// avatar endpoint whenever an explicit `avatarUrl` was never set.
+		const profile = selectedProfile ?? enabledProfile;
+		if (!profile) return null;
+		if (profile.avatarUrl) return profile.avatarUrl;
+		if (profile.avatarObjectKey && BACKEND_URL) {
+			return `${BACKEND_URL}/v1/profiles/${encodeURIComponent(profile.id)}/avatar`;
+		}
+		return null;
+	}, [enabledProfile, selectedProfile]);
 	const {
 		songTitleByIdentifier,
 		songCatalogIndexByIdentifier,
@@ -1609,35 +1619,41 @@ function App() {
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
-			<header className="sticky top-0 z-40 border-b border-border/60 bg-background/95 backdrop-blur md:hidden">
-				<div className="mx-auto flex h-14 max-w-[1800px] items-center gap-2 px-4">
-					<Button variant="ghost" size="icon-sm" onClick={() => setMobileDrawerOpen(true)} aria-label="打开导航菜单">
+			<header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-xl md:hidden">
+				<div className="flex h-14 items-center gap-2 px-3">
+					<Button
+						variant="ghost"
+						size="icon"
+						className="size-10 shrink-0"
+						onClick={() => setMobileDrawerOpen(true)}
+						aria-label={t("sidebar:openNavMenu")}
+					>
 						<MenuIcon />
 					</Button>
-					<p className="flex-1 truncate text-sm font-medium">{currentTabLabel}</p>
+					<p className="flex-1 truncate text-base font-semibold tracking-tight">{currentTabLabel}</p>
 				</div>
 			</header>
 
 			<Sheet open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
-				<SheetContent side="left" className="w-[86vw] max-w-[300px] border-border/60 bg-card/90 p-0 backdrop-blur-xl">
+				<SheetContent side="left" className="w-[86vw] max-w-[300px] border-border/60 bg-sidebar/95 p-0 backdrop-blur-xl">
 					<SheetHeader className="sr-only">
-						<SheetTitle>导航菜单</SheetTitle>
+						<SheetTitle>{t("sidebar:navMenu")}</SheetTitle>
 					</SheetHeader>
 					{sidebarContent}
 				</SheetContent>
 			</Sheet>
 
 			<div className="min-h-screen">
-				<aside className="fixed inset-y-0 left-0 z-20 hidden w-[272px] border-r border-border/60 bg-card/30 md:flex md:flex-col">
+				<aside className="fixed inset-y-0 left-0 z-20 hidden w-64 border-r border-border/60 bg-sidebar md:flex md:flex-col">
 					{sidebarContent}
 				</aside>
 
-				<main className="flex min-w-0 flex-col md:pl-[272px]">
-					<header className="sticky top-0 z-30 hidden h-14 items-center border-b border-border/60 bg-background/90 px-6 backdrop-blur md:flex">
-						<p className="text-lg">{currentTabLabel}</p>
+				<main className="flex min-w-0 flex-col md:pl-64">
+					<header className="sticky top-0 z-30 hidden h-14 items-center border-b border-border/60 bg-background/85 px-6 backdrop-blur-xl md:flex">
+						<p className="text-lg font-semibold tracking-tight">{currentTabLabel}</p>
 					</header>
 
-					<div className="flex min-w-0 flex-col gap-4 p-4 md:p-6">{tabPanelContent}</div>
+					<div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-4 p-4 md:p-6">{tabPanelContent}</div>
 				</main>
 			</div>
 

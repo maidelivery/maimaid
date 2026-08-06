@@ -8,7 +8,9 @@
 	"sidebar": {
 		"workspace": "ワークスペース",
 		"management": "管理",
-		"logout": "ログアウト"
+		"logout": "ログアウト",
+		"navMenu": "ナビゲーションメニュー",
+		"openNavMenu": "ナビゲーションメニューを開く"
 	},
 	"auth": {
 		"titleRegister": "アカウント作成",
@@ -428,6 +430,7 @@
 	},
 	"adminUsers": {
 		"pageTitle": "ユーザー管理",
+		"sectionUserList": "ユーザー一覧",
 		"pageDesc": "ユーザーの作成、ステータスの確認、およびクリーンアップを行います。",
 		"sectionCreateUser": "一般ユーザーを作成",
 		"createHandleHint": "管理者はメールアドレスとパスワードだけ入力します。ハンドルはバックエンドが自動生成します。",
@@ -474,6 +477,7 @@
 	},
 	"aliases": {
 		"pageTitle": "エイリアスコミュニティ",
+		"sectionCandidates": "投票中の候補",
 		"pageDesc": "候補エイリアスを確認し、投票します。",
 		"badgeDailySubmit": "本日の投稿: {{count}}/5",
 		"badgeCurrentCandidates": "現在の候補: {{count}}",

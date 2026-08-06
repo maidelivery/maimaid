@@ -26,6 +26,14 @@ if (backendOrigin) {
 	connectSources.push(backendOrigin);
 }
 
+// Profile avatars are streamed by the backend from R2 via
+// GET /v1/profiles/:profileId/avatar, so the backend origin must be an
+// allowed image source too, not just a connect-src.
+const imageSources = ["'self'", "data:", "https://dp4p6x0xfi5o9.cloudfront.net"];
+if (backendOrigin) {
+	imageSources.push(backendOrigin);
+}
+
 const contentSecurityPolicy = [
 	"default-src 'self'",
 	"base-uri 'self'",
@@ -33,7 +41,7 @@ const contentSecurityPolicy = [
 	"object-src 'none'",
 	"form-action 'self'",
 	`connect-src ${connectSources.join(" ")}`,
-	"img-src 'self' data: https://dp4p6x0xfi5o9.cloudfront.net",
+	`img-src ${imageSources.join(" ")}`,
 	"font-src 'self' data:",
 	"script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
 	"style-src 'self' 'unsafe-inline'",

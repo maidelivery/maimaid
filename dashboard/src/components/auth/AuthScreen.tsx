@@ -1,7 +1,7 @@
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
+import Image from "next/image";
 import { Loader2Icon } from "lucide-react";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
-import { Avatar as UiAvatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -147,16 +147,39 @@ export function AuthScreen(props: AuthScreenProps) {
 	}, []);
 
 	return (
-		<div className="min-h-screen bg-background text-foreground">
-			<main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-5 px-4 py-10">
-				<div className="flex w-full items-center gap-3 px-1">
-					<UiAvatar className="size-8 border border-border/70 bg-card">
-						<AvatarFallback className="text-xs font-semibold">MD</AvatarFallback>
-					</UiAvatar>
-					<p className="text-xl font-semibold">maimaid Dashboard</p>
+		<div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+			<div
+				aria-hidden
+				className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--diff-remaster),transparent_55%),radial-gradient(ellipse_at_bottom_right,var(--primary),transparent_60%)] opacity-[0.13] dark:opacity-25"
+			/>
+
+			<main className="relative mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-6 px-5 py-10">
+				<div className="flex flex-col items-center gap-3">
+					<Image
+						src="/app-icon.png"
+						alt=""
+						width={64}
+						height={64}
+						unoptimized
+						priority
+						className="size-16 drop-shadow-md dark:hidden"
+					/>
+					<Image
+						src="/app-icon-dark.png"
+						alt=""
+						width={64}
+						height={64}
+						unoptimized
+						priority
+						className="hidden size-16 drop-shadow-lg dark:block"
+					/>
+					<div className="text-center">
+						<p className="text-2xl font-bold tracking-tight">maimaid</p>
+						<p className="text-sm text-muted-foreground">Dashboard</p>
+					</div>
 				</div>
 
-				<Card className="w-full border-border/60 bg-card/90 backdrop-blur">
+				<Card className="w-full border-border/60 bg-card/80 shadow-xl shadow-primary/5 backdrop-blur-xl">
 					<CardHeader>
 						<CardTitle>
 							{authMode === "register"

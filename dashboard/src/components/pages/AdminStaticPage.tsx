@@ -183,62 +183,60 @@ export function AdminStaticPage({
 	};
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>{t("pageTitle")}</CardTitle>
-				<CardDescription>{t("pageDesc")}</CardDescription>
-			</CardHeader>
-			<CardContent className="flex flex-col gap-6">
-				<div className="flex flex-wrap gap-2">
-					<Button className="h-9 w-full sm:w-auto" onClick={() => void handleBuildBundle()} disabled={buildRunning}>
-						{buildRunning ? t("btnBuilding") : t("btnForceBuild")}
-					</Button>
-					<Button
-						className="h-9 w-full sm:w-auto"
-						variant="outline"
-						onClick={() => void onReloadStatic()}
-						disabled={buildRunning}
-					>
-						<RefreshCwIcon data-icon="inline-start" />
-						{t("btnRefresh")}
-					</Button>
-				</div>
+		<div className="flex min-w-0 flex-col gap-4">
+			<div className="flex flex-wrap gap-2">
+				<Button className="h-9 w-full sm:w-auto" onClick={() => void handleBuildBundle()} disabled={buildRunning}>
+					{buildRunning ? t("btnBuilding") : t("btnForceBuild")}
+				</Button>
+				<Button
+					className="h-9 w-full sm:w-auto"
+					variant="outline"
+					onClick={() => void onReloadStatic()}
+					disabled={buildRunning}
+				>
+					<RefreshCwIcon data-icon="inline-start" />
+					{t("btnRefresh")}
+				</Button>
+			</div>
 
-				{buildState !== "idle" ? (
-					<section className="flex flex-col gap-2 rounded-lg border p-3">
-						<div className="flex items-center justify-between">
-							<p className="text-xs font-medium">{t("buildProgressTitle")}</p>
-							<p className="text-xs tabular-nums text-muted-foreground">
-								{t("buildProgressPercent", { value: Math.round(buildProgress) })}
-							</p>
-						</div>
-						<div
-							className="h-2 w-full overflow-hidden rounded-full bg-muted"
-							role="progressbar"
-							aria-valuemin={0}
-							aria-valuemax={100}
-							aria-valuenow={Math.round(buildProgress)}
-						>
-							<div
-								className={`h-full transition-[width] duration-300 ${buildState === "failed" ? "bg-destructive" : "bg-primary"}`}
-								style={{ width: `${Math.max(0, Math.min(100, buildProgress))}%` }}
-							/>
-						</div>
-						<p className={`text-xs ${buildState === "failed" ? "text-destructive" : "text-muted-foreground"}`}>
-							{buildState === "running"
-								? t("buildProgressRunning")
-								: buildState === "succeeded"
-									? t("buildProgressSuccess")
-									: t("buildProgressFailed")}
+			{buildState !== "idle" ? (
+				<section className="flex flex-col gap-2">
+					<div className="flex items-center justify-between">
+						<p className="text-xs font-medium">{t("buildProgressTitle")}</p>
+						<p className="text-xs tabular-nums text-muted-foreground">
+							{t("buildProgressPercent", { value: Math.round(buildProgress) })}
 						</p>
-					</section>
-				) : null}
+					</div>
+					<div
+						className="h-2 w-full overflow-hidden rounded-full bg-muted"
+						role="progressbar"
+						aria-valuemin={0}
+						aria-valuemax={100}
+						aria-valuenow={Math.round(buildProgress)}
+					>
+						<div
+							className={`h-full transition-[width] duration-300 ${buildState === "failed" ? "bg-destructive" : "bg-primary"}`}
+							style={{ width: `${Math.max(0, Math.min(100, buildProgress))}%` }}
+						/>
+					</div>
+					<p className={`text-xs ${buildState === "failed" ? "text-destructive" : "text-muted-foreground"}`}>
+						{buildState === "running"
+							? t("buildProgressRunning")
+							: buildState === "succeeded"
+								? t("buildProgressSuccess")
+								: t("buildProgressFailed")}
+					</p>
+				</section>
+			) : null}
 
-				<section className="flex flex-col gap-3 rounded-lg border p-3">
-					<h3 className="text-sm font-medium">{t("scheduleSectionTitle")}</h3>
-					<p className="text-xs text-muted-foreground">{t("scheduleSectionDesc")}</p>
+			<Card size="sm">
+				<CardHeader>
+					<CardTitle>{t("scheduleSectionTitle")}</CardTitle>
+					<CardDescription>{t("scheduleSectionDesc")}</CardDescription>
+				</CardHeader>
+				<CardContent className="flex flex-col gap-3">
 					<div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_176px_auto] md:items-end">
-						<div className="flex h-9 items-center justify-between rounded-md border px-3">
+						<div className="flex h-9 items-center justify-between gap-3">
 							<span className="text-sm">{t("enableAutoBuild")}</span>
 							<Switch checked={scheduleEnabledDraft} onCheckedChange={setScheduleEnabledDraft} disabled={!scheduleReady} />
 						</div>
@@ -268,10 +266,14 @@ export function AdminStaticPage({
 							? `${staticBundleSchedule.enabled ? t("enabled") : t("disabled")}${t("scheduleTemplate", { intervalHours: staticBundleSchedule.intervalHours, cronExpression: staticBundleSchedule.cronExpression })}`
 							: t("loading")}
 					</p>
-				</section>
+				</CardContent>
+			</Card>
 
-				<section className="flex flex-col gap-3">
-					<h3 className="text-sm font-medium">{t("sourcesSectionTitle")}</h3>
+			<Card size="sm">
+				<CardHeader>
+					<CardTitle>{t("sourcesSectionTitle")}</CardTitle>
+				</CardHeader>
+				<CardContent>
 					{staticSources.length === 0 ? (
 						<Empty>
 							<EmptyHeader>
@@ -280,22 +282,18 @@ export function AdminStaticPage({
 						</Empty>
 					) : (
 						<div className="flex flex-col gap-3">
-							<div className="space-y-3 md:hidden">
+							<div className="-mt-1 divide-y divide-border/60 md:hidden">
 								{sourcesPagination.pagedItems.map((source) => (
-									<article key={source.id} className="rounded-lg border p-3">
+									<article key={source.id} className="py-3">
 										<div className="flex items-start justify-between gap-2">
 											<p className="text-sm font-medium">{source.category}</p>
-											<span className="rounded-md border px-2 py-1 text-xs text-muted-foreground">
+											<span className="text-xs text-muted-foreground">
 												{source.enabled ? t("statusEnabled") : t("statusDisabled")}
 											</span>
 										</div>
 										<p className="mt-2 break-all text-xs text-muted-foreground">{source.activeUrl}</p>
 										<div className="mt-3 grid grid-cols-2 gap-2">
-											<Button
-												variant={source.enabled ? "destructive" : "outline"}
-												className="h-9 w-full"
-												onClick={() => void handleToggleSource(source)}
-											>
+											<Button variant="outline" className="h-9 w-full" onClick={() => void handleToggleSource(source)}>
 												{source.enabled ? t("actionDisable") : t("actionEnable")}
 											</Button>
 											<Button variant="outline" className="h-9 w-full" onClick={() => openEditSourceDialog(source)}>
@@ -345,10 +343,14 @@ export function AdminStaticPage({
 							/>
 						</div>
 					)}
-				</section>
+				</CardContent>
+			</Card>
 
-				<section className="flex flex-col gap-3">
-					<h3 className="text-sm font-medium">{t("bundlesSectionTitle")}</h3>
+			<Card size="sm">
+				<CardHeader>
+					<CardTitle>{t("bundlesSectionTitle")}</CardTitle>
+				</CardHeader>
+				<CardContent>
 					{staticBundles.length === 0 ? (
 						<Empty>
 							<EmptyHeader>
@@ -357,16 +359,14 @@ export function AdminStaticPage({
 						</Empty>
 					) : (
 						<div className="flex flex-col gap-3">
-							<div className="space-y-3 md:hidden">
+							<div className="-mt-1 divide-y divide-border/60 md:hidden">
 								{bundlesPagination.pagedItems.map((bundle) => (
-									<article key={bundle.id} className="rounded-lg border p-3">
+									<article key={bundle.id} className="py-3">
 										<p className="text-sm font-medium">{bundle.version}</p>
-										<p className="mt-2 break-all text-xs text-muted-foreground">MD5：{bundle.md5}</p>
-										<div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-											<span className="rounded-md border px-2 py-1">
-												{bundle.active ? t("statusActive") : t("statusInactive")}
-											</span>
-											<span className="rounded-md border px-2 py-1">{new Date(bundle.createdAt).toLocaleString()}</span>
+										<p className="mt-1 break-all text-xs text-muted-foreground">MD5：{bundle.md5}</p>
+										<div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+											<span>{bundle.active ? t("statusActive") : t("statusInactive")}</span>
+											<span>{new Date(bundle.createdAt).toLocaleString()}</span>
 										</div>
 									</article>
 								))}
@@ -404,48 +404,48 @@ export function AdminStaticPage({
 							/>
 						</div>
 					)}
-				</section>
+				</CardContent>
+			</Card>
 
-				<Dialog open={Boolean(editingSource)} onOpenChange={(open) => !open && setEditingSource(null)}>
-					<DialogContent className="sm:max-w-lg">
-						<DialogHeader>
-							<DialogTitle>{t("dialogEditUrlTitle")}</DialogTitle>
-							<DialogDescription>
-								{editingSource ? t("dialogEditUrlDesc", { category: editingSource.category }) : t("dialogEditUrlFallbackDesc")}
-							</DialogDescription>
-						</DialogHeader>
+			<Dialog open={Boolean(editingSource)} onOpenChange={(open) => !open && setEditingSource(null)}>
+				<DialogContent className="sm:max-w-lg">
+					<DialogHeader>
+						<DialogTitle>{t("dialogEditUrlTitle")}</DialogTitle>
+						<DialogDescription>
+							{editingSource ? t("dialogEditUrlDesc", { category: editingSource.category }) : t("dialogEditUrlFallbackDesc")}
+						</DialogDescription>
+					</DialogHeader>
+					<Field>
+						<FieldLabel htmlFor="edit-static-source-url">{t("labelActiveUrl")}</FieldLabel>
+						<Input
+							id="edit-static-source-url"
+							value={editingSourceUrl}
+							onChange={(event) => setEditingSourceUrl(event.target.value)}
+						/>
+					</Field>
+					{editingSource?.category === "chart_fit" ? (
 						<Field>
-							<FieldLabel htmlFor="edit-static-source-url">{t("labelActiveUrl")}</FieldLabel>
+							<FieldLabel htmlFor="edit-static-source-extra-url">{t("labelExtraUrl")}</FieldLabel>
 							<Input
-								id="edit-static-source-url"
-								value={editingSourceUrl}
-								onChange={(event) => setEditingSourceUrl(event.target.value)}
+								id="edit-static-source-extra-url"
+								value={editingSourceExtraUrl}
+								onChange={(event) => setEditingSourceExtraUrl(event.target.value)}
+								placeholder={t("labelExtraUrlPlaceholder")}
 							/>
 						</Field>
-						{editingSource?.category === "chart_fit" ? (
-							<Field>
-								<FieldLabel htmlFor="edit-static-source-extra-url">{t("labelExtraUrl")}</FieldLabel>
-								<Input
-									id="edit-static-source-extra-url"
-									value={editingSourceExtraUrl}
-									onChange={(event) => setEditingSourceExtraUrl(event.target.value)}
-									placeholder={t("labelExtraUrlPlaceholder")}
-								/>
-							</Field>
-						) : null}
-						<DialogFooter>
-							<Button variant="outline" onClick={() => setEditingSource(null)}>
-								{t("btnCancel")}
-							</Button>
-							<Button onClick={() => void handleSubmitEditSourceUrl()} disabled={!editingSourceUrl.trim()}>
-								{t("btnUpdateUrl")}
-							</Button>
-						</DialogFooter>
-					</DialogContent>
-				</Dialog>
+					) : null}
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setEditingSource(null)}>
+							{t("btnCancel")}
+						</Button>
+						<Button onClick={() => void handleSubmitEditSourceUrl()} disabled={!editingSourceUrl.trim()}>
+							{t("btnUpdateUrl")}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 
-				{confirmDialogNode}
-			</CardContent>
-		</Card>
+			{confirmDialogNode}
+		</div>
 	);
 }
