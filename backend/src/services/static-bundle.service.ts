@@ -21,12 +21,12 @@ const STATIC_SOURCE_DEFAULTS: Array<{ category: string; activeUrl: string; fallb
 	},
 	{
 		category: "songid_json",
-		activeUrl: "https://maimaid.shikoch.in/songid.json",
+		activeUrl: "https://static.shikoch.in/songid.json",
 		fallbackUrls: [],
 	},
 	{
 		category: "utage_note_json",
-		activeUrl: "https://maimaid.shikoch.in/utage_chart_stats.json",
+		activeUrl: "https://static.shikoch.in/utage_chart_stats.json",
 		fallbackUrls: [],
 	},
 	{

@@ -933,7 +933,7 @@ export class CatalogService {
 				where: { category: "songid_json" },
 				select: { activeUrl: true, enabled: true },
 			});
-			const targetUrl = source?.enabled && source.activeUrl ? source.activeUrl : "https://maimaid.shikoch.in/songid.json";
+			const targetUrl = source?.enabled && source.activeUrl ? source.activeUrl : "https://static.shikoch.in/songid.json";
 			const response = await fetch(targetUrl, { method: "GET" });
 			if (!response.ok) {
 				return new Map<number, string>();
