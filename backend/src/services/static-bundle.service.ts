@@ -1,12 +1,17 @@
-import { createHash } from "node:crypto";
 import { inject, singleton } from "tsyringe";
 import { Prisma, type PrismaClient } from "@prisma/client";
-import { parse as parseYaml } from "yaml";
 import { TOKENS } from "../di/tokens.js";
 import type { Env } from "../env.js";
 import { AppError } from "../lib/errors.js";
-import { ChartFitService } from "./chart-fit.service.js";
+import { buildSongIdMapping, ChartFitService } from "./chart-fit.service.js";
 import { CatalogService } from "./catalog.service.js";
+import {
+	composeBundlePayload,
+	normalizeSourceCategory,
+	toRecord,
+	type ComposedBundle,
+	type StaticSourceTarget,
+} from "./static-bundle.utils.js";
 
 const STATIC_SOURCE_DEFAULTS: Array<{ category: string; activeUrl: string; fallbackUrls: string[] }> = [
 	{
@@ -59,6 +64,11 @@ export type StaticBundlePeriodicBuildSchedule = {
 	cronExpression: string;
 };
 
+/** A composed bundle ready to store. `force` skips the md5 dedupe check. */
+export type PublishBundleInput = ComposedBundle & {
+	force?: boolean;
+};
+
 @singleton()
 export class StaticBundleService {
 	constructor(
@@ -77,13 +87,6 @@ export class StaticBundleService {
 			return Prisma.JsonNull;
 		}
 		return this.toJsonValue(value);
-	}
-
-	private normalizeSourceCategory(category: string) {
-		if (category === "df_chart_fit") {
-			return "chart_fit";
-		}
-		return category;
 	}
 
 	private sanitizeFallbackUrls(category: string, fallbackUrls: string[]) {
@@ -147,7 +150,7 @@ export class StaticBundleService {
 		enabled?: boolean;
 		metadata?: Record<string, unknown> | null;
 	}) {
-		const category = this.normalizeSourceCategory(input.category.trim());
+		const category = normalizeSourceCategory(input.category.trim());
 		const fallbackUrls = this.sanitizeFallbackUrls(category, input.fallbackUrls ?? []);
 
 		return this.prisma.staticSource.create({
@@ -178,7 +181,7 @@ export class StaticBundleService {
 			throw new AppError(404, "static_source_not_found", "Static source not found.");
 		}
 
-		const category = this.normalizeSourceCategory(existing.category);
+		const category = normalizeSourceCategory(existing.category);
 		const data: Prisma.StaticSourceUpdateInput = {};
 		if (input.activeUrl !== undefined) {
 			data.activeUrl = input.activeUrl.trim();
@@ -254,103 +257,64 @@ export class StaticBundleService {
 		return this.toPeriodicBuildSchedule(config.enabled, config.intervalHours);
 	}
 
-	async buildBundle(force = false) {
+	/**
+	 * The enabled sources, category-normalized. Exposed so the GitHub Actions
+	 * builder can fetch the upstreams itself instead of making the API do it.
+	 */
+	async listEnabledSourceTargets(): Promise<StaticSourceTarget[]> {
 		await this.ensureDefaultSources();
 		const sources = await this.prisma.staticSource.findMany({
 			where: { enabled: true },
 			orderBy: { category: "asc" },
 		});
-		if (sources.length === 0) {
-			throw new AppError(400, "static_source_empty", "No enabled static source.");
-		}
-
-		const sourceMeta: Record<string, unknown> = {};
-		const payload: Record<string, unknown> = {
-			resources: {},
-		};
-
-		const normalizedSources = sources.map((source) => ({
-			...source,
-			category: this.normalizeSourceCategory(source.category),
+		return sources.map((source) => ({
+			category: normalizeSourceCategory(source.category),
+			activeUrl: source.activeUrl,
+			fallbackUrls: source.fallbackUrls,
 		}));
-		const chartFitSource = normalizedSources.find((source) => source.category === "chart_fit");
-		const commonSources = normalizedSources.filter((source) => source.category !== "chart_fit");
+	}
 
-		const commonFetched = await this.mapWithConcurrency(commonSources, 4, async (source) => ({
-			source,
-			fetched: await this.fetchStaticSourceFromTargets(source.category, [source.activeUrl, ...source.fallbackUrls]),
-		}));
-		for (const item of commonFetched) {
-			(payload.resources as Record<string, unknown>)[item.source.category] = item.fetched.content;
-			sourceMeta[item.source.category] = {
-				url: item.fetched.url,
-				contentType: item.fetched.contentType,
-			};
+	/**
+	 * Build in-process: compute, then publish. Still used by the admin "build now"
+	 * button and by `manifest()` when no bundle exists yet. The scheduled path runs
+	 * the compute half in GitHub Actions and calls `publishBundle` over HTTP, so
+	 * this is the fallback rather than the normal route.
+	 */
+	async buildBundle(force = false) {
+		const sources = await this.listEnabledSourceTargets();
+		const composed = await composeBundlePayload(sources, async (input) =>
+			this.chartFitService.refreshSnapshotWithMapping(buildSongIdMapping(input.dataJson, input.songidJson)),
+		);
+		return this.publishBundle({ ...composed, force });
+	}
+
+	/**
+	 * Database half of a bundle build: dedupe by md5, insert, activate, prune, then
+	 * refresh the Song/Sheet catalog from the bundle's data_json.
+	 *
+	 * `md5` is taken on trust rather than recomputed. Hashing means a full
+	 * key-sorted clone of ~15 MB of JSON, the single largest heap spike in a build,
+	 * and not paying it here is the point of moving builds to CI. Both callers hash
+	 * with the same `computeBundleMd5`, so there is no second implementation free to
+	 * drift. The format is still checked so a malformed value fails loudly instead
+	 * of silently poisoning client caching.
+	 */
+	async publishBundle(input: PublishBundleInput) {
+		if (!/^[0-9a-f]{32}$/.test(input.md5)) {
+			throw new AppError(400, "static_bundle_invalid_md5", "Bundle md5 must be 32 lowercase hex characters.");
 		}
 
-		const resourcesRecord = payload.resources as Record<string, unknown>;
-		const selfChartFit = await this.chartFitService.refreshSnapshot({
-			dataJson: resourcesRecord.data_json,
-			songidJson: resourcesRecord.songid_json,
-		});
-
-		if (chartFitSource) {
-			if (chartFitSource.fallbackUrls.length > 1) {
-				throw new AppError(400, "static_source_invalid_fallback_urls", "chart_fit supports at most one extra URL.");
-			}
-
-			let primaryPayload: unknown = {};
-			let primaryResolvedUrl: string | null = null;
-			let primaryContentType: string | null = null;
-			let primaryFetchError: string | null = null;
-
-			try {
-				const primary = await this.fetchStaticSourceByUrl("chart_fit", chartFitSource.activeUrl);
-				primaryPayload = primary.content;
-				primaryResolvedUrl = primary.url;
-				primaryContentType = primary.contentType;
-			} catch (error) {
-				primaryFetchError = error instanceof Error ? error.message : "unknown_error";
-			}
-
-			const extraUrl = chartFitSource.fallbackUrls[0] ?? null;
-			let secondaryPayload: unknown = selfChartFit.payload;
-			let secondaryResolvedUrl: string | null = null;
-			let secondaryFetchError: string | null = null;
-
-			if (extraUrl) {
-				try {
-					const secondary = await this.fetchStaticSourceByUrl("chart_fit", extraUrl);
-					secondaryPayload = secondary.content;
-					secondaryResolvedUrl = secondary.url;
-				} catch (error) {
-					secondaryFetchError = error instanceof Error ? error.message : "unknown_error";
-				}
-			}
-
-			const mergedChartFit = this.chartFitService.mergePayloads(primaryPayload, secondaryPayload, 1000);
-			resourcesRecord.chart_fit = mergedChartFit;
-			sourceMeta.chart_fit = {
-				url: primaryResolvedUrl,
-				contentType: primaryContentType,
-				primaryFetchError,
-				extraUrl,
-				extraResolvedUrl: secondaryResolvedUrl,
-				extraFetchError: secondaryFetchError,
-				selfGeneratedAt: (selfChartFit.meta as Record<string, unknown>).generatedAt ?? null,
-			};
+		const resourcesRecord = toRecord(input.payload.resources);
+		const dataJsonResource = resourcesRecord?.data_json;
+		// Checked before the insert. Previously this threw *after* activating the
+		// bundle, leaving an active row whose catalog had never been applied.
+		if (dataJsonResource === undefined || dataJsonResource === null) {
+			throw new AppError(502, "static_bundle_missing_catalog_data", "Bundle payload is missing data_json.");
 		}
 
-		payload.resources = this.normalizeBundleResources(payload.resources as Record<string, unknown>);
-
-		const md5 = this.computeBundleMd5(payload);
-		const version = `bundle-${Date.now()}`;
-
-		if (!force) {
+		if (!input.force) {
 			const existing = await this.prisma.staticBundle.findFirst({
-				where: {
-					md5,
-				},
+				where: { md5: input.md5 },
 				orderBy: { createdAt: "desc" },
 			});
 			if (existing) {
@@ -361,6 +325,7 @@ export class StaticBundleService {
 			}
 		}
 
+		const version = `bundle-${Date.now()}`;
 		const bundle = await this.prisma.$transaction(async (tx) => {
 			await tx.staticBundle.updateMany({
 				where: { active: true },
@@ -369,9 +334,9 @@ export class StaticBundleService {
 			return tx.staticBundle.create({
 				data: {
 					version,
-					md5,
-					payloadJson: this.toJsonValue(payload),
-					sourceMeta: this.toJsonValue(sourceMeta),
+					md5: input.md5,
+					payloadJson: this.toJsonValue(input.payload),
+					sourceMeta: this.toJsonValue(input.sourceMeta),
 					active: true,
 					activatedAt: new Date(),
 				},
@@ -380,12 +345,7 @@ export class StaticBundleService {
 
 		await this.pruneBundles();
 
-		const dataJsonResource = resourcesRecord.data_json;
-		if (dataJsonResource === undefined || dataJsonResource === null) {
-			throw new AppError(502, "static_bundle_missing_catalog_data", "Bundle payload is missing data_json.");
-		}
-
-		const dataJsonMeta = this.toRecord(sourceMeta.data_json);
+		const dataJsonMeta = toRecord(input.sourceMeta.data_json);
 		const dataJsonSourceUrl =
 			typeof dataJsonMeta?.url === "string" && dataJsonMeta.url.trim()
 				? dataJsonMeta.url
@@ -486,12 +446,12 @@ export class StaticBundleService {
 			return [];
 		}
 
-		const payload = this.toRecord(activeBundle.payloadJson);
-		const resources = this.toRecord(payload?.resources);
+		const payload = toRecord(activeBundle.payloadJson);
+		const resources = toRecord(payload?.resources);
 		const rows = Array.isArray(resources?.songid_json) ? resources.songid_json : [];
 		const items: Array<{ id: number; name: string }> = [];
 		for (const rowValue of rows) {
-			const row = this.toRecord(rowValue);
+			const row = toRecord(rowValue);
 			if (!row) {
 				continue;
 			}
@@ -614,450 +574,5 @@ SELECT cron.schedule(
 				error: error instanceof Error ? error.message : "unknown_error",
 			});
 		}
-	}
-
-	private async fetchStaticSourceByUrl(category: string, url: string) {
-		const response = await fetch(url, {
-			method: "GET",
-		});
-		if (!response.ok) {
-			throw new AppError(502, "static_source_fetch_failed", `Static source fetch failed: ${category}`, {
-				category,
-				url,
-				error: `HTTP_${response.status}`,
-			});
-		}
-
-		const contentType = response.headers.get("content-type");
-		const raw = await response.text();
-		const parsed = this.tryParseText(raw, contentType);
-		return {
-			url,
-			contentType,
-			content: this.normalizeResourcePayload(category, parsed, raw),
-		};
-	}
-
-	private async fetchStaticSourceFromTargets(category: string, targets: string[]) {
-		let fetchError: string | null = null;
-		for (const url of targets) {
-			try {
-				return await this.fetchStaticSourceByUrl(category, url);
-			} catch (error) {
-				fetchError = error instanceof Error ? error.message : "unknown_error";
-			}
-		}
-
-		throw new AppError(502, "static_source_fetch_failed", `Static source fetch failed: ${category}`, {
-			category,
-			error: fetchError,
-		});
-	}
-
-	private tryParseText(raw: string, contentType: string | null) {
-		const normalizedType = (contentType ?? "").toLowerCase();
-		const maybeJson = normalizedType.includes("json") || raw.trimStart().startsWith("{") || raw.trimStart().startsWith("[");
-		if (!maybeJson) {
-			return raw;
-		}
-		try {
-			return JSON.parse(raw) as unknown;
-		} catch {
-			return raw;
-		}
-	}
-
-	private normalizeResourcePayload(category: string, parsed: unknown, raw: string) {
-		if (category !== "dan_info") {
-			return parsed;
-		}
-
-		return this.parseDanInfoPayload(parsed, raw);
-	}
-
-	private normalizeBundleResources(resources: Record<string, unknown>) {
-		const normalized = { ...resources };
-		if (normalized.chart_fit === undefined && normalized.df_chart_fit !== undefined) {
-			normalized.chart_fit = normalized.df_chart_fit;
-		}
-		delete (normalized as Record<string, unknown>).df_chart_fit;
-		normalized.lxns_aliases = this.normalizeLxnsAliasesPayload(resources.lxns_aliases, resources.songid_json);
-		return normalized;
-	}
-
-	private normalizeLxnsAliasesPayload(lxnsPayload: unknown, songIdPayload: unknown) {
-		const aliases = this.extractLxnsAliasRows(lxnsPayload);
-		if (aliases.length === 0) {
-			return lxnsPayload;
-		}
-
-		const knownSongIds = this.extractSongIdSet(songIdPayload);
-		const merged = new Map<number, Set<string>>();
-
-		for (const row of aliases) {
-			const canonicalSongId = this.resolveCanonicalLxnsSongId(row.song_id, knownSongIds);
-			const existing = merged.get(canonicalSongId) ?? new Set<string>();
-			for (const alias of row.aliases) {
-				const trimmed = alias.trim();
-				if (!trimmed) {
-					continue;
-				}
-				existing.add(trimmed);
-			}
-			merged.set(canonicalSongId, existing);
-		}
-
-		const normalizedAliases = Array.from(merged.entries())
-			.sort((left, right) => left[0] - right[0])
-			.map(([songId, aliasSet]) => ({
-				song_id: songId,
-				aliases: Array.from(aliasSet).sort(),
-			}));
-
-		return {
-			aliases: normalizedAliases,
-		};
-	}
-
-	private extractLxnsAliasRows(payload: unknown) {
-		const sourceArray = Array.isArray(payload) ? payload : ((this.toRecord(payload)?.aliases as unknown[] | undefined) ?? []);
-
-		const rows: Array<{ song_id: number; aliases: string[] }> = [];
-		for (const item of sourceArray) {
-			const record = this.toRecord(item);
-			if (!record) {
-				continue;
-			}
-			const songId = Number(record.song_id);
-			if (!Number.isFinite(songId)) {
-				continue;
-			}
-			const aliasesRaw = Array.isArray(record.aliases)
-				? record.aliases.filter((entry: unknown): entry is string => typeof entry === "string")
-				: [];
-			rows.push({
-				song_id: Math.trunc(songId),
-				aliases: aliasesRaw,
-			});
-		}
-		return rows;
-	}
-
-	private extractSongIdSet(payload: unknown) {
-		const set = new Set<number>();
-		if (!Array.isArray(payload)) {
-			return set;
-		}
-		for (const item of payload) {
-			const record = this.toRecord(item);
-			if (!record) {
-				continue;
-			}
-			const id = Number(record.id);
-			if (!Number.isFinite(id)) {
-				continue;
-			}
-			set.add(Math.trunc(id));
-		}
-		return set;
-	}
-
-	private resolveCanonicalLxnsSongId(songId: number, knownSongIds: Set<number>) {
-		if (knownSongIds.size === 0) {
-			return songId;
-		}
-
-		if (songId > 0 && songId < 10000) {
-			const dxCandidate = songId + 10000;
-			if (!knownSongIds.has(songId) && knownSongIds.has(dxCandidate)) {
-				return dxCandidate;
-			}
-		}
-
-		const candidates = this.buildLxnsSongIdCandidates(songId);
-		for (const candidate of candidates) {
-			if (knownSongIds.has(candidate)) {
-				return candidate;
-			}
-		}
-		return songId;
-	}
-
-	private buildLxnsSongIdCandidates(songId: number) {
-		const candidates: number[] = [];
-		const push = (value: number) => {
-			if (!Number.isFinite(value) || value <= 0) {
-				return;
-			}
-			if (!candidates.includes(value)) {
-				candidates.push(value);
-			}
-		};
-
-		push(songId);
-
-		if (songId > 0 && songId < 10000) {
-			push(songId + 10000);
-		}
-
-		if (songId > 10000 && songId < 100000) {
-			const baseId = songId % 10000;
-			if (baseId > 0) {
-				push(baseId);
-				push(baseId + 10000);
-			}
-		}
-
-		if (songId >= 100000) {
-			const baseId = songId % 100000;
-			if (baseId > 0) {
-				push(baseId);
-				if (baseId < 10000) {
-					push(baseId + 10000);
-				}
-			}
-		}
-
-		return candidates;
-	}
-
-	private parseDanInfoPayload(parsed: unknown, raw: string) {
-		let candidate = parsed;
-		if (typeof candidate === "string") {
-			try {
-				candidate = parseYaml(raw);
-			} catch (error) {
-				throw new AppError(502, "static_source_invalid_payload", "Dan info YAML parse failed.", {
-					error: error instanceof Error ? error.message : "unknown_error",
-				});
-			}
-		}
-
-		return this.sanitizeDanCategories(candidate);
-	}
-
-	private sanitizeDanCategories(value: unknown) {
-		if (!Array.isArray(value)) {
-			return [];
-		}
-
-		const rows: Array<{
-			title: string;
-			id: string;
-			sections: Array<{
-				title?: string;
-				description?: string;
-				sheets: string[];
-				sheetDescriptions?: string[];
-			}>;
-		}> = [];
-
-		for (let index = 0; index < value.length; index += 1) {
-			const item = value[index];
-			if (typeof item !== "object" || item === null) {
-				continue;
-			}
-
-			const record = item as Record<string, unknown>;
-			const titleRaw = typeof record.title === "string" ? record.title : "";
-			const title = titleRaw.trim();
-			if (!title) {
-				continue;
-			}
-
-			const lowerTitle = title.toLocaleLowerCase();
-			if (lowerTitle.includes("test") || lowerTitle.includes("author's choice")) {
-				continue;
-			}
-
-			const sectionItems = Array.isArray(record.sections) ? record.sections : [];
-			const cleanedSections = sectionItems
-				.map((section) => this.sanitizeDanSection(section))
-				.filter((section): section is NonNullable<typeof section> => section !== null);
-			if (cleanedSections.length === 0) {
-				continue;
-			}
-
-			const idRaw = typeof record.id === "string" ? record.id.trim() : "";
-			rows.push({
-				title,
-				id: idRaw || this.fallbackDanCategoryId(title, index),
-				sections: cleanedSections,
-			});
-		}
-
-		return rows;
-	}
-
-	private sanitizeDanSection(section: unknown) {
-		if (typeof section !== "object" || section === null) {
-			return null;
-		}
-
-		const record = section as Record<string, unknown>;
-		const rawSheets = Array.isArray(record.sheets)
-			? record.sheets.filter((item): item is string => typeof item === "string")
-			: [];
-		if (rawSheets.length === 0) {
-			return null;
-		}
-
-		const validSheetIndexes = new Set<number>();
-		const cleanedSheets: string[] = [];
-		for (let index = 0; index < rawSheets.length; index += 1) {
-			const rawSheet = rawSheets[index]!;
-			if (!this.isValidDanRawSheetRef(rawSheet)) {
-				continue;
-			}
-			validSheetIndexes.add(index);
-			cleanedSheets.push(rawSheet.trim());
-		}
-		if (cleanedSheets.length === 0) {
-			return null;
-		}
-
-		let cleanedSheetDescriptions: string[] | undefined;
-		if (Array.isArray(record.sheetDescriptions)) {
-			const descriptions = record.sheetDescriptions.filter((item): item is string => typeof item === "string");
-			const paired: string[] = [];
-			const pairCount = Math.min(rawSheets.length, descriptions.length);
-			for (let index = 0; index < pairCount; index += 1) {
-				if (!validSheetIndexes.has(index)) {
-					continue;
-				}
-				const description = descriptions[index]!;
-				paired.push(description);
-			}
-			cleanedSheetDescriptions = paired.length > 0 ? paired : undefined;
-		}
-
-		const title = typeof record.title === "string" ? record.title.trim() : "";
-		const description = typeof record.description === "string" ? record.description.trim() : "";
-
-		const cleanedSection: {
-			title?: string;
-			description?: string;
-			sheets: string[];
-			sheetDescriptions?: string[];
-		} = {
-			sheets: cleanedSheets,
-		};
-		if (title) {
-			cleanedSection.title = title;
-		}
-		if (description) {
-			cleanedSection.description = description;
-		}
-		if (cleanedSheetDescriptions && cleanedSheetDescriptions.length > 0) {
-			cleanedSection.sheetDescriptions = cleanedSheetDescriptions;
-		}
-		return cleanedSection;
-	}
-
-	private isValidDanRawSheetRef(raw: string) {
-		const trimmed = raw.trim();
-		if (!trimmed) {
-			return false;
-		}
-
-		const parts = trimmed.split("|");
-		if (parts.length < 3) {
-			return false;
-		}
-
-		const title = (parts[0] ?? "").trim();
-		const type = (parts[1] ?? "").trim().toLocaleLowerCase();
-		const difficulty = (parts[2] ?? "").trim().toLocaleLowerCase();
-		if (!title || !type || !difficulty) {
-			return false;
-		}
-
-		if (type.includes("utage") || difficulty.includes("utage")) {
-			return false;
-		}
-
-		const validTypes = new Set(["dx", "std"]);
-		if (!validTypes.has(type)) {
-			return false;
-		}
-
-		const validDifficulties = new Set(["basic", "advanced", "expert", "master", "remaster"]);
-		return validDifficulties.has(difficulty);
-	}
-
-	private fallbackDanCategoryId(title: string, index: number) {
-		const normalized = title
-			.normalize("NFKC")
-			.toLocaleLowerCase()
-			.replace(/\s+/gu, "-")
-			.replace(/[^\p{L}\p{N}_-]/gu, "");
-		return normalized || `category-${index + 1}`;
-	}
-
-	private computeBundleMd5(payload: Record<string, unknown>) {
-		const hashMaterial = payload.resources ?? {};
-		const canonical = this.stableStringify(hashMaterial);
-		return createHash("md5").update(canonical).digest("hex");
-	}
-
-	private stableStringify(value: unknown) {
-		return JSON.stringify(this.normalizeForStableHash(value));
-	}
-
-	private async mapWithConcurrency<TInput, TResult>(
-		inputs: TInput[],
-		concurrency: number,
-		worker: (input: TInput) => Promise<TResult>,
-	) {
-		if (inputs.length === 0) {
-			return [];
-		}
-
-		const normalizedConcurrency = Math.max(1, Math.min(concurrency, inputs.length));
-		const results = new Array<TResult>(inputs.length);
-		let cursor = 0;
-
-		const runWorker = async () => {
-			while (true) {
-				const current = cursor;
-				cursor += 1;
-				if (current >= inputs.length) {
-					return;
-				}
-				results[current] = await worker(inputs[current]!);
-			}
-		};
-
-		await Promise.all(Array.from({ length: normalizedConcurrency }, () => runWorker()));
-		return results;
-	}
-
-	private toRecord(value: unknown) {
-		return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
-	}
-
-	private normalizeForStableHash(value: unknown): unknown {
-		if (value === null || value === undefined) {
-			return null;
-		}
-
-		if (value instanceof Date) {
-			return value.toISOString();
-		}
-
-		if (Array.isArray(value)) {
-			return value.map((item) => this.normalizeForStableHash(item));
-		}
-
-		if (typeof value === "object") {
-			const record = value as Record<string, unknown>;
-			const normalized: Record<string, unknown> = {};
-			for (const key of Object.keys(record).sort()) {
-				normalized[key] = this.normalizeForStableHash(record[key]);
-			}
-			return normalized;
-		}
-
-		return value;
 	}
 }

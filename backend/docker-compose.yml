@@ -19,36 +19,9 @@ services:
       timeout: 3s
       retries: 20
 
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    env_file:
-      - path: .env.docker
-        required: true
-      - path: .env.docker.local
-        required: false
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - minio-data:/data
-
-  minio-init:
-    image: minio/mc:latest
-    env_file:
-      - path: .env.docker
-        required: true
-      - path: .env.docker.local
-        required: false
-    volumes:
-      - ./docker/minio/init.sh:/init.sh:ro
-    depends_on:
-      - minio
-    entrypoint:
-      - /bin/sh
-      - /init.sh
-    restart: "no"
-
+  # Object storage is Cloudflare R2, so there is no storage container here. Point
+  # the S3_* vars in .env.docker at an R2 bucket, or leave them blank to run
+  # without object storage (avatar upload then returns storage_not_configured).
   backend:
     build:
       context: .
@@ -61,12 +34,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      minio-init:
-        condition: service_completed_successfully
     ports:
       - "8787:8787"
     restart: unless-stopped
 
 volumes:
   postgres-data:
-  minio-data:

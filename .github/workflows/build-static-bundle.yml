@@ -1,0 +1,66 @@
+name: Build static bundle
+
+# Assembling a static bundle fetches every upstream source (data.json alone is
+# several MB), merges chart stats, and hashes the result — parsing and
+# re-serializing well over 10 MB of JSON. That used to run inside the API process
+# on a 1 vCPU / 1 GB host, where it was by far the heaviest thing the server did
+# and a plausible OOM. Here it runs on a runner instead, and the API only receives
+# the finished bundle to store and activate.
+
+"on":
+  schedule:
+    # Every 6 hours, matching the STATIC_SYNC_INTERVAL_HOURS default. Off the hour
+    # so this does not pile onto the top-of-hour spike on GitHub's schedulers.
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Publish even when the bundle contents are unchanged"
+        type: boolean
+        default: false
+
+# A build ends in a write that flips which bundle is active. Two overlapping runs
+# could interleave those writes, so let one finish rather than cancelling it.
+concurrency:
+  group: build-static-bundle
+  cancel-in-progress: false
+
+jobs:
+  build-static-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and publish bundle
+        working-directory: backend
+        env:
+          MAIMAID_API_URL: ${{ secrets.MAIMAID_API_URL }}
+          MAIMAID_INTERNAL_JOB_TOKEN: ${{ secrets.MAIMAID_INTERNAL_JOB_TOKEN }}
+          # The composed payload is held in memory as parsed JSON, several times
+          # over during hashing. The default heap is enough today but leaves little
+          # margin as the catalog grows.
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: |
+          set -euo pipefail
+          : "${MAIMAID_API_URL:?Missing GitHub Secret MAIMAID_API_URL}"
+          : "${MAIMAID_INTERNAL_JOB_TOKEN:?Missing GitHub Secret MAIMAID_INTERNAL_JOB_TOKEN}"
+          # `force` is only ever set by workflow_dispatch; on a schedule it is empty.
+          if [ "${{ inputs.force }}" = "true" ]; then
+            pnpm run static-bundle:build -- --force
+          else
+            pnpm run static-bundle:build
+          fi

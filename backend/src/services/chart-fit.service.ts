@@ -517,6 +517,141 @@ export const mergeChartStatsPayloads = (
 	};
 };
 
+/**
+ * Maps a local sheet (title + chart type) onto the upstream numeric song id.
+ * Derived purely from `data.json` and `songid.json`.
+ */
+export type ChartFitSongIdMapping = {
+	byTitleAndType: Map<string, number>;
+	byTitle: Map<string, number[]>;
+};
+
+/**
+ * Wire form of {@link ChartFitSongIdMapping}. The mapping is a few thousand short
+ * entries, so CI can parse the multi-MB source JSON, derive this, and post it to
+ * the server — which then only needs the `best_scores` aggregate that genuinely
+ * requires database access.
+ */
+export type SerializedChartFitSongIdMapping = {
+	byTitleAndType: Record<string, number>;
+	byTitle: Record<string, number[]>;
+};
+
+export const buildSongIdMapping = (dataJson: unknown, songidJson: unknown): ChartFitSongIdMapping => {
+	const byTitleAndType = new Map<string, number>();
+	const byTitle = new Map<string, number[]>();
+
+	const dataRecord = toRecord(dataJson);
+	const songsRaw = Array.isArray(dataRecord?.songs) ? dataRecord.songs : [];
+	for (const song of songsRaw) {
+		const row = toRecord(song);
+		if (!row) {
+			continue;
+		}
+
+		const songIdRaw = toFiniteNumber(row.songId);
+		const titleRaw = typeof row.title === "string" ? row.title : "";
+		if (songIdRaw === null || !titleRaw.trim()) {
+			continue;
+		}
+		const songId = Math.trunc(songIdRaw);
+
+		const normalizedTitle = normalizeTitle(titleRaw);
+		const sheets = Array.isArray(row.sheets) ? row.sheets : [];
+		for (const sheet of sheets) {
+			const sheetRecord = toRecord(sheet);
+			const sheetTypeRaw = typeof sheetRecord?.type === "string" ? sheetRecord.type : "";
+			const normalizedType = normalizeType(sheetTypeRaw);
+			if (!normalizedType) {
+				continue;
+			}
+			byTitleAndType.set(`${normalizedTitle}|${normalizedType}`, songId);
+		}
+	}
+
+	const songIdRows = Array.isArray(songidJson) ? songidJson : [];
+	for (const item of songIdRows) {
+		const row = toRecord(item);
+		if (!row) {
+			continue;
+		}
+		const idRaw = toFiniteNumber(row.id);
+		const nameRaw = typeof row.name === "string" ? row.name : "";
+		if (idRaw === null || !nameRaw.trim()) {
+			continue;
+		}
+
+		const normalizedTitle = normalizeTitle(nameRaw);
+		const existing = byTitle.get(normalizedTitle) ?? [];
+		const normalizedId = Math.trunc(idRaw);
+		if (!existing.includes(normalizedId)) {
+			existing.push(normalizedId);
+			existing.sort((left, right) => left - right);
+			byTitle.set(normalizedTitle, existing);
+		}
+	}
+
+	return {
+		byTitleAndType,
+		byTitle,
+	};
+};
+
+export const serializeSongIdMapping = (mapping: ChartFitSongIdMapping): SerializedChartFitSongIdMapping => ({
+	byTitleAndType: Object.fromEntries(mapping.byTitleAndType),
+	byTitle: Object.fromEntries(mapping.byTitle),
+});
+
+/**
+ * Rebuilds Maps from the wire form. Goes through `Object.entries` rather than
+ * indexing the parsed object: song titles are arbitrary user-facing strings, and
+ * a title of `constructor` would otherwise resolve against `Object.prototype`.
+ */
+export const deserializeSongIdMapping = (raw: SerializedChartFitSongIdMapping): ChartFitSongIdMapping => ({
+	byTitleAndType: new Map(Object.entries(raw.byTitleAndType ?? {})),
+	byTitle: new Map(Object.entries(raw.byTitle ?? {})),
+});
+
+export const resolveSongIdFromMapping = (
+	mapping: ChartFitSongIdMapping,
+	input: { title: string; chartType: string; songIdentifier: string },
+) => {
+	const normalizedTitle = normalizeTitle(input.title);
+	if (!normalizedTitle) {
+		return null;
+	}
+
+	const normalizedType = normalizeType(input.chartType);
+	const byTypeHit = mapping.byTitleAndType.get(`${normalizedTitle}|${normalizedType}`);
+	if (byTypeHit && byTypeHit > 0) {
+		return byTypeHit;
+	}
+
+	const candidates = mapping.byTitle.get(normalizedTitle) ?? [];
+	if (candidates.length === 0) {
+		return null;
+	}
+
+	const localSongId = Number(input.songIdentifier);
+	if (Number.isFinite(localSongId)) {
+		const localSongIdInt = Math.trunc(localSongId);
+		if (candidates.includes(localSongIdInt)) {
+			return localSongIdInt;
+		}
+		if (localSongIdInt < 10000 && candidates.includes(localSongIdInt + 10000)) {
+			return localSongIdInt + 10000;
+		}
+		if (localSongIdInt > 10000 && candidates.includes(localSongIdInt % 10000)) {
+			return localSongIdInt % 10000;
+		}
+	}
+
+	const preferred =
+		normalizedType === "dx" ? candidates.find((id) => id >= 10000) : candidates.find((id) => id > 0 && id < 10000);
+
+	return preferred ?? candidates[0] ?? null;
+};
+
 // Only the newest snapshot is ever read (`getLatestSnapshotOrRefresh`). A few are
 // kept so a bad refresh can be inspected, but each payload holds stats for every
 // chart in the game, so unbounded history is the single largest avoidable
@@ -528,7 +663,16 @@ export class ChartFitService {
 	constructor(@inject(TOKENS.Prisma) private readonly prisma: PrismaClient) {}
 
 	async refreshSnapshot(input?: ChartFitSourceInput) {
-		const computed = await this.computeSelfChartStats(input);
+		return this.refreshSnapshotWithMapping(buildSongIdMapping(input?.dataJson, input?.songidJson));
+	}
+
+	/**
+	 * Same as {@link refreshSnapshot}, but takes the song-id mapping instead of the
+	 * multi-MB source JSON it is derived from. Lets the bundle build run the parse
+	 * elsewhere (CI) and leave only the `best_scores` aggregate on the server.
+	 */
+	async refreshSnapshotWithMapping(mapping: ChartFitSongIdMapping) {
+		const computed = await this.computeSelfChartStats(mapping);
 		await this.prisma.chartFitSnapshot.create({
 			data: {
 				payloadJson: toJsonValue(computed.payload),
@@ -591,9 +735,7 @@ export class ChartFitService {
 		});
 	}
 
-	private async computeSelfChartStats(input?: ChartFitSourceInput) {
-		const mapping = this.buildSongIdMapping(input?.dataJson, input?.songidJson);
-
+	private async computeSelfChartStats(mapping: ChartFitSongIdMapping) {
 		const rows = await this.prisma.bestScore.findMany({
 			select: {
 				achievements: true,
@@ -623,7 +765,7 @@ export class ChartFitService {
 		for (const row of rows) {
 			const title = row.sheet.song?.title?.trim() ?? "";
 			const chartType = normalizeType(row.sheet.chartType);
-			const mappedSongId = this.resolveSongIdFromMapping(mapping, {
+			const mappedSongId = resolveSongIdFromMapping(mapping, {
 				title,
 				chartType,
 				songIdentifier: row.sheet.songIdentifier,
@@ -814,105 +956,5 @@ export class ChartFitService {
 		} catch {
 			return undefined;
 		}
-	}
-
-	private buildSongIdMapping(dataJson: unknown, songidJson: unknown) {
-		const byTitleAndType = new Map<string, number>();
-		const byTitle = new Map<string, number[]>();
-
-		const dataRecord = toRecord(dataJson);
-		const songsRaw = Array.isArray(dataRecord?.songs) ? dataRecord.songs : [];
-		for (const song of songsRaw) {
-			const row = toRecord(song);
-			if (!row) {
-				continue;
-			}
-
-			const songIdRaw = toFiniteNumber(row.songId);
-			const titleRaw = typeof row.title === "string" ? row.title : "";
-			if (songIdRaw === null || !titleRaw.trim()) {
-				continue;
-			}
-			const songId = Math.trunc(songIdRaw);
-
-			const normalizedTitle = normalizeTitle(titleRaw);
-			const sheets = Array.isArray(row.sheets) ? row.sheets : [];
-			for (const sheet of sheets) {
-				const sheetRecord = toRecord(sheet);
-				const sheetTypeRaw = typeof sheetRecord?.type === "string" ? sheetRecord.type : "";
-				const normalizedType = normalizeType(sheetTypeRaw);
-				if (!normalizedType) {
-					continue;
-				}
-				byTitleAndType.set(`${normalizedTitle}|${normalizedType}`, songId);
-			}
-		}
-
-		const songIdRows = Array.isArray(songidJson) ? songidJson : [];
-		for (const item of songIdRows) {
-			const row = toRecord(item);
-			if (!row) {
-				continue;
-			}
-			const idRaw = toFiniteNumber(row.id);
-			const nameRaw = typeof row.name === "string" ? row.name : "";
-			if (idRaw === null || !nameRaw.trim()) {
-				continue;
-			}
-
-			const normalizedTitle = normalizeTitle(nameRaw);
-			const existing = byTitle.get(normalizedTitle) ?? [];
-			const normalizedId = Math.trunc(idRaw);
-			if (!existing.includes(normalizedId)) {
-				existing.push(normalizedId);
-				existing.sort((left, right) => left - right);
-				byTitle.set(normalizedTitle, existing);
-			}
-		}
-
-		return {
-			byTitleAndType,
-			byTitle,
-		};
-	}
-
-	private resolveSongIdFromMapping(
-		mapping: ReturnType<ChartFitService["buildSongIdMapping"]>,
-		input: { title: string; chartType: string; songIdentifier: string },
-	) {
-		const normalizedTitle = normalizeTitle(input.title);
-		if (!normalizedTitle) {
-			return null;
-		}
-
-		const normalizedType = normalizeType(input.chartType);
-		const byTypeHit = mapping.byTitleAndType.get(`${normalizedTitle}|${normalizedType}`);
-		if (byTypeHit && byTypeHit > 0) {
-			return byTypeHit;
-		}
-
-		const candidates = mapping.byTitle.get(normalizedTitle) ?? [];
-		if (candidates.length === 0) {
-			return null;
-		}
-
-		const localSongId = Number(input.songIdentifier);
-		if (Number.isFinite(localSongId)) {
-			const localSongIdInt = Math.trunc(localSongId);
-			if (candidates.includes(localSongIdInt)) {
-				return localSongIdInt;
-			}
-			if (localSongIdInt < 10000 && candidates.includes(localSongIdInt + 10000)) {
-				return localSongIdInt + 10000;
-			}
-			if (localSongIdInt > 10000 && candidates.includes(localSongIdInt % 10000)) {
-				return localSongIdInt % 10000;
-			}
-		}
-
-		const preferred =
-			normalizedType === "dx" ? candidates.find((id) => id >= 10000) : candidates.find((id) => id > 0 && id < 10000);
-
-		return preferred ?? candidates[0] ?? null;
 	}
 }
