@@ -32,6 +32,17 @@ const EnvSchema = z.object({
 	S3_SECRET_ACCESS_KEY: z.string().optional(),
 	CATALOG_SOURCE_URL: z.url().optional(),
 	STATIC_SYNC_INTERVAL_HOURS: z.coerce.number().int().positive().default(6),
+	// pg_cron enqueues into "job_queue" but nothing consumed it, so scheduled
+	// catalog syncs and bundle builds never ran. This runs a consumer inside the
+	// API process. Off by default: a bundle build fetches every upstream source
+	// and recomputes chart stats, which is the heaviest thing this server does,
+	// so enabling it is a deliberate choice about the host's capacity.
+	JOB_DISPATCHER_ENABLED: z
+		.enum(["true", "false"])
+		.default("false")
+		.transform((value) => value === "true"),
+	JOB_DISPATCHER_INTERVAL_SECONDS: z.coerce.number().int().positive().default(60),
+	JOB_DISPATCHER_BATCH_SIZE: z.coerce.number().int().positive().max(50).default(5),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

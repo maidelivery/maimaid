@@ -517,6 +517,12 @@ export const mergeChartStatsPayloads = (
 	};
 };
 
+// Only the newest snapshot is ever read (`getLatestSnapshotOrRefresh`). A few are
+// kept so a bad refresh can be inspected, but each payload holds stats for every
+// chart in the game, so unbounded history is the single largest avoidable
+// consumer of disk on a small host.
+const CHART_FIT_SNAPSHOT_RETENTION = 5;
+
 @singleton()
 export class ChartFitService {
 	constructor(@inject(TOKENS.Prisma) private readonly prisma: PrismaClient) {}
@@ -529,7 +535,26 @@ export class ChartFitService {
 				metaJson: toJsonValue(computed.meta),
 			},
 		});
+		await this.pruneSnapshots();
 		return computed;
+	}
+
+	/**
+	 * Drop snapshots older than the newest `CHART_FIT_SNAPSHOT_RETENTION`. Runs
+	 * after the insert so a prune failure cannot lose the fresh snapshot.
+	 */
+	private async pruneSnapshots() {
+		const keep = await this.prisma.chartFitSnapshot.findMany({
+			orderBy: { createdAt: "desc" },
+			take: CHART_FIT_SNAPSHOT_RETENTION,
+			select: { id: true },
+		});
+		if (keep.length < CHART_FIT_SNAPSHOT_RETENTION) {
+			return;
+		}
+		await this.prisma.chartFitSnapshot.deleteMany({
+			where: { id: { notIn: keep.map((row) => row.id) } },
+		});
 	}
 
 	async getLatestSnapshotOrRefresh(input?: ChartFitSourceInput) {

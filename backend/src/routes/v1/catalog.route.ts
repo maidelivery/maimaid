@@ -19,6 +19,10 @@ const songsQuerySchema = z.object({
 });
 
 const sheetsQuerySchema = z.object({
+	includeDisabled: z
+		.enum(["true", "false"])
+		.optional()
+		.transform((value) => value === "true"),
 	songIdentifier: z.string().optional(),
 });
 
@@ -46,7 +50,7 @@ catalogV1Route.get("/songs", standardValidator("query", songsQuerySchema, valida
 catalogV1Route.get("/sheets", standardValidator("query", sheetsQuerySchema, validationHook), async (c) => {
 	const catalogService = c.var.resolve(CatalogService);
 	const query = c.req.valid("query");
-	const sheets = await catalogService.listSheets(query.songIdentifier);
+	const sheets = await catalogService.listSheets(query.songIdentifier, query.includeDisabled);
 	return ok(c, { sheets });
 });
 

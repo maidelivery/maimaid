@@ -41,6 +41,13 @@ const STATIC_SOURCE_DEFAULTS: Array<{ category: string; activeUrl: string; fallb
 	},
 ];
 
+// Every row carries a full copy of the bundle payload (the catalog alone is
+// several MB), so history is the largest avoidable disk consumer here. Clients
+// read `/manifest` and then fetch that exact version, so a handful of recent
+// bundles must survive: a client that read the manifest just before a rebuild
+// still has an in-flight request for the previous version.
+const STATIC_BUNDLE_RETENTION = 5;
+
 const STATIC_BUNDLE_SCHEDULE_ROW_ID = 1;
 const STATIC_BUNDLE_CRON_JOB_NAME = "maimaid-static-bundle-build-request";
 const STATIC_BUNDLE_CRON_DRIVER_EXPRESSION = "* * * * *";
@@ -371,6 +378,8 @@ export class StaticBundleService {
 			});
 		});
 
+		await this.pruneBundles();
+
 		const dataJsonResource = resourcesRecord.data_json;
 		if (dataJsonResource === undefined || dataJsonResource === null) {
 			throw new AppError(502, "static_bundle_missing_catalog_data", "Bundle payload is missing data_json.");
@@ -396,6 +405,29 @@ export class StaticBundleService {
 			bundle,
 			created: true,
 		};
+	}
+
+	/**
+	 * Drop bundles older than the newest `STATIC_BUNDLE_RETENTION`. Runs after the
+	 * insert so a prune failure cannot lose the bundle that was just built. The
+	 * active row is excluded explicitly rather than relying on it being newest,
+	 * so this stays safe if activation ever stops implying "most recent".
+	 */
+	private async pruneBundles() {
+		const keep = await this.prisma.staticBundle.findMany({
+			orderBy: { createdAt: "desc" },
+			take: STATIC_BUNDLE_RETENTION,
+			select: { id: true },
+		});
+		if (keep.length < STATIC_BUNDLE_RETENTION) {
+			return;
+		}
+		await this.prisma.staticBundle.deleteMany({
+			where: {
+				active: false,
+				id: { notIn: keep.map((row) => row.id) },
+			},
+		});
 	}
 
 	async listBundles(limit = 20) {

@@ -779,6 +779,10 @@ export class ImportService {
 						},
 					},
 				},
+				// Several rows can share one lookup key, and the map below keeps the
+				// first. Charts that vanished upstream are kept as `disabled` rather
+				// than deleted, so order them last to route scores to a live chart.
+				orderBy: [{ disabled: "asc" }, { songIdentifier: "asc" }],
 			});
 
 			for (const sheet of sheetsBySongId) {
@@ -845,6 +849,8 @@ export class ImportService {
 						},
 					},
 				},
+				// Titles are not unique across songs, so prefer live charts here too.
+				orderBy: [{ disabled: "asc" }, { songIdentifier: "asc" }],
 			});
 
 			const byTitleKey = new Map<string, CatalogSheetCandidate>();
