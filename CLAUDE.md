@@ -4,15 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-maimaid is a maimai DX player ecosystem app. It's a monorepo with three main components: a native iOS app, a Hono backend server, and a Next.js web dashboard. The iOS app is the primary product — it handles score tracking, song catalog browsing, B50 calculation, image recognition-based score entry, and cloud sync.
+maimaid is a maimai DX player ecosystem app. It's a monorepo with four main components: a native iOS app, a native Android app, a Hono backend server, and a Next.js web dashboard. The iOS app is the primary product — it handles score tracking, song catalog browsing, B50 calculation, image recognition-based score entry, and cloud sync. The Android app is the port of that same feature set.
 
 ## Monorepo Structure
 
 - **`ios/maimaid/`** — iOS app (SwiftUI + SwiftData), the core product
+- **`android/`** — Android app (Kotlin + Jetpack Compose + Room), standalone Gradle build
 - **`backend/`** — Hono API server (TypeScript, Prisma, PostgreSQL)
 - **`dashboard/`** — Admin/user dashboard (Next.js 16, shadcn/ui, Tailwind CSS v4)
 
-Orchestrated with **Nx** and **pnpm workspaces** (`pnpm@10.20.0`). The pnpm workspace covers `dashboard` and `backend`.
+Orchestrated with **Nx** and **pnpm workspaces** (`pnpm@10.33.0`). The pnpm workspace covers `dashboard` and `backend`. The `android/` tree is a self-contained Gradle build and is not part of the pnpm workspace or Nx graph.
 
 ## Common Commands
 
@@ -46,6 +47,18 @@ pnpm run podman:down            # Stop local stack
 
 Use XcodeBuildMCP (via the xcodebuildmcp-cli skill) for building, testing, and running the iOS app. The Xcode project is at `ios/maimaid.xcodeproj/`. iOS secrets (BACKEND_URL, BACKEND_AUTH_URL) go in `ios/Config/Secrets.xcconfig` (gitignored).
 
+### Android (from `android/`)
+
+The Gradle root is `android/`, so run the wrapper from there — not from the repo root.
+
+```bash
+./gradlew assembleDebug           # Build debug APK
+./gradlew installDebug            # Build and install on connected device/emulator
+./gradlew test                    # JVM unit tests (app/src/test)
+./gradlew connectedAndroidTest    # Instrumented tests (requires device/emulator)
+./gradlew lint                    # Android lint
+```
+
 ## Architecture
 
 ### iOS App (`ios/maimaid/`)
@@ -56,6 +69,19 @@ Use XcodeBuildMCP (via the xcodebuildmcp-cli skill) for building, testing, and r
 - **Views/**: Feature views organized flat; `Settings/` and `Components/` are subdirectories
 - **Services/**: Backend API client (`BackendAPIClient`), session management (`BackendSessionManager`), cloud sync (`BackendCloudSyncService`), incremental sync, score sync, data import from Diving Fish / LXNS, image recognition (`MLScoreProcessor`, `MLChooseProcessor`, `MLDistinguishProcessor`), community aliases
 - **Localization**: `Localizable.strings` in `en`, `ja`, `zh-Hans`, `zh-Hant`. When adding user-facing strings, translate into all four languages.
+
+### Android App (`android/`)
+
+- **Target**: minSdk 33, targetSdk 36, compileSdk 36.1; JVM target 17; Kotlin 2.3.20, AGP 9.2.1
+- **Toolchain**: `app/build.gradle.kts` pins `kotlin { jvmToolchain(17) }`, so the compile JDK does not depend on your `JAVA_HOME`. This is deliberate: AGP's `androidJdkImage` transform shells out to `jlink`, and GraalVM's `jlink` cannot process the Android platform's `core-for-system-modules.jar`. Without the pin, a GraalVM `JAVA_HOME` fails `:app:compileDebugJavaWithJavac`. Gradle auto-provisions a JDK 17 via the foojay resolver configured in `settings.gradle.kts` if you don't have one.
+- **Package**: `net.krtl.maimaid` (both `namespace` and `applicationId`)
+- **UI**: Jetpack Compose (Compose BOM) + Material 3, Navigation Compose, Coil for images
+- **Data layer**: Room (schemas exported to `app/schemas/` via KSP) + DataStore Preferences
+- **Networking**: Retrofit + OkHttp + kotlinx.serialization; background work via WorkManager
+- **Scanner**: CameraX for capture, ML Kit text recognition (Latin + Chinese + Japanese) for OCR, TFLite for classification/detection. Code lives in `app/src/main/kotlin/net/krtl/maimaid/scanner`; see `android/docs/scanner-structure.md` for the module layout. Runtime models are packaged assets in `app/src/main/assets/scanner/`.
+- **Build types**: `debug` (`.debug` suffix), `release`, and `snapshot` (`.snapshot` suffix, derived from release). All restricted to the `arm64-v8a` ABI.
+- **Config**: `BACKEND_URL` and `BACKEND_AUTH_URL` are read as Gradle properties from `android/gradle.properties` and exposed through `BuildConfig`. Release signing reads `storeFile` / `storePassword` / `keyAlias` / `keyPassword` from `android/local.properties` (gitignored); the release build type silently skips signing config when that file is absent.
+- **Tests**: JVM unit tests in `app/src/test/` (JUnit4 + Truth + coroutines-test). Instrumented tests in `app/src/androidTest/`, including `ScannerSampleRegressionTest`, which reads the HEIC samples and `detail.json` in `android/mairesult/` — that directory is wired in as an androidTest asset source, so it is test fixture data, not scratch files.
 
 ### Backend (`backend/`)
 
