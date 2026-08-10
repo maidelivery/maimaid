@@ -1,5 +1,3 @@
-@file:Suppress("UnstableApiUsage")
-
 pluginManagement {
     repositories {
         google {
@@ -26,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "maimaid"
 include(":app")
+ 
