@@ -98,7 +98,7 @@ struct BackendAuthView: View {
             .interactiveDismissDisabled(true)
             .alert(item: $resolutionError) { error in
                 Alert(
-                    title: Text("Error"),
+                    title: Text("common.error"),
                     message: Text(error.message)
                 )
             }

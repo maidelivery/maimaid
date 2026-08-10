@@ -331,7 +331,7 @@ enum BackendCloudSyncService {
             throw BackendAPIError(
                 statusCode: nil,
                 code: "profile_not_found",
-                message: "Local profile not found."
+                message: String(localized: "settings.cloud.error.profileNotFound")
             )
         }
 
@@ -576,7 +576,11 @@ enum BackendCloudSyncService {
             throw BackendAPIError.badResponse
         }
         guard (200...299).contains(httpResponse.statusCode) else {
-            throw BackendAPIError(statusCode: httpResponse.statusCode, code: nil, message: "Avatar upload failed.")
+            throw BackendAPIError(
+                statusCode: httpResponse.statusCode,
+                code: nil,
+                message: String(localized: "settings.cloud.error.avatarUploadFailed")
+            )
         }
     }
 

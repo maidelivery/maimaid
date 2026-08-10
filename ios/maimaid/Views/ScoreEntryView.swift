@@ -401,7 +401,7 @@ struct ScoreEntryView: View {
             HStack(spacing: 12) {
                 Menu {
                     Picker(String(localized: "score.entry.combo"), selection: $selectedFC) {
-                        Text("None").tag(String?.none)
+                        Text("common.none").tag(String?.none)
                         Text("FC").tag(String?("fc"))
                         Text("FC+").tag(String?("fcp"))
                         Text("AP").tag(String?("ap"))
@@ -426,7 +426,7 @@ struct ScoreEntryView: View {
                 
                 Menu {
                     Picker(String(localized: "score.entry.sync"), selection: $selectedFS) {
-                        Text("None").tag(String?.none)
+                        Text("common.none").tag(String?.none)
                         Text("S").tag(String?("sync"))
                         Text("FS").tag(String?("fs"))
                         Text("FS+").tag(String?("fsp"))

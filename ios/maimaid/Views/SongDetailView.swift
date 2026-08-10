@@ -968,7 +968,7 @@ struct SongDetailContent: View {
     }
 
     private var typePicker: some View {
-        Picker("Version", selection: $selectedType) {
+        Picker("plate.menu.version", selection: $selectedType) {
             ForEach(availableTypes, id: \.self) { type in
                 Text(chartTypePickerTitle(type)).tag(type)
             }
@@ -1625,7 +1625,7 @@ private struct SongDetailPlayHistorySection: View {
                 VStack(spacing: 0) {
                     HStack {
                         Spacer()
-                        Picker("Sort by", selection: $historySortByDate) {
+                        Picker("sort.title", selection: $historySortByDate) {
                             Text(String(localized: "song.detail.sort.time")).tag(true)
                             Text(String(localized: "song.detail.sort.rate")).tag(false)
                         }

@@ -245,9 +245,9 @@ struct PlateProgressView: View {
                     .tint(Color(hex: selectedPlate.color))
                 
                 HStack(spacing: 12) {
-                    summaryMetric(title: "已完成", value: achievedSheetCount, tint: Color(hex: selectedPlate.color))
-                    summaryMetric(title: "剩余", value: remainingSheetCount, tint: .secondary)
-                    summaryMetric(title: "总谱面", value: totalSheetCount, tint: .secondary)
+                    summaryMetric(title: "plate.summary.completed", value: achievedSheetCount, tint: Color(hex: selectedPlate.color))
+                    summaryMetric(title: "plate.summary.remaining", value: remainingSheetCount, tint: .secondary)
+                    summaryMetric(title: "plate.summary.total", value: totalSheetCount, tint: .secondary)
                 }
             }
             .padding(16)
@@ -278,11 +278,11 @@ struct PlateProgressView: View {
                 
                 menuButton(
                     title: "plate.menu.plate",
-                    selection: selectedPlate.rawValue,
+                    selection: localizedPlateName(selectedPlate),
                     systemImage: "sparkles.rectangle.stack.fill",
-                    options: PlateType.allCases.map { $0.rawValue }
+                    options: PlateType.allCases.map(localizedPlateName)
                 ) { name in
-                    guard let plate = PlateType.allCases.first(where: { $0.rawValue == name }) else { return }
+                    guard let plate = PlateType.allCases.first(where: { localizedPlateName($0) == name }) else { return }
                     guard plate != .sho || selectedGroup?.hasSho == true else { return }
                     selectedPlate = plate
                 }
@@ -334,8 +334,12 @@ struct PlateProgressView: View {
     }
     
     private func isOptionDisabled(_ option: String) -> Bool {
-        (option == PlateType.sho.rawValue && selectedGroup?.hasSho == false) ||
+        (option == localizedPlateName(.sho) && selectedGroup?.hasSho == false) ||
         (option == "REMASTER" && selectedGroup?.name != "舞代")
+    }
+
+    private func localizedPlateName(_ plate: PlateType) -> String {
+        String(localized: LocalizedStringResource(stringLiteral: plate.rawValue))
     }
     
     // MARK: - Level Section
@@ -350,7 +354,7 @@ struct PlateProgressView: View {
                 .font(.headline.bold())
             
             HStack(spacing: 10) {
-                Text("\(completedCount) / \(section.sheets.count) 已完成")
+                Text("plate.section.progress \(completedCount) \(section.sheets.count)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 
@@ -464,7 +468,7 @@ struct PlateProgressView: View {
             Color.black.opacity(0.04)
                 .ignoresSafeArea()
             
-            ProgressView("更新中…")
+            ProgressView("plate.loading")
                 .padding(.horizontal, 18)
                 .padding(.vertical, 14)
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
@@ -480,20 +484,19 @@ struct PlateProgressView: View {
     private var progressTitle: String {
         guard let group = selectedGroup else { return String(localized: "plate.title") }
         
-        if group.name == "舞代" || group.name != group.platePrefix {
-            return "\(group.platePrefix)\(selectedPlate.shortName)进度"
-        } else {
-            return "\(group.name) \(selectedPlate.rawValue)进度"
-        }
+        let groupName = group.name == "舞代" || group.name != group.platePrefix
+            ? group.platePrefix
+            : group.name
+        return String(localized: "plate.progress.title \(groupName) \(localizedPlateName(selectedPlate))")
     }
     
     private var summarySubtitle: String {
         let groupName = displayName(for: selectedGroup)
         let difficultyName = selectedDifficulty.uppercased()
-        return "\(groupName) · \(difficultyName) · \(selectedPlate.rawValue)"
+        return "\(groupName) · \(difficultyName) · \(localizedPlateName(selectedPlate))"
     }
     
-    private func summaryMetric(title: String, value: Int, tint: Color) -> some View {
+    private func summaryMetric(title: LocalizedStringKey, value: Int, tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption)
@@ -506,8 +509,10 @@ struct PlateProgressView: View {
     }
     
     private func jacketAccessibilityLabel(for sheet: Sheet, achieved: Bool) -> String {
-        let title = sheet.song?.title ?? "Unknown Song"
-        let state = achieved ? "已完成" : "未完成"
-        return "\(title)，\(sheet.difficulty.uppercased())，\(state)"
+        let title = sheet.song?.title ?? String(localized: "common.unknown")
+        let state = achieved
+            ? String(localized: "plate.status.completed")
+            : String(localized: "plate.status.incomplete")
+        return String(localized: "plate.chart.accessibility \(title) \(sheet.difficulty.uppercased()) \(state)")
     }
 }
