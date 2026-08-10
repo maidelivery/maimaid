@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { parse as parseYaml } from "yaml";
 import { AppError } from "../lib/errors.js";
+import { difficultyByLevelIndex, normalizeChartType } from "../utils/compat.js";
 import { mergeChartStatsPayloads } from "./chart-fit.service.js";
 
 /**
@@ -143,6 +144,157 @@ export const normalizeLxnsAliasesPayload = (lxnsPayload: unknown, songIdPayload:
 
 	return {
 		aliases: normalizedAliases,
+	};
+};
+
+type LxnsPlayableSong = {
+	artist: string;
+	charts: Set<string>;
+};
+
+export type LxnsCnRegionMergeStats = {
+	lxnsSongCount: number;
+	lxnsChartCount: number;
+	catalogChartCount: number;
+	matchedChartCount: number;
+};
+
+const normalizeCatalogIdentity = (value: unknown) =>
+	typeof value === "string" ? value.normalize("NFKC").trim().toLocaleLowerCase().replace(/\s+/gu, " ") : "";
+
+const lxnsChartKey = (chartType: string, difficulty: string) => `${chartType}|${difficulty}`;
+
+/**
+ * Treats the LXNS CN song list as authoritative for ordinary chart availability.
+ * Other region flags and Utage sheets keep their catalog values.
+ */
+export const mergeLxnsCnRegions = (
+	dataJson: unknown,
+	lxnsSongList: unknown,
+): { dataJson: Record<string, unknown>; stats: LxnsCnRegionMergeStats } => {
+	const dataRoot = toRecord(dataJson);
+	const dataSongs = Array.isArray(dataRoot?.songs) ? dataRoot.songs : null;
+	if (!dataRoot || !dataSongs) {
+		throw new AppError(502, "static_source_invalid_payload", "data_json is missing songs for CN region merge.");
+	}
+
+	const lxnsRoot = toRecord(lxnsSongList);
+	const lxnsSongs = Array.isArray(lxnsRoot?.songs) ? lxnsRoot.songs : null;
+	if (!lxnsSongs || lxnsSongs.length === 0) {
+		throw new AppError(502, "static_source_invalid_payload", "LXNS song list is missing songs.");
+	}
+
+	const playableByTitle = new Map<string, LxnsPlayableSong[]>();
+	let lxnsChartCount = 0;
+
+	for (const rawSong of lxnsSongs) {
+		const song = toRecord(rawSong);
+		const title = normalizeCatalogIdentity(song?.title);
+		if (!song || !title) {
+			continue;
+		}
+
+		const difficulties = toRecord(song.difficulties);
+		const charts = new Set<string>();
+		for (const chartType of ["standard", "dx"] as const) {
+			const rawCharts = difficulties?.[chartType];
+			if (!Array.isArray(rawCharts)) {
+				continue;
+			}
+
+			for (const rawChart of rawCharts) {
+				const chart = toRecord(rawChart);
+				const difficultyIndex = Number(chart?.difficulty);
+				if (!Number.isInteger(difficultyIndex)) {
+					continue;
+				}
+				const difficulty = difficultyByLevelIndex(difficultyIndex);
+				if (!difficulty) {
+					continue;
+				}
+				charts.add(lxnsChartKey(chartType, difficulty));
+			}
+		}
+
+		if (charts.size === 0) {
+			continue;
+		}
+
+		lxnsChartCount += charts.size;
+		const candidates = playableByTitle.get(title) ?? [];
+		candidates.push({
+			artist: normalizeCatalogIdentity(song.artist),
+			charts,
+		});
+		playableByTitle.set(title, candidates);
+	}
+
+	if (lxnsChartCount === 0) {
+		throw new AppError(502, "static_source_invalid_payload", "LXNS song list contains no playable charts.");
+	}
+
+	let catalogChartCount = 0;
+	let matchedChartCount = 0;
+	const mergedSongs = dataSongs.map((rawSong) => {
+		const song = toRecord(rawSong);
+		if (!song || !Array.isArray(song.sheets)) {
+			return rawSong;
+		}
+
+		const titleCandidates = playableByTitle.get(normalizeCatalogIdentity(song.title)) ?? [];
+		const artist = normalizeCatalogIdentity(song.artist);
+		const artistCandidates = titleCandidates.filter((candidate) => candidate.artist === artist);
+		const candidates = titleCandidates.length === 1 ? titleCandidates : artistCandidates;
+
+		const sheets = song.sheets.map((rawSheet) => {
+			const sheet = toRecord(rawSheet);
+			if (!sheet) {
+				return rawSheet;
+			}
+
+			const chartType = normalizeChartType(typeof sheet.type === "string" ? sheet.type : undefined);
+			if (chartType !== "standard" && chartType !== "dx") {
+				return rawSheet;
+			}
+
+			catalogChartCount += 1;
+			const difficulty = normalizeCatalogIdentity(sheet.difficulty);
+			const key = lxnsChartKey(chartType, difficulty);
+			const isPlayableInCn = candidates.some((candidate) => candidate.charts.has(key));
+			if (isPlayableInCn) {
+				matchedChartCount += 1;
+			}
+
+			return {
+				...sheet,
+				regions: {
+					...(toRecord(sheet.regions) ?? {}),
+					cn: isPlayableInCn,
+				},
+			};
+		});
+
+		return {
+			...song,
+			sheets,
+		};
+	});
+
+	if (catalogChartCount > 0 && matchedChartCount === 0) {
+		throw new AppError(502, "static_source_invalid_payload", "LXNS song list did not match any catalog charts.");
+	}
+
+	return {
+		dataJson: {
+			...dataRoot,
+			songs: mergedSongs,
+		},
+		stats: {
+			lxnsSongCount: lxnsSongs.length,
+			lxnsChartCount,
+			catalogChartCount,
+			matchedChartCount,
+		},
 	};
 };
 
@@ -593,6 +745,18 @@ export const composeBundlePayload = async (
 			contentType: item.fetched.contentType,
 		};
 	}
+
+	if (resources.lxns_song_list === undefined) {
+		throw new AppError(502, "static_source_missing", "LXNS song list source is required for CN region validation.");
+	}
+	const cnRegionMerge = mergeLxnsCnRegions(resources.data_json, resources.lxns_song_list);
+	resources.data_json = cnRegionMerge.dataJson;
+	delete resources.lxns_song_list;
+	const lxnsSongListMeta = toRecord(sourceMeta.lxns_song_list) ?? {};
+	sourceMeta.lxns_song_list = {
+		...lxnsSongListMeta,
+		...cnRegionMerge.stats,
+	};
 
 	// Depends on data_json/songid_json above, so it cannot run in the same batch.
 	const selfChartFit = await resolveSelfChartFit({

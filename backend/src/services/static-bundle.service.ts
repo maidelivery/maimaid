@@ -35,6 +35,11 @@ const STATIC_SOURCE_DEFAULTS: Array<{ category: string; activeUrl: string; fallb
 		fallbackUrls: [],
 	},
 	{
+		category: "lxns_song_list",
+		activeUrl: "https://maimai.lxns.net/api/v0/maimai/song/list",
+		fallbackUrls: [],
+	},
+	{
 		category: "chart_fit",
 		activeUrl: "https://www.diving-fish.com/api/maimaidxprober/chart_stats",
 		fallbackUrls: [],
