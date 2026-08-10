@@ -400,13 +400,9 @@ struct LxnsImportView: View {
 
             totalRecords = result.fetchedCount
             progress = Double(result.fetchedCount)
-            importStatus = String(localized: "import.status.processing \(totalRecords)")
 
             if result.upsertedCount == 0 {
-                try BackendIncrementalSyncService.updateLastSyncRevisionIfAvailable(
-                    result.latestRevision,
-                    context: modelContext
-                )
+                try await BackendCloudSyncService.restoreFromCloud(context: modelContext)
                 profile.lastImportDateLXNS = Date()
                 try modelContext.save()
                 pendingUpsertedCount = 0
@@ -414,6 +410,8 @@ struct LxnsImportView: View {
                 isImporting = false
                 return
             }
+
+            importStatus = String(localized: "import.status.processing \(totalRecords)")
 
             importStatus = String(localized: "import.status.conflict.checking")
             let preview = try await BackendIncrementalSyncService.previewImportConflicts(
@@ -434,6 +432,7 @@ struct LxnsImportView: View {
                 preview: preview,
                 context: modelContext
             )
+            try await BackendCloudSyncService.restoreFromCloud(context: modelContext)
             profile.lastImportDateLXNS = Date()
             try modelContext.save()
 
@@ -471,6 +470,7 @@ struct LxnsImportView: View {
                 preview: preview,
                 context: modelContext
             )
+            try await BackendCloudSyncService.restoreFromCloud(context: modelContext)
 
             let targetProfileId = preview.profileId
             if let profile = try modelContext.fetch(

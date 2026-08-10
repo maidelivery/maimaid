@@ -1381,6 +1381,7 @@ struct SheetCardView: View {
         }
         
         try? modelContext.save()
+        ScoreService.shared.notifyScoresChanged(for: profileId)
         Task {
             await SyncManager.shared.syncCloudSnapshotIfNeeded(context: modelContext)
         }

@@ -97,6 +97,9 @@ struct PlateProgressView: View {
                 recomputeAchievements()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .maimaiScoresDidChange)) { _ in
+            recomputeAchievements()
+        }
         .onDisappear {
             recomputeTask?.cancel()
         }

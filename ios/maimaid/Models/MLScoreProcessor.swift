@@ -112,9 +112,9 @@ nonisolated final class MLScoreProcessor {
                 
             // Status Badges
             case "fc": scoreResult.comboStatus = "fc"
-            case "fcp": scoreResult.comboStatus = "fc+"
+            case "fcp": scoreResult.comboStatus = "fcp"
             case "ap": scoreResult.comboStatus = "ap"
-            case "app": scoreResult.comboStatus = "ap+"
+            case "app": scoreResult.comboStatus = "app"
             case "sync": scoreResult.syncStatus = "sync"
             case "fs": scoreResult.syncStatus = "fs"
             case "fsp": scoreResult.syncStatus = "fs+"

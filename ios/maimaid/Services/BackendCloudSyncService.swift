@@ -729,6 +729,7 @@ enum BackendCloudSyncService {
         ScoreService.shared.repairDetachedRecordsIfNeeded(context: context, force: true)
         try context.save()
         ScoreService.shared.invalidateAllCaches()
+        ScoreService.shared.notifyScoresChanged()
     }
 
     private static func ensureSyncConfig(context: ModelContext) -> SyncConfig {

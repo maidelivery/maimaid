@@ -15,7 +15,6 @@ private final class BackendWebAuthPresentationContextProvider: NSObject, ASWebAu
 
 struct BackendAuthView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var configs: [SyncConfig]
 
     @State private var sessionManager = BackendSessionManager.shared
     @State private var webAuthenticationSession: ASWebAuthenticationSession?
@@ -43,8 +42,6 @@ struct BackendAuthView: View {
         case register
         case forgot
     }
-
-    private var config: SyncConfig? { configs.first }
 
     private var isBusy: Bool {
         isOpeningWebAuth || isSigningOut || isSyncing || isResolvingAccountConflict
@@ -183,36 +180,6 @@ struct BackendAuthView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-            }
-
-            Section(
-                header: Text("settings.cloud.section.autoBackup"),
-                footer: Text("settings.cloud.autoBackup.footer")
-            ) {
-                Picker(
-                    "settings.cloud.autoBackup.interval",
-                    selection: Binding(
-                        get: { config?.cloudBackupInterval ?? 0 },
-                        set: { value in
-                            let currentConfig = ensureSyncConfig()
-                            currentConfig.cloudBackupInterval = value
-                            try? modelContext.save()
-                            Task {
-                                await BackendAutoBackup.scheduleNextBackup(container: modelContext.container)
-                            }
-                        }
-                    )
-                ) {
-                    Text("settings.cloud.autoBackup.never").tag(0)
-                    Text("1h").tag(1)
-                    Text("3h").tag(3)
-                    Text("6h").tag(6)
-                    Text("12h").tag(12)
-                    Text("24h").tag(24)
-                }
-                .pickerStyle(.menu)
-
-                LabeledContent("settings.cloud.autoBackup.lastBackup", value: lastBackupDisplayText)
             }
 
             Section {
@@ -379,22 +346,6 @@ struct BackendAuthView: View {
         .background(.black.opacity(0.82), in: Capsule())
     }
 
-    private var lastBackupDisplayText: String {
-        guard let lastBackup = config?.lastCloudBackupDate else {
-            return String(localized: "settings.cloud.autoBackup.never")
-        }
-        return lastBackup.formatted(date: .numeric, time: .shortened)
-    }
-
-    private func ensureSyncConfig() -> SyncConfig {
-        if let config {
-            return config
-        }
-        let newConfig = SyncConfig()
-        modelContext.insert(newConfig)
-        return newConfig
-    }
-
     @MainActor
     private func showToast(message: String, error: Bool = false) {
         isErrorToast = error
@@ -444,7 +395,6 @@ struct BackendAuthView: View {
         }
 
         conflictState = nil
-        await BackendAutoBackup.scheduleNextBackup(container: modelContext.container)
     }
 
     @MainActor
@@ -471,7 +421,6 @@ struct BackendAuthView: View {
             try await AccountDataResolutionCoordinator.shared.applyResolution(option, context: modelContext)
             conflictState = nil
             showToast(message: "settings.cloud.resolution.success")
-            await BackendAutoBackup.scheduleNextBackup(container: modelContext.container)
         } catch {
             resolutionError = DisplayableError(message: error.localizedDescription)
         }
@@ -497,7 +446,6 @@ struct BackendAuthView: View {
             AccountDataResolutionCoordinator.shared.clearPendingResolutionState(context: modelContext)
         }
 
-        BackendAutoBackup.cancelScheduledBackup()
     }
 
     @MainActor
@@ -572,7 +520,6 @@ struct BackendAuthView: View {
         do {
             try await BackendCloudSyncService.backupToCloud(context: modelContext)
             showToast(message: "settings.cloud.message.backupSuccess")
-            await BackendAutoBackup.scheduleNextBackup(container: modelContext.container)
         } catch {
             let detail = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             showToast(message: String(localized: "settings.cloud.message.backupFailed") + ": " + detail, error: true)

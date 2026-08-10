@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-enum GameServer: String, CaseIterable, Identifiable, Codable {
+enum GameServer: String, CaseIterable, Identifiable, Codable, Sendable {
     case jp = "jp"
     case intl = "intl"
     case cn = "cn"
@@ -32,8 +32,8 @@ class ServerVersionService {
     
     private init() {}
     
-    /// Determines the latest version for a given server by finding the song with
-    /// the newest releaseDate that is playable on that server.
+    /// Determines the latest version for a given server by finding the newest
+    /// version with at least one playable song on that server.
     /// Deleted songs (not playable on ANY server) are excluded.
     func cutoffDate(for server: GameServer) -> String {
         let formatter = DateFormatter()
@@ -47,7 +47,7 @@ class ServerVersionService {
         case .jp:
             return "9999-12-31" // All JP songs are playable
         case .cn:
-            let date = calendar.date(byAdding: .month, value: -18, to: now) ?? now
+            let date = calendar.date(byAdding: .month, value: -15, to: now) ?? now
             return formatter.string(from: date)
         case .intl:
             let date = calendar.date(byAdding: .month, value: -4, to: now) ?? now
@@ -111,19 +111,16 @@ class ServerVersionService {
             }
             if activeVersionSongs.isEmpty { continue }
             
-            let playableCount = activeVersionSongs.filter { isPlayable(song: $0, cutoff: cutoff) }.count
-            
-            if playableCount > 0 {
-                serverVersion = version // This version has at least one playable song
-                if playableCount < activeVersionSongs.count {
-                    // Not fully playable -> server is currently in this version (e.g., PRiSM partially released)
-                    break
-                }
-            } else {
-                // Zero playable songs, BUT the previous version was 100% playable.
-                // The user logic dictates that if the calculated version is 100% playable, we probe the next one.
-                // If it has unplayable songs (0 playable < total), we set the server version to this one.
-                serverVersion = version
+            let playableCount = activeVersionSongs.filter {
+                isPlayable(song: $0, cutoff: cutoff, server: server)
+            }.count
+
+            guard playableCount > 0 else { break }
+
+            serverVersion = version
+            if playableCount < activeVersionSongs.count {
+                // The first partially released version is the server's current
+                // generation. Later-generation previews must not advance it.
                 break
             }
         }

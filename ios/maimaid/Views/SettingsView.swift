@@ -9,6 +9,9 @@ struct SettingsView: View {
     
     private var config: SyncConfig? { configs.first }
     private var activeProfile: UserProfile? { activeProfiles.first }
+    private var canUseThirdPartyScoreSync: Bool {
+        activeProfile?.server == GameServer.cn.rawValue
+    }
     private var hasLxnsBoundAccount: Bool {
         guard let activeProfile else {
             return false
@@ -81,6 +84,7 @@ struct SettingsView: View {
                             }
                         }
                     ))
+                    .disabled(!canUseThirdPartyScoreSync)
                 }
                 
                 // Appearance Section

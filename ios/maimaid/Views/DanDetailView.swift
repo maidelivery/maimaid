@@ -44,6 +44,9 @@ struct DanDetailView: View {
         .task {
             await loadScoreCache()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .maimaiScoresDidChange)) { _ in
+            Task { await loadScoreCache() }
+        }
     }
     
     private func loadScoreCache() async {

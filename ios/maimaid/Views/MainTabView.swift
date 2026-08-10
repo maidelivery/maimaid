@@ -27,13 +27,13 @@ struct MainTabView: View {
                 ScannerView()
             }
             
-            Tab("tab.settings", systemImage: "gearshape") {
-                SettingsView()
-            }
-            
-            Tab("tab.search", systemImage: "magnifyingglass", role: .search) {
+            Tab("tab.search", systemImage: "magnifyingglass") {
                 SongsView(searchText: searchText)
                     .searchable(text: $searchText, prompt: "search.placeholder")
+            }
+
+            Tab("tab.settings", systemImage: "gearshape") {
+                SettingsView()
             }
         }
         .preferredColorScheme(preferredScheme)
@@ -47,9 +47,6 @@ struct MainTabView: View {
             // Reconnect orphaned scores due to Model relationship changes
             fixOrphanedScores()
             
-            // Force a data sync if regions are missing (e.g. regionCn is false for all)
-            await checkAndForceDataSync()
-
             scheduleSongsPreloadIfNeeded()
             
         }
@@ -183,28 +180,6 @@ struct MainTabView: View {
         UserDefaults.app.didFixOrphanedScoresMigration = true
     }
     
-    private func checkAndForceDataSync() async {
-        if UserDefaults.app.didForceRegionSyncMigration { return }
-        
-        // If the database has sheets but none have regionCn set to true, it means they are using
-        // the default unmigrated values. We need to force a sync to populate the actual regions.
-        var descriptor = FetchDescriptor<Sheet>()
-        descriptor.fetchLimit = 100 // Just check a sample
-        if let sheets = try? modelContext.fetch(descriptor), !sheets.isEmpty {
-            let hasAnyCn = sheets.contains { $0.regionCn }
-            if !hasAnyCn {
-                print("MainTabView: No songs with regionCn=true found. Forcing data sync to populate regions...")
-                // We run this detached to not block the main UI if it takes long
-                let container = modelContext.container
-                Task.detached {
-                    let backgroundContext = SwiftData.ModelContext(container)
-                    try? await MaimaiDataFetcher.shared.fetchSongs(modelContext: backgroundContext)
-                }
-            }
-        }
-        UserDefaults.app.didForceRegionSyncMigration = true
-    }
-
     private func scheduleSongsPreloadIfNeeded() {
         guard !didScheduleSongsPreload else { return }
         didScheduleSongsPreload = true

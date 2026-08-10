@@ -76,12 +76,10 @@ class SyncManager {
             print("SyncManager: 成绩上行失败，缺少可用数据上下文。")
             return
         }
-        let profile = resolveProfile(for: score, context: context)
         await uploadToThirdPartiesIfNeeded(
             sheet: sheet,
             score: score,
             context: context,
-            profile: profile,
             isEnabled: true
         )
     }
@@ -105,20 +103,24 @@ class SyncManager {
         sheet: Sheet,
         score: Score,
         context: ModelContext,
-        profile: UserProfile? = nil,
         isEnabled: Bool? = nil
     ) async {
         let thirdPartySyncEnabled = isEnabled ?? loadThirdPartySyncEnabled(context: context)
         guard thirdPartySyncEnabled else {
             return
         }
-        guard sheet.regionCn else {
-            print("SyncManager: [ThirdParty] 跳过上送，谱面不在国服可玩范围。")
+
+        guard let activeProfile = resolveActiveProfile(context: context),
+              activeProfile.server == GameServer.cn.rawValue else {
+            print("SyncManager: [ThirdParty] 跳过上送，当前激活档案属于其他服务器。")
             return
         }
-
-        guard let activeProfile = profile ?? resolveProfile(for: score, context: context) else {
-            print("SyncManager: [ThirdParty] 跳过上送，未找到可用档案。")
+        guard score.userProfileId == activeProfile.id else {
+            print("SyncManager: [ThirdParty] 跳过上送，成绩不属于当前国服档案。")
+            return
+        }
+        guard sheet.regionCn else {
+            print("SyncManager: [ThirdParty] 跳过上送，谱面不在国服可玩范围。")
             return
         }
 
@@ -348,6 +350,13 @@ class SyncManager {
 
         let allProfiles = FetchDescriptor<UserProfile>()
         return (try? context.fetch(allProfiles))?.first
+    }
+
+    private func resolveActiveProfile(context: ModelContext) -> UserProfile? {
+        let descriptor = FetchDescriptor<UserProfile>(
+            predicate: #Predicate<UserProfile> { $0.isActive == true }
+        )
+        return (try? context.fetch(descriptor))?.first
     }
     
     func refreshLxnsToken(profileId: UUID) async -> String? {

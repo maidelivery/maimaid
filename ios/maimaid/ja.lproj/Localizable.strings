@@ -59,7 +59,7 @@
 "settings.data.importLxns" = "LXNS からインポート";
 "settings.data.bound" = "連携済み";
 "settings.sync.header" = "スコアの同期";
-"settings.sync.footer" = "有効にすると、手動保存した国服対象譜面のスコアを連携済みの外部サービス（DF/LXNS）へ同期します。クラウドアカウントへの同期はこのスイッチの影響を受けません。";
+"settings.sync.footer" = "DF/LXNS からのスコア取り込みはすべてのサーバープロフィールで利用できます。スコア送信は有効なプロフィールが中国版サーバーの場合のみ動作します。クラウド同期はこの設定とは独立しています。";
 "settings.sync.autoUpload" = "スコア同期";
 "settings.appearance.header" = "外観";
 "settings.appearance.theme" = "テーマ";

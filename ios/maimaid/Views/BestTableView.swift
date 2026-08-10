@@ -18,6 +18,7 @@ struct BestTableView: View {
     // MARK: - 临时版本覆盖 (退出页面即失效)
     @State private var overriddenVersion: String?
     @State private var showVersionPicker = false
+    @State private var cachedServerVersion: String?
     @AppStorage(AppStorageKeys.useFitDiff) private var useFitDiff = false
     
     // MARK: - Performance / Lifecycle
@@ -37,8 +38,7 @@ struct BestTableView: View {
     }
     
     private var serverVersion: String? {
-        guard let profile = activeProfile, let server = GameServer(rawValue: profile.server) else { return nil }
-        return ServerVersionService.shared.latestVersion(for: server, songs: songs)
+        cachedServerVersion
     }
     
     private var b35Sum: Int {
@@ -227,6 +227,15 @@ struct BestTableView: View {
             
             scheduleCalculation(delayNanoseconds: 180_000_000)
         }
+        .task(id: activeProfile?.server) {
+            guard let server = activeProfile.flatMap({ GameServer(rawValue: $0.server) }) else {
+                cachedServerVersion = nil
+                return
+            }
+            await Task.yield()
+            guard !Task.isCancelled else { return }
+            cachedServerVersion = ServerVersionService.shared.latestVersion(for: server, songs: songs)
+        }
         .onDisappear {
             isVisible = false
             calculationTask?.cancel()
@@ -251,8 +260,12 @@ struct BestTableView: View {
         .onChange(of: useFitDiff) { _, _ in
             scheduleCalculation()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .NSManagedObjectContextDidSave)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .maimaiScoresDidChange)) { notification in
             guard isVisible else { return }
+            if let changedProfileID = notification.object as? UUID,
+               changedProfileID != activeProfile?.id {
+                return
+            }
             scheduleCalculation(delayNanoseconds: 180_000_000)
         }
     }

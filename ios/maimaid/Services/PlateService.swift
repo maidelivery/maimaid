@@ -30,7 +30,7 @@ enum PlateType: String, CaseIterable, Identifiable {
     /// 检查给定成绩是否达成该牌类型要求
     func isAchieved(score: Score?) -> Bool {
         guard let score = score else { return false }
-        let fc = score.fc?.lowercased()
+        let fc = ThemeUtils.canonicalFC(score.fc)
         let fs = score.fs?.lowercased()
         
         switch self {
