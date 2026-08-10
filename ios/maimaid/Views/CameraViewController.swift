@@ -4,10 +4,13 @@ import os
 
 final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
     var onImageCaptured: ((UIImage) -> Void)?
+    var onPhotoCaptured: ((Result<Data, Error>) -> Void)?
     
     private var captureSession: AVCaptureSession?
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private var photoOutput: AVCapturePhotoOutput?
+    private var videoDevice: AVCaptureDevice?
+    private var configuredPreviewSize: CGSize = .zero
     private let processingQueue = DispatchQueue(label: "com.maimaid.camera.queue", qos: .userInteractive)
     private let frameCounter = OSAllocatedUnfairLock(initialState: 0)
     nonisolated private static let rawContext = CIContext(options: [.useSoftwareRenderer: false])
@@ -26,10 +29,11 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
         captureSession = AVCaptureSession()
         guard let captureSession = captureSession else { return }
         
-        captureSession.sessionPreset = .hd1280x720
+        captureSession.sessionPreset = .high
         
-        guard let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+        guard let videoDevice = Self.preferredBackCamera(),
               let videoInput = try? AVCaptureDeviceInput(device: videoDevice) else { return }
+        self.videoDevice = videoDevice
         
         if captureSession.canAddInput(videoInput) { captureSession.addInput(videoInput) }
         
@@ -81,14 +85,15 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
         guard let cgImage = Self.rawContext.createCGImage(ciImage, from: ciImage.extent) else { return }
         let image = UIImage(cgImage: cgImage)
         
-        DispatchQueue.main.async {
-            self.onImageCaptured?(image)
+        Task { @MainActor [weak self] in
+            self?.onImageCaptured?(image)
         }
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         previewLayer?.frame = view.layer.bounds
+        configureSystemCameraFieldOfView()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -106,7 +111,15 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
     }
     
     @objc private func handleTakePhoto() {
-        guard let output = photoOutput else { return }
+        guard let output = photoOutput else {
+            let error = NSError(
+                domain: "CameraViewController",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Photo output is unavailable"]
+            )
+            onPhotoCaptured?(.failure(error))
+            return
+        }
         
         let settings = AVCapturePhotoSettings()
         if let connection = output.connection(with: .video) {
@@ -129,15 +142,71 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
         
         output.capturePhoto(with: settings, delegate: self)
     }
+
+    private static func preferredBackCamera() -> AVCaptureDevice? {
+        AVCaptureDevice.default(.builtInTripleCamera, for: .video, position: .back)
+            ?? AVCaptureDevice.default(.builtInDualWideCamera, for: .video, position: .back)
+            ?? AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
+    }
+
+    private func configureSystemCameraFieldOfView() {
+        let previewSize = view.bounds.size
+        guard previewSize.width > 0,
+              previewSize.height > 0,
+              previewSize != configuredPreviewSize,
+              let videoDevice else { return }
+        configuredPreviewSize = previewSize
+
+        let viewportAspect = max(previewSize.width, previewSize.height) / min(previewSize.width, previewSize.height)
+        let videoAspect = CGFloat(16.0 / 9.0)
+        let aspectFillCropFactor = max(1, viewportAspect / videoAspect)
+
+        let wideCameraZoomFactor: CGFloat
+        if videoDevice.isVirtualDevice,
+           let wideCameraIndex = videoDevice.constituentDevices.firstIndex(where: { $0.deviceType == .builtInWideAngleCamera }),
+           wideCameraIndex > 0,
+           videoDevice.virtualDeviceSwitchOverVideoZoomFactors.indices.contains(wideCameraIndex - 1) {
+            wideCameraZoomFactor = CGFloat(
+                truncating: videoDevice.virtualDeviceSwitchOverVideoZoomFactors[wideCameraIndex - 1]
+            )
+        } else {
+            wideCameraZoomFactor = 1
+        }
+
+        let compensatedZoomFactor = wideCameraZoomFactor / aspectFillCropFactor
+        let availableZoomFactor = min(
+            max(compensatedZoomFactor, videoDevice.minAvailableVideoZoomFactor),
+            videoDevice.maxAvailableVideoZoomFactor
+        )
+
+        do {
+            try videoDevice.lockForConfiguration()
+            videoDevice.videoZoomFactor = availableZoomFactor
+            videoDevice.unlockForConfiguration()
+        } catch {
+            return
+        }
+    }
 }
 
 extension CameraViewController: AVCapturePhotoCaptureDelegate {
-    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        guard let data = photo.fileDataRepresentation(),
-              let image = UIImage(data: data) else { return }
-        
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(name: Notification.Name("ScannerPhotoCaptured"), object: image)
+    nonisolated func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        let result: Result<Data, Error>
+        if let error {
+            result = .failure(error)
+        } else if let data = photo.fileDataRepresentation() {
+            result = .success(data)
+        } else {
+            let error = NSError(
+                domain: "CameraViewController",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "Captured photo data is unavailable"]
+            )
+            result = .failure(error)
+        }
+
+        Task { @MainActor [weak self] in
+            self?.onPhotoCaptured?(result)
         }
     }
 }
