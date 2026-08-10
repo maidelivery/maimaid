@@ -5,14 +5,13 @@
 //  Created by 西 宮缄 on 2/23/26.
 //
 
-import SwiftUI
 import SwiftData
-import BackgroundTasks
+import SwiftUI
 
 @main
 struct maimaidApp: App {
     @Environment(\.scenePhase) private var scenePhase
-    
+
     private let sharedModelContainer: ModelContainer = {
         do {
             return try ModelContainer(
@@ -29,311 +28,79 @@ struct maimaidApp: App {
             fatalError("Failed to create ModelContainer: \(error)")
         }
     }()
-    
+
     var body: some Scene {
         WindowGroup {
             MainTabView()
                 .onOpenURL { url in
                     BackendSessionManager.shared.handleAuthRedirect(url)
                 }
+                .task {
+                    await BackendLaunchBackup.backupOnce(container: sharedModelContainer)
+                }
         }
         .modelContainer(sharedModelContainer)
-        .backgroundTask(.appRefresh(StaticDataAutoUpdate.taskIdentifier)) {
-            await StaticDataAutoUpdate.handleBackgroundRefresh(container: sharedModelContainer)
-        }
-        .backgroundTask(.appRefresh(BackendAutoBackup.taskIdentifier)) {
-            await BackendAutoBackup.handleBackgroundBackup(container: sharedModelContainer)
-        }
         .onChange(of: scenePhase) { _, newPhase in
-            switch newPhase {
-            case .active:
-                Task {
-                    await StaticDataAutoUpdate.refreshIfNeeded(
-                        container: sharedModelContainer,
-                        reason: "scenePhase.active"
-                    )
-                    if BackendSessionManager.shared.isConfigured {
-                        await BackendSessionManager.shared.checkSession()
-                        if BackendSessionManager.shared.isAuthenticated {
-                            let context = ModelContext(sharedModelContainer)
-                            if let userId = BackendSessionManager.shared.currentUser?.id {
-                                let conflictState = AccountDataResolutionCoordinator.shared.detectConflictAfterAuth(
-                                    context: context,
-                                    currentUserId: userId
-                                )
-                                if !conflictState.requiresResolution {
-                                    try? await BackendIncrementalSyncService.pullUpdates(context: context, force: false)
-                                }
-                            }
-                        }
-                    }
-                    await BackendAutoBackup.backupIfNeeded(
-                        container: sharedModelContainer,
-                        reason: "scenePhase.active"
-                    )
-                    await MaimaiDataFetcher.shared.syncApprovedCommunityAliasesIfNeeded(
-                        container: sharedModelContainer
-                    )
+            guard newPhase == .active else { return }
+
+            Task { @MainActor in
+                guard BackendSessionManager.shared.isConfigured else { return }
+
+                await BackendSessionManager.shared.checkSession()
+                guard BackendSessionManager.shared.isAuthenticated,
+                      let userId = BackendSessionManager.shared.currentUser?.id else {
+                    return
                 }
-            case .background:
-                Task {
-                    await StaticDataAutoUpdate.scheduleNextRefresh(container: sharedModelContainer)
-                    await BackendAutoBackup.scheduleNextBackup(container: sharedModelContainer)
+
+                let context = ModelContext(sharedModelContainer)
+                let conflictState = AccountDataResolutionCoordinator.shared.detectConflictAfterAuth(
+                    context: context,
+                    currentUserId: userId
+                )
+                if !conflictState.requiresResolution {
+                    try? await BackendIncrementalSyncService.pullUpdates(context: context, force: false)
                 }
-            default:
-                break
+
+                await MaimaiDataFetcher.shared.syncApprovedCommunityAliasesIfNeeded(
+                    container: sharedModelContainer
+                )
             }
         }
     }
 }
 
-enum StaticDataAutoUpdate {
-    static let taskIdentifier = "in.shikoch.maimaid.static-data-refresh"
-    private static let minimumLeadTime: TimeInterval = 15 * 60
-    
-    @MainActor
-    static func refreshIfNeeded(container: ModelContainer, reason: String) async {
-        guard !MaimaiDataFetcher.shared.isSyncing else { return }
-        
-        let context = ModelContext(container)
-        guard let config = loadConfig(in: context) else { return }
-        guard config.backgroundSyncInterval > 0 else {
-            cancelScheduledRefresh()
-            return
-        }
-        
-        let options = configuredOptions()
-        
-        guard isRefreshDue(config: config) else { return }
-        
-        print("StaticDataAutoUpdate: foreground refresh triggered (\(reason))")
-        
-        do {
-            try await MaimaiDataFetcher.shared.fetchSongs(modelContext: context, options: options)
-        } catch {
-            print("StaticDataAutoUpdate: foreground refresh failed: \(error)")
-        }
-    }
-    
-    @MainActor
-    static func handleBackgroundRefresh(container: ModelContainer) async {
-        guard !MaimaiDataFetcher.shared.isSyncing else {
-            await scheduleNextRefresh(container: container)
-            return
-        }
-        
-        let context = ModelContext(container)
-        guard let config = loadConfig(in: context), config.backgroundSyncInterval > 0 else {
-            cancelScheduledRefresh()
-            return
-        }
-        
-        let options = configuredOptions()
-        
-        if isRefreshDue(config: config) {
-            print("StaticDataAutoUpdate: background refresh triggered")
-            
-            do {
-                try await MaimaiDataFetcher.shared.fetchSongs(modelContext: context, options: options)
-            } catch {
-                print("StaticDataAutoUpdate: background refresh failed: \(error)")
-            }
-        }
-        
-        await scheduleNextRefresh(container: container)
-    }
-    
-    @MainActor
-    static func scheduleNextRefresh(container: ModelContainer) async {
-        let context = ModelContext(container)
-        guard let config = loadConfig(in: context), config.backgroundSyncInterval > 0 else {
-            cancelScheduledRefresh()
-            return
-        }
-        
-        let options = configuredOptions()
-        
-        let request = BGAppRefreshTaskRequest(identifier: taskIdentifier)
-        let dueDate = nextDueDate(for: config)
-        request.earliestBeginDate = max(dueDate, Date().addingTimeInterval(minimumLeadTime))
-        
-        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: taskIdentifier)
-        
-        do {
-            try BGTaskScheduler.shared.submit(request)
-            print("StaticDataAutoUpdate: scheduled next refresh for \(request.earliestBeginDate ?? Date())")
-        } catch {
-            print("StaticDataAutoUpdate: failed to schedule refresh: \(error)")
-        }
-    }
-    
-    static func cancelScheduledRefresh() {
-        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: taskIdentifier)
-    }
-    
-    @MainActor
-    private static func loadConfig(in context: ModelContext) -> SyncConfig? {
-        (try? context.fetch(FetchDescriptor<SyncConfig>()))?.first
-    }
-    
-    private static func isRefreshDue(config: SyncConfig, now: Date = Date()) -> Bool {
-        now >= nextDueDate(for: config)
-    }
-    
-    private static func nextDueDate(for config: SyncConfig) -> Date {
-        let lastUpdate = config.lastStaticDataUpdateDate ?? .distantPast
-        return lastUpdate.addingTimeInterval(TimeInterval(config.backgroundSyncInterval * 3600))
-    }
-    
-    private static func configuredOptions() -> MaimaiDataFetcher.SyncOptions {
-        .init()
-    }
-}
+@MainActor
+enum BackendLaunchBackup {
+    private static var hasStartedBackup = false
 
-enum BackendAutoBackup {
-    static let taskIdentifier = "in.shikoch.maimaid.backend-backup"
-    private static let minimumLeadTime: TimeInterval = 15 * 60
-    
-    @MainActor
-    static func backupIfNeeded(container: ModelContainer, reason: String) async {
-        let context = ModelContext(container)
-        guard let config = loadConfig(in: context) else { return }
-        guard config.cloudBackupInterval > 0 else {
-            cancelScheduledBackup()
+    static func backupOnce(container: ModelContainer) async {
+        guard !hasStartedBackup,
+              !Task.isCancelled,
+              BackendSessionManager.shared.isConfigured else {
             return
         }
-        guard BackendSessionManager.shared.isConfigured else {
-            cancelScheduledBackup()
-            return
-        }
-        
+
         await BackendSessionManager.shared.checkSession()
-        guard BackendSessionManager.shared.isAuthenticated else {
-            cancelScheduledBackup()
+        guard !Task.isCancelled,
+              BackendSessionManager.shared.isAuthenticated,
+              let userId = BackendSessionManager.shared.currentUser?.id else {
             return
         }
-        guard let userId = BackendSessionManager.shared.currentUser?.id else {
-            cancelScheduledBackup()
-            return
-        }
+
+        let context = ModelContext(container)
         guard !AccountDataResolutionCoordinator.shared.hasPendingResolution(
             context: context,
             currentUserId: userId
         ) else {
-            cancelScheduledBackup()
             return
         }
-        guard isBackupDue(config: config) else { return }
-        
-        print("BackendAutoBackup: foreground backup triggered (\(reason))")
-        
+
+        hasStartedBackup = true
+
         do {
             try await BackendCloudSyncService.backupToCloud(context: context)
         } catch {
-            print("BackendAutoBackup: foreground backup failed: \(error)")
+            print("BackendLaunchBackup: backup failed: \(error)")
         }
-    }
-    
-    @MainActor
-    static func handleBackgroundBackup(container: ModelContainer) async {
-        let context = ModelContext(container)
-        guard let config = loadConfig(in: context), config.cloudBackupInterval > 0 else {
-            cancelScheduledBackup()
-            return
-        }
-        guard BackendSessionManager.shared.isConfigured else {
-            cancelScheduledBackup()
-            return
-        }
-        
-        await BackendSessionManager.shared.checkSession()
-        guard BackendSessionManager.shared.isAuthenticated else {
-            cancelScheduledBackup()
-            return
-        }
-        guard let userId = BackendSessionManager.shared.currentUser?.id else {
-            cancelScheduledBackup()
-            return
-        }
-        guard !AccountDataResolutionCoordinator.shared.hasPendingResolution(
-            context: context,
-            currentUserId: userId
-        ) else {
-            cancelScheduledBackup()
-            return
-        }
-        
-        if isBackupDue(config: config) {
-            print("BackendAutoBackup: background backup triggered")
-            
-            do {
-                try await BackendCloudSyncService.backupToCloud(context: context)
-            } catch {
-                print("BackendAutoBackup: background backup failed: \(error)")
-            }
-        }
-        
-        await scheduleNextBackup(container: container)
-    }
-    
-    @MainActor
-    static func scheduleNextBackup(container: ModelContainer) async {
-        let context = ModelContext(container)
-        guard let config = loadConfig(in: context), config.cloudBackupInterval > 0 else {
-            cancelScheduledBackup()
-            return
-        }
-        guard BackendSessionManager.shared.isConfigured else {
-            cancelScheduledBackup()
-            return
-        }
-        
-        await BackendSessionManager.shared.checkSession()
-        guard BackendSessionManager.shared.isAuthenticated else {
-            cancelScheduledBackup()
-            return
-        }
-        guard let userId = BackendSessionManager.shared.currentUser?.id else {
-            cancelScheduledBackup()
-            return
-        }
-        guard !AccountDataResolutionCoordinator.shared.hasPendingResolution(
-            context: context,
-            currentUserId: userId
-        ) else {
-            cancelScheduledBackup()
-            return
-        }
-        
-        let request = BGAppRefreshTaskRequest(identifier: taskIdentifier)
-        let dueDate = nextDueDate(for: config)
-        request.earliestBeginDate = max(dueDate, Date().addingTimeInterval(minimumLeadTime))
-        
-        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: taskIdentifier)
-        
-        do {
-            try BGTaskScheduler.shared.submit(request)
-            print("BackendAutoBackup: scheduled next backup for \(request.earliestBeginDate ?? Date())")
-        } catch {
-            print("BackendAutoBackup: failed to schedule backup: \(error)")
-        }
-    }
-    
-    static func cancelScheduledBackup() {
-        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: taskIdentifier)
-    }
-    
-    @MainActor
-    private static func loadConfig(in context: ModelContext) -> SyncConfig? {
-        (try? context.fetch(FetchDescriptor<SyncConfig>()))?.first
-    }
-    
-    private static func isBackupDue(config: SyncConfig, now: Date = Date()) -> Bool {
-        now >= nextDueDate(for: config)
-    }
-    
-    private static func nextDueDate(for config: SyncConfig) -> Date {
-        let lastBackup = config.lastCloudBackupDate ?? .distantPast
-        return lastBackup.addingTimeInterval(TimeInterval(config.cloudBackupInterval * 3600))
     }
 }

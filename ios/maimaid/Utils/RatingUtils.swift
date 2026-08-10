@@ -179,7 +179,7 @@ enum RatingUtils {
     
     /// Returns true if the fc value represents an All Perfect (AP or AP+).
     static func isAP(_ fc: String?) -> Bool {
-        guard let fc = fc?.lowercased() else { return false }
+        guard let fc = ThemeUtils.canonicalFC(fc) else { return false }
         return fc == "ap" || fc == "app"
     }
     

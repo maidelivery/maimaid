@@ -42,7 +42,6 @@ struct SongsView: View {
     
     // Performance: Cache score map to avoid repeated lookups
     @State private var scoreCache: [String: Score] = [:]
-    @State private var cachedProfileId: UUID? = nil
     
     // Grid zoom state
     @AppStorage(AppStorageKeys.songsGridColumns) private var committedColumns: Int = 4
@@ -125,9 +124,7 @@ struct SongsView: View {
             // Small delay to debounce rapid calls
             try? await Task.sleep(for: .milliseconds(50))
             guard !Task.isCancelled else { return }
-            let profileId = activeProfiles.first?.id
             scoreCache = ScoreService.shared.scoreMap(context: modelContext)
-            cachedProfileId = profileId
         }
     }
     
@@ -589,11 +586,7 @@ struct SongsView: View {
             FilterView(settings: $filterSettings, allCategories: allCategories, allVersions: allVersions)
         }
         .onAppear {
-            // Only refresh cache if empty or profile changed
-            let currentProfileId = activeProfiles.first?.id
-            if scoreCache.isEmpty || cachedProfileId != currentProfileId {
-                refreshScoreCache()
-            }
+            refreshScoreCache()
             if displayedSongs.isEmpty && !songs.isEmpty {
                 updateDisplayedSongs(refreshSnapshots: true)
             }
@@ -601,6 +594,13 @@ struct SongsView: View {
         }
         // Use single onChange for profile changes
         .onChange(of: activeProfiles.first?.id) { _, _ in
+            refreshScoreCache()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .maimaiScoresDidChange)) { notification in
+            if let changedProfileID = notification.object as? UUID,
+               changedProfileID != activeProfiles.first?.id {
+                return
+            }
             refreshScoreCache()
         }
         .onChange(of: songs) { _, _ in updateDisplayedSongs(refreshSnapshots: true) }

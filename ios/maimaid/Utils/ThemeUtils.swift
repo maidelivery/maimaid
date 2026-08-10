@@ -5,7 +5,6 @@ enum AppStorageKeys {
     static let showScannerBoundingBox = "showScannerBoundingBox"
     static let scoreQueryDisplayMode = "scoreQuery.displayMode"
     static let scoreQueryGridColumns = "scoreQuery.gridColumns"
-    static let scoreQueryBadgeMode = "scoreQuery.badgeMode"
     static let scoreQuerySortMode = "scoreQuery.sortMode"
     static let scoreQuerySortAscending = "scoreQuery.sortAscending"
     static let syncUpdateRemoteData = "syncUpdateRemoteData"
@@ -333,10 +332,24 @@ struct ThemeUtils {
     }
     
     // MARK: - Status Normalization & Ordering
+
+    /// Converts display and storage variants to the canonical FC status code.
+    nonisolated static func canonicalFC(_ fc: String?) -> String? {
+        guard let fc else { return nil }
+
+        let normalized = fc.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        switch normalized {
+        case "fc+", "fcp": return "fcp"
+        case "ap+", "app": return "app"
+        case "fc", "ap": return normalized
+        case "": return nil
+        default: return normalized
+        }
+    }
     
     // Canonical ordering for FC badges
     static func fcOrder(_ fc: String?) -> Int {
-        guard let fc = fc?.lowercased() else { return 0 }
+        guard let fc = canonicalFC(fc) else { return 0 }
         switch fc {
         case "app": return 4 // AP+
         case "ap":  return 3 // AP
@@ -371,7 +384,7 @@ struct ThemeUtils {
     
     /// Normalizes FC status codes to display strings (fc→FC, fcp→FC+, ap→AP, app→AP+).
     nonisolated static func normalizeFC(_ fc: String) -> String {
-        switch fc.lowercased() {
+        switch canonicalFC(fc) {
         case "app": return "AP+"
         case "ap":  return "AP"
         case "fcp": return "FC+"

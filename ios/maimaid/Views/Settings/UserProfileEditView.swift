@@ -20,7 +20,6 @@ struct UserProfileEditView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query private var profiles: [UserProfile]
-    @Query private var songs: [Song]
     
     @State private var name: String = ""
     @State private var plate: String = ""
@@ -45,9 +44,6 @@ struct UserProfileEditView: View {
         return nil
     }
     
-    private var detectedLatestVersion: String {
-        ServerVersionService.shared.latestVersion(for: selectedServer, songs: songs)
-    }
     
     var body: some View {
         Form {
@@ -67,15 +63,6 @@ struct UserProfileEditView: View {
                     }
                 }
                 
-                // Show detected latest version for selected server
-                HStack {
-                    Text("userProfile.latestVersion")
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text(ThemeUtils.versionAbbreviation(detectedLatestVersion))
-                        .foregroundStyle(.blue)
-                        .font(.subheadline.bold())
-                }
             }
             
             if isEditing {
@@ -106,16 +93,6 @@ struct UserProfileEditView: View {
                     SecureField("settings.sync.lxnsToken", text: $lxnsRefreshToken)
                 }
                 
-                if let existingProfile {
-                    Section("userProfile.section.metadata") {
-                        LabeledContent("userProfile.profileId") {
-                            Text(existingProfile.id.uuidString)
-                                .font(.footnote.monospaced())
-                                .foregroundStyle(.secondary)
-                                .textSelection(.enabled)
-                        }
-                    }
-                }
             }
             
             Section("profile.edit.presetIcon") {
@@ -153,7 +130,7 @@ struct UserProfileEditView: View {
                 .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
-        .onAppear {
+        .task {
             if let p = existingProfile {
                 name = p.name
                 plate = p.plate ?? ""

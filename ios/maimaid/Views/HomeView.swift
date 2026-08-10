@@ -17,7 +17,7 @@ struct HomeView: View {
     @AppStorage(UserDefaultsKeys.didPerformInitialSync) private var didPerformInitialSync = false
     @AppStorage(AppStorageKeys.didShowOnboarding) private var didShowOnboarding = false
     
-    @State private var showingEditProfile = false
+    @State private var profileEditMode: UserProfileEditView.Mode?
     @State private var showingOnboarding = false
     @State private var computedB50Total: Int = 0
     @State private var standardB50Total: Int = 0
@@ -79,13 +79,9 @@ struct HomeView: View {
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("home.title")
-            .sheet(isPresented: $showingEditProfile) {
+            .sheet(item: $profileEditMode) { mode in
                 NavigationStack {
-                    if let profile = activeProfile {
-                        UserProfileEditView(mode: .edit(profile))
-                    } else {
-                        UserProfileEditView(mode: .create)
-                    }
+                    UserProfileEditView(mode: mode)
                 }
             }
             .sheet(isPresented: $showingOnboarding) {
@@ -112,6 +108,14 @@ struct HomeView: View {
                 await updateB50IfNeeded()
             }
             .onChange(of: allScores.count) { _, _ in
+                refreshScoreFingerprintCache()
+                scheduleB50Update()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .maimaiScoresDidChange)) { notification in
+                if let changedProfileID = notification.object as? UUID,
+                   changedProfileID != activeProfile?.id {
+                    return
+                }
                 refreshScoreFingerprintCache()
                 scheduleB50Update()
             }
@@ -167,16 +171,20 @@ struct HomeView: View {
         var totalRate = 0.0
         var totalDxScore = 0
         var latestUpdate: TimeInterval = 0
+        var fcFingerprint = 0
 
         for score in allScores where score.userProfileId == profileId {
             scoreCount += 1
             totalRate += score.rate
             totalDxScore += score.dxScore
             latestUpdate = max(latestUpdate, score.achievementDate.timeIntervalSince1970)
+            for byte in (score.fc ?? "").utf8 {
+                fcFingerprint = fcFingerprint &* 31 &+ Int(byte)
+            }
         }
 
         let normalizedRate = Int((totalRate * 10_000).rounded())
-        return "\(scoreCount)_\(normalizedRate)_\(totalDxScore)_\(Int(latestUpdate))"
+        return "\(scoreCount)_\(normalizedRate)_\(totalDxScore)_\(Int(latestUpdate))_\(fcFingerprint)"
     }
 
     private func scheduleB50Update() {
@@ -388,7 +396,7 @@ struct HomeView: View {
 
     private var profileHeader: some View {
         Button {
-            showingEditProfile = true
+            profileEditMode = activeProfile.map(UserProfileEditView.Mode.edit) ?? .create
         } label: {
             HStack(spacing: 16) {
                 // Avatar

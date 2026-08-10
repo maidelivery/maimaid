@@ -6,11 +6,6 @@
 	<string>$(BACKEND_AUTH_URL)</string>
 	<key>BACKEND_URL</key>
 	<string>$(BACKEND_URL)</string>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>in.shikoch.maimaid.static-data-refresh</string>
-		<string>in.shikoch.maimaid.backend-backup</string>
-	</array>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>en</string>
@@ -28,12 +23,6 @@
 				<string>maimaid</string>
 			</array>
 		</dict>
-	</array>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-		<string>fetch</string>
-		<string>processing</string>
 	</array>
 </dict>
 </plist>

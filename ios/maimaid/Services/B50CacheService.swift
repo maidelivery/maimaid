@@ -41,7 +41,7 @@ final class B50CacheService {
     private func buildScoreSnapshot(
         modelContext: ModelContext,
         profileId: UUID?
-    ) -> (fingerprint: String, scoreMap: [String: Score]) {
+    ) async -> (fingerprint: String, scoreMap: [String: Score]) {
         let profileKey = profileId?.uuidString ?? "none"
         
         let scores: [Score]
@@ -64,7 +64,10 @@ final class B50CacheService {
         var totalRate: Double = 0
         var totalDxScore: Int = 0
         
-        for score in scores {
+        for (index, score) in scores.enumerated() {
+            if index.isMultiple(of: 200) {
+                await Task.yield()
+            }
             scoreMap[score.sheetId] = score
             totalRate += score.rate
             totalDxScore += score.dxScore
@@ -99,7 +102,7 @@ final class B50CacheService {
         let songCount = allSongs.count
         
         // Single score fetch instead of fetchCount + latest fetch + scoreMap rebuild
-        let snapshot = buildScoreSnapshot(modelContext: modelContext, profileId: profileId)
+        let snapshot = await buildScoreSnapshot(modelContext: modelContext, profileId: profileId)
         
         let params = [
             profileKey,

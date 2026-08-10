@@ -59,7 +59,7 @@
 "settings.data.importLxns" = "Import from LXNS";
 "settings.data.bound" = "Bound";
 "settings.sync.header" = "Score Sync";
-"settings.sync.footer" = "When enabled, manually saved scores on CN-available charts sync to bound third-party services (DF/LXNS). Sync to your cloud account is not controlled by this switch.";
+"settings.sync.footer" = "DF/LXNS score import works with every server profile. Score uploads run only while the active profile uses the CN server. Cloud sync remains independent.";
 "settings.sync.autoUpload" = "Sync Scores";
 "settings.appearance.header" = "Appearance";
 "settings.appearance.theme" = "Theme";

@@ -262,7 +262,6 @@ enum BackendIncrementalSyncService {
             let config = ensureSyncConfig(context: context)
             config.lastSyncRevision = response.latestRevision
             try context.save()
-            try await pullUpdates(context: context, profileId: profile.id, force: false)
         }
     }
 
@@ -329,6 +328,7 @@ enum BackendIncrementalSyncService {
         config.lastSyncRevision = response.latestRevision
         try context.save()
         ScoreService.shared.invalidateAllCaches()
+        ScoreService.shared.notifyScoresChanged(for: profileId)
     }
 
     static func previewImportConflicts(context: ModelContext, profileId: UUID) async throws -> ImportSyncConflictPreview {
@@ -421,6 +421,7 @@ enum BackendIncrementalSyncService {
         }
 
         ScoreService.shared.invalidateAllCaches()
+        ScoreService.shared.notifyScoresChanged(for: preview.profileId)
     }
 
     static func deleteProfile(profileId: UUID, context: ModelContext) async throws {

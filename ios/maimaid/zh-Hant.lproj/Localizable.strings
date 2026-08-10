@@ -59,7 +59,7 @@
 "settings.data.importLxns" = "從 LXNS 匯入成績";
 "settings.data.bound" = "已綁定";
 "settings.sync.header" = "成績同步";
-"settings.sync.footer" = "開啟後，手動儲存成績時，App 會將國服可用譜面的成績同步到已綁定的第三方查分器（DF/LXNS）。自家雲端同步不受此開關影響。";
+"settings.sync.footer" = "DF/LXNS 成績匯入適用於所有伺服器檔案；成績上送僅在目前啟用的檔案為國服時生效。自家雲端同步不受此開關影響。";
 "settings.sync.autoUpload" = "同步成績";
 "settings.appearance.header" = "外觀";
 "settings.appearance.theme" = "主題";

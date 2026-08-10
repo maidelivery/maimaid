@@ -18,14 +18,11 @@ private enum StaticUpdateState {
 
 struct StaticDataUpdateView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var configs: [SyncConfig]
     @State private var fetcher = MaimaiDataFetcher.shared
 
     @State private var updateState: StaticUpdateState = .idle
     @State private var syncErrorMessage: String?
-    @State private var lastCheckedAt: Date?
 
-    private var config: SyncConfig? { configs.first }
     private var isSyncing: Bool { fetcher.isSyncing }
 
     var body: some View {
@@ -102,42 +99,6 @@ struct StaticDataUpdateView: View {
                 }
             }
 
-            Section("自动更新") {
-                let currentInterval = config?.backgroundSyncInterval ?? 0
-                Picker("检查频率", selection: Binding(
-                    get: { currentInterval },
-                    set: { newValue in
-                        if let config {
-                            config.backgroundSyncInterval = newValue
-                        } else {
-                            let newConfig = SyncConfig()
-                            newConfig.backgroundSyncInterval = newValue
-                            modelContext.insert(newConfig)
-                        }
-                        try? modelContext.save()
-                        Task {
-                            await StaticDataAutoUpdate.scheduleNextRefresh(container: modelContext.container)
-                        }
-                    }
-                )) {
-                    Text("关闭").tag(0)
-                    Text("每天").tag(24)
-                    Text("每 7 天").tag(168)
-                    Text("每 14 天").tag(336)
-                    Text("每 30 天").tag(720)
-                }
-                .pickerStyle(.menu)
-
-                if let lastUpdate = config?.lastStaticDataUpdateDate {
-                    LabeledContent("上次更新", value: lastUpdate.formatted(date: .numeric, time: .shortened))
-                } else {
-                    LabeledContent("上次更新", value: "从未")
-                }
-
-                if let lastCheckedAt {
-                    LabeledContent("上次检查", value: lastCheckedAt.formatted(date: .numeric, time: .shortened))
-                }
-            }
         }
         .navigationTitle("静态数据更新")
         .navigationBarTitleDisplayMode(.inline)
@@ -155,7 +116,6 @@ struct StaticDataUpdateView: View {
     private func checkForUpdate() async {
         syncErrorMessage = nil
         updateState = .checking
-        defer { lastCheckedAt = .now }
 
         guard BackendSessionManager.shared.isConfigured else {
             updateState = .backendUnconfigured
@@ -190,7 +150,6 @@ struct StaticDataUpdateView: View {
                 return false
             }()
             try await fetcher.fetchSongs(modelContext: modelContext, forceBundleApply: forceBundleApply)
-            await StaticDataAutoUpdate.scheduleNextRefresh(container: modelContext.container)
             await checkForUpdate()
         } catch {
             syncErrorMessage = error.localizedDescription

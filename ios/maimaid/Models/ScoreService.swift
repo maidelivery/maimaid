@@ -1,6 +1,10 @@
 import Foundation
 import SwiftData
 
+extension Notification.Name {
+    static let maimaiScoresDidChange = Notification.Name("MaimaiScoresDidChange")
+}
+
 /// 成绩管理服务 - 确保所有成绩操作都在当前用户作用域下进行
 @MainActor
 final class ScoreService {
@@ -213,6 +217,11 @@ final class ScoreService {
     
     /// 获取指定谱面对当前用户的成绩
     func score(for sheet: Sheet, context: ModelContext) -> Score? {
+        let profileId = currentActiveProfileId(context: context)
+        if let relatedScore = sheet.scores.first(where: { $0.userProfileId == profileId }) {
+            return relatedScore
+        }
+
         let snapshot = currentSnapshot(context: context)
         for sheetId in candidateScoreSheetIds(for: sheet) {
             if let score = snapshot.scoreMap[sheetId] {
@@ -265,6 +274,7 @@ final class ScoreService {
     ) -> Score {
         let profileId = currentActiveProfileId(context: context)
         let existingScore = score(for: sheet, context: context)
+        let canonicalFC = ThemeUtils.canonicalFC(fc)
         
         let result: Score
         
@@ -277,7 +287,7 @@ final class ScoreService {
             }
             
             existing.dxScore = max(existing.dxScore, dxScore)
-            existing.fc = ThemeUtils.bestFC(existing.fc, fc)
+            existing.fc = ThemeUtils.canonicalFC(ThemeUtils.bestFC(existing.fc, canonicalFC))
             existing.fs = ThemeUtils.bestFS(existing.fs, fs)
             result = existing
         } else {
@@ -286,7 +296,7 @@ final class ScoreService {
                 rate: rate,
                 rank: rank,
                 dxScore: dxScore,
-                fc: fc,
+                fc: canonicalFC,
                 fs: fs,
                 achievementDate: Date(),
                 userProfileId: profileId
@@ -317,7 +327,7 @@ final class ScoreService {
             rate: rate,
             rank: rank,
             dxScore: dxScore,
-            fc: fc,
+            fc: ThemeUtils.canonicalFC(fc),
             fs: fs,
             playDate: Date(),
             userProfileId: profileId
@@ -353,6 +363,7 @@ final class ScoreService {
     /// 当外部导入、恢复、批量更新成绩后调用
     func notifyScoresChanged(for profileId: UUID? = nil) {
         invalidateScoreCache(for: profileId)
+        NotificationCenter.default.post(name: .maimaiScoresDidChange, object: profileId)
     }
     
     // MARK: - 历史记录

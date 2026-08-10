@@ -72,7 +72,10 @@ class RecommendationService {
             ("S", 97.0), ("S+", 98.0), ("SS", 99.0), ("SS+", 99.5), ("SSS", 100.0), ("SSS+", 100.5)
         ]
 
-        for song in songs {
+        for (index, song) in songs.enumerated() {
+            if index.isMultiple(of: 32) {
+                await Task.yield()
+            }
             if song.category.lowercased().contains("utage") || song.category.contains("宴") {
                 continue
             }

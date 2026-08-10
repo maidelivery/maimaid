@@ -252,10 +252,7 @@ struct DivingFishImportView: View {
             progress = Double(result.fetchedCount)
 
             if result.upsertedCount == 0 {
-                try BackendIncrementalSyncService.updateLastSyncRevisionIfAvailable(
-                    result.latestRevision,
-                    context: modelContext
-                )
+                try await BackendCloudSyncService.restoreFromCloud(context: modelContext)
                 profile.lastImportDateDF = Date()
                 try modelContext.save()
                 pendingUpsertedCount = 0
@@ -283,6 +280,7 @@ struct DivingFishImportView: View {
                 preview: preview,
                 context: modelContext
             )
+            try await BackendCloudSyncService.restoreFromCloud(context: modelContext)
             profile.lastImportDateDF = Date()
             try modelContext.save()
 
@@ -320,6 +318,7 @@ struct DivingFishImportView: View {
                 preview: preview,
                 context: modelContext
             )
+            try await BackendCloudSyncService.restoreFromCloud(context: modelContext)
 
             let targetProfileId = preview.profileId
             if let profile = try modelContext.fetch(

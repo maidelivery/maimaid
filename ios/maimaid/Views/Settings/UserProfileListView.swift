@@ -3,13 +3,22 @@ import SwiftData
 
 struct UserProfileListView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var profiles: [UserProfile]
-    @Query private var songs: [Song]
+    @Query(sort: \UserProfile.createdAt) private var profiles: [UserProfile]
     @State private var showingCreateProfile = false
     @State private var editingProfile: UserProfile?
     
     // Cache server versions to avoid recomputing per-row
     @State private var serverVersionCache: [GameServer: String] = [:]
+
+    private struct SongVersionSnapshot: Sendable {
+        let version: String?
+        let category: String
+        let releaseDate: String?
+        let hasAnyRegion: Bool
+        let hasJpRegion: Bool
+        let hasIntlRegion: Bool
+        let hasCnRegion: Bool
+    }
     
     var body: some View {
         List {
@@ -20,28 +29,30 @@ struct UserProfileListView: View {
                     Text("userProfile.empty.description")
                 }
             } else {
-                ForEach(profiles.sorted(by: { $0.createdAt < $1.createdAt })) { profile in
-                    profileRow(profile)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            switchToProfile(profile)
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            if !profile.isActive {
-                                Button(role: .destructive) {
-                                    deleteProfile(profile)
-                                } label: {
-                                    Label("userProfile.delete", systemImage: "trash")
-                                }
-                            }
-                            
-                            Button {
-                                editingProfile = profile
+                ForEach(profiles) { profile in
+                    Button {
+                        switchToProfile(profile)
+                    } label: {
+                        profileRow(profile)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        if !profile.isActive {
+                            Button(role: .destructive) {
+                                deleteProfile(profile)
                             } label: {
-                                Label("userProfile.edit", systemImage: "pencil")
+                                Label("userProfile.delete", systemImage: "trash")
                             }
-                            .tint(.blue)
                         }
+
+                        Button {
+                            editingProfile = profile
+                        } label: {
+                            Label("userProfile.edit", systemImage: "pencil")
+                        }
+                        .tint(.blue)
+                    }
                 }
             }
         }
@@ -68,20 +79,90 @@ struct UserProfileListView: View {
         .task {
             await buildServerVersionCache()
         }
-        .onChange(of: songs.count) { _, _ in
-            Task {
-                await buildServerVersionCache()
-            }
-        }
     }
     
     private func buildServerVersionCache() async {
-        // Compute all server versions once, off the rendering path
-        var cache: [GameServer: String] = [:]
-        for server in GameServer.allCases {
-            cache[server] = ServerVersionService.shared.latestVersion(for: server, songs: songs)
-        }
+        let container = modelContext.container
+        let sequence = UserDefaults.app.maimaiVersionSequence
+        let cutoffs = Dictionary(uniqueKeysWithValues: GameServer.allCases.map { server in
+            (server.rawValue, ServerVersionService.shared.cutoffDate(for: server))
+        })
+
+        let cache = await Task.detached(priority: .utility) {
+            let context = ModelContext(container)
+            let songs = (try? context.fetch(FetchDescriptor<Song>())) ?? []
+            let snapshots = songs.map { song in
+                let sheets = song.sheets
+                let hasJpRegion = sheets.contains { $0.regionJp }
+                let hasIntlRegion = sheets.contains { $0.regionIntl }
+                let hasCnRegion = sheets.contains { $0.regionCn }
+                return SongVersionSnapshot(
+                    version: song.version,
+                    category: song.category,
+                    releaseDate: song.releaseDate,
+                    hasAnyRegion: hasJpRegion || hasIntlRegion || hasCnRegion,
+                    hasJpRegion: hasJpRegion,
+                    hasIntlRegion: hasIntlRegion,
+                    hasCnRegion: hasCnRegion
+                )
+            }
+
+            var result: [GameServer: String] = [:]
+            for server in GameServer.allCases {
+                result[server] = UserProfileListView.latestVersion(
+                    for: server,
+                    songs: snapshots,
+                    sequence: sequence,
+                    cutoff: cutoffs[server.rawValue] ?? "9999-12-31"
+                )
+            }
+            return result
+        }.value
+
+        guard !Task.isCancelled else { return }
         serverVersionCache = cache
+    }
+
+    nonisolated private static func latestVersion(
+        for server: GameServer,
+        songs: [SongVersionSnapshot],
+        sequence: [String],
+        cutoff: String
+    ) -> String {
+        let orderedVersions: [String]
+        if sequence.isEmpty {
+            orderedVersions = Set(songs.compactMap(\.version)).sorted()
+        } else {
+            orderedVersions = sequence
+        }
+
+        var serverVersion = orderedVersions.first ?? sequence.last ?? ""
+        for version in orderedVersions {
+            let activeSongs = songs.filter { song in
+                song.version == version &&
+                !song.category.localizedStandardContains("utage") &&
+                !song.category.contains("宴") &&
+                song.hasAnyRegion
+            }
+            guard !activeSongs.isEmpty else { continue }
+
+            let playableCount = activeSongs.count { song in
+                let hasRegion: Bool
+                switch server {
+                case .jp: hasRegion = song.hasJpRegion
+                case .intl: hasRegion = song.hasIntlRegion
+                case .cn: hasRegion = song.hasCnRegion
+                }
+                if hasRegion { return true }
+                guard let releaseDate = song.releaseDate, !releaseDate.isEmpty else { return true }
+                return releaseDate <= cutoff
+            }
+
+            guard playableCount > 0 else { break }
+            serverVersion = version
+            if playableCount < activeSongs.count { break }
+        }
+        return serverVersion
     }
     
     private func profileRow(_ profile: UserProfile) -> some View {
