@@ -338,9 +338,10 @@ struct ScannerView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                CameraPreviewView { image in
-                    handleCameraFrame(image)
-                }
+                CameraPreviewView(
+                    onImageCaptured: handleCameraFrame,
+                    onPhotoCaptured: handleCapturedScannerPhoto
+                )
                 .ignoresSafeArea()
                 
                 debugOverlayView()
@@ -910,9 +911,6 @@ struct ScannerView: View {
             .accessibilityHint(Text("scanner.library.hint"))
         }
         .padding()
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ScannerPhotoCaptured"))) { notification in
-            if let image = notification.object as? UIImage { handleCapturedScannerPhoto(image) }
-        }
     }
     
     private func triggerPhotoCapture() {
@@ -927,7 +925,13 @@ struct ScannerView: View {
         NotificationCenter.default.post(name: NSNotification.Name("TakeScannerPhoto"), object: nil)
     }
     
-    private func handleCapturedScannerPhoto(_ image: UIImage) {
+    private func handleCapturedScannerPhoto(_ result: Result<Data, Error>) {
+        guard case .success(let data) = result else {
+            isSavingPhoto = false
+            showFeedback(String(localized: "scanner.photo.error"))
+            return
+        }
+
         let title = recognizedSong?.title
         var tags: [String] = []
         if let t = title { tags.append(t) }
@@ -937,12 +941,13 @@ struct ScannerView: View {
             tags.append(diff.uppercased()); tags.append(type.uppercased())
         }
         if let rate = recognizedRate { tags.append(RatingUtils.calculateRank(achievement: rate)) }
-        Task {
+        Task { @MainActor in
+            defer { isSavingPhoto = false }
             do {
-                try await PhotoService.shared.saveImageWithMetadata(image, title: title, tags: tags)
-                await MainActor.run { self.isSavingPhoto = false; showFeedback(String(localized: "scanner.photo.saved")) }
+                try await PhotoService.shared.savePhotoDataWithMetadata(data, title: title, tags: tags)
+                showFeedback(String(localized: "scanner.photo.saved"))
             } catch {
-                await MainActor.run { self.isSavingPhoto = false; showFeedback(String(localized: "scanner.photo.error")) }
+                showFeedback(String(localized: "scanner.photo.error"))
             }
         }
     }

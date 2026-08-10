@@ -2,29 +2,29 @@ import Foundation
 import UIKit
 import Photos
 
-class PhotoService {
+nonisolated final class PhotoService: Sendable {
     static let shared = PhotoService()
-    private let albumName = "maimai"
+    private static let albumName = "maimai"
     
     private init() {}
     
     // MARK: - Album Management
     
-    private func fetchMaimaiAlbum() -> PHAssetCollection? {
+    private static func fetchMaimaiAlbum() -> PHAssetCollection? {
         let fetchOptions = PHFetchOptions()
         fetchOptions.predicate = NSPredicate(format: "title = %@", albumName)
         let collection = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: fetchOptions)
         return collection.firstObject
     }
     
-    private func createMaimaiAlbum() async throws -> PHAssetCollection {
+    private static func createMaimaiAlbum() async throws -> PHAssetCollection {
         if let existingAlbum = fetchMaimaiAlbum() {
             return existingAlbum
         }
         
         var albumPlaceholder: PHObjectPlaceholder?
         try await PHPhotoLibrary.shared().performChanges {
-            let createAlbumRequest = PHAssetCollectionChangeRequest.creationRequestForAssetCollection(withTitle: self.albumName)
+            let createAlbumRequest = PHAssetCollectionChangeRequest.creationRequestForAssetCollection(withTitle: albumName)
             albumPlaceholder = createAlbumRequest.placeholderForCreatedAssetCollection
         }
         
@@ -42,21 +42,15 @@ class PhotoService {
     
     // MARK: - Image Saving
     
-    /// Requests necessary photo library access.
-    public func checkAuthorizations() async -> (canAdd: Bool, canReadWrite: Bool) {
-        let rwStatus = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
-        let addStatus = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
-        
-        let canReadWrite = rwStatus == .authorized || rwStatus == .limited
-        let canAdd = addStatus == .authorized || addStatus == .limited || canReadWrite
-        
-        return (canAdd, canReadWrite)
+    private static func requestAuthorization() async -> PHAuthorizationStatus {
+        let currentStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        guard currentStatus == .notDetermined else { return currentStatus }
+        return await PHPhotoLibrary.requestAuthorization(for: .readWrite)
     }
     
-    /// Stuffs the title and tags internally inside the JPEG metadata block, specifically the Title/Description fields so it falls into iOS Spotlight scope.
-    private func jpegDataWithMetadata(_ uiImage: UIImage, title: String?, tags: [String]?) -> Data? {
-        guard let originalData = uiImage.jpegData(compressionQuality: 0.95) as CFData?,
-              let source = CGImageSourceCreateWithData(originalData, nil),
+    /// Adds searchable title and tag metadata while preserving the camera's original image format.
+    private static func photoDataWithMetadata(_ originalData: Data, title: String?, tags: [String]?) -> Data? {
+        guard let source = CGImageSourceCreateWithData(originalData as CFData, nil),
               let uti = CGImageSourceGetType(source) else {
             return nil
         }
@@ -98,27 +92,22 @@ class PhotoService {
         return mutableData as Data
     }
     
-    public func saveImageWithMetadata(_ image: UIImage, title: String?, tags: [String]? = nil) async throws {
-        let auths = await checkAuthorizations()
-        guard auths.canAdd else {
+    public func savePhotoDataWithMetadata(_ data: Data, title: String?, tags: [String]? = nil) async throws {
+        let authorizationStatus = await Self.requestAuthorization()
+        guard authorizationStatus == .authorized || authorizationStatus == .limited else {
             throw NSError(domain: "PhotoService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Photo library access denied"])
         }
-        
-        // Try appending EXIF data if title is provided
-        guard let metadataData = jpegDataWithMetadata(image, title: title, tags: tags) else {
-            throw NSError(domain: "PhotoService", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to weave metadata into JPEG"])
-        }
-        
-        var targetAlbum: PHAssetCollection? = nil
-        if auths.canReadWrite {
-            targetAlbum = try? await createMaimaiAlbum()
-        }
+
+        let metadataData = await Task.detached(priority: .userInitiated) {
+            Self.photoDataWithMetadata(data, title: title, tags: tags) ?? data
+        }.value
+
+        let targetAlbum = try? await Self.createMaimaiAlbum()
         
         try await PHPhotoLibrary.shared().performChanges {
             let creationRequest = PHAssetCreationRequest.forAsset()
             creationRequest.addResource(with: .photo, data: metadataData, options: nil)
             
-            // Add to our album if we have read/write access and the album exists
             if let album = targetAlbum, let placeholder = creationRequest.placeholderForCreatedAsset {
                 let albumChangeRequest = PHAssetCollectionChangeRequest(for: album)
                 albumChangeRequest?.addAssets([placeholder] as NSArray)
