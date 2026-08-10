@@ -5,6 +5,7 @@ struct RecommendationListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var songs: [Song]
     @Query private var configs: [SyncConfig]
+    @Query private var allScores: [Score]
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     @State private var response: RecommendationResponse?
     @State private var isLoading = true
@@ -18,12 +19,21 @@ struct RecommendationListView: View {
     
     /// Generates a lightweight fingerprint from scores to detect changes.
     /// Uses count + sum of rates, which changes whenever scores are added/updated.
-    private func currentScoreFingerprint() -> String {
-        let scores = ScoreService.shared.allScores(context: modelContext)
-        let count = scores.count
-        // Use a hash of count + total rate to detect any score change
-        let totalRate = scores.reduce(0.0) { $0 + $1.rate }
-        return "\(count)_\(String(format: "%.2f", totalRate))"
+    private func currentScoreFingerprint() async -> String {
+        let profileID = activeProfile?.id
+        var count = 0
+        var totalRate = 0.0
+        var latestUpdate: TimeInterval = 0
+        for (index, score) in allScores.enumerated() where score.userProfileId == profileID {
+            count += 1
+            totalRate += score.rate
+            latestUpdate = max(latestUpdate, score.achievementDate.timeIntervalSince1970)
+            if index.isMultiple(of: 200) {
+                await Task.yield()
+            }
+        }
+        let normalizedRate = Int((totalRate * 100).rounded())
+        return "\(count)_\(normalizedRate)_\(Int(latestUpdate))"
     }
     
     /// Generates a fingerprint from config values that affect recommendations
@@ -127,6 +137,13 @@ struct RecommendationListView: View {
         .onChange(of: activeProfile?.b35RecLimit) { _, _ in
             Task { await loadRecommendationsIfNeeded() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .maimaiScoresDidChange)) { notification in
+            if let changedProfileID = notification.object as? UUID,
+               changedProfileID != activeProfile?.id {
+                return
+            }
+            Task { await loadRecommendations(force: true) }
+        }
     }
     
     private func rowStepper(title: LocalizedStringKey, value: Binding<Int>, range: ClosedRange<Int>) -> some View {
@@ -144,7 +161,7 @@ struct RecommendationListView: View {
     
     /// Only reloads if scores or config have actually changed
     private func loadRecommendationsIfNeeded() async {
-        let scoreFingerprint = currentScoreFingerprint()
+        let scoreFingerprint = await currentScoreFingerprint()
         let configFingerprint = currentConfigFingerprint()
         
         // If we have cached results and nothing has changed, skip
@@ -157,7 +174,7 @@ struct RecommendationListView: View {
     
     private func loadRecommendations(force: Bool = false) async {
         // Update fingerprints before loading
-        let scoreFingerprint = currentScoreFingerprint()
+        let scoreFingerprint = await currentScoreFingerprint()
         let configFingerprint = currentConfigFingerprint()
         
         // Skip if nothing changed (unless forced)
@@ -205,7 +222,7 @@ struct RecommendationRow: View {
                             .font(.system(size: 11, weight: .black, design: .rounded))
                             .foregroundStyle(RatingUtils.colorForRank(rank))
                         
-                        Text("\(rate, format: .number.precision(.fractionLength(2)))%")
+                        Text("\(rate, format: .number.precision(.fractionLength(4)))%")
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(.secondary)
                     } else {

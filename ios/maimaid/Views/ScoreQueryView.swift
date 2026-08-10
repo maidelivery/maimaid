@@ -26,7 +26,6 @@ struct ScoreQueryView: View {
     // Display settings (persisted)
     @AppStorage(AppStorageKeys.scoreQueryDisplayMode) private var displayMode: DisplayMode = .grid
     @AppStorage(AppStorageKeys.scoreQueryGridColumns) private var committedColumns: Int = 5
-    @AppStorage(AppStorageKeys.scoreQueryBadgeMode) private var badgeMode: BadgeMode = .rank
     @AppStorage(AppStorageKeys.scoreQuerySortMode) private var sortMode: SortMode = .rating
     @AppStorage(AppStorageKeys.scoreQuerySortAscending) private var sortAscending: Bool = false
     
@@ -55,10 +54,6 @@ struct ScoreQueryView: View {
     
     enum DisplayMode: String, CaseIterable {
         case grid, list
-    }
-    
-    enum BadgeMode: String, CaseIterable {
-        case rank, fc, fs
     }
     
     enum SortMode: String, CaseIterable {
@@ -353,6 +348,13 @@ struct ScoreQueryView: View {
         .onChange(of: selectedRanks) { _, _ in applyFiltersAndSort() }
         .onChange(of: selectedFC) { _, _ in applyFiltersAndSort() }
         .onChange(of: selectedFS) { _, _ in applyFiltersAndSort() }
+        .onReceive(NotificationCenter.default.publisher(for: .maimaiScoresDidChange)) { notification in
+            if let changedProfileID = notification.object as? UUID,
+               changedProfileID != activeProfiles.first?.id {
+                return
+            }
+            Task { await loadData() }
+        }
         .task {
             await loadData()
         }
@@ -447,19 +449,6 @@ struct ScoreQueryView: View {
                     .frame(width: 100)
                 }
                 
-                if displayMode == .grid {
-                    HStack(spacing: 12) {
-                        Picker("", selection: $badgeMode) {
-                            Text("scoreQuery.badge.rank").tag(BadgeMode.rank)
-                            Text("scoreQuery.badge.fc").tag(BadgeMode.fc)
-                            Text("scoreQuery.badge.fs").tag(BadgeMode.fs)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 180)
-                        
-                        Spacer()
-                    }
-                }
             }
             .padding(16)
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
@@ -719,55 +708,54 @@ struct ScoreQueryView: View {
                 size: cellSize,
                 cornerRadius: cornerRadius
             )
-            
-            // Difficulty accent (top-left small bar)
-            VStack {
-                HStack {
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(ThemeUtils.colorForDifficulty(entry.difficulty, entry.type, colorScheme))
-                        .frame(width: 3, height: 14)
-                        .padding(.leading, 2)
-                        .padding(.top, 2)
-                    Spacer()
-                }
-                Spacer()
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(
+                        ThemeUtils.colorForDifficulty(entry.difficulty, entry.type, colorScheme),
+                        lineWidth: intCols > 5 ? 1.5 : 2
+                    )
             }
-            
-            // Badge overlay
-            badgeOverlay(entry: entry, intCols: intCols)
+
+            scoreBadges(entry: entry, intCols: intCols)
                 .padding(2)
         }
     }
     
     @ViewBuilder
-    private func badgeOverlay(entry: ScoreEntry, intCols: Int) -> some View {
-        switch badgeMode {
-        case .rank:
-            Text(entry.rank)
-                .font(.system(size: intCols > 5 ? 7 : 9, weight: .black, design: .rounded))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 3)
-                .padding(.vertical, 1)
-                .background(RatingUtils.colorForRank(entry.rank), in: RoundedRectangle(cornerRadius: 3))
-        case .fc:
+    private func scoreBadges(entry: ScoreEntry, intCols: Int) -> some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            gridBadge(
+                text: entry.rank,
+                color: RatingUtils.colorForRank(entry.rank),
+                intCols: intCols
+            )
+
             if let fc = entry.fc, !fc.isEmpty {
-                Text(ThemeUtils.normalizeFC(fc))
-                    .font(.system(size: intCols > 5 ? 7 : 9, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 3)
-                    .padding(.vertical, 1)
-                    .background(ThemeUtils.fcColor(fc), in: RoundedRectangle(cornerRadius: 3))
+                gridBadge(
+                    text: ThemeUtils.normalizeFC(fc),
+                    color: ThemeUtils.fcColor(fc),
+                    intCols: intCols
+                )
             }
-        case .fs:
+
             if let fs = entry.fs, !fs.isEmpty {
-                Text(ThemeUtils.normalizeFS(fs))
-                    .font(.system(size: intCols > 5 ? 7 : 9, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 3)
-                    .padding(.vertical, 1)
-                    .background(ThemeUtils.fsColor(fs), in: RoundedRectangle(cornerRadius: 3))
+                gridBadge(
+                    text: ThemeUtils.normalizeFS(fs),
+                    color: ThemeUtils.fsColor(fs),
+                    intCols: intCols
+                )
             }
         }
+    }
+
+    private func gridBadge(text: String, color: Color, intCols: Int) -> some View {
+        Text(text)
+            .font(.system(size: intCols > 5 ? 7 : 9, weight: .black, design: .rounded))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 3)
+            .padding(.vertical, 1)
+            .background(color, in: RoundedRectangle(cornerRadius: 3))
+            .lineLimit(1)
     }
     
     private var listView: some View {
@@ -859,7 +847,10 @@ struct ScoreQueryView: View {
         var rootEntries: [ScoreEntry] = []
         var chartEntries: [ConstantTableEntry] = []
         
-        for song in songs {
+        for (index, song) in songs.enumerated() {
+            if index.isMultiple(of: 32) {
+                await Task.yield()
+            }
             sMap[song.songIdentifier] = song
             
             if song.category.lowercased().contains("utage") || song.category.contains("宴") { continue }
@@ -970,7 +961,7 @@ struct ScoreQueryView: View {
     private func debounceFilter() {
         searchTask?.cancel()
         searchTask = Task {
-            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+            try? await Task.sleep(for: .milliseconds(300))
             if !Task.isCancelled {
                 applyFiltersAndSort()
             }
@@ -1154,9 +1145,6 @@ private struct ScoreConstantExportView: View {
     private var sectionFillA: Color { colorScheme == .dark ? Color.white.opacity(0.06) : Color.white.opacity(0.24) }
     private var sectionFillB: Color { colorScheme == .dark ? Color.white.opacity(0.03) : Color.white.opacity(0.14) }
     private var dividerColor: Color { colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.85) }
-    private var overlayTextColor: Color { colorScheme == .dark ? .white : .white }
-    private var overlaySubtextColor: Color { colorScheme == .dark ? Color.white.opacity(0.9) : Color.white.opacity(0.92) }
-    
     private var totalCharts: Int {
         sections.reduce(0) { $0 + $1.entries.count }
     }
@@ -1268,22 +1256,24 @@ private struct ScoreConstantExportView: View {
     private func exportChartCell(_ entry: ScoreQueryView.ConstantTableEntry) -> some View {
         let borderColor = ThemeUtils.colorForDifficulty(entry.difficulty, entry.type, colorScheme)
         
-        return ZStack(alignment: .bottomLeading) {
-            ZStack(alignment: .topTrailing) {
-                SongJacketView(
-                    imageName: entry.imageName,
-                    size: jacketSize,
-                    cornerRadius: 8,
-                    useThumbnail: true
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(borderColor, lineWidth: 2)
-                )
-            }
+        return ZStack(alignment: .bottomTrailing) {
+            SongJacketView(
+                imageName: entry.imageName,
+                size: jacketSize,
+                cornerRadius: 8,
+                useThumbnail: true
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(borderColor, lineWidth: 2)
+            )
             
             if mode == .withScores {
-                VStack(spacing: 2) {
+                VStack(alignment: .trailing, spacing: 2) {
+                    overlayLine(
+                        text: entry.rank,
+                        color: entry.rank.map(RatingUtils.colorForRank)
+                    )
                     overlayLine(
                         text: entry.fc.map(ThemeUtils.normalizeFC),
                         color: entry.fc.map(ThemeUtils.fcColor)
@@ -1292,29 +1282,11 @@ private struct ScoreConstantExportView: View {
                         text: entry.fs.map(ThemeUtils.normalizeFS),
                         color: entry.fs.map(ThemeUtils.fsColor)
                     )
-                    overlayLine(
-                        text: entry.rank,
-                        color: entry.rank.map(RatingUtils.colorForRank)
-                    )
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(4)
-                .frame(width: chartWidth, height: jacketSize * 0.6, alignment: .bottomLeading)
-                .background(
-                    LinearGradient(
-                        colors: [
-                            Color.clear,
-                            Color.black.opacity(colorScheme == .dark ? 0.18 : 0.10),
-                            Color.black.opacity(colorScheme == .dark ? 0.86 : 0.78)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    in: RoundedRectangle(cornerRadius: 8)
-                )
+                .padding(2)
             }
         }
-        .frame(width: chartWidth, height: jacketSize, alignment: .bottomLeading)
+        .frame(width: chartWidth, height: jacketSize, alignment: .bottomTrailing)
     }
     
     private func exportPill(text: String, icon: String, tint: Color) -> some View {
@@ -1344,16 +1316,13 @@ private struct ScoreConstantExportView: View {
     private func overlayLine(text: String?, color: Color?) -> some View {
         if let text, !text.isEmpty, let color {
             Text(text)
-                .font(.system(size: 10, weight: .black, design: .rounded))
+                .font(.system(size: 9, weight: .black, design: .rounded))
                 .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 1.5)
-                .background(color.opacity(colorScheme == .dark ? 0.7 : 0.64), in: RoundedRectangle(cornerRadius: 4))
+                .padding(.horizontal, 3)
+                .padding(.vertical, 1)
+                .background(color, in: RoundedRectangle(cornerRadius: 3))
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
-        } else {
-            Color.clear
-                .frame(height: 0)
         }
     }
     
