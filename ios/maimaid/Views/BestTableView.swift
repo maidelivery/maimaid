@@ -545,6 +545,8 @@ struct VersionPickerSheet: View {
                                     .foregroundStyle(.primary)
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(.rect)
                     }
                     .buttonStyle(.plain)
                 } footer: {
@@ -572,6 +574,8 @@ struct VersionPickerSheet: View {
                                         .foregroundStyle(.primary)
                                 }
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(.rect)
                         }
                         .buttonStyle(.plain)
                     }

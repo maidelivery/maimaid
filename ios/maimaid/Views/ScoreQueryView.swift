@@ -10,18 +10,14 @@ struct ScoreQueryView: View {
     
     // MARK: - State
     
-    @State private var scoreMap: [String: Score] = [:]
     @State private var songMap: [String: Song] = [:]
     @State private var allEntries: [ScoreEntry] = []
-    @State private var allChartEntries: [ConstantTableEntry] = []
     @State private var filteredEntries: [ScoreEntry] = []
     @State private var isLoading = true
     @State private var searchText = ""
     @State private var searchTask: Task<Void, Never>?
-    @State private var selectedExportBaseLevel: Int = 14
-    @State private var constantExportMode: ConstantExportMode = .constantsOnly
-    @State private var isExporting = false
-    @State private var exportSharePayload: ExportSharePayload?
+    @State private var filterSettings = ScoreQueryFilterSettings()
+    @State private var isShowingFilters = false
     
     // Display settings (persisted)
     @AppStorage(AppStorageKeys.scoreQueryDisplayMode) private var displayMode: DisplayMode = .grid
@@ -41,12 +37,6 @@ struct ScoreQueryView: View {
     private let minColumns: CGFloat = 3
     private let maxColumns: CGFloat = 9
     
-    // Filters
-    @State private var selectedDifficulties: Set<String> = []
-    @State private var selectedRanks: Set<String> = []
-    @State private var selectedFC: Set<String> = []
-    @State private var selectedFS: Set<String> = []
-    
     // Stats
     @State private var stats = PlayerStats()
     
@@ -58,11 +48,6 @@ struct ScoreQueryView: View {
     
     enum SortMode: String, CaseIterable {
         case rating, achievement, level
-    }
-    
-    enum ConstantExportMode: String, CaseIterable {
-        case constantsOnly
-        case withScores
     }
     
     struct PlayerStats {
@@ -93,61 +78,6 @@ struct ScoreQueryView: View {
         let fs: String?
         let dxScore: Int
     }
-    
-    struct ConstantTableEntry: Identifiable, Sendable {
-        let id: String
-        let songIdentifier: String
-        let songTitle: String
-        let imageName: String
-        let difficulty: String
-        let type: String
-        let level: Double
-        let achievement: Double?
-        let rank: String?
-        let fc: String?
-        let fs: String?
-    }
-    
-    struct ConstantExportSection: Identifiable, Sendable {
-        let levelLabel: String
-        let entries: [ConstantTableEntry]
-        
-        var id: String { levelLabel }
-    }
-    
-    struct ExportSharePayload: Identifiable {
-        let id = UUID()
-        let image: UIImage
-    }
-    
-    // MARK: - Computed
-    
-    private var activeProfile: UserProfile? { activeProfiles.first }
-    
-    private var availableExportBaseLevels: [Int] {
-        Array(Set(allChartEntries.map { exportBucketBaseLevel(for: $0.level) }))
-            .sorted(by: >)
-    }
-    
-    private var exportEntries: [ConstantTableEntry] {
-        allChartEntries
-            .filter { exportBucketBaseLevel(for: $0.level) == selectedExportBaseLevel }
-            .sorted(by: exportEntryComparator)
-    }
-    
-    private var exportSections: [ConstantExportSection] {
-        let grouped = Dictionary(grouping: exportEntries) { constantKey(for: $0.level) }
-        
-        return grouped
-            .map { levelKey, entries in
-                ConstantExportSection(levelLabel: levelKey, entries: entries.sorted(by: exportEntryComparator))
-            }
-            .sorted { lhs, rhs in
-                (Double(lhs.levelLabel) ?? 0) > (Double(rhs.levelLabel) ?? 0)
-            }
-    }
-    
-    private var exportSectionCount: Int { exportSections.count }
     
     // MARK: - Grid Zoom Helpers
     
@@ -249,26 +179,6 @@ struct ScoreQueryView: View {
             }
     }
     
-    private var allDifficulties: [String] {
-        ["basic", "advanced", "expert", "master", "remaster"]
-    }
-    
-    private var difficultyDisplayNames: [String: String] {
-        ["basic": "Basic", "advanced": "Advanced", "expert": "Expert", "master": "Master", "remaster": "Re:Master"]
-    }
-    
-    private var rankOptions: [String] {
-        ["SSS+", "SSS", "SS+", "SS", "S+", "S", "AAA", "AA", "A", "BBB", "BB", "B", "C", "D"]
-    }
-    
-    private var fcOptions: [String] {
-        ["AP+", "AP", "FC+", "FC"]
-    }
-    
-    private var fsOptions: [String] {
-        ["FDX+", "FDX", "FS+", "FS"]
-    }
-    
     // MARK: - Body
     
     var body: some View {
@@ -282,15 +192,6 @@ struct ScoreQueryView: View {
                         statsHeader
                             .padding(.horizontal, 16)
                             .padding(.top, 8)
-                        
-                        // Controls
-                        controlsSection
-                            .padding(.horizontal, 16)
-                            .padding(.top, 12)
-                        
-                        // Filter Chips
-                        filterSection
-                            .padding(.top, 12)
                         
                         // Content
                         Group {
@@ -332,9 +233,52 @@ struct ScoreQueryView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle("scoreQuery.title")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        displayMode = displayMode == .grid ? .list : .grid
+                    }
+                } label: {
+                    Label(
+                        displayMode == .grid ? "scoreQuery.display.list" : "scoreQuery.display.grid",
+                        systemImage: displayMode == .grid ? "list.bullet" : "square.grid.2x2"
+                    )
+                    .contentTransition(.symbolEffect(.replace))
+                }
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu("sort.title", systemImage: "arrow.up.arrow.down") {
+                    Picker("sort.title", selection: $sortMode) {
+                        Label("scoreQuery.sort.rating", systemImage: "star.fill").tag(SortMode.rating)
+                        Label("scoreQuery.sort.achievement", systemImage: "percent").tag(SortMode.achievement)
+                        Label("scoreQuery.sort.level", systemImage: "chart.bar.fill").tag(SortMode.level)
+                    }
+
+                    Divider()
+
+                    Button {
+                        sortAscending.toggle()
+                    } label: {
+                        Label(
+                            sortAscending ? String(localized: "sort.ascending") : String(localized: "sort.descending"),
+                            systemImage: sortAscending ? "arrow.up" : "arrow.down"
+                        )
+                    }
+                }
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("filter.title", systemImage: "line.3.horizontal.decrease.circle") {
+                    isShowingFilters = true
+                }
+                .tint(filterSettings.isEmpty ? .primary : .blue)
+            }
+        }
         .searchable(text: $searchText, prompt: "search.placeholder")
-        .sheet(item: $exportSharePayload) { payload in
-            ShareSheetView(items: [payload.image])
+        .sheet(isPresented: $isShowingFilters) {
+            ScoreQueryFilterView(settings: $filterSettings)
         }
         .onAppear {
             liveColumnCount = CGFloat(committedColumns)
@@ -344,10 +288,7 @@ struct ScoreQueryView: View {
         }
         .onChange(of: sortMode) { _, _ in applyFiltersAndSort() }
         .onChange(of: sortAscending) { _, _ in applyFiltersAndSort() }
-        .onChange(of: selectedDifficulties) { _, _ in applyFiltersAndSort() }
-        .onChange(of: selectedRanks) { _, _ in applyFiltersAndSort() }
-        .onChange(of: selectedFC) { _, _ in applyFiltersAndSort() }
-        .onChange(of: selectedFS) { _, _ in applyFiltersAndSort() }
+        .onChange(of: filterSettings) { _, _ in applyFiltersAndSort() }
         .onReceive(NotificationCenter.default.publisher(for: .maimaiScoresDidChange)) { notification in
             if let changedProfileID = notification.object as? UUID,
                changedProfileID != activeProfiles.first?.id {
@@ -401,265 +342,6 @@ struct ScoreQueryView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-    }
-    
-    // MARK: - Controls Section
-    
-    private var controlsSection: some View {
-        VStack(spacing: 12) {
-            VStack(spacing: 12) {
-                HStack(spacing: 12) {
-                    Menu {
-                        Picker("", selection: $sortMode) {
-                            Label("scoreQuery.sort.rating", systemImage: "star.fill").tag(SortMode.rating)
-                            Label("scoreQuery.sort.achievement", systemImage: "percent").tag(SortMode.achievement)
-                            Label("scoreQuery.sort.level", systemImage: "chart.bar.fill").tag(SortMode.level)
-                        }
-                        
-                        Divider()
-                        
-                        Button {
-                            sortAscending.toggle()
-                        } label: {
-                            Label(
-                                sortAscending ? String(localized: "sort.ascending") : String(localized: "sort.descending"),
-                                systemImage: sortAscending ? "arrow.up" : "arrow.down"
-                            )
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.up.arrow.down")
-                            Text(sortModeLabel)
-                                .font(.system(size: 13, weight: .medium))
-                            Image(systemName: sortAscending ? "arrow.up" : "arrow.down")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color(.tertiarySystemGroupedBackground), in: Capsule())
-                    }
-                    
-                    Spacer()
-                    
-                    Picker("", selection: $displayMode) {
-                        Image(systemName: "square.grid.3x3.fill").tag(DisplayMode.grid)
-                        Image(systemName: "list.bullet").tag(DisplayMode.list)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 100)
-                }
-                
-            }
-            .padding(16)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-            
-            if !availableExportBaseLevels.isEmpty {
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Label("scoreQuery.export.title", systemImage: "square.and.arrow.up")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("scoreQuery.export.subtitle")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
-                        }
-                        
-                        Spacer()
-                        
-                        VStack(alignment: .trailing, spacing: 3) {
-                            Text("\(exportEntries.count)")
-                                .font(.system(size: 22, weight: .bold, design: .rounded))
-                            Text("scoreQuery.export.charts")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    
-                    HStack(spacing: 10) {
-                        Menu {
-                            Picker("scoreQuery.export.level", selection: $selectedExportBaseLevel) {
-                                ForEach(availableExportBaseLevels, id: \.self) { value in
-                                    Text(exportBaseLevelLabel(for: value)).tag(value)
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "chart.bar.doc.horizontal")
-                                Text(exportBaseLevelLabel(for: selectedExportBaseLevel))
-                                    .font(.system(size: 13, weight: .semibold))
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color(.tertiarySystemGroupedBackground), in: Capsule())
-                        }
-                        
-                        Text("\(exportSectionCount) \(String(localized: "scoreQuery.export.sections"))")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.secondary)
-                        
-                        Spacer()
-                    }
-                    
-                    Picker("", selection: $constantExportMode) {
-                        Text("scoreQuery.export.mode.constants").tag(ConstantExportMode.constantsOnly)
-                        Text("scoreQuery.export.mode.scores").tag(ConstantExportMode.withScores)
-                    }
-                    .pickerStyle(.segmented)
-                    
-                    HStack(spacing: 8) {
-                        if constantExportMode == .withScores, let activeProfile {
-                            Label(activeProfile.name, systemImage: "person.crop.circle")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(.secondary)
-                        }
-                        
-                        Label("scoreQuery.export.regularOnly", systemImage: "music.note")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.secondary)
-                        
-                        Spacer()
-                    }
-                    
-                    Button {
-                        exportConstantTable()
-                    } label: {
-                        HStack(spacing: 8) {
-                            if isExporting {
-                                ProgressView()
-                                    .controlSize(.small)
-                            } else {
-                                Image(systemName: "photo.on.rectangle.angled")
-                            }
-                            
-                            Text(isExporting ? "scoreQuery.export.exporting" : "scoreQuery.export.button")
-                                .font(.system(size: 15, weight: .semibold))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(exportEntries.isEmpty || isExporting)
-                }
-                .padding(16)
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-            }
-        }
-    }
-    
-    private var sortModeLabel: LocalizedStringKey {
-        switch sortMode {
-        case .rating: return "scoreQuery.sort.rating"
-        case .achievement: return "scoreQuery.sort.achievement"
-        case .level: return "scoreQuery.sort.level"
-        }
-    }
-    
-    // MARK: - Filter Section
-    
-    private var filterSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Difficulty chips
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(allDifficulties, id: \.self) { diff in
-                        let displayName = difficultyDisplayNames[diff] ?? diff.capitalized
-                        FilterChip(
-                            title: displayName,
-                            isSelected: selectedDifficulties.contains(diff),
-                            color: ThemeUtils.colorForDifficulty(diff, nil, colorScheme)
-                        ) {
-                            if selectedDifficulties.contains(diff) {
-                                selectedDifficulties.remove(diff)
-                            } else {
-                                selectedDifficulties.insert(diff)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-            }
-            
-            // Rank filter chips
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(rankOptions.prefix(6), id: \.self) { rank in
-                        FilterChip(
-                            title: rank,
-                            isSelected: selectedRanks.contains(rank),
-                            color: RatingUtils.colorForRank(rank)
-                        ) {
-                            if selectedRanks.contains(rank) {
-                                selectedRanks.remove(rank)
-                            } else {
-                                selectedRanks.insert(rank)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-            }
-            
-            // FC/FS chips
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    // FC chips
-                    ForEach(fcOptions, id: \.self) { fc in
-                        FilterChip(
-                            title: fc,
-                            isSelected: selectedFC.contains(fc),
-                            color: ThemeUtils.fcColor(fc)
-                        ) {
-                            if selectedFC.contains(fc) {
-                                selectedFC.remove(fc)
-                            } else {
-                                selectedFC.insert(fc)
-                            }
-                        }
-                    }
-                    
-                    Divider().frame(height: 20)
-                    
-                    // FS chips
-                    ForEach(fsOptions, id: \.self) { fs in
-                        FilterChip(
-                            title: fs,
-                            isSelected: selectedFS.contains(fs),
-                            color: ThemeUtils.fsColor(fs)
-                        ) {
-                            if selectedFS.contains(fs) {
-                                selectedFS.remove(fs)
-                            } else {
-                                selectedFS.insert(fs)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-            }
-            
-            // Active filter count
-            let activeCount = selectedDifficulties.count + selectedRanks.count + selectedFC.count + selectedFS.count
-            if activeCount > 0 {
-                HStack {
-                    Text("^[\(filteredEntries.count) \(String(localized: "scoreQuery.results"))](inflect: true)")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                    
-                    Spacer()
-                    
-                    Button {
-                        selectedDifficulties.removeAll()
-                        selectedRanks.removeAll()
-                        selectedFC.removeAll()
-                        selectedFS.removeAll()
-                    } label: {
-                        Text("filter.reset")
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                }
-                .padding(.horizontal, 16)
-            }
-        }
     }
     
     // MARK: - Content View
@@ -841,11 +523,9 @@ struct ScoreQueryView: View {
     
     private func loadData() async {
         let map = ScoreService.shared.scoreMap(context: modelContext)
-        self.scoreMap = map
         
         var sMap: [String: Song] = [:]
         var rootEntries: [ScoreEntry] = []
-        var chartEntries: [ConstantTableEntry] = []
         
         for (index, song) in songs.enumerated() {
             if index.isMultiple(of: 32) {
@@ -862,20 +542,6 @@ struct ScoreQueryView: View {
                 guard level > 0 else { continue }
                 
                 let score = scoreForSheet(sheet, in: map)
-                
-                chartEntries.append(ConstantTableEntry(
-                    id: "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)",
-                    songIdentifier: song.songIdentifier,
-                    songTitle: song.title,
-                    imageName: song.imageName,
-                    difficulty: sheet.difficulty,
-                    type: sheet.type,
-                    level: level,
-                    achievement: score?.rate,
-                    rank: score.map { RatingUtils.calculateRank(achievement: $0.rate) },
-                    fc: score?.fc,
-                    fs: score?.fs
-                ))
                 
                 guard let score, score.rate > 0 else { continue }
                 
@@ -905,12 +571,6 @@ struct ScoreQueryView: View {
         
         self.songMap = sMap
         self.allEntries = rootEntries
-        self.allChartEntries = chartEntries
-        
-        if let firstExportLevel = availableExportBaseLevels.first, !availableExportBaseLevels.contains(selectedExportBaseLevel) {
-            selectedExportBaseLevel = firstExportLevel
-        }
-        
         computeStats(from: map)
         applyFiltersAndSort()
         isLoading = false
@@ -971,10 +631,10 @@ struct ScoreQueryView: View {
     private func applyFiltersAndSort() {
 //        let searchLower = searchText.lowercased()
         let hasSearch = !searchText.isEmpty
-        let diffFilter = selectedDifficulties
-        let rankFilter = selectedRanks
-        let fcFilter = selectedFC
-        let fsFilter = selectedFS
+        let diffFilter = filterSettings.selectedDifficulties
+        let rankFilter = filterSettings.selectedRanks
+        let fcFilter = filterSettings.selectedFC
+        let fsFilter = filterSettings.selectedFS
         let currentSortMode = sortMode
         let ascending = sortAscending
         
@@ -983,9 +643,9 @@ struct ScoreQueryView: View {
         for entry in allEntries {
             // Search filter
             if hasSearch {
-                let matches = entry.songTitle.localizedCaseInsensitiveContains(searchText) ||
-                              entry.aliases.contains(where: { $0.localizedCaseInsensitiveContains(searchText) }) ||
-                              (entry.searchKeywords?.localizedCaseInsensitiveContains(searchText) ?? false)
+                let matches = entry.songTitle.localizedStandardContains(searchText) ||
+                              entry.aliases.contains(where: { $0.localizedStandardContains(searchText) }) ||
+                              (entry.searchKeywords?.localizedStandardContains(searchText) ?? false)
                 if !matches { continue }
             }
             
@@ -1059,322 +719,5 @@ struct ScoreQueryView: View {
         }
         
         return candidates
-    }
-    
-    private func constantKey(for level: Double) -> String {
-        let normalized = (level * 10).rounded(.towardZero) / 10
-        return normalized.formatted(.number.precision(.fractionLength(1)))
-    }
-    
-    private func exportBucketBaseLevel(for level: Double) -> Int {
-        level >= 15 ? 14 : Int(level.rounded(.down))
-    }
-    
-    private func exportBaseLevelLabel(for level: Int) -> String {
-        level == 14 ? "14~15" : "\(level)"
-    }
-    
-    private func exportEntryComparator(_ lhs: ConstantTableEntry, _ rhs: ConstantTableEntry) -> Bool {
-        if lhs.songTitle != rhs.songTitle {
-            return lhs.songTitle.localizedStandardCompare(rhs.songTitle) == .orderedAscending
-        }
-        
-        let lhsDiff = ThemeUtils.difficultyOrder(lhs.difficulty)
-        let rhsDiff = ThemeUtils.difficultyOrder(rhs.difficulty)
-        if lhsDiff != rhsDiff {
-            return lhsDiff > rhsDiff
-        }
-        
-        if lhs.type != rhs.type {
-            return lhs.type.localizedCaseInsensitiveCompare(rhs.type) == .orderedAscending
-        }
-        
-        return lhs.id < rhs.id
-    }
-    
-    private func exportConstantTable() {
-        guard !exportSections.isEmpty else { return }
-        isExporting = true
-        
-        Task {
-            let image = await MainActor.run {
-                ScoreConstantExportView.renderImage(
-                    baseLevel: selectedExportBaseLevel,
-                    sections: exportSections,
-                    mode: constantExportMode,
-                    userName: activeProfile?.name,
-                    colorScheme: colorScheme
-                )
-            }
-            
-            await MainActor.run {
-                isExporting = false
-                if let image {
-                    exportSharePayload = ExportSharePayload(image: image)
-                }
-            }
-        }
-    }
-}
-
-private struct ScoreConstantExportView: View {
-    let baseLevel: Int
-    let sections: [ScoreQueryView.ConstantExportSection]
-    let mode: ScoreQueryView.ConstantExportMode
-    let userName: String?
-    
-    @Environment(\.colorScheme) private var colorScheme
-
-    private let canvasWidth: CGFloat = 1440
-    private let horizontalPadding: CGFloat = 28
-    private let labelWidth: CGFloat = 72
-    
-    private var chartWidth: CGFloat { mode == .withScores ? 58 : 52 }
-    private var jacketSize: CGFloat { mode == .withScores ? 58 : 52 }
-    private var chartSpacing: CGFloat { mode == .withScores ? 8 : 6 }
-    private var maxColumns: Int {
-        let usableWidth = canvasWidth - horizontalPadding * 2 - labelWidth - 20
-        return max(Int((usableWidth + chartSpacing) / (chartWidth + chartSpacing)), 1)
-    }
-    
-    private var bgColor: Color { colorScheme == .dark ? Color(hex: "#111216") : Color(hex: "#FFF5FB") }
-    private var bgSecondary: Color { colorScheme == .dark ? Color(hex: "#171922") : Color(hex: "#FAEEFF") }
-    private var bgTertiary: Color { colorScheme == .dark ? Color(hex: "#20172B") : Color(hex: "#F8F0FF") }
-    private var primaryColor: Color { colorScheme == .dark ? .white : Color(hex: "#8A245C") }
-    private var secondaryColor: Color { colorScheme == .dark ? Color.white.opacity(0.66) : Color.black.opacity(0.58) }
-    private var sectionFillA: Color { colorScheme == .dark ? Color.white.opacity(0.06) : Color.white.opacity(0.24) }
-    private var sectionFillB: Color { colorScheme == .dark ? Color.white.opacity(0.03) : Color.white.opacity(0.14) }
-    private var dividerColor: Color { colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.85) }
-    private var totalCharts: Int {
-        sections.reduce(0) { $0 + $1.entries.count }
-    }
-    
-    private var backgroundGradient: LinearGradient {
-        LinearGradient(
-            colors: [
-                bgColor,
-                bgSecondary,
-                bgTertiary
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-    
-    var body: some View {
-        ZStack {
-            backgroundGradient
-            
-            VStack(alignment: .leading, spacing: 20) {
-                headerSection
-                
-                ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
-                    sectionView(section, index: index)
-                }
-                
-                footerSection
-            }
-            .padding(.horizontal, horizontalPadding)
-            .padding(.vertical, 24)
-        }
-        .frame(width: canvasWidth)
-    }
-    
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(
-                        String(
-                            format: String(
-                                localized: mode == .constantsOnly
-                                    ? "scoreQuery.export.imageTitle.constants"
-                                    : "scoreQuery.export.imageTitle.scores"
-                            ),
-                            displayBaseLevel
-                        )
-                    )
-                        .font(.system(size: 36, weight: .black, design: .rounded))
-                        .foregroundStyle(primaryColor)
-                    Text(
-                        String(
-                            format: String(localized: "scoreQuery.export.imageSummary"),
-                            sections.count,
-                            totalCharts
-                        )
-                    )
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(secondaryColor)
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 8) {
-                    if let userName, mode == .withScores {
-                        exportPill(text: userName, icon: "person.crop.circle.fill", tint: Color(hex: "#8E3DFF"))
-                    }
-                }
-            }
-            
-            Divider()
-                .overlay(dividerColor)
-        }
-    }
-    
-    private var displayBaseLevel: String {
-        baseLevel == 14 ? "14~15" : "\(baseLevel)"
-    }
-    
-    private func sectionView(_ section: ScoreQueryView.ConstantExportSection, index: Int) -> some View {
-        HStack(alignment: .top, spacing: 16) {
-            Text(section.levelLabel)
-                .font(.system(size: 32, weight: .black, design: .rounded))
-                .foregroundStyle(levelColor(for: section.levelLabel, index: index))
-                .frame(width: labelWidth, alignment: .leading)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-            
-            VStack(alignment: .leading, spacing: chartSpacing) {
-                ForEach(Array(section.entries.chunked(into: maxColumns).enumerated()), id: \.offset) { _, row in
-                    HStack(spacing: chartSpacing) {
-                        ForEach(row) { entry in
-                            exportChartCell(entry)
-                        }
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(index.isMultiple(of: 2) ? sectionFillA : sectionFillB)
-        )
-    }
-    
-    private func exportChartCell(_ entry: ScoreQueryView.ConstantTableEntry) -> some View {
-        let borderColor = ThemeUtils.colorForDifficulty(entry.difficulty, entry.type, colorScheme)
-        
-        return ZStack(alignment: .bottomTrailing) {
-            SongJacketView(
-                imageName: entry.imageName,
-                size: jacketSize,
-                cornerRadius: 8,
-                useThumbnail: true
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(borderColor, lineWidth: 2)
-            )
-            
-            if mode == .withScores {
-                VStack(alignment: .trailing, spacing: 2) {
-                    overlayLine(
-                        text: entry.rank,
-                        color: entry.rank.map(RatingUtils.colorForRank)
-                    )
-                    overlayLine(
-                        text: entry.fc.map(ThemeUtils.normalizeFC),
-                        color: entry.fc.map(ThemeUtils.fcColor)
-                    )
-                    overlayLine(
-                        text: entry.fs.map(ThemeUtils.normalizeFS),
-                        color: entry.fs.map(ThemeUtils.fsColor)
-                    )
-                }
-                .padding(2)
-            }
-        }
-        .frame(width: chartWidth, height: jacketSize, alignment: .bottomTrailing)
-    }
-    
-    private func exportPill(text: String, icon: String, tint: Color) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-            Text(text)
-                .lineLimit(1)
-        }
-        .font(.system(size: 12, weight: .semibold))
-        .foregroundStyle(tint)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(tint.opacity(0.12), in: Capsule())
-    }
-    
-    private var footerSection: some View {
-        HStack {
-            Text(String(localized: "scoreQuery.export.watermark"))
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(secondaryColor)
-            Spacer()
-        }
-        .padding(.top, 4)
-    }
-    
-    @ViewBuilder
-    private func overlayLine(text: String?, color: Color?) -> some View {
-        if let text, !text.isEmpty, let color {
-            Text(text)
-                .font(.system(size: 9, weight: .black, design: .rounded))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 3)
-                .padding(.vertical, 1)
-                .background(color, in: RoundedRectangle(cornerRadius: 3))
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-        }
-    }
-    
-    private func levelColor(for label: String, index: Int) -> Color {
-        let tenths = Int(((Double(label) ?? 0) * 10).rounded()) % 10
-        
-        switch tenths {
-        case 0, 5:
-            return Color(hex: "#D34A63")
-        case 1, 6:
-            return Color(hex: "#4D78FF")
-        case 2, 7:
-            return Color(hex: "#3F9B74")
-        case 3, 8:
-            return Color(hex: "#B45BFF")
-        default:
-            return index.isMultiple(of: 2) ? Color(hex: "#C84A7B") : Color(hex: "#5489FF")
-        }
-    }
-}
-
-private extension ScoreConstantExportView {
-    @MainActor
-    static func renderImage(
-        baseLevel: Int,
-        sections: [ScoreQueryView.ConstantExportSection],
-        mode: ScoreQueryView.ConstantExportMode,
-        userName: String?,
-        colorScheme: ColorScheme
-    ) -> UIImage? {
-        let view = ScoreConstantExportView(
-            baseLevel: baseLevel,
-            sections: sections,
-            mode: mode,
-            userName: userName
-        )
-        .environment(\.colorScheme, colorScheme)
-        .preferredColorScheme(colorScheme)
-        
-        let renderer = ImageRenderer(content: view)
-        renderer.scale = 2
-        
-        return renderer.uiImage
-    }
-}
-
-private extension Array {
-    func chunked(into size: Int) -> [[Element]] {
-        guard size > 0 else { return [] }
-        
-        return stride(from: 0, to: count, by: size).map { index in
-            Array(self[index..<Swift.min(index + size, count)])
-        }
     }
 }

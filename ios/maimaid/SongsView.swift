@@ -523,7 +523,6 @@ struct SongsView: View {
                         }
                     } label: {
                         Image(systemName: isGridView ? "list.bullet" : "square.grid.2x2")
-                            .foregroundStyle(.blue)
                             .contentTransition(.symbolEffect(.replace))
                     }
                 }
@@ -550,7 +549,6 @@ struct SongsView: View {
                         }
                     } label: {
                         Image(systemName: "arrow.up.arrow.down")
-                            .foregroundStyle(.blue)
                     }
                 }
                 

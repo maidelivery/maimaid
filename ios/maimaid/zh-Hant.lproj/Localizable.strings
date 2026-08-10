@@ -422,6 +422,8 @@
 "scoreQuery.sort.rating" = "Rating";
 "scoreQuery.sort.achievement" = "達成率";
 "scoreQuery.sort.level" = "定數";
+"scoreQuery.display.grid" = "顯示網格";
+"scoreQuery.display.list" = "顯示列表";
 "scoreQuery.badge.rank" = "評級";
 "scoreQuery.badge.fc" = "FC";
 "scoreQuery.badge.fs" = "FS";
@@ -433,15 +435,21 @@
 "scoreQuery.export.charts" = "譜面";
 "scoreQuery.export.level" = "整數定數";
 "scoreQuery.export.sections" = "細分定數";
+"scoreQuery.export.mode.title" = "匯出內容";
 "scoreQuery.export.mode.constants" = "僅定數";
 "scoreQuery.export.mode.scores" = "帶成績";
+"scoreQuery.export.player" = "玩家";
 "scoreQuery.export.regularOnly" = "僅包含常規譜面";
+"scoreQuery.export.empty" = "暫無可用譜面";
+"scoreQuery.export.empty.description" = "下載歌曲資料後即可匯出定數圖。";
 "scoreQuery.export.exporting" = "正在生成圖片...";
 "scoreQuery.export.button" = "匯出圖片";
 "scoreQuery.export.imageTitle.constants" = "%@ 定數表";
 "scoreQuery.export.imageTitle.scores" = "%@ 定數與成績表";
 "scoreQuery.export.imageSummary" = "%d 個細分定數 · %d 張常規譜面";
 "scoreQuery.export.watermark" = "由 maimaid 產生";
+"home.constantTableExport.title" = "匯出定數圖";
+"home.constantTableExport.subtitle" = "生成並分享定數表圖片";
 
 // MARK: - Cloud Sync
 "settings.cloud.title" = "雲端帳戶";
