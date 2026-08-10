@@ -324,6 +324,16 @@ struct HomeView: View {
                 )
             }
             .buttonStyle(.plain)
+
+            NavigationLink(destination: ConstantTableExportView()) {
+                functionCard(
+                    icon: "square.and.arrow.up.on.square.fill",
+                    title: "home.constantTableExport.title",
+                    subtitle: "home.constantTableExport.subtitle",
+                    gradient: [Color.pink, Color.orange]
+                )
+            }
+            .buttonStyle(.plain)
             
             NavigationLink(destination: PlateProgressView()) {
                 functionCard(

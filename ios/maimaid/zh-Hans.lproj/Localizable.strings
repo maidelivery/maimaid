@@ -423,6 +423,8 @@
 "scoreQuery.sort.rating" = "Rating";
 "scoreQuery.sort.achievement" = "达成率";
 "scoreQuery.sort.level" = "定数";
+"scoreQuery.display.grid" = "显示网格";
+"scoreQuery.display.list" = "显示列表";
 "scoreQuery.badge.rank" = "评级";
 "scoreQuery.badge.fc" = "FC";
 "scoreQuery.badge.fs" = "FS";
@@ -434,15 +436,21 @@
 "scoreQuery.export.charts" = "谱面";
 "scoreQuery.export.level" = "整数定数";
 "scoreQuery.export.sections" = "细分定数";
+"scoreQuery.export.mode.title" = "导出内容";
 "scoreQuery.export.mode.constants" = "仅定数";
 "scoreQuery.export.mode.scores" = "带成绩";
+"scoreQuery.export.player" = "玩家";
 "scoreQuery.export.regularOnly" = "仅包含常规谱面";
+"scoreQuery.export.empty" = "暂无可用谱面";
+"scoreQuery.export.empty.description" = "下载歌曲数据后即可导出定数图。";
 "scoreQuery.export.exporting" = "正在生成图片...";
 "scoreQuery.export.button" = "导出图片";
 "scoreQuery.export.imageTitle.constants" = "%@ 定数表";
 "scoreQuery.export.imageTitle.scores" = "%@ 定数与成绩表";
 "scoreQuery.export.imageSummary" = "%d 个细分定数 · %d 张常规谱面";
 "scoreQuery.export.watermark" = "由 maimaid 生成";
+"home.constantTableExport.title" = "导出定数图";
+"home.constantTableExport.subtitle" = "生成并分享定数表图片";
 
 // MARK: - Cloud Sync
 "settings.cloud.title" = "云端账户";

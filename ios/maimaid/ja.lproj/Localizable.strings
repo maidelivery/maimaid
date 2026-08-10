@@ -422,6 +422,8 @@
 "scoreQuery.sort.rating" = "Rating";
 "scoreQuery.sort.achievement" = "達成率";
 "scoreQuery.sort.level" = "レベル";
+"scoreQuery.display.grid" = "グリッド表示";
+"scoreQuery.display.list" = "リスト表示";
 "scoreQuery.badge.rank" = "ランク";
 "scoreQuery.badge.fc" = "FC";
 "scoreQuery.badge.fs" = "FS";
@@ -433,15 +435,21 @@
 "scoreQuery.export.charts" = "チャート";
 "scoreQuery.export.level" = "整数定数";
 "scoreQuery.export.sections" = "セクション";
+"scoreQuery.export.mode.title" = "書き出す内容";
 "scoreQuery.export.mode.constants" = "定数";
 "scoreQuery.export.mode.scores" = "スコア付き";
+"scoreQuery.export.player" = "プレイヤー";
 "scoreQuery.export.regularOnly" = "通常のチャートのみ";
+"scoreQuery.export.empty" = "利用可能な譜面がありません";
+"scoreQuery.export.empty.description" = "楽曲データをダウンロードすると定数表を書き出せます。";
 "scoreQuery.export.exporting" = "画像を生成中...";
 "scoreQuery.export.button" = "画像のエクスポート";
 "scoreQuery.export.imageTitle.constants" = "%@ 定数テーブル";
 "scoreQuery.export.imageTitle.scores" = "%@ スコアを含む定数テーブル";
 "scoreQuery.export.imageSummary" = "%d セクション · %d 通常のチャート";
 "scoreQuery.export.watermark" = "maimaidで生成";
+"home.constantTableExport.title" = "定数表を書き出す";
+"home.constantTableExport.subtitle" = "定数表の画像を作成して共有";
 
 // MARK: - Cloud Sync
 "settings.cloud.title" = "クラウドアカウント";
