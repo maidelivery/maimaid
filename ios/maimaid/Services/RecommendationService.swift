@@ -26,6 +26,8 @@ class RecommendationService {
     static let shared = RecommendationService()
 
     private let chartStatsService = ChartStatsService.shared
+    private let maximumCandidatesPerCategory = 100
+    private let maximumCandidatesPerCategoryForEmptyProfile = 50
 
     private init() {}
 
@@ -47,18 +49,18 @@ class RecommendationService {
 
         let b35Limit = profile?.b35Count ?? configs.first?.b35Count ?? 35
         let b15Limit = profile?.b15Count ?? configs.first?.b15Count ?? 15
-        let b15RecLimit = profile?.b15RecLimit ?? configs.first?.b15RecLimit ?? 10
-        let b35RecLimit = profile?.b35RecLimit ?? configs.first?.b35RecLimit ?? 10
-
         // 🔴 修复：使用 ScoreService 获取成绩（确保用户隔离）
         let scoreMap = ScoreService.shared.scoreMap(context: modelContext)
         let profileId = profile?.id
+        let candidateLimit = scoreMap.isEmpty
+            ? maximumCandidatesPerCategoryForEmptyProfile
+            : maximumCandidatesPerCategory
 
         let input = await songs.toCalculationInput(userProfileId: profileId, server: serverContext, preloadedScores: scoreMap)
 
         let b50 = await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: latestVersion)
-        let b15Threshold = b50.b15.last?.rating ?? 0
-        let b35Threshold = b50.b35.last?.rating ?? 0
+        let b15Threshold = replacementThreshold(for: b50.b15, capacity: b15Limit)
+        let b35Threshold = replacementThreshold(for: b50.b35, capacity: b35Limit)
 
         // Calculate User's B15 Average Internal Level
         let b15Levels = b50.b15.map { $0.level }
@@ -75,6 +77,9 @@ class RecommendationService {
         for (index, song) in songs.enumerated() {
             if index.isMultiple(of: 32) {
                 await Task.yield()
+                guard !Task.isCancelled else {
+                    return RecommendationResponse(b15: [], b35: [])
+                }
             }
             if song.category.lowercased().contains("utage") || song.category.contains("宴") {
                 continue
@@ -107,15 +112,21 @@ class RecommendationService {
                 let category = RatingUtils.determineSongCategory(
                     songVersion: sheet.version ?? song.version,
                     latestServerVersion: latestVersion,
+                    server: serverContext,
                     isRegionActive: isRegionActive
                 )
                 if category == .excluded { continue }
 
                 let isNew = (category == .b15)
                 let threshold = isNew ? b15Threshold : b35Threshold
+                let selectedEntries = isNew ? b50.b15 : b50.b35
 
                 let currentRating = currentScore.map { RatingUtils.calculateRating(internalLevel: internalLevelValue, achievement: $0.rate, fc: $0.fc) } ?? 0
-                let isInB50 = (isNew ? b50.b15 : b50.b35).contains(where: { $0.songId == song.songId && $0.diff == sheet.difficulty.uppercased() && $0.type == sheet.type.uppercased() })
+                let isInB50 = selectedEntries.contains { entry in
+                    entry.songIdentifier == song.songIdentifier
+                        && entry.diff.caseInsensitiveCompare(sheet.difficulty) == .orderedSame
+                        && entry.type.caseInsensitiveCompare(sheet.type) == .orderedSame
+                }
 
                 // Find the MINIMUM rank that gives a gain
                 var bestTarget: (rank: String, achievement: Double)?
@@ -172,30 +183,60 @@ class RecommendationService {
 
                     if isNew {
                         b15Recs.append(result)
+                        if b15Recs.count > candidateLimit * 2 {
+                            b15Recs = Array(
+                                b15Recs
+                                    .sorted { $0.comprehensiveScore > $1.comprehensiveScore }
+                                    .prefix(candidateLimit)
+                            )
+                        }
                     } else {
                         b35Recs.append(result)
+                        if b35Recs.count > candidateLimit * 2 {
+                            b35Recs = Array(
+                                b35Recs
+                                    .sorted { prefersB35($0, over: $1) }
+                                    .prefix(candidateLimit)
+                            )
+                        }
                     }
                 }
             }
         }
 
         // Sort B15: Use the comprehensive score (gain + proximity)
-        let sortedB15 = b15Recs.sorted { $0.comprehensiveScore > $1.comprehensiveScore }
+        let sortedB15 = b15Recs
+            .sorted { $0.comprehensiveScore > $1.comprehensiveScore }
+            .prefix(candidateLimit)
 
         // Sort B35: Prioritize by Gap (fit data), else potential gain
-        let sortedB35 = b35Recs.sorted { r1, r2 in
-            if let g1 = r1.diffGap, let g2 = r2.diffGap {
-                if abs(g1 - g2) < 0.1 { return r1.potentialGain > r2.potentialGain }
-                return g1 > g2
-            }
-            if r1.diffGap != nil { return true }
-            if r2.diffGap != nil { return false }
-            return r1.potentialGain > r2.potentialGain
-        }
+        let sortedB35 = b35Recs
+            .sorted { prefersB35($0, over: $1) }
+            .prefix(candidateLimit)
 
         return RecommendationResponse(
-            b15: Array(sortedB15.prefix(b15RecLimit)),
-            b35: Array(sortedB35.prefix(b35RecLimit))
+            b15: Array(sortedB15),
+            b35: Array(sortedB35)
         )
+    }
+
+    private func replacementThreshold(
+        for entries: [RatingUtils.RatingEntry],
+        capacity: Int
+    ) -> Int {
+        guard entries.count >= capacity else { return 0 }
+        return entries.last?.rating ?? 0
+    }
+
+    private func prefersB35(_ lhs: RecommendationResult, over rhs: RecommendationResult) -> Bool {
+        if let lhsGap = lhs.diffGap, let rhsGap = rhs.diffGap {
+            if abs(lhsGap - rhsGap) < 0.1 {
+                return lhs.potentialGain > rhs.potentialGain
+            }
+            return lhsGap > rhsGap
+        }
+        if lhs.diffGap != nil { return true }
+        if rhs.diffGap != nil { return false }
+        return lhs.potentialGain > rhs.potentialGain
     }
 }
