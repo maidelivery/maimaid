@@ -53,7 +53,7 @@ struct StaticDataUpdateView: View {
                 .padding(.vertical, 8)
             }
 
-            Section("更新操作") {
+            Section("update.actions") {
                 if isSyncing {
                     VStack(alignment: .leading, spacing: 10) {
                         ProgressView(value: fetcher.progress, total: 1)
@@ -81,7 +81,7 @@ struct StaticDataUpdateView: View {
                     }
 
                     actionRow(
-                        title: "重新检查更新",
+                        title: String(localized: "update.action.checkAgain"),
                         icon: "magnifyingglass",
                         tint: .green,
                         disabled: isSyncing
@@ -100,7 +100,7 @@ struct StaticDataUpdateView: View {
             }
 
         }
-        .navigationTitle("静态数据更新")
+        .navigationTitle("update.title")
         .navigationBarTitleDisplayMode(.inline)
         .interactiveDismissDisabled(isSyncing)
         .navigationBarBackButtonHidden(isSyncing)
@@ -190,34 +190,34 @@ struct StaticDataUpdateView: View {
     private var statusTitle: String {
         switch updateState {
         case .idle:
-            "准备检查更新"
+            String(localized: "update.status.ready")
         case .checking:
-            "正在检查更新…"
+            String(localized: "update.status.checking")
         case .upToDate:
-            "已是最新静态数据"
+            String(localized: "update.status.upToDate")
         case .available:
-            "发现可用更新"
+            String(localized: "update.status.available")
         case .backendUnconfigured:
-            "未配置后端"
+            String(localized: "update.status.unconfigured")
         case let .failed(message):
-            "检查失败：\(message)"
+            String(localized: "update.status.failed \(message)")
         }
     }
 
     private var statusDescription: String {
         switch updateState {
         case .idle:
-            "进入页面后会自动检查静态数据更新。"
+            String(localized: "update.description.ready")
         case .checking:
-            "正在从后端获取最新 manifest。"
+            String(localized: "update.description.checking")
         case .upToDate:
-            "当前本地 md5 与服务端一致。"
+            String(localized: "update.description.upToDate")
         case .available:
-            "点击下方按钮下载并应用完整更新。"
+            String(localized: "update.description.available")
         case .backendUnconfigured:
-            "请先在设置中配置后端地址。"
+            String(localized: "update.description.unconfigured")
         case .failed:
-            "请检查网络或后端状态后重试。"
+            String(localized: "update.description.failed")
         }
     }
 
@@ -232,18 +232,19 @@ struct StaticDataUpdateView: View {
         }()
 
         guard let manifest else { return nil }
-        let createdText = manifest.createdAt?.formatted(date: .numeric, time: .shortened) ?? "未知时间"
-        return "版本：\(manifest.version) · 构建：\(createdText)"
+        let createdText = manifest.createdAt?.formatted(date: .numeric, time: .shortened)
+            ?? String(localized: "update.version.unknownTime")
+        return String(localized: "update.version \(manifest.version) \(createdText)")
     }
 
     private var actionButtonTitle: String {
         switch updateState {
         case .available:
-            "下载并更新"
+            String(localized: "update.action.download")
         case .upToDate:
-            "重新安装当前版本"
+            String(localized: "update.action.reinstall")
         default:
-            "立即更新"
+            String(localized: "update.action.updateNow")
         }
     }
 

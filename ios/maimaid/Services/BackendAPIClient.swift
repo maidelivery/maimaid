@@ -23,7 +23,11 @@ struct BackendAPIError: LocalizedError {
         code: "unauthorized",
         message: String(localized: "community.alias.submit.loginRequired")
     )
-    static let badResponse = BackendAPIError(statusCode: nil, code: nil, message: "Invalid server response.")
+    static let badResponse = BackendAPIError(
+        statusCode: nil,
+        code: nil,
+        message: String(localized: "settings.cloud.error.badResponse")
+    )
 }
 
 private struct BackendErrorPayload: Decodable {

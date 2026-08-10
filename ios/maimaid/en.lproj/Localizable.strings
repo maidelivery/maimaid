@@ -196,6 +196,15 @@
 "plate.menu.version" = "Version";
 "plate.menu.difficulty" = "Difficulty";
 "plate.menu.plate" = "Plate";
+"plate.summary.completed" = "Completed";
+"plate.summary.remaining" = "Remaining";
+"plate.summary.total" = "Total Charts";
+"plate.section.progress %lld %lld" = "Completed %lld / %lld";
+"plate.loading" = "Updating...";
+"plate.progress.title %@ %@" = "%@ %@ Progress";
+"plate.status.completed" = "Completed";
+"plate.status.incomplete" = "Incomplete";
+"plate.chart.accessibility %@ %@ %@" = "%@, %@, %@";
 
 "极牌" = "极 Plate";
 "将牌" = "将 Plate";
@@ -262,6 +271,25 @@
 
 // Static Data Update
 "update.title" = "Static Data Update";
+"update.actions" = "Update Actions";
+"update.action.checkAgain" = "Check Again";
+"update.status.ready" = "Ready to Check for Updates";
+"update.status.checking" = "Checking for Updates...";
+"update.status.upToDate" = "Static Data Is Up to Date";
+"update.status.available" = "Update Available";
+"update.status.unconfigured" = "Backend Not Configured";
+"update.status.failed %@" = "Check Failed: %@";
+"update.description.ready" = "Updates are checked automatically when this page opens.";
+"update.description.checking" = "Fetching the latest manifest from the backend.";
+"update.description.upToDate" = "The local data matches the latest server version.";
+"update.description.available" = "Download and apply the complete update below.";
+"update.description.unconfigured" = "Configure the backend address in Settings first.";
+"update.description.failed" = "Check the network or backend status, then try again.";
+"update.version.unknownTime" = "Unknown Time";
+"update.version %@ %@" = "Version: %@ · Built: %@";
+"update.action.download" = "Download and Update";
+"update.action.reinstall" = "Reinstall Current Version";
+"update.action.updateNow" = "Update Now";
 
 // MARK: - Best Table
 "bestTable.title" = "Best Table";
@@ -306,7 +334,7 @@
 "rec.empty.title" = "No Recs";
 "rec.empty.desc" = "Insufficient data or no high-yield tracks found.";
 "rec.status.notPlayed" = "Not Played";
-"rec.afterRank %@" = "after %@";
+"rec.afterRank %@" = "Target: %@";
 
 // MARK: - Data Sync
 "data.sync.stage.idle" = "Idle";
@@ -470,6 +498,9 @@
 "settings.cloud.config.step.fill" = "2. Fill in `BACKEND_URL` and `BACKEND_AUTH_URL`";
 "settings.cloud.config.error.unconfigured" = "Cloud is not configured.";
 "common.unknown" = "Unknown";
+"common.none" = "None";
+"common.ok" = "OK";
+"common.error" = "Error";
 "dan.detail.noRecord" = "No Record";
 "dan.detail.missing" = "Missing";
 "dan.list.sections %lld" = "%lld Sections";
@@ -540,6 +571,10 @@
 "data.sync.status.fetchingUtageChartStats" = "Fetching utage note totals...";
 "data.sync.log.fetchedUtageChartStats %lld" = "Fetched utage note totals: %lld entries";
 "data.sync.log.mergedUtageChartStats %lld" = "Merged utage note totals: updated %lld charts";
+"data.sync.status.noUpdate" = "Static data is already up to date.";
+"data.sync.log.danUnavailable" = "Dan data is unavailable in the static bundle; keeping the local cache.";
+"data.sync.log.chartFitUnavailable" = "Chart fit data is unavailable in the static bundle; keeping the local cache.";
+"data.sync.log.intermediateSaveFailed %@" = "Intermediate save failed while processing songs: %@";
 
 // MARK: - Backend Account Resolution
 "settings.cloud.logout.options.title" = "Sign Out Options";
@@ -572,3 +607,13 @@
 "settings.import.resolution.value.missing" = "-";
 "settings.import.resolution.more.show %lld" = "Show more (%lld remaining)";
 "settings.import.resolution.more.hide" = "Collapse remaining conflicts";
+"settings.cloud.error.badResponse" = "Invalid server response.";
+"settings.cloud.error.profileNotFound" = "Local profile not found.";
+"settings.cloud.error.avatarUploadFailed" = "Avatar upload failed.";
+"settings.cloud.error.playRecordMappingFailed" = "Failed to map remote play records to local charts.";
+"settings.cloud.error.scoreMappingFailed" = "Failed to map remote scores to local charts.";
+"photo.error.albumPlaceholder" = "Failed to prepare the maimai album.";
+"photo.error.albumFetch" = "Failed to access the newly created maimai album.";
+"photo.error.accessDenied" = "Photo library access denied.";
+"camera.error.outputUnavailable" = "Photo capture is unavailable.";
+"camera.error.dataUnavailable" = "Captured photo data is unavailable.";

@@ -119,7 +119,7 @@ struct SettingsView: View {
             }
             .navigationTitle("settings.title")
             .alert(alertTitle, isPresented: $showAlert) {
-                Button("OK", role: .cancel) {}
+                Button("common.ok", role: .cancel) {}
             } message: {
                 Text(alertMessage)
             }

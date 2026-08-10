@@ -115,7 +115,7 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
             let error = NSError(
                 domain: "CameraViewController",
                 code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Photo output is unavailable"]
+                userInfo: [NSLocalizedDescriptionKey: String(localized: "camera.error.outputUnavailable")]
             )
             onPhotoCaptured?(.failure(error))
             return
@@ -200,7 +200,7 @@ extension CameraViewController: AVCapturePhotoCaptureDelegate {
             let error = NSError(
                 domain: "CameraViewController",
                 code: 2,
-                userInfo: [NSLocalizedDescriptionKey: "Captured photo data is unavailable"]
+                userInfo: [NSLocalizedDescriptionKey: String(localized: "camera.error.dataUnavailable")]
             )
             result = .failure(error)
         }

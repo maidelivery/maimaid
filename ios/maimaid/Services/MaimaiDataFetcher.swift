@@ -320,7 +320,7 @@ class MaimaiDataFetcher {
             let bundleResources = staticBundle?.bundle?.payload.resources
 
             if staticBundle?.isUpToDate == true {
-                updateStage(.completed, base: 1.0, message: "No static data update available.")
+                updateStage(.completed, base: 1.0, message: String(localized: "data.sync.status.noUpdate"))
                 isSyncing = false
                 return
             }
@@ -488,7 +488,7 @@ class MaimaiDataFetcher {
                     try danJsonData.write(to: fileURL)
                     log(String(localized: "data.sync.log.fetchedDanData \(cleanedCategories.count)"))
                 } else {
-                    log("Dan info is unavailable in backend static bundle; keeping existing local cache.")
+                    log(String(localized: "data.sync.log.danUnavailable"))
                 }
             }
 
@@ -499,7 +499,7 @@ class MaimaiDataFetcher {
                     log(String(localized: "data.sync.log.chartStatsUpdated"))
                 } else {
                     await ChartStatsService.shared.fetchStats()
-                    log("Chart fit is unavailable in backend static bundle; keeping existing local cache.")
+                    log(String(localized: "data.sync.log.chartFitUnavailable"))
                 }
             }
 
@@ -785,7 +785,7 @@ class MaimaiDataFetcher {
                         do {
                             try modelContext.save()
                         } catch {
-                            log("Intermediate save failed while processing songs: \(error.localizedDescription)")
+                            log(String(localized: "data.sync.log.intermediateSaveFailed \(error.localizedDescription)"))
                         }
                     }
                 }

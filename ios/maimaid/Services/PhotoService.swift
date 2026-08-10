@@ -29,12 +29,20 @@ nonisolated final class PhotoService: Sendable {
         }
         
         guard let placeholder = albumPlaceholder else {
-            throw NSError(domain: "PhotoService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to allocate album placeholder"])
+            throw NSError(
+                domain: "PhotoService",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: String(localized: "photo.error.albumPlaceholder")]
+            )
         }
         
         let fetchResult = PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [placeholder.localIdentifier], options: nil)
         guard let album = fetchResult.firstObject else {
-            throw NSError(domain: "PhotoService", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to fetch newly created album"])
+            throw NSError(
+                domain: "PhotoService",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: String(localized: "photo.error.albumFetch")]
+            )
         }
         
         return album
@@ -95,7 +103,11 @@ nonisolated final class PhotoService: Sendable {
     public func savePhotoDataWithMetadata(_ data: Data, title: String?, tags: [String]? = nil) async throws {
         let authorizationStatus = await Self.requestAuthorization()
         guard authorizationStatus == .authorized || authorizationStatus == .limited else {
-            throw NSError(domain: "PhotoService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Photo library access denied"])
+            throw NSError(
+                domain: "PhotoService",
+                code: 3,
+                userInfo: [NSLocalizedDescriptionKey: String(localized: "photo.error.accessDenied")]
+            )
         }
 
         let metadataData = await Task.detached(priority: .userInitiated) {

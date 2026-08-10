@@ -627,14 +627,14 @@ enum BackendIncrementalSyncService {
             throw BackendAPIError(
                 statusCode: nil,
                 code: "sync_sheet_mapping_failed",
-                message: "Failed to map remote play records to local sheets."
+                message: String(localized: "settings.cloud.error.playRecordMappingFailed")
             )
         }
         if !snapshot.scores.isEmpty && resolvedScores.isEmpty {
             throw BackendAPIError(
                 statusCode: nil,
                 code: "sync_sheet_mapping_failed",
-                message: "Failed to map remote scores to local sheets."
+                message: String(localized: "settings.cloud.error.scoreMappingFailed")
             )
         }
 
@@ -760,7 +760,7 @@ enum BackendIncrementalSyncService {
             throw BackendAPIError(
                 statusCode: nil,
                 code: "sync_sheet_mapping_failed",
-                message: "Failed to map remote scores to local sheets."
+                message: String(localized: "settings.cloud.error.scoreMappingFailed")
             )
         }
 
@@ -923,7 +923,7 @@ enum BackendIncrementalSyncService {
             throw BackendAPIError(
                 statusCode: nil,
                 code: "sync_sheet_mapping_failed",
-                message: "Failed to map remote scores to local sheets."
+                message: String(localized: "settings.cloud.error.scoreMappingFailed")
             )
         }
 
@@ -996,7 +996,7 @@ enum BackendIncrementalSyncService {
             throw BackendAPIError(
                 statusCode: nil,
                 code: "sync_sheet_mapping_failed",
-                message: "Failed to map remote play records to local sheets."
+                message: String(localized: "settings.cloud.error.playRecordMappingFailed")
             )
         }
 
