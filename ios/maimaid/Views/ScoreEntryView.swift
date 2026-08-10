@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import PhotosUI
 
 struct ScoreEntryView: View {
     @Environment(\.dismiss) private var dismiss
@@ -16,11 +15,6 @@ struct ScoreEntryView: View {
     let initialFC: String?
     let initialFS: String?
     
-    @State private var isProcessingPhoto = false
-    @State private var recognizedRate: Double?
-    @State private var selectedItem: PhotosPickerItem? = nil
-    @State private var selectedImage: UIImage? = nil
-    
     @State private var rateText = ""
     @State private var dxScoreText = ""
     @State private var isSaved = false
@@ -35,7 +29,6 @@ struct ScoreEntryView: View {
     @ScaledMetric(relativeTo: .largeTitle) private var achievementFontSize = 48
     @ScaledMetric(relativeTo: .title3) private var achievementPercentFontSize = 24
     @ScaledMetric(relativeTo: .body) private var dxScoreFieldMinWidth = 88
-    @ScaledMetric(relativeTo: .body) private var photoThumbnailSize = 60
     
     init(sheet: Sheet, initialRate: Double? = nil, initialRank: String? = nil, initialDxScore: Int? = nil, initialFC: String? = nil, initialFS: String? = nil) {
         self.sheet = sheet
@@ -206,7 +199,6 @@ struct ScoreEntryView: View {
                 VStack(spacing: 24) {
                     headerCard
                     scoreInputSection
-                    photoScanSection
                     
                     if let existingScore = cachedCurrentScore {
                         existingScoreCard(existingScore)
@@ -273,11 +265,6 @@ struct ScoreEntryView: View {
         }
         .onChange(of: selectedFS) { _, _ in
             resetSaveStateIfNeeded()
-        }
-        .onChange(of: selectedItem) { _, newItem in
-            Task {
-                await processSelectedItem(newItem)
-            }
         }
     }
     
@@ -470,89 +457,6 @@ struct ScoreEntryView: View {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
     }
     
-    private var photoScanSection: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Image(systemName: "camera.viewfinder")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.blue)
-                    .accessibilityHidden(true)
-                Text("score.entry.selectPhoto")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                Spacer()
-            }
-            
-            if isProcessingPhoto {
-                HStack(spacing: 10) {
-                    ProgressView()
-                    Text("score.entry.recognizing")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 20)
-            } else if let image = selectedImage {
-                HStack(spacing: 12) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: photoThumbnailSize, height: photoThumbnailSize)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .accessibilityHidden(true)
-                    
-                    VStack(alignment: .leading, spacing: 6) {
-                        if let rate = recognizedRate {
-                            Label("score.entry.success", systemImage: "checkmark.circle.fill")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.green)
-                            
-                            Text("\(rate, format: .number.precision(.fractionLength(4)))%")
-                                .font(.headline.bold())
-                                .monospacedDigit()
-                                .foregroundStyle(.primary)
-                        } else {
-                            Label("score.entry.failed", systemImage: "exclamationmark.triangle.fill")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.orange)
-                            
-                            Text("score.entry.manualHint")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    PhotosPicker(selection: $selectedItem, matching: .images) {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.blue)
-                            .frame(width: 44, height: 44)
-                            .background(Color.blue.opacity(0.1), in: Circle())
-                    }
-                    .accessibilityLabel(Text("score.entry.repickPhoto"))
-                    .accessibilityHint(Text("score.entry.repickPhoto.hint"))
-                }
-            } else {
-                PhotosPicker(selection: $selectedItem, matching: .images) {
-                    Label("score.entry.selectPhoto", systemImage: "photo")
-                        .font(.headline)
-                        .foregroundStyle(.blue)
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: 52)
-                        .background(Color.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(Color.blue.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
-                        )
-                }
-            }
-        }
-        .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-    }
-    
     private func existingScoreCard(_ score: Score) -> some View {
         HStack(spacing: 12) {
             Image(systemName: "clock.arrow.circlepath")
@@ -635,34 +539,6 @@ struct ScoreEntryView: View {
         }
     }
     
-    private func processSelectedItem(_ item: PhotosPickerItem?) async {
-        guard let item else { return }
-        
-        recognizedRate = nil
-        isProcessingPhoto = true
-        defer { isProcessingPhoto = false }
-        
-        guard let data = try? await item.loadTransferable(type: Data.self),
-              let image = UIImage(data: data) else {
-            selectedImage = nil
-            return
-        }
-        
-        selectedImage = image
-        let result = await MLScoreProcessor.shared.process(image)
-        
-        guard let rate = result.rate else {
-            recognizedRate = nil
-            return
-        }
-        
-        recognizedRate = rate
-        withAnimation(feedbackAnimation) {
-            rateText = String(format: "%.4f", rate)
-        }
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-    }
-    
     private func dismissKeyboard() {
         isRateFocused = false
         isDxScoreFocused = false
@@ -701,6 +577,7 @@ struct ScoreEntryView: View {
         
         try? modelContext.save()
         cachedCurrentScore = savedScore
+        ScoreService.shared.notifyScoresChanged(for: savedScore.userProfileId)
 
         Task {
             await SyncManager.shared.syncAfterScoreSave(
