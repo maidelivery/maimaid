@@ -2,6 +2,11 @@ import SwiftUI
 import SwiftData
 
 struct RecommendationListView: View {
+    private enum RecommendationPage: Hashable {
+        case new
+        case old
+    }
+
     @Environment(\.modelContext) private var modelContext
     @Query private var songs: [Song]
     @Query private var configs: [SyncConfig]
@@ -9,11 +14,16 @@ struct RecommendationListView: View {
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     @State private var response: RecommendationResponse?
     @State private var isLoading = true
+    @State private var selectedPage: RecommendationPage = .new
+    @State private var visibleB15Count = 10
+    @State private var visibleB35Count = 10
     
     // Cache invalidation: track a fingerprint of the user's scores
     @State private var lastScoreFingerprint: String = ""
     @State private var lastConfigFingerprint: String = ""
     @State private var hasLoadedOnce = false
+
+    private let pageSize = 10
     
     private var activeProfile: UserProfile? { activeProfiles.first }
     
@@ -38,75 +48,50 @@ struct RecommendationListView: View {
     
     /// Generates a fingerprint from config values that affect recommendations
     private func currentConfigFingerprint() -> String {
-        let b15Rec = activeProfile?.b15RecLimit ?? configs.first?.b15RecLimit ?? 10
-        let b35Rec = activeProfile?.b35RecLimit ?? configs.first?.b35RecLimit ?? 10
         let b15Count = activeProfile?.b15Count ?? configs.first?.b15Count ?? 15
         let b35Count = activeProfile?.b35Count ?? configs.first?.b35Count ?? 35
         let server = activeProfile?.server ?? "jp"
-        return "\(b15Rec)_\(b35Rec)_\(b15Count)_\(b35Count)_\(server)"
+        return "\(b15Count)_\(b35Count)_\(server)"
+    }
+
+    private var b15Recommendations: [RecommendationResult] {
+        response?.b15 ?? []
+    }
+
+    private var b35Recommendations: [RecommendationResult] {
+        response?.b35 ?? []
+    }
+
+    private var selectedPageTitle: LocalizedStringKey {
+        switch selectedPage {
+        case .new:
+            "rec.section.new"
+        case .old:
+            "rec.section.old"
+        }
     }
     
     var body: some View {
         ZStack {
-            List {
-                if !isLoading {
-                    // Capacity Settings Section
-                    if let profile = activeProfile {
-                        Section("rec.settings.capacity") {
-                            rowStepper(title: "rec.settings.new", value: Binding(
-                                get: { profile.b15RecLimit },
-                                set: { profile.b15RecLimit = $0 }
-                            ), range: 1...50)
-                            
-                            rowStepper(title: "rec.settings.old", value: Binding(
-                                get: { profile.b35RecLimit },
-                                set: { profile.b35RecLimit = $0 }
-                            ), range: 1...50)
-                        }
-                    } else if let config = configs.first {
-                        Section("rec.settings.capacity") {
-                            rowStepper(title: "rec.settings.new", value: Binding(
-                                get: { config.b15RecLimit },
-                                set: { config.b15RecLimit = $0 }
-                            ), range: 1...50)
-                            
-                            rowStepper(title: "rec.settings.old", value: Binding(
-                                get: { config.b35RecLimit },
-                                set: { config.b35RecLimit = $0 }
-                            ), range: 1...50)
-                        }
-                    }
-                    
-                    // B15 Recommendations
-                    if let b15 = response?.b15, !b15.isEmpty {
-                        Section("rec.section.new") {
-                            ForEach(b15) { result in
-                                NavigationLink(destination: SongDetailView(song: result.song, preferredType: result.sheet.type)) {
-                                    RecommendationRow(result: result)
-                                }
-                            }
-                        }
-                    }
-                    
-                    // B35 Recommendations
-                    if let b35 = response?.b35, !b35.isEmpty {
-                        Section("rec.section.old") {
-                            ForEach(b35) { result in
-                                NavigationLink(destination: SongDetailView(song: result.song, preferredType: result.sheet.type)) {
-                                    RecommendationRow(result: result)
-                                }
-                            }
-                        }
-                    }
+            switch selectedPage {
+            case .new:
+                RecommendationPageView(
+                    results: b15Recommendations,
+                    visibleCount: visibleB15Count,
+                    onLoadMore: loadMoreB15
+                ) {
+                    await loadRecommendations(force: true)
+                }
+            case .old:
+                RecommendationPageView(
+                    results: b35Recommendations,
+                    visibleCount: visibleB35Count,
+                    onLoadMore: loadMoreB35
+                ) {
+                    await loadRecommendations(force: true)
                 }
             }
-            .listStyle(.insetGrouped)
-            .refreshable {
-                // Pull-to-refresh always forces a reload
-                await loadRecommendations(force: true)
-            }
-            
-            // Loading Overlay
+
             if isLoading {
                 VStack(spacing: 12) {
                     ProgressView()
@@ -116,26 +101,35 @@ struct RecommendationListView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(.systemGroupedBackground))
-            } else if (response?.b15.isEmpty ?? true) && (response?.b35.isEmpty ?? true) {
-                ContentUnavailableView(
-                    "rec.empty.title",
-                    systemImage: "sparkles",
-                    description: Text("rec.empty.desc")
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemGroupedBackground))
             }
         }
         .navigationTitle("rec.title")
+        .background(Color(.systemGroupedBackground))
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Picker("rec.title", selection: $selectedPage) {
+                        Text("rec.section.new").tag(RecommendationPage.new)
+                        Text("rec.section.old").tag(RecommendationPage.old)
+                    }
+                } label: {
+                    Label(selectedPageTitle, systemImage: "rectangle.2.swap")
+                        .labelStyle(.titleAndIcon)
+                }
+            }
+        }
         .task {
             guard !songs.isEmpty else { return }
             await loadRecommendationsIfNeeded()
         }
-        .onChange(of: activeProfile?.b15RecLimit) { _, _ in
-            Task { await loadRecommendationsIfNeeded() }
-        }
-        .onChange(of: activeProfile?.b35RecLimit) { _, _ in
-            Task { await loadRecommendationsIfNeeded() }
+        .task(id: currentConfigFingerprint()) {
+            guard hasLoadedOnce else { return }
+            do {
+                try await Task.sleep(for: .milliseconds(500))
+            } catch {
+                return
+            }
+            await loadRecommendationsIfNeeded()
         }
         .onReceive(NotificationCenter.default.publisher(for: .maimaiScoresDidChange)) { notification in
             if let changedProfileID = notification.object as? UUID,
@@ -146,17 +140,12 @@ struct RecommendationListView: View {
         }
     }
     
-    private func rowStepper(title: LocalizedStringKey, value: Binding<Int>, range: ClosedRange<Int>) -> some View {
-        HStack {
-            Text(title)
-                .font(.subheadline)
-            Spacer()
-            Stepper("\(value.wrappedValue)", value: value, in: range)
-                .labelsHidden()
-            Text("\(value.wrappedValue)")
-                .font(.subheadline.monospacedDigit().bold())
-                .frame(width: 30)
-        }
+    private func loadMoreB15() {
+        visibleB15Count = min(visibleB15Count + pageSize, b15Recommendations.count)
+    }
+
+    private func loadMoreB35() {
+        visibleB35Count = min(visibleB35Count + pageSize, b35Recommendations.count)
     }
     
     /// Only reloads if scores or config have actually changed
@@ -183,12 +172,19 @@ struct RecommendationListView: View {
         }
         
         isLoading = true
-        response = await RecommendationService.shared.getRecommendations(
+        let newResponse = await RecommendationService.shared.getRecommendations(
             songs: songs,
             configs: configs,
             activeProfile: activeProfile,
             modelContext: modelContext
         )
+        guard !Task.isCancelled else {
+            isLoading = false
+            return
+        }
+        response = newResponse
+        visibleB15Count = min(pageSize, newResponse.b15.count)
+        visibleB35Count = min(pageSize, newResponse.b35.count)
         lastScoreFingerprint = scoreFingerprint
         lastConfigFingerprint = configFingerprint
         hasLoadedOnce = true
@@ -202,12 +198,18 @@ struct RecommendationRow: View {
     
     var body: some View {
         HStack(spacing: 14) {
-            // Song Jacket
-            SongJacketView(
-                imageName: result.song.imageName,
-                size: 56,
-                cornerRadius: 10
-            )
+            HStack(spacing: 10) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(ThemeUtils.colorForDifficulty(result.sheet.difficulty, result.sheet.type, colorScheme))
+                    .frame(width: 4)
+                    .padding(.vertical, 8)
+
+                SongJacketView(
+                    imageName: result.song.imageName,
+                    size: 56,
+                    cornerRadius: 10
+                )
+            }
             
             VStack(alignment: .leading, spacing: 4) {
                 // Line 1: Song Title
@@ -235,7 +237,6 @@ struct RecommendationRow: View {
                 // Line 3: Badges
                 HStack(spacing: 4) {
                     BadgeView(text: result.sheet.type.uppercased(), background: result.sheet.type.lowercased() == "dx" ? .orange : .blue)
-                    BadgeView(text: ThemeUtils.diffShort(result.sheet.difficulty), background: ThemeUtils.colorForDifficulty(result.sheet.difficulty, result.sheet.type, colorScheme))
                 }
             }
             .frame(minHeight: 56, alignment: .leading)

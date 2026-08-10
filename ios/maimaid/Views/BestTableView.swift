@@ -3,6 +3,11 @@ import SwiftData
 import CoreData
 
 struct BestTableView: View {
+    private enum CapacityField: Hashable {
+        case old
+        case new
+    }
+
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
     @Query private var songs: [Song]
@@ -25,6 +30,9 @@ struct BestTableView: View {
     @State private var calculationTask: Task<Void, Never>?
     @State private var hasAppeared = false
     @State private var isVisible = false
+    @State private var b35CountDraft = 35
+    @State private var b15CountDraft = 15
+    @FocusState private var focusedCapacityField: CapacityField?
     
     /// 可选的版本列表
     private var availableVersions: [String] {
@@ -118,10 +126,11 @@ struct BestTableView: View {
 
             Section("bestTable.settings.capacity") {
                 HStack(spacing: 20) {
-                    capacityInput(title: "bestTable.settings.old", value: Binding(
-                        get: { currentB35Count },
-                        set: { if let p = activeProfile { p.b35Count = max(1, $0) } else { configs.first?.b35Count = max(1, $0) } }
-                    ))
+                    capacityInput(
+                        title: "bestTable.settings.old",
+                        value: $b35CountDraft,
+                        field: .old
+                    )
                     
                     VStack {
                         Image(systemName: "plus")
@@ -129,10 +138,11 @@ struct BestTableView: View {
                             .foregroundStyle(.secondary)
                     }
                     
-                    capacityInput(title: "bestTable.settings.new", value: Binding(
-                        get: { currentB15Count },
-                        set: { if let p = activeProfile { p.b15Count = max(1, $0) } else { configs.first?.b15Count = max(1, $0) } }
-                    ))
+                    capacityInput(
+                        title: "bestTable.settings.new",
+                        value: $b15CountDraft,
+                        field: .new
+                    )
                     
                     Divider()
                         .frame(height: 30)
@@ -195,6 +205,7 @@ struct BestTableView: View {
                 }
             }
         }
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle("bestTable.title")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -210,6 +221,12 @@ struct BestTableView: View {
                 }
                 .disabled(cache.isLoading || isExporting || (cache.b50Result.b35.isEmpty && cache.b50Result.b15.isEmpty))
             }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("filter.done") {
+                    focusedCapacityField = nil
+                }
+            }
         }
         .sheet(isPresented: $showVersionPicker) {
             VersionPickerSheet(
@@ -221,11 +238,12 @@ struct BestTableView: View {
         .onAppear {
             isVisible = true
             cache.updateSongs(songs)
+            synchronizeCapacityDrafts()
             
             guard !hasAppeared else { return }
             hasAppeared = true
             
-            scheduleCalculation(delayNanoseconds: 180_000_000)
+            scheduleCalculation(delay: .milliseconds(180))
         }
         .task(id: activeProfile?.server) {
             guard let server = activeProfile.flatMap({ GameServer(rawValue: $0.server) }) else {
@@ -237,6 +255,7 @@ struct BestTableView: View {
             cachedServerVersion = ServerVersionService.shared.latestVersion(for: server, songs: songs)
         }
         .onDisappear {
+            commitFocusedCapacity()
             isVisible = false
             calculationTask?.cancel()
             calculationTask = nil
@@ -246,13 +265,25 @@ struct BestTableView: View {
             scheduleCalculation()
         }
         .onChange(of: activeProfile?.id) { _, _ in
+            synchronizeCapacityDrafts()
             scheduleCalculation()
         }
-        .onChange(of: currentB35Count) { _, _ in
+        .onChange(of: currentB35Count) { _, newValue in
+            if focusedCapacityField != .old {
+                b35CountDraft = newValue
+            }
             scheduleCalculation()
         }
-        .onChange(of: currentB15Count) { _, _ in
+        .onChange(of: currentB15Count) { _, newValue in
+            if focusedCapacityField != .new {
+                b15CountDraft = newValue
+            }
             scheduleCalculation()
+        }
+        .onChange(of: focusedCapacityField) { oldValue, _ in
+            if let oldValue {
+                commitCapacity(oldValue)
+            }
         }
         .onChange(of: overriddenVersion) { _, _ in
             scheduleCalculation()
@@ -266,16 +297,16 @@ struct BestTableView: View {
                changedProfileID != activeProfile?.id {
                 return
             }
-            scheduleCalculation(delayNanoseconds: 180_000_000)
+            scheduleCalculation(delay: .milliseconds(180))
         }
     }
     
     // MARK: - Scheduling
     
-    private func scheduleCalculation(delayNanoseconds: UInt64 = 120_000_000) {
+    private func scheduleCalculation(delay: Duration = .milliseconds(120)) {
         calculationTask?.cancel()
         calculationTask = Task {
-            try? await Task.sleep(for: .nanoseconds(delayNanoseconds))
+            try? await Task.sleep(for: delay)
             guard !Task.isCancelled, isVisible else { return }
             await performCalculation()
         }
@@ -337,29 +368,67 @@ struct BestTableView: View {
         }
     }
     
-    private func capacityInput(title: LocalizedStringKey, value: Binding<Int>) -> some View {
+    private func capacityInput(
+        title: LocalizedStringKey,
+        value: Binding<Int>,
+        field: CapacityField
+    ) -> some View {
         VStack(alignment: .center, spacing: 6) {
             Text(title).font(.caption2).foregroundStyle(.secondary)
             
-            TextField("", text: Binding(
-                get: { String(value.wrappedValue) },
-                set: { newValue in
-                    if let intValue = Int(newValue.filter({ $0.isNumber })) {
-                        value.wrappedValue = intValue
-                    }
-                }
-            ))
+            TextField("", value: value, format: .number)
             .keyboardType(.numberPad)
             .multilineTextAlignment(.center)
             .font(.system(.body, design: .monospaced).bold())
             .frame(width: 60)
             .padding(.vertical, 8)
             .background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
-            .onSubmit {
-                if value.wrappedValue < 1 { value.wrappedValue = 1 }
-            }
+            .focused($focusedCapacityField, equals: field)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private func synchronizeCapacityDrafts() {
+        if focusedCapacityField != .old {
+            b35CountDraft = currentB35Count
+        }
+        if focusedCapacityField != .new {
+            b15CountDraft = currentB15Count
+        }
+    }
+
+    private func commitFocusedCapacity() {
+        guard let focusedCapacityField else { return }
+        commitCapacity(focusedCapacityField)
+    }
+
+    private func commitCapacity(_ field: CapacityField) {
+        switch field {
+        case .old:
+            let value = max(1, b35CountDraft)
+            b35CountDraft = value
+            if let activeProfile {
+                if activeProfile.b35Count != value {
+                    activeProfile.b35Count = value
+                }
+            } else {
+                if configs.first?.b35Count != value {
+                    configs.first?.b35Count = value
+                }
+            }
+        case .new:
+            let value = max(1, b15CountDraft)
+            b15CountDraft = value
+            if let activeProfile {
+                if activeProfile.b15Count != value {
+                    activeProfile.b15Count = value
+                }
+            } else {
+                if configs.first?.b15Count != value {
+                    configs.first?.b15Count = value
+                }
+            }
+        }
     }
     
     private func performCalculation() async {
@@ -380,12 +449,19 @@ struct BestTableView: View {
     
     private func ratingRow(entry: RatingUtils.RatingEntry) -> some View {
         HStack(spacing: 14) {
-            SongJacketView(
-                imageName: entry.imageName ?? "",
-                size: 56,
-                cornerRadius: 10,
-                useThumbnail: true
-            )
+            HStack(spacing: 10) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(ThemeUtils.colorForDifficulty(entry.diff, entry.type, colorScheme))
+                    .frame(width: 4)
+                    .padding(.vertical, 8)
+
+                SongJacketView(
+                    imageName: entry.imageName ?? "",
+                    size: 56,
+                    cornerRadius: 10,
+                    useThumbnail: true
+                )
+            }
             
             VStack(alignment: .leading, spacing: 4) {
                 MarqueeText(text: entry.songTitle, font: .system(size: 15, weight: .bold), fontWeight: .bold, color: .primary)
@@ -415,7 +491,6 @@ struct BestTableView: View {
                 
                 HStack(spacing: 4) {
                     BadgeView(text: entry.type.uppercased(), background: entry.type.uppercased() == "DX" ? .orange : .blue)
-                    BadgeView(text: ThemeUtils.diffShort(entry.diff), background: ThemeUtils.colorForDifficulty(entry.diff, entry.type, colorScheme))
                     
                     if let fc = entry.fc, !fc.isEmpty {
                         BadgeView(text: ThemeUtils.normalizeFC(fc), background: ThemeUtils.fcColor(fc))

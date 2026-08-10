@@ -124,8 +124,8 @@ enum RatingUtils {
     // MARK: - Song Category
     
     enum SongCategory: Sendable {
-        case b15  // New songs (current version only)
-        case b35  // Old songs
+        case b15  // New-song bucket for the selected server version rules
+        case b35  // Older-song bucket
         case excluded
     }
     
@@ -232,16 +232,15 @@ enum RatingUtils {
     
     // MARK: - Song Category Determination
     
-    /// Determines whether a song belongs to B15 (current or newer playable version),
-    /// B35 (older), or excluded.
-    /// If a song is available in the selected server region and its version is the current
-    /// server version or any newer playable version, it counts toward B15.
+    /// Determines a sheet's Best 50 bucket using the selected server's version rules.
     static func determineSongCategory(
         songVersion: String?,
         latestServerVersion: String?,
+        server: GameServer?,
         isRegionActive: Bool
     ) -> SongCategory {
         guard isRegionActive else { return .excluded }
+        guard let server else { return .excluded }
         
         guard let latest = latestServerVersion, let songVer = songVersion else {
             return .b35
@@ -249,17 +248,44 @@ enum RatingUtils {
         
         let versionSequence = UserDefaults.app.maimaiVersionSequence
         
-        guard let songIndex = versionSequence.firstIndex(where: { songVer.contains($0) || $0.contains(songVer) }),
-              let latestIndex = versionSequence.firstIndex(where: { latest.contains($0) || $0.contains(latest) }) else {
+        guard let songIndex = versionIndex(of: songVer, in: versionSequence),
+              let latestIndex = versionIndex(of: latest, in: versionSequence) else {
             return .b35
         }
-        
-        // The current server version and any newer region-active versions count as B15.
-        if songIndex >= latestIndex {
-            return .b15
+
+        switch server {
+        case .cn:
+            // Region-active preview charts are part of the CN new-song bucket.
+            return songIndex >= latestIndex ? .b15 : .b35
+        case .jp, .intl:
+            if songIndex > latestIndex {
+                return .excluded
+            }
+
+            let circleIndex = versionSequence.firstIndex {
+                $0.caseInsensitiveCompare("CiRCLE") == .orderedSame
+            }
+            let includesPreviousVersion = circleIndex.map { latestIndex >= $0 } ?? false
+            let oldestB15Index = includesPreviousVersion ? max(0, latestIndex - 1) : latestIndex
+            return songIndex >= oldestB15Index ? .b15 : .b35
         }
-        
-        return .b35
+    }
+
+    private static func versionIndex(of version: String, in sequence: [String]) -> Int? {
+        if let exactIndex = sequence.firstIndex(where: {
+            $0.caseInsensitiveCompare(version) == .orderedSame
+        }) {
+            return exactIndex
+        }
+
+        let normalizedVersion = version.lowercased()
+        return sequence.enumerated()
+            .filter {
+                let candidate = $0.element.lowercased()
+                return normalizedVersion.contains(candidate) || candidate.contains(normalizedVersion)
+            }
+            .max { $0.element.count < $1.element.count }?
+            .offset
     }
     
     // MARK: - B50 Calculation
@@ -342,6 +368,7 @@ enum RatingUtils {
                 let category = determineSongCategory(
                     songVersion: sheetData.version ?? songData.version,
                     latestServerVersion: latestVersion,
+                    server: input.server,
                     isRegionActive: isRegionActive
                 )
 
