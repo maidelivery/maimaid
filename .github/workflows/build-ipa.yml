@@ -34,23 +34,20 @@ jobs:
       - name: Archive app (unsigned)
         env:
           ARCHIVE_PATH: ${{ runner.temp }}/maimaid.xcarchive
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          MAIMAID_API_URL: ${{ secrets.MAIMAID_API_URL }}
         run: |
           set -euo pipefail
           mkdir -p build
           LOG_PATH="$PWD/build/archive.log"
           RESULT_BUNDLE_PATH="$PWD/build/maimaid.xcresult"
-          : "${SUPABASE_URL:?Missing GitHub Secret SUPABASE_URL}"
-          : "${SUPABASE_PUBLISHABLE_KEY:?Missing GitHub Secret SUPABASE_PUBLISHABLE_KEY}"
+          : "${MAIMAID_API_URL:?Missing GitHub Secret MAIMAID_API_URL}"
           if ! xcodebuild \
             -project ios/maimaid.xcodeproj \
             -scheme maimaid \
             -configuration Release \
             -destination "generic/platform=iOS" \
             CODE_SIGNING_ALLOWED=NO \
-            SUPABASE_URL="$SUPABASE_URL" \
-            SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
+            BACKEND_URL="$MAIMAID_API_URL" \
             archive \
             -archivePath "$ARCHIVE_PATH" \
             -resultBundlePath "$RESULT_BUNDLE_PATH" 2>&1 | tee "$LOG_PATH"; then
