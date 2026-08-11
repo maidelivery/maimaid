@@ -3,13 +3,18 @@ package org.rhythmeta.maimaid.ui.song
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,10 +22,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -33,8 +39,31 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChevronLeft
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -50,67 +79,72 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.ScoreInput
+import org.rhythmeta.maimaid.core.data.RatingUtils
 import org.rhythmeta.maimaid.core.data.ScoreRules
+import org.rhythmeta.maimaid.core.data.ScoreToleranceCalculator
 import org.rhythmeta.maimaid.core.data.ScoreValidationError
 import org.rhythmeta.maimaid.core.database.PlayRecordEntity
 import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.SongEntity
+import org.rhythmeta.maimaid.ui.catalog.ScoreEntrySongCard
+import org.rhythmeta.maimaid.ui.components.ExpandableBottomSheet
 import org.rhythmeta.maimaid.ui.components.SquircleExtension
+import org.rhythmeta.maimaid.ui.components.squircleShape
+import org.rhythmeta.maimaid.ui.util.ScoreStatusColors
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.sp
+import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.ListPopupColumn
+import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.SnackbarDuration
 import top.yukonga.miuix.kmp.basic.SnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Delete
-import top.yukonga.miuix.kmp.icon.extended.Edit
-import top.yukonga.miuix.kmp.icon.extended.Album
-import top.yukonga.miuix.kmp.icon.extended.ChevronForward
-import top.yukonga.miuix.kmp.icon.extended.GridView
-import top.yukonga.miuix.kmp.icon.extended.Lock
-import top.yukonga.miuix.kmp.icon.extended.Months
-import top.yukonga.miuix.kmp.icon.extended.Music
-import top.yukonga.miuix.kmp.icon.extended.Play
-import top.yukonga.miuix.kmp.icon.extended.Search
-import top.yukonga.miuix.kmp.icon.extended.Timer
-import top.yukonga.miuix.kmp.icon.extended.Unlock
+import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.LocalContentColor
+import top.yukonga.miuix.kmp.window.WindowListPopup
 import java.math.RoundingMode
 import java.io.File
 import java.time.Instant
@@ -164,15 +198,17 @@ fun SongDetailScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val copiedConfirmation = stringResource(R.string.common_copied_to_clipboard)
-    val showCopiedSnackbar: () -> Unit = {
+    val showSnackbar: (String) -> Unit = { message ->
         coroutineScope.launch {
             snackbarHostState.showSnackbar(
-                message = copiedConfirmation,
+                message = message,
                 duration = SnackbarDuration.Custom(ClipboardSnackbarDurationMillis),
             )
         }
     }
+    val showCopiedSnackbar: () -> Unit = { showSnackbar(copiedConfirmation) }
     var recordToDelete by remember { mutableStateOf<PlayRecordEntity?>(null) }
+    var retainedEntryChart by remember { mutableStateOf<SheetScoreUiState?>(null) }
     var jacketColor by remember(song.songIdentifier) { mutableStateOf<Color?>(null) }
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
     val detailColors = jacketColor?.let { SongVisualUtils.detailColors(it, darkTheme) }
@@ -234,6 +270,7 @@ fun SongDetailScreen(
                     metadataVersion = selectedChartVersion,
                     onJacketColor = { jacketColor = it },
                     onCopied = showCopiedSnackbar,
+                    onMessage = showSnackbar,
                 )
             }
             item { CommunityAliasSection(aliases, surfaceColor, accentColor) }
@@ -287,11 +324,15 @@ fun SongDetailScreen(
     val entryChart = state.entrySheetKey?.let { key ->
         state.charts.firstOrNull { it.sheet.sheetKey == key }
     }
-    if (entryChart != null) {
-        ScoreEntryDialog(
-            chart = entryChart,
+    LaunchedEffect(entryChart) {
+        entryChart?.let { retainedEntryChart = it }
+    }
+    (entryChart ?: retainedEntryChart)?.let { presentedChart ->
+        ScoreEntrySheet(
+            visible = entryChart != null,
+            song = song,
+            chart = presentedChart,
             saveStatus = state.saveStatus,
-            accentColor = accentColor,
             onInputChanged = viewModel::markEntryChanged,
             onSave = viewModel::saveScore,
             onDismiss = viewModel::dismissScoreEntry,
@@ -319,11 +360,33 @@ private fun SongHeader(
     metadataVersion: String?,
     onJacketColor: (Color) -> Unit,
     onCopied: () -> Unit,
+    onMessage: (String) -> Unit,
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val hapticFeedback = LocalHapticFeedback.current
     val artist = song.artist.ifBlank { stringResource(R.string.song_artist_unknown) }
     val titleInteractionSource = remember { MutableInteractionSource() }
     val artistInteractionSource = remember { MutableInteractionSource() }
+    val jacketShape = remember { squircleShape(26.dp) }
+    var jacketMenuExpanded by remember { mutableStateOf(false) }
+    var actionSourceFile by remember(cachedCover, song.imageName) { mutableStateOf(cachedCover) }
+    var pendingLegacyDownload by remember { mutableStateOf<File?>(null) }
+    val jacketSavedMessage = stringResource(R.string.song_jacket_saved)
+    val jacketActionFailedMessage = stringResource(R.string.song_jacket_action_failed)
+    val shareChooserTitle = stringResource(R.string.song_jacket_share_chooser)
+    val legacyDownloadLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("image/*"),
+    ) { uri ->
+        val source = pendingLegacyDownload
+        pendingLegacyDownload = null
+        if (uri != null && source != null) {
+            coroutineScope.launch {
+                val saved = saveJacketToUri(context, source, uri)
+                onMessage(if (saved) jacketSavedMessage else jacketActionFailedMessage)
+            }
+        }
+    }
     val jacketModel = remember(cachedCover, song.imageName) {
         ImageRequest.Builder(context)
             .data(cachedCover ?: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/${song.imageName}")
@@ -334,33 +397,123 @@ private fun SongHeader(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            modifier = Modifier
-                .size(220.dp)
-                .squircleSurface(
-                    color = MiuixTheme.colorScheme.surfaceContainer,
-                    cornerRadius = 26.dp,
-                    extension = SquircleExtension,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = MiuixIcons.Edit,
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                modifier = Modifier.size(42.dp),
-            )
-            AsyncImage(
-                model = jacketModel,
-                contentDescription = song.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-                onSuccess = { result ->
-                    val averageColor = runCatching {
-                        val bitmap = result.result.drawable.toBitmap(config = Bitmap.Config.ARGB_8888)
-                        SongVisualUtils.averageJacketColor(bitmap)
-                    }.getOrNull()
-                    averageColor?.let(onJacketColor)
+        Box {
+            val openJacketMenu = {
+                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                jacketMenuExpanded = true
+            }
+            Box(
+                modifier = Modifier
+                    .size(220.dp)
+                    .shadow(
+                        elevation = 18.dp,
+                        shape = jacketShape,
+                        clip = false,
+                        ambientColor = Color.Black.copy(alpha = 0.18f),
+                        spotColor = Color.Black.copy(alpha = 0.28f),
+                    )
+                    .squircleSurface(
+                        color = MiuixTheme.colorScheme.surfaceContainer,
+                        cornerRadius = 26.dp,
+                        extension = SquircleExtension,
+                    )
+                    .semantics {
+                        onLongClick(label = context.getString(R.string.song_jacket_actions)) {
+                            openJacketMenu()
+                            true
+                        }
+                    }
+                    .pointerInput(song.imageName) {
+                        detectTapGestures(onLongPress = { openJacketMenu() })
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Edit,
+                    contentDescription = null,
+                    tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    modifier = Modifier.size(42.dp),
+                )
+                AsyncImage(
+                    model = jacketModel,
+                    contentDescription = song.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                    onSuccess = { result ->
+                        val bitmap = runCatching {
+                            result.result.drawable.toBitmap(config = Bitmap.Config.ARGB_8888)
+                        }.getOrNull()
+                        bitmap?.let { loadedBitmap ->
+                            SongVisualUtils.averageJacketColor(loadedBitmap)?.let(onJacketColor)
+                            if (actionSourceFile == null) {
+                                coroutineScope.launch {
+                                    cacheJacketBitmap(context, loadedBitmap, song.imageName)?.let { cached ->
+                                        actionSourceFile = cached
+                                    }
+                                }
+                            }
+                        }
+                    },
+                )
+            }
+            JacketActionMenu(
+                expanded = jacketMenuExpanded,
+                enabled = actionSourceFile != null,
+                onDismiss = { jacketMenuExpanded = false },
+                onDownload = {
+                    jacketMenuExpanded = false
+                    val source = actionSourceFile ?: return@JacketActionMenu
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        coroutineScope.launch {
+                            val saved = saveJacketToDownloads(context, source, song.title)
+                            onMessage(if (saved) jacketSavedMessage else jacketActionFailedMessage)
+                        }
+                    } else {
+                        pendingLegacyDownload = source
+                        legacyDownloadLauncher.launch(jacketDisplayName(song.title, source))
+                    }
+                },
+                onCopy = {
+                    jacketMenuExpanded = false
+                    val source = actionSourceFile ?: return@JacketActionMenu
+                    coroutineScope.launch {
+                        val sharedJacket = prepareSharedJacket(context, source, song.title)
+                        val clipboard = context.getSystemService(ClipboardManager::class.java)
+                        if (sharedJacket != null && clipboard != null) {
+                            clipboard.setPrimaryClip(
+                                ClipData.newUri(context.contentResolver, song.title, sharedJacket.uri),
+                            )
+                            onCopied()
+                        } else {
+                            onMessage(jacketActionFailedMessage)
+                        }
+                    }
+                },
+                onShare = {
+                    jacketMenuExpanded = false
+                    val source = actionSourceFile ?: return@JacketActionMenu
+                    coroutineScope.launch {
+                        val sharedJacket = prepareSharedJacket(context, source, song.title)
+                        if (sharedJacket == null) {
+                            onMessage(jacketActionFailedMessage)
+                            return@launch
+                        }
+                        runCatching {
+                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = sharedJacket.mimeType
+                                putExtra(Intent.EXTRA_STREAM, sharedJacket.uri)
+                                clipData = ClipData.newUri(
+                                    context.contentResolver,
+                                    song.title,
+                                    sharedJacket.uri,
+                                )
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(sendIntent, shareChooserTitle))
+                        }.onFailure {
+                            onMessage(jacketActionFailedMessage)
+                        }
+                    }
                 },
             )
         }
@@ -423,20 +576,20 @@ private fun SongHeader(
         MetadataGrid(
             listOfNotNull(
                 song.bpm?.let {
-                    MetadataItem(it.toInt().toString(), MiuixIcons.Timer, stringResource(R.string.song_bpm))
+                    MetadataItem(it.toInt().toString(), Icons.Rounded.Timer, stringResource(R.string.song_bpm))
                 },
                 song.category.ifBlank { "maimai" }.let {
-                    MetadataItem(it, MiuixIcons.GridView, stringResource(R.string.song_category))
+                    MetadataItem(it, Icons.Rounded.GridView, stringResource(R.string.song_category))
                 },
                 metadataVersion?.takeIf(String::isNotBlank)?.let {
                     MetadataItem(
                         SongVisualUtils.formatVersionName(it),
-                        MiuixIcons.Album,
+                        Icons.Rounded.Album,
                         stringResource(R.string.song_version),
                     )
                 },
                 song.releaseDate?.takeIf(String::isNotBlank)?.let {
-                    MetadataItem(it, MiuixIcons.Months, stringResource(R.string.song_release_date))
+                    MetadataItem(it, Icons.Rounded.CalendarMonth, stringResource(R.string.song_release_date))
                 },
             ),
             surfaceColor = surfaceColor,
@@ -449,6 +602,82 @@ private fun SongHeader(
 }
 
 @Composable
+private fun JacketActionMenu(
+    expanded: Boolean,
+    enabled: Boolean,
+    onDismiss: () -> Unit,
+    onDownload: () -> Unit,
+    onCopy: () -> Unit,
+    onShare: () -> Unit,
+) {
+    WindowListPopup(
+        show = expanded,
+        alignment = PopupPositionProvider.Align.End,
+        enableWindowDim = false,
+        onDismissRequest = onDismiss,
+    ) {
+        ListPopupColumn {
+            JacketActionMenuItem(
+                text = stringResource(R.string.song_jacket_download),
+                icon = Icons.Rounded.Download,
+                enabled = enabled,
+                onClick = onDownload,
+            )
+            JacketActionMenuItem(
+                text = stringResource(R.string.song_jacket_copy),
+                icon = Icons.Rounded.ContentCopy,
+                enabled = enabled,
+                onClick = onCopy,
+            )
+            JacketActionMenuItem(
+                text = stringResource(R.string.song_jacket_share),
+                icon = Icons.Rounded.Share,
+                enabled = enabled,
+                onClick = onShare,
+            )
+        }
+    }
+}
+
+@Composable
+private fun JacketActionMenuItem(
+    text: String,
+    icon: ImageVector,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val contentColor = if (enabled) {
+        MiuixTheme.colorScheme.onSurfaceContainer
+    } else {
+        MiuixTheme.colorScheme.disabledOnSecondaryVariant
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onClick,
+            )
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = contentColor,
+            modifier = Modifier.size(20.dp),
+        )
+        Text(
+            text = text,
+            style = MiuixTheme.textStyles.body1,
+            color = contentColor,
+        )
+    }
+}
+
+@Composable
 private fun MetadataGrid(
     values: List<MetadataItem>,
     surfaceColor: Color,
@@ -456,7 +685,7 @@ private fun MetadataGrid(
     onItemClick: (MetadataItem) -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val singleRow = maxWidth >= 520.dp
+        val singleRow = values.size == 3 || maxWidth >= 520.dp
         if (singleRow) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 values.forEach {
@@ -559,11 +788,6 @@ private fun RegionAvailability(
             RegionFlag("🇨🇳", stringResource(R.string.song_region_china), cn, accentColor)
             Spacer(Modifier.weight(1f))
             val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
-            val availabilityIconColor = if (isLocked) {
-                MiuixTheme.colorScheme.onBackgroundVariant
-            } else {
-                accentColor
-            }
             val availabilityTextColor = if (isLocked) {
                 if (darkTheme) LockRequiredDarkColor else LockRequiredLightColor
             } else {
@@ -574,9 +798,9 @@ private fun RegionAvailability(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Icon(
-                    imageVector = if (isLocked) MiuixIcons.Lock else MiuixIcons.Unlock,
+                    imageVector = if (isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
                     contentDescription = null,
-                    tint = availabilityIconColor,
+                    tint = availabilityTextColor,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
@@ -621,7 +845,7 @@ private fun ExternalSearch(title: String, surfaceColor: Color, accentColor: Colo
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Icon(
-                imageVector = MiuixIcons.Search,
+                imageVector = Icons.Rounded.Search,
                 contentDescription = stringResource(R.string.song_external_search),
                 tint = accentColor,
                 modifier = Modifier.size(20.dp),
@@ -633,7 +857,7 @@ private fun ExternalSearch(title: String, surfaceColor: Color, accentColor: Colo
                 },
                 modifier = Modifier.weight(1f),
                 surfaceColor = brandColors.youtubeSurface,
-                icon = MiuixIcons.Play,
+                icon = Icons.Rounded.PlayArrow,
                 textStyle = MiuixTheme.textStyles.footnote1,
                 contentColor = brandColors.youtubeContent,
             )
@@ -644,7 +868,7 @@ private fun ExternalSearch(title: String, surfaceColor: Color, accentColor: Colo
                 },
                 modifier = Modifier.weight(1f),
                 surfaceColor = brandColors.bilibiliSurface,
-                icon = MiuixIcons.Music,
+                icon = Icons.Rounded.MusicNote,
                 textStyle = MiuixTheme.textStyles.footnote1,
                 contentColor = brandColors.bilibiliContent,
             )
@@ -733,7 +957,7 @@ private fun MetadataChip(
         Spacer(Modifier.width(6.dp))
         Text(
             text = item.value,
-            style = MiuixTheme.textStyles.footnote1,
+            style = MiuixTheme.textStyles.footnote2,
             color = accentColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -856,7 +1080,6 @@ private fun SheetScoreCard(
     onDeleteRecord: (PlayRecordEntity) -> Unit,
 ) {
     var expanded by rememberSaveable(chart.sheet.sheetKey) { mutableStateOf(false) }
-    var historyExpanded by rememberSaveable(chart.sheet.sheetKey) { mutableStateOf(false) }
     val expandInteractionSource = remember { MutableInteractionSource() }
     val chevronRotation by animateFloatAsState(
         targetValue = if (expanded) 90f else 0f,
@@ -866,6 +1089,7 @@ private fun SheetScoreCard(
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
     val accent = SongVisualUtils.difficultyColor(
         difficulty = chart.sheet.difficulty,
+        type = chart.sheet.type,
         darkTheme = darkTheme,
         brightenDark = true,
         fallbackColor = MiuixTheme.colorScheme.primary,
@@ -920,7 +1144,7 @@ private fun SheetScoreCard(
             )
             Spacer(Modifier.width(6.dp))
             Icon(
-                imageVector = MiuixIcons.Demibold.ChevronForward,
+                imageVector = Icons.Rounded.ChevronRight,
                 contentDescription = null,
                 tint = MiuixTheme.colorScheme.onSurfaceVariantSummary.copy(alpha = 0.58f),
                 modifier = Modifier
@@ -930,55 +1154,183 @@ private fun SheetScoreCard(
         }
 
         AnimatedVisibility(visible = expanded) {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Spacer(Modifier.height(12.dp))
                 BestScoreRow(chart.score, chart.sheet, accentColor)
-                Spacer(Modifier.height(10.dp))
-                NoteStatistics(chart.sheet)
-                Spacer(Modifier.height(10.dp))
+
+                NoteStatisticsSection(chart.sheet)
+
+                (chart.sheet.internalLevelValue ?: chart.sheet.levelValue)
+                    ?.takeIf { it > 0.0 }
+                    ?.let { level -> RatingTableSection(level) }
+
+                if (chart.sheet.hasNoteData()) {
+                    FaultToleranceCalculator(
+                        sheet = chart.sheet,
+                        accentColor = accent,
+                    )
+                }
+
+                if (chart.history.isNotEmpty()) {
+                    PlayHistorySection(
+                        records = chart.history,
+                        accentColor = accent,
+                        onDeleteRecord = onDeleteRecord,
+                    )
+                }
+
                 SongDetailButton(
                     onClick = onRecord,
                     surfaceColor = actionSurfaceColor,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Icon(MiuixIcons.Edit, contentDescription = null)
+                    Icon(Icons.Rounded.Edit, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.score_record_action))
-                }
-                if (chart.history.isNotEmpty()) {
-                    SongDetailTextButton(
-                        text = stringResource(R.string.score_history),
-                        onClick = { historyExpanded = !historyExpanded },
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        surfaceColor = actionSurfaceColor,
-                        accentColor = accentColor,
-                        contentColor = accentColor,
-                    )
-                    AnimatedVisibility(visible = historyExpanded) {
-                        Column(modifier = Modifier.padding(top = 12.dp)) {
-                            chart.history.forEach { record -> HistoryRow(record, onDelete = { onDeleteRecord(record) }) }
-                        }
-                    }
                 }
             }
         }
     }
 }
 
+private data class NoteBreakdownItem(
+    val label: String,
+    val count: Int,
+    val weight: Double,
+    val color: Color,
+)
+
+private fun SheetEntity.hasNoteData(): Boolean = listOf(tap, hold, slide, touch, breakCount)
+    .any { (it ?: 0) > 0 }
+
 @Composable
-private fun NoteStatistics(sheet: SheetEntity) {
-    val notes = listOf("TAP" to sheet.tap, "HOLD" to sheet.hold, "SLIDE" to sheet.slide, "TOUCH" to sheet.touch, "BREAK" to sheet.breakCount)
-        .filter { it.second != null }
-    if (notes.isEmpty()) return
-    Text(
-        text = stringResource(R.string.song_notes_title),
-        style = MiuixTheme.textStyles.body2,
-        fontWeight = FontWeight.Bold,
+private fun CollapsibleDetailSection(
+    title: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (expanded) 90f else 0f,
+        animationSpec = tween(durationMillis = 180),
+        label = "$title-chevron",
     )
-    notes.forEach { (name, count) ->
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(name, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-            Text(count.toString(), fontWeight = FontWeight.Bold)
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    role = Role.Button,
+                    onClick = { onExpandedChange(!expanded) },
+                )
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = title,
+                style = MiuixTheme.textStyles.body2,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                imageVector = Icons.Rounded.ChevronRight,
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary.copy(alpha = 0.58f),
+                modifier = Modifier
+                    .size(13.dp)
+                    .rotate(chevronRotation),
+            )
+        }
+        AnimatedVisibility(visible = expanded) {
+            Box(modifier = Modifier.padding(top = 8.dp)) {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoteStatisticsSection(sheet: SheetEntity) {
+    if (!sheet.hasNoteData()) return
+    var expanded by rememberSaveable(sheet.sheetKey) { mutableStateOf(false) }
+    val notes = listOf(
+        NoteBreakdownItem("TAP", sheet.tap ?: 0, 1.0, Color(0xFFFF2D78)),
+        NoteBreakdownItem("HOLD", sheet.hold ?: 0, 2.0, Color(0xFFFF2D78)),
+        NoteBreakdownItem("SLIDE", sheet.slide ?: 0, 3.0, Color(0xFF4D80FF)),
+        NoteBreakdownItem("TOUCH", sheet.touch ?: 0, 1.0, Color(0xFF4D80FF)),
+        NoteBreakdownItem("BREAK", sheet.breakCount ?: 0, 5.0, Color(0xFFFF9500)),
+    ).filter { it.count > 0 }
+    val totalWeight = notes.sumOf { it.count * it.weight }
+
+    CollapsibleDetailSection(
+        title = stringResource(R.string.song_notes_title),
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        Column {
+            notes.forEachIndexed { index, note ->
+                val fraction = if (totalWeight > 0.0) {
+                    note.count * note.weight / totalWeight
+                } else {
+                    0.0
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            if (index % 2 == 0) {
+                                MiuixTheme.colorScheme.onSurface.copy(alpha = 0.02f)
+                            } else {
+                                Color.Transparent
+                            },
+                        )
+                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = note.label,
+                        style = MiuixTheme.textStyles.footnote2,
+                        fontWeight = FontWeight.Bold,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        modifier = Modifier.width(44.dp),
+                    )
+                    BoxWithConstraints(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(6.dp)
+                            .clip(CircleShape)
+                            .background(MiuixTheme.colorScheme.onSurface.copy(alpha = 0.06f)),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .width(
+                                    maxOf(4.dp, maxWidth * fraction.toFloat())
+                                        .coerceAtMost(maxWidth),
+                                )
+                                .background(note.color.copy(alpha = 0.5f)),
+                        )
+                    }
+                    Text(
+                        text = note.count.toString(),
+                        style = MiuixTheme.textStyles.footnote1,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.width(40.dp),
+                    )
+                    Text(
+                        text = "${(fraction * 100).toInt()}%",
+                        style = MiuixTheme.textStyles.footnote2,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.width(34.dp),
+                    )
+                }
+            }
         }
     }
 }
@@ -988,7 +1340,7 @@ private fun BestScoreRow(score: ScoreEntity?, sheet: SheetEntity, accentColor: C
     if (score == null) {
         Text(
             text = stringResource(R.string.detail_no_scores),
-            color = MiuixTheme.colorScheme.onBackgroundVariant,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         )
         return
     }
@@ -1003,11 +1355,23 @@ private fun BestScoreRow(score: ScoreEntity?, sheet: SheetEntity, accentColor: C
                 style = MiuixTheme.textStyles.footnote2,
                 color = MiuixTheme.colorScheme.onBackgroundVariant,
             )
-            Text(
-                text = "${formatAchievement(score.achievement)}%  ${score.rank}",
-                style = MiuixTheme.textStyles.title2,
-                fontWeight = FontWeight.Bold,
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "${formatAchievement(score.achievement)}%",
+                    style = MiuixTheme.textStyles.title2,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = score.rank,
+                    style = MiuixTheme.textStyles.title2,
+                    fontWeight = FontWeight.Bold,
+                    color = ScoreStatusColors.rank(score.rank)
+                        ?: MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                )
+            }
         }
         Column(horizontalAlignment = Alignment.End) {
             if (score.dxScore > 0) {
@@ -1016,15 +1380,347 @@ private fun BestScoreRow(score: ScoreEntity?, sheet: SheetEntity, accentColor: C
                     style = MiuixTheme.textStyles.body2,
                 )
             }
-            val badges = listOfNotNull(
-                ScoreRules.displayFc(score.fc),
-                ScoreRules.displayFs(score.fs),
-            ).joinToString("  ")
-            if (badges.isNotEmpty()) {
+            if (score.fc != null || score.fs != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ScoreRules.displayFc(score.fc)?.let { combo ->
+                        Text(
+                            text = combo,
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = ScoreStatusColors.combo(score.fc)
+                                ?: MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                        )
+                    }
+                    ScoreRules.displayFs(score.fs)?.let { sync ->
+                        Text(
+                            text = sync,
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = ScoreStatusColors.sync(score.fs) ?: accentColor,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RatingTableSection(level: Double) {
+    var expanded by rememberSaveable(level) { mutableStateOf(false) }
+    val rows = remember(level) {
+        val values = RatingUtils.rankThresholds.asReversed().map { threshold ->
+            Triple(
+                threshold.rank,
+                threshold.threshold,
+                RatingUtils.calculate(level, threshold.threshold),
+            )
+        }
+        values.mapIndexed { index, value ->
+            RatingTableRow(
+                rank = value.first,
+                achievement = value.second,
+                rating = value.third,
+                delta = (value.third - (values.getOrNull(index + 1)?.third ?: 0)).coerceAtLeast(0),
+            )
+        }
+    }
+    CollapsibleDetailSection(
+        title = stringResource(R.string.score_rating_table),
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
-                    text = badges,
+                    text = stringResource(R.string.score_rating_achievement),
+                    style = MiuixTheme.textStyles.footnote2,
+                    fontWeight = FontWeight.Bold,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = stringResource(R.string.score_rating_score),
+                    style = MiuixTheme.textStyles.footnote2,
+                    fontWeight = FontWeight.Bold,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.width(54.dp),
+                )
+                Text(
+                    text = stringResource(R.string.score_rating_delta),
+                    style = MiuixTheme.textStyles.footnote2,
+                    fontWeight = FontWeight.Bold,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.width(44.dp),
+                )
+            }
+            rows.forEachIndexed { index, row ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            if (index % 2 == 0) {
+                                MiuixTheme.colorScheme.onSurface.copy(alpha = 0.02f)
+                            } else {
+                                Color.Transparent
+                            },
+                        )
+                        .padding(horizontal = 4.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = row.rank,
+                        style = MiuixTheme.textStyles.footnote1,
+                        fontWeight = FontWeight.Bold,
+                        color = ScoreStatusColors.rank(row.rank)
+                            ?: MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        modifier = Modifier.width(42.dp),
+                    )
+                    Text(
+                        text = "${formatAchievement(row.achievement)}%",
+                        style = MiuixTheme.textStyles.footnote1,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = row.rating.toString(),
+                        style = MiuixTheme.textStyles.body2,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.width(54.dp),
+                    )
+                    Text(
+                        text = row.delta.takeIf { it > 0 }?.let { "↑$it" }.orEmpty(),
+                        style = MiuixTheme.textStyles.footnote2,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.width(44.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+private data class RatingTableRow(
+    val rank: String,
+    val achievement: Double,
+    val rating: Int,
+    val delta: Int,
+)
+
+@Composable
+private fun FaultToleranceCalculator(
+    sheet: SheetEntity,
+    accentColor: Color,
+) {
+    var targetAchievement by rememberSaveable(sheet.sheetKey) { mutableStateOf(100.5) }
+    val tolerance = remember(sheet, targetAchievement) {
+        ScoreToleranceCalculator.calculate(
+            tapCount = sheet.tap ?: 0,
+            holdCount = sheet.hold ?: 0,
+            slideCount = sheet.slide ?: 0,
+            touchCount = sheet.touch ?: 0,
+            breakCount = sheet.breakCount ?: 0,
+            targetAchievement = targetAchievement,
+        )
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.score_tolerance_title),
+                style = MiuixTheme.textStyles.body2,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = stringResource(R.string.score_tolerance_hint),
+                style = MiuixTheme.textStyles.footnote2,
+                color = accentColor,
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            RatingUtils.rankThresholds.asReversed().forEach { target ->
+                val selected = target.threshold == targetAchievement
+                val rankColor = ScoreStatusColors.rank(target.rank)
+                    ?: MiuixTheme.colorScheme.onSurfaceVariantSummary
+                Text(
+                    text = target.rank,
                     style = MiuixTheme.textStyles.footnote1,
-                    color = accentColor,
+                    fontWeight = FontWeight.Bold,
+                    color = rankColor,
+                    modifier = Modifier
+                        .squircleSurface(
+                            color = if (selected) {
+                                rankColor.copy(alpha = 0.16f)
+                            } else {
+                                MiuixTheme.colorScheme.surfaceContainerHigh
+                            },
+                            cornerRadius = 50.dp,
+                            extension = SquircleExtension,
+                        )
+                        .clickable { targetAchievement = target.threshold }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            ToleranceResult(
+                title = "GREAT",
+                value = tolerance.great,
+                color = Color(0xFFFF2D78),
+                modifier = Modifier.weight(1f),
+            )
+            ToleranceResult(
+                title = "GOOD",
+                value = tolerance.good,
+                color = Color(0xFF34C759),
+                modifier = Modifier.weight(1f),
+            )
+            ToleranceResult(
+                title = "MISS",
+                value = tolerance.miss,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ToleranceResult(
+    title: String,
+    value: Int,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .squircleSurface(
+                color = color.copy(alpha = 0.08f),
+                cornerRadius = 12.dp,
+                extension = SquircleExtension,
+            )
+            .squircleBorder(
+                width = 1.dp,
+                color = color.copy(alpha = 0.15f),
+                cornerRadius = 12.dp,
+                extension = SquircleExtension,
+            )
+            .padding(vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = title,
+            style = MiuixTheme.textStyles.footnote2,
+            fontWeight = FontWeight.Bold,
+            color = color.copy(alpha = 0.8f),
+        )
+        Text(
+            text = value.toString(),
+            style = MiuixTheme.textStyles.title3,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = stringResource(R.string.score_tolerance_limit),
+            style = MiuixTheme.textStyles.footnote2,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        )
+    }
+}
+
+@Composable
+private fun PlayHistorySection(
+    records: List<PlayRecordEntity>,
+    accentColor: Color,
+    onDeleteRecord: (PlayRecordEntity) -> Unit,
+) {
+    val sheetKey = records.first().sheetKey
+    var expanded by rememberSaveable(sheetKey) { mutableStateOf(false) }
+    var sortByDate by rememberSaveable(sheetKey) { mutableStateOf(true) }
+    var page by rememberSaveable(sheetKey) { mutableStateOf(1) }
+    val sortedRecords = remember(records, sortByDate) {
+        if (sortByDate) {
+            records.sortedByDescending(PlayRecordEntity::playedAt)
+        } else {
+            records.sortedWith(
+                compareByDescending<PlayRecordEntity> { it.achievement }
+                    .thenByDescending { it.playedAt },
+            )
+        }
+    }
+    val totalPages = ((sortedRecords.size + HistoryPageSize - 1) / HistoryPageSize).coerceAtLeast(1)
+    val validPage = page.coerceIn(1, totalPages)
+    val displayRecords = sortedRecords.drop((validPage - 1) * HistoryPageSize).take(HistoryPageSize)
+    val bestRecordId = records.maxWithOrNull(
+        compareBy<PlayRecordEntity> { it.achievement }.thenBy { it.playedAt },
+    )?.id
+    LaunchedEffect(totalPages) {
+        page = page.coerceIn(1, totalPages)
+    }
+
+    CollapsibleDetailSection(
+        title = stringResource(R.string.score_history),
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 4.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TabRowWithContour(
+                    tabs = listOf(
+                        stringResource(R.string.score_history_sort_time),
+                        stringResource(R.string.score_history_sort_achievement),
+                    ),
+                    selectedTabIndex = if (sortByDate) 0 else 1,
+                    onTabSelected = { index ->
+                        sortByDate = index == 0
+                        page = 1
+                    },
+                    modifier = Modifier.width(160.dp),
+                    minWidth = 70.dp,
+                    maxWidth = 80.dp,
+                    height = 36.dp,
+                    cornerRadius = 10.dp,
+                )
+            }
+            displayRecords.forEachIndexed { index, record ->
+                HistoryRow(
+                    record = record,
+                    isBest = record.id == bestRecordId,
+                    alternate = index % 2 == 0,
+                    accentColor = accentColor,
+                    onDelete = { onDeleteRecord(record) },
+                )
+            }
+            if (totalPages > 1) {
+                HistoryPagination(
+                    page = validPage,
+                    totalPages = totalPages,
+                    accentColor = accentColor,
+                    onPageChange = { page = it },
                 )
             }
         }
@@ -1032,58 +1728,231 @@ private fun BestScoreRow(score: ScoreEntity?, sheet: SheetEntity, accentColor: C
 }
 
 @Composable
-private fun HistoryRow(record: PlayRecordEntity, onDelete: () -> Unit) {
-    val locale = LocalConfiguration.current.locales[0]
-    val formatter = remember(locale) {
-        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withLocale(locale)
-    }
+private fun HistoryPagination(
+    page: Int,
+    totalPages: Int,
+    accentColor: Color,
+    onPageChange: (Int) -> Unit,
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 10.dp),
+            .padding(top = 8.dp),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "${formatAchievement(record.achievement)}%  ${record.rank}",
-                style = MiuixTheme.textStyles.body1,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = Instant.ofEpochMilli(record.playedAt)
-                    .atZone(ZoneId.systemDefault())
-                    .format(formatter),
-                style = MiuixTheme.textStyles.footnote2,
-                color = MiuixTheme.colorScheme.onBackgroundVariant,
-            )
-        }
-        val details = buildList {
-            if (record.dxScore > 0) add(record.dxScore.toString())
-            ScoreRules.displayFc(record.fc)?.let(::add)
-            ScoreRules.displayFs(record.fs)?.let(::add)
-        }.joinToString("  ")
-        if (details.isNotEmpty()) {
-            Text(
-                text = details,
-                style = MiuixTheme.textStyles.footnote1,
-                color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
-            )
-        }
-        IconButton(onClick = onDelete) {
+        IconButton(
+            onClick = { onPageChange(page - 1) },
+            enabled = page > 1,
+        ) {
             Icon(
-                imageVector = MiuixIcons.Delete,
-                contentDescription = stringResource(R.string.score_delete_record),
-                tint = MiuixTheme.colorScheme.error,
+                imageVector = Icons.Rounded.ChevronLeft,
+                contentDescription = stringResource(R.string.score_history_previous_page),
+                tint = if (page > 1) accentColor else MiuixTheme.colorScheme.disabledOnSecondaryVariant,
+            )
+        }
+        Box {
+            Text(
+                text = stringResource(R.string.score_history_page, page, totalPages),
+                style = MiuixTheme.textStyles.footnote1,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .squircleSurface(
+                        color = MiuixTheme.colorScheme.surfaceContainerHigh,
+                        cornerRadius = 50.dp,
+                        extension = SquircleExtension,
+                    )
+                    .clickable(role = Role.Button) { menuExpanded = true }
+                    .padding(horizontal = 16.dp, vertical = 7.dp),
+            )
+            WindowListPopup(
+                show = menuExpanded,
+                alignment = PopupPositionProvider.Align.End,
+                enableWindowDim = false,
+                onDismissRequest = { menuExpanded = false },
+            ) {
+                ListPopupColumn {
+                    (1..totalPages).forEach { option ->
+                        val selected = option == page
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = selected,
+                                    role = Role.RadioButton,
+                                    onClick = {
+                                        onPageChange(option)
+                                        menuExpanded = false
+                                    },
+                                )
+                                .padding(horizontal = 20.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.score_history_page_option, option),
+                                color = if (selected) accentColor else MiuixTheme.colorScheme.onSurfaceContainer,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (selected) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Check,
+                                    contentDescription = null,
+                                    tint = accentColor,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        IconButton(
+            onClick = { onPageChange(page + 1) },
+            enabled = page < totalPages,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.ChevronRight,
+                contentDescription = stringResource(R.string.score_history_next_page),
+                tint = if (page < totalPages) accentColor else MiuixTheme.colorScheme.disabledOnSecondaryVariant,
             )
         }
     }
 }
 
 @Composable
-private fun ScoreEntryDialog(
+private fun HistoryRow(
+    record: PlayRecordEntity,
+    isBest: Boolean,
+    alternate: Boolean,
+    accentColor: Color,
+    onDelete: () -> Unit,
+) {
+    val locale = LocalConfiguration.current.locales[0]
+    val dateFormatter = remember(locale) {
+        DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(locale)
+    }
+    val timeFormatter = remember(locale) {
+        DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale)
+    }
+    val playedAt = Instant.ofEpochMilli(record.playedAt).atZone(ZoneId.systemDefault())
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                when {
+                    isBest -> Modifier
+                        .squircleSurface(
+                            color = accentColor.copy(alpha = 0.1f),
+                            cornerRadius = 8.dp,
+                            extension = SquircleExtension,
+                        )
+                        .squircleBorder(
+                            width = 1.5.dp,
+                            color = accentColor,
+                            cornerRadius = 8.dp,
+                            extension = SquircleExtension,
+                        )
+                    alternate -> Modifier.background(MiuixTheme.colorScheme.onSurface.copy(alpha = 0.02f))
+                    else -> Modifier
+                },
+            )
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.width(72.dp)) {
+            Text(
+                text = playedAt.format(dateFormatter),
+                style = MiuixTheme.textStyles.footnote1,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = playedAt.format(timeFormatter),
+                style = MiuixTheme.textStyles.footnote2,
+                color = MiuixTheme.colorScheme.onBackgroundVariant,
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = record.rank,
+                    style = MiuixTheme.textStyles.footnote1,
+                    fontWeight = FontWeight.Bold,
+                    color = ScoreStatusColors.rank(record.rank)
+                        ?: MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+                Text(
+                    text = "${formatAchievement(record.achievement)}%",
+                    style = MiuixTheme.textStyles.body2,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            if (record.dxScore > 0) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Star,
+                        contentDescription = null,
+                        tint = Color(0xFFFFD700),
+                        modifier = Modifier.size(10.dp),
+                    )
+                    Text(
+                        text = record.dxScore.toString(),
+                        style = MiuixTheme.textStyles.footnote2,
+                        color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                    )
+                }
+            }
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ScoreRules.displayFc(record.fc)?.let { combo ->
+                Text(
+                    text = combo,
+                    style = MiuixTheme.textStyles.footnote2,
+                    fontWeight = FontWeight.Bold,
+                    color = ScoreStatusColors.combo(record.fc)
+                        ?: MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                )
+            }
+            ScoreRules.displayFs(record.fs)?.let { sync ->
+                Text(
+                    text = sync,
+                    style = MiuixTheme.textStyles.footnote2,
+                    fontWeight = FontWeight.Bold,
+                    color = ScoreStatusColors.sync(record.fs)
+                        ?: MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                )
+            }
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Delete,
+                    contentDescription = stringResource(R.string.score_delete_record),
+                    tint = MiuixTheme.colorScheme.error.copy(alpha = 0.65f),
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScoreEntrySheet(
+    visible: Boolean,
+    song: SongEntity,
     chart: SheetScoreUiState,
     saveStatus: ScoreSaveStatus,
-    accentColor: Color,
     onInputChanged: () -> Unit,
     onSave: (ScoreInput) -> Unit,
     onDismiss: () -> Unit,
@@ -1098,7 +1967,19 @@ private fun ScoreEntryDialog(
     var selectedFc by rememberSaveable(chart.sheet.sheetKey) { mutableStateOf(currentScore?.fc) }
     var selectedFs by rememberSaveable(chart.sheet.sheetKey) { mutableStateOf(currentScore?.fs) }
     val focusManager = LocalFocusManager.current
-    val parsedAchievement = achievementText.trim().replace(',', '.').toDoubleOrNull()
+    LaunchedEffect(visible, chart.sheet.sheetKey) {
+        if (visible) {
+            achievementText = currentScore?.achievement?.let(::formatAchievement).orEmpty()
+            dxScoreText = currentScore?.dxScore?.takeIf { it > 0 }?.toString().orEmpty()
+            selectedFc = currentScore?.fc
+            selectedFs = currentScore?.fs
+        }
+    }
+
+    val parsedAchievement = achievementText.trim().toDoubleOrNull()
+    val calculatedRank = parsedAchievement
+        ?.takeIf { it.isFinite() && it in 0.0..101.0 }
+        ?.let(ScoreRules::calculateRank)
     val parsedDxScore = if (dxScoreText.isBlank()) 0 else dxScoreText.trim().toIntOrNull()
     val maxDxScore = (chart.sheet.total ?: 0) * 3
     val input = if (parsedAchievement != null && parsedDxScore != null) {
@@ -1111,180 +1992,244 @@ private fun ScoreEntryDialog(
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
     val difficultyColor = SongVisualUtils.difficultyColor(
         difficulty = chart.sheet.difficulty,
+        type = chart.sheet.type,
         darkTheme = darkTheme,
         brightenDark = true,
         fallbackColor = MiuixTheme.colorScheme.primary,
     )
+    val canSubmit = inputIsValid && saveStatus != ScoreSaveStatus.Saving
+    val headerActionVisible = canSubmit || saveStatus == ScoreSaveStatus.Saved
+    val submitOrDismiss: () -> Unit = {
+        focusManager.clearFocus()
+        if (saveStatus == ScoreSaveStatus.Saved) onDismiss() else input?.let(onSave)
+    }
 
-    Dialog(
+    ExpandableBottomSheet(
+        visible = visible,
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.92f)
-                .padding(horizontal = 18.dp),
-            cornerRadius = 8.dp,
-            insideMargin = androidx.compose.foundation.layout.PaddingValues(0.dp),
-        ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+        expandActionLabel = stringResource(R.string.score_entry_expand),
+        collapseActionLabel = stringResource(R.string.score_entry_collapse),
+        expandedStateDescription = stringResource(R.string.score_entry_sheet_expanded),
+        halfExpandedStateDescription = stringResource(R.string.score_entry_sheet_half),
+        header = {
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.CenterStart),
             ) {
-                item {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.score_entry_title),
-                                style = MiuixTheme.textStyles.title2,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Text(
-                                text = "${chart.sheet.type.displayChartType()} · ${chart.sheet.difficulty.displayDifficulty()} · Lv.${chart.sheet.internalLevel ?: chart.sheet.level}",
-                                style = MiuixTheme.textStyles.footnote1,
-                                color = difficultyColor,
-                            )
-                        }
-                        IconButton(onClick = onDismiss) {
-                            Icon(
-                                imageVector = MiuixIcons.Close,
-                                contentDescription = stringResource(R.string.action_cancel),
-                            )
-                        }
-                    }
-                }
-                item {
-                    TextField(
-                        value = achievementText,
-                        onValueChange = {
-                            achievementText = it
-                            onInputChanged()
-                        },
-                        label = stringResource(R.string.score_achievement_hint),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Decimal,
-                            imeAction = ImeAction.Next,
+                Icon(
+                    imageVector = Icons.Rounded.Close,
+                    contentDescription = stringResource(R.string.action_cancel),
+                )
+            }
+            Text(
+                text = stringResource(R.string.score_entry_title),
+                style = MiuixTheme.textStyles.title3,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Center),
+                maxLines = 1,
+            )
+            if (headerActionVisible) {
+                IconButton(
+                    onClick = submitOrDismiss,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = stringResource(
+                            if (saveStatus == ScoreSaveStatus.Saved) R.string.action_done else R.string.score_save,
                         ),
-                        modifier = Modifier.fillMaxWidth(),
-                        insideMargin = DpSize(width = 14.dp, height = 13.dp),
-                        cornerRadius = 14.dp,
-                        useLabelAsPlaceholder = true,
-                        singleLine = true,
+                        tint = MiuixTheme.colorScheme.primary,
                     )
                 }
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
+            }
+        },
+    ) { topInset ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                top = topInset + 12.dp,
+                end = 16.dp,
+                bottom = 28.dp,
+            ),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            item {
+                ScoreEntrySongCard(
+                    song = song,
+                    sheet = chart.sheet,
+                )
+            }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 16.dp,
+                    insideMargin = PaddingValues(16.dp),
+                    colors = CardDefaults.defaultColors(
+                        color = MiuixTheme.colorScheme.surfaceContainer,
+                        contentColor = MiuixTheme.colorScheme.onSurfaceContainer,
+                    ),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text(
-                            text = stringResource(R.string.score_rank),
-                            color = MiuixTheme.colorScheme.onBackgroundVariant,
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Text(
-                            text = parsedAchievement
-                                ?.takeIf { it.isFinite() && it in 0.0..101.0 }
-                                ?.let(ScoreRules::calculateRank)
-                                ?: stringResource(R.string.score_rank_pending),
-                            style = MiuixTheme.textStyles.title3,
+                            text = calculatedRank ?: stringResource(R.string.score_rank_pending),
+                            style = MiuixTheme.textStyles.title1,
                             fontWeight = FontWeight.Bold,
-                            color = accentColor,
+                            color = ScoreStatusColors.rank(calculatedRank)
+                                ?: MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
                         )
-                    }
-                }
-                item {
-                    TextField(
-                        value = dxScoreText,
-                        onValueChange = {
-                            dxScoreText = it.filter(Char::isDigit)
-                            onInputChanged()
-                        },
-                        label = if (maxDxScore > 0) {
-                            stringResource(R.string.score_dx_hint_with_max, maxDxScore)
-                        } else {
-                            stringResource(R.string.score_dx_score)
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Done,
-                        ),
-                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                        modifier = Modifier.fillMaxWidth(),
-                        insideMargin = DpSize(width = 14.dp, height = 13.dp),
-                        cornerRadius = 14.dp,
-                        useLabelAsPlaceholder = true,
-                        singleLine = true,
-                    )
-                }
-                item {
-                    ScoreOptionRow(
-                        title = stringResource(R.string.score_combo),
-                        options = listOf(null, "fc", "fcp", "ap", "app"),
-                        selected = selectedFc,
-                        accentColor = accentColor,
-                        display = { ScoreRules.displayFc(it) ?: stringResource(R.string.common_none) },
-                        onSelected = {
-                            selectedFc = it
-                            onInputChanged()
-                        },
-                    )
-                }
-                item {
-                    ScoreOptionRow(
-                        title = stringResource(R.string.score_sync),
-                        options = listOf(null, "sync", "fs", "fsp", "fsd", "fsdp"),
-                        selected = selectedFs,
-                        accentColor = accentColor,
-                        display = { ScoreRules.displayFs(it) ?: stringResource(R.string.common_none) },
-                        onSelected = {
-                            selectedFs = it
-                            onInputChanged()
-                        },
-                    )
-                }
-                item {
-                    ScoreEntryMessage(
-                        achievementText = achievementText,
-                        parsedAchievement = parsedAchievement,
-                        dxScoreText = dxScoreText,
-                        parsedDxScore = parsedDxScore,
-                        validationError = validationError,
-                        maxDxScore = maxDxScore,
-                        saveStatus = saveStatus,
-                    )
-                }
-                currentScore?.let { score ->
-                    item {
-                        Text(
-                            text = stringResource(
-                                R.string.score_current_best_value,
-                                formatAchievement(score.achievement),
-                                score.rank,
+                        TextField(
+                            value = achievementText,
+                            onValueChange = { value ->
+                                acceptedAchievementInput(value)?.let { accepted ->
+                                    if (accepted != achievementText) {
+                                        achievementText = accepted
+                                        onInputChanged()
+                                    }
+                                }
+                            },
+                            label = stringResource(R.string.score_achievement_hint),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Next,
                             ),
-                            style = MiuixTheme.textStyles.body2,
-                            color = MiuixTheme.colorScheme.onBackgroundVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                            insideMargin = DpSize(width = 14.dp, height = 13.dp),
+                            cornerRadius = 14.dp,
+                            useLabelAsPlaceholder = true,
+                            singleLine = true,
+                        )
+                        TextField(
+                            value = dxScoreText,
+                            onValueChange = { value ->
+                                acceptedDxScoreInput(value, maxDxScore)?.let { accepted ->
+                                    if (accepted != dxScoreText) {
+                                        dxScoreText = accepted
+                                        onInputChanged()
+                                    }
+                                }
+                            },
+                            label = if (maxDxScore > 0) {
+                                stringResource(R.string.score_dx_hint_with_max, maxDxScore)
+                            } else {
+                                stringResource(R.string.score_dx_score)
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Done,
+                            ),
+                            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                            modifier = Modifier.fillMaxWidth(),
+                            insideMargin = DpSize(width = 14.dp, height = 13.dp),
+                            cornerRadius = 14.dp,
+                            useLabelAsPlaceholder = true,
+                            singleLine = true,
+                        )
+                        ScoreDropdownField(
+                            title = stringResource(R.string.score_combo),
+                            options = listOf(null, "fc", "fcp", "ap", "app"),
+                            selected = selectedFc,
+                            display = { ScoreRules.displayFc(it) ?: stringResource(R.string.common_none) },
+                            optionColor = ScoreStatusColors::combo,
+                            onSelected = {
+                                selectedFc = it
+                                onInputChanged()
+                            },
+                        )
+                        ScoreDropdownField(
+                            title = stringResource(R.string.score_sync),
+                            options = listOf(null, "sync", "fs", "fsp", "fsd", "fsdp"),
+                            selected = selectedFs,
+                            display = {
+                                when (it) {
+                                    "sync" -> "Sync"
+                                    else -> ScoreRules.displayFs(it) ?: stringResource(R.string.common_none)
+                                }
+                            },
+                            optionColor = ScoreStatusColors::sync,
+                            onSelected = {
+                                selectedFs = it
+                                onInputChanged()
+                            },
                         )
                     }
                 }
+            }
+            item {
+                ScoreEntryMessage(
+                    achievementText = achievementText,
+                    parsedAchievement = parsedAchievement,
+                    dxScoreText = dxScoreText,
+                    parsedDxScore = parsedDxScore,
+                    validationError = validationError,
+                    maxDxScore = maxDxScore,
+                    saveStatus = saveStatus,
+                )
+            }
+            currentScore?.let { score ->
                 item {
-                    TextButton(
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        cornerRadius = 14.dp,
+                        insideMargin = PaddingValues(14.dp),
+                        colors = CardDefaults.defaultColors(
+                            color = MiuixTheme.colorScheme.surfaceContainerHigh,
+                            contentColor = MiuixTheme.colorScheme.onSurfaceContainerHigh,
+                        ),
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(
+                                text = stringResource(R.string.score_current_best),
+                                style = MiuixTheme.textStyles.footnote2,
+                                color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = "${formatAchievement(score.achievement)}%",
+                                    style = MiuixTheme.textStyles.body2,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Text(
+                                    text = score.rank,
+                                    style = MiuixTheme.textStyles.body2,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ScoreStatusColors.rank(score.rank)
+                                        ?: MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            item {
+                Button(
+                    onClick = submitOrDismiss,
+                    enabled = saveStatus == ScoreSaveStatus.Saved || canSubmit,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColorsPrimary(),
+                ) {
+                    Icon(
+                        imageVector = if (saveStatus == ScoreSaveStatus.Saved) {
+                            Icons.Rounded.Check
+                        } else {
+                            Icons.Rounded.Save
+                        },
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
                         text = when (saveStatus) {
                             ScoreSaveStatus.Saving -> stringResource(R.string.score_saving)
                             ScoreSaveStatus.Saved -> stringResource(R.string.action_done)
                             else -> stringResource(R.string.score_save)
                         },
-                        onClick = {
-                            focusManager.clearFocus()
-                            if (saveStatus == ScoreSaveStatus.Saved) onDismiss() else input?.let(onSave)
-                        },
-                        enabled = saveStatus == ScoreSaveStatus.Saved ||
-                            (inputIsValid && saveStatus != ScoreSaveStatus.Saving),
-                        modifier = Modifier.fillMaxWidth(),
-                        cornerRadius = 8.dp,
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                        style = MiuixTheme.textStyles.button,
                     )
                 }
             }
@@ -1293,53 +2238,119 @@ private fun ScoreEntryDialog(
 }
 
 @Composable
-private fun ScoreOptionRow(
+private fun ScoreDropdownField(
     title: String,
     options: List<String?>,
     selected: String?,
-    accentColor: Color,
     display: @Composable (String?) -> String,
+    optionColor: (String?) -> Color? = { null },
     onSelected: (String?) -> Unit,
 ) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedColor = optionColor(selected)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = title,
             style = MiuixTheme.textStyles.footnote1,
             color = MiuixTheme.colorScheme.onBackgroundVariant,
         )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            options.forEach { option ->
-                val isSelected = option == selected
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .squircleSurface(
+                        color = MiuixTheme.colorScheme.surfaceContainerHigh,
+                        cornerRadius = 14.dp,
+                        extension = SquircleExtension,
+                    )
+                    .clickable(role = Role.Button) { expanded = true }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
-                    text = display(option),
-                    style = MiuixTheme.textStyles.button,
-                    color = if (isSelected) {
-                        MiuixTheme.colorScheme.onPrimary
-                    } else {
-                        MiuixTheme.colorScheme.onSurfaceContainerVariant
-                    },
-                    modifier = Modifier
-                        .heightIn(min = 40.dp)
-                        .squircleSurface(
-                            color = if (isSelected) {
-                                accentColor
-                            } else {
-                                MiuixTheme.colorScheme.secondaryContainer
-                            },
-                            cornerRadius = 50.dp,
-                            extension = SquircleExtension,
-                        )
-                        .clickable { onSelected(option) }
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    text = display(selected),
+                    style = MiuixTheme.textStyles.body1,
+                    fontWeight = FontWeight.Medium,
+                    color = selectedColor ?: MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                    modifier = Modifier.weight(1f),
                 )
+                Icon(
+                    imageVector = Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = selectedColor ?: MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            WindowListPopup(
+                show = expanded,
+                alignment = PopupPositionProvider.Align.End,
+                enableWindowDim = false,
+                onDismissRequest = { expanded = false },
+            ) {
+                ListPopupColumn {
+                    options.forEach { option ->
+                        val isSelected = option == selected
+                        val color = optionColor(option)
+                            ?: MiuixTheme.colorScheme.onSurfaceContainer
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    if (isSelected) {
+                                        color.copy(alpha = 0.08f)
+                                    } else {
+                                        Color.Transparent
+                                    },
+                                )
+                                .selectable(
+                                    selected = isSelected,
+                                    role = Role.RadioButton,
+                                    onClick = {
+                                        onSelected(option)
+                                        expanded = false
+                                    },
+                                )
+                                .padding(horizontal = 20.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = display(option),
+                                style = MiuixTheme.textStyles.body1,
+                                fontWeight = FontWeight.Medium,
+                                color = color,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Check,
+                                    contentDescription = null,
+                                    tint = color,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
+}
+
+private fun acceptedAchievementInput(value: String): String? {
+    val normalized = value.replace(',', '.')
+    if (!AchievementInputPattern.matches(normalized)) return null
+    val parsed = normalized.toDoubleOrNull()
+    if (parsed != null && parsed > MaximumAchievement) return null
+    return normalized
+}
+
+private fun acceptedDxScoreInput(value: String, maximum: Int): String? {
+    if (value.isEmpty()) return value
+    if (value.any { it !in '0'..'9' }) return null
+    val parsed = value.toIntOrNull() ?: return null
+    if (maximum > 0 && parsed > maximum) return null
+    return value
 }
 
 @Composable
@@ -1445,3 +2456,7 @@ private fun formatPreciseLevel(value: Double): String {
     val normalized = value.toBigDecimal().stripTrailingZeros()
     return if (normalized.scale() < 1) normalized.setScale(1).toPlainString() else normalized.toPlainString()
 }
+
+private val AchievementInputPattern = Regex("^[0-9]{0,3}(?:\\.[0-9]{0,4})?$")
+private const val MaximumAchievement = 101.0
+private const val HistoryPageSize = 5

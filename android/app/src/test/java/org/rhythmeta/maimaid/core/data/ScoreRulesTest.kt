@@ -8,6 +8,14 @@ import org.rhythmeta.maimaid.core.database.ScoreEntity
 
 class ScoreRulesTest {
     @Test
+    fun `sync display values normalize to storage codes`() {
+        assertEquals("sync", ScoreRules.canonicalFs("S"))
+        assertEquals("fsp", ScoreRules.canonicalFs("FS+"))
+        assertEquals("fsd", ScoreRules.canonicalFs("FDX"))
+        assertEquals("fsdp", ScoreRules.canonicalFs("FDX+"))
+    }
+
+    @Test
     fun calculatesRanksAtEveryUpperBoundary() {
         assertEquals("D", ScoreRules.calculateRank(49.9999))
         assertEquals("C", ScoreRules.calculateRank(50.0))

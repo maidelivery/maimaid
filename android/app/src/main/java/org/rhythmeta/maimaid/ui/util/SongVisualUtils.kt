@@ -42,8 +42,8 @@ internal object SongVisualUtils {
                     .coerceIn(0.03f, if (selected) 0.18f else 0.11f)
             }
             hsv[2] = when {
-                darkTheme && selected -> 0.4f
-                darkTheme -> 0.3f
+                darkTheme && selected -> 0.3f
+                darkTheme -> 0.2f
                 selected -> 0.94f
                 else -> 0.98f
             }
@@ -102,6 +102,10 @@ internal object SongVisualUtils {
         brightenDark: Boolean = false,
         fallbackColor: Color = Color(0xFFFF2D55).copy(alpha = 0.5f),
     ): Color {
+        if (type?.contains("utage", ignoreCase = true) == true) {
+            return utageColor(darkTheme)
+        }
+
         val normalized = difficulty.lowercase()
         val baseColor = when {
             "basic" in normalized -> if (darkTheme) Color(0xFF2A974E) else Color(0xFF36BF63)
@@ -109,7 +113,6 @@ internal object SongVisualUtils {
             "expert" in normalized -> if (darkTheme) Color(0xFFC54153) else Color(0xFFF7536A)
             "remaster" in normalized -> if (darkTheme) Color(0xFFBF8CFC) else Color(0xFFE3BDFC)
             "master" in normalized -> if (darkTheme) Color(0xFF813DB4) else Color(0xFFA34EE4)
-            type?.contains("utage", ignoreCase = true) == true -> utageColor(darkTheme)
             else -> return fallbackColor
         }
         if (!darkTheme || !brightenDark) return baseColor

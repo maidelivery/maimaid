@@ -192,6 +192,120 @@ internal fun SongCard(
 }
 
 @Composable
+internal fun ScoreEntrySongCard(
+    song: SongEntity,
+    sheet: SheetEntity,
+    modifier: Modifier = Modifier,
+) {
+    val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
+    val difficultyColor = SongVisualUtils.difficultyColor(
+        difficulty = sheet.difficulty,
+        type = sheet.type,
+        darkTheme = darkTheme,
+        brightenDark = true,
+        fallbackColor = MiuixTheme.colorScheme.primary,
+    )
+    val chartTypeColor = SongVisualUtils.chartTypeColor(
+        type = sheet.type,
+        darkTheme = darkTheme,
+        fallbackColor = difficultyColor,
+    )
+    val cardColor = SongVisualUtils.detailColors(difficultyColor, darkTheme).surface
+    val artist = song.artist.ifBlank { stringResource(R.string.song_artist_unknown) }
+    val constant = sheet.internalLevel
+        ?.takeIf(String::isNotBlank)
+        ?: sheet.internalLevelValue?.toString()
+        ?: sheet.level
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(78.dp)
+            .squircleSurface(
+                color = cardColor,
+                cornerRadius = 14.dp,
+                extension = SquircleExtension,
+            )
+            .squircleBorder(
+                width = 1.dp,
+                color = difficultyColor.copy(alpha = 0.18f),
+                cornerRadius = 14.dp,
+                extension = SquircleExtension,
+            )
+            .padding(vertical = 12.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(vertical = 7.dp)
+                .fillMaxHeight()
+                .width(4.dp)
+                .squircleSurface(
+                    color = difficultyColor,
+                    cornerRadius = 2.dp,
+                    extension = SquircleExtension,
+                ),
+        )
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .padding(start = 12.dp, end = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Text(
+                    text = song.title,
+                    style = MiuixTheme.textStyles.body1.copy(
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                    color = MiuixTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = artist,
+                    style = MiuixTheme.textStyles.footnote1.copy(fontSize = 12.sp),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = sheet.difficulty.scoreEntryDifficultyLabel(),
+                    style = MiuixTheme.textStyles.body2.copy(fontWeight = FontWeight.SemiBold),
+                    color = difficultyColor,
+                    maxLines = 1,
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = sheet.type.scoreEntryChartTypeLabel(),
+                        style = MiuixTheme.textStyles.footnote1.copy(fontWeight = FontWeight.Bold),
+                        color = chartTypeColor,
+                    )
+                    Text(
+                        text = constant,
+                        style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.Bold),
+                        color = difficultyColor,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun SongJacket(
     imageName: String,
     coverImageStore: CoverImageStore,
@@ -226,4 +340,14 @@ private fun SongJacket(
             modifier = Modifier.fillMaxSize(),
         )
     }
+}
+
+private fun String.scoreEntryChartTypeLabel(): String = when (lowercase()) {
+    "std", "standard" -> "STD"
+    else -> uppercase()
+}
+
+private fun String.scoreEntryDifficultyLabel(): String = when (lowercase()) {
+    "remaster" -> "RE:MASTER"
+    else -> uppercase()
 }
