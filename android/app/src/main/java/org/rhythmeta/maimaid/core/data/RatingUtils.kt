@@ -3,6 +3,8 @@ package org.rhythmeta.maimaid.core.data
 import kotlin.math.floor
 
 object RatingUtils {
+    data class RankThreshold(val rank: String, val threshold: Double)
+
     data class Entry(
         val sheetKey: String,
         val songIdentifier: String,
@@ -25,6 +27,23 @@ object RatingUtils {
         80.0 to 13.6, 90.0 to 15.2, 94.0 to 16.8, 96.9999 to 17.6, 97.0 to 20.0,
         98.0 to 20.3, 98.9999 to 20.6, 99.0 to 20.8, 99.5 to 21.1,
         99.9999 to 21.4, 100.0 to 21.6, 100.4999 to 22.2, 100.5 to 22.4,
+    )
+
+    val rankThresholds = listOf(
+        RankThreshold("D", 0.0),
+        RankThreshold("C", 50.0),
+        RankThreshold("B", 60.0),
+        RankThreshold("BB", 70.0),
+        RankThreshold("BBB", 75.0),
+        RankThreshold("A", 80.0),
+        RankThreshold("AA", 90.0),
+        RankThreshold("AAA", 94.0),
+        RankThreshold("S", 97.0),
+        RankThreshold("S+", 98.0),
+        RankThreshold("SS", 99.0),
+        RankThreshold("SS+", 99.5),
+        RankThreshold("SSS", 100.0),
+        RankThreshold("SSS+", 100.5),
     )
 
     fun coefficient(achievement: Double): Double = coefficients.lastOrNull { achievement >= it.first }?.second ?: 0.0

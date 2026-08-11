@@ -48,7 +48,13 @@ object ScoreRules {
         else -> normalized
     }
 
-    fun canonicalFs(value: String?): String? = value.normalizedCode()
+    fun canonicalFs(value: String?): String? = when (val normalized = value.normalizedCode()) {
+        "s" -> "sync"
+        "fs+" -> "fsp"
+        "fdx", "fsd" -> "fsd"
+        "fdx+", "fsdp" -> "fsdp"
+        else -> normalized
+    }
 
     fun displayFc(value: String?): String? = when (val canonical = canonicalFc(value)) {
         "fcp" -> "FC+"

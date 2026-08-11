@@ -15,6 +15,13 @@ class RatingUtilsTest {
     }
 
     @Test
+    fun `rank thresholds match score entry ranks`() {
+        RatingUtils.rankThresholds.forEach { threshold ->
+            assertEquals(threshold.rank, RatingUtils.rank(threshold.threshold))
+        }
+    }
+
+    @Test
     fun `ap receives bonus from circle onward`() {
         assertEquals(292, RatingUtils.calculate(13.0, 100.5, fc = "ap", afterCircle = false))
         assertEquals(293, RatingUtils.calculate(13.0, 100.5, fc = "app", afterCircle = true))
