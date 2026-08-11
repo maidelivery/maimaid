@@ -4,6 +4,14 @@ import android.os.Build
 import android.view.RoundedCorner
 import androidx.activity.BackEventCompat
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.DocumentScanner
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -84,14 +92,6 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.Home
-import top.yukonga.miuix.kmp.icon.extended.Scan
-import top.yukonga.miuix.kmp.icon.extended.Search
-import top.yukonga.miuix.kmp.icon.extended.Settings
-import top.yukonga.miuix.kmp.icon.extended.Favorites
-import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -333,7 +333,6 @@ fun MaimaidApp(
                 onOpenSong = openSong,
             )
             RootDestination.Settings -> SettingsScreen(
-                state = uiState,
                 themeMode = themeMode,
                 themeColorSource = themeColorSource,
                 themeCustomColorArgb = themeCustomColorArgb,
@@ -344,7 +343,6 @@ fun MaimaidApp(
                 showScannerBoundingBoxes = showScannerBoundingBoxes,
                 onShowScannerBoundingBoxesChange = viewModel::setShowScannerBoundingBoxes,
                 onOpenDetail = openDetail,
-                onRetrySync = viewModel::retryCatalogSync,
             )
         }
     }
@@ -377,7 +375,7 @@ fun MaimaidApp(
     val detailNavigationIcon: @Composable () -> Unit = {
         if (detail != null) {
             IconButton(onClick = closeDetail) {
-                Icon(MiuixIcons.Back, contentDescription = stringResource(R.string.action_back))
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back))
             }
         }
     }
@@ -387,7 +385,7 @@ fun MaimaidApp(
                 viewModel.setSongFavorite(selectedSong.songIdentifier, !selectedSong.isFavorite)
             }) {
                 Icon(
-                    imageVector = if (selectedSong.isFavorite) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
+                    imageVector = if (selectedSong.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                     contentDescription = stringResource(
                         if (selectedSong.isFavorite) R.string.song_remove_favorite else R.string.song_add_favorite,
                     ),
@@ -663,6 +661,23 @@ fun MaimaidApp(
                                 actions = detailActions,
                                 defaultWindowInsetsPadding = true,
                             )
+                        } else if (activeDetail == AppDetail.StaticData) {
+                            val detailTitle = detailTitle(activeDetail)
+                            SmallTopAppBar(
+                                title = detailTitle,
+                                modifier = Modifier.drawPlainBackdrop(
+                                    backdrop = detailBackdrop,
+                                    shape = { RectangleShape },
+                                    effects = { blur(24.dp.toPx()) },
+                                    onDrawSurface = {
+                                        drawRect(backgroundColor.copy(alpha = 0.52f))
+                                    },
+                                ),
+                                color = Color.Transparent,
+                                navigationIcon = detailNavigationIcon,
+                                actions = detailActions,
+                                defaultWindowInsetsPadding = true,
+                            )
                         } else {
                             val detailTitle = detailTitle(activeDetail)
                             TopAppBar(
@@ -680,15 +695,19 @@ fun MaimaidApp(
                         modifier = Modifier
                             .fillMaxSize()
                             .then(
-                                if (activeDetail == AppDetail.Song) Modifier.layerBackdrop(detailBackdrop)
-                                else Modifier.padding(paddingValues),
+                                when (activeDetail) {
+                                    AppDetail.Song -> Modifier.layerBackdrop(detailBackdrop)
+                                    AppDetail.StaticData -> Modifier
+                                        .padding(paddingValues)
+                                        .layerBackdrop(detailBackdrop)
+                                    else -> Modifier.padding(paddingValues)
+                                },
                             ),
                     ) {
                         DetailScreen(
                             detail = activeDetail,
                             state = uiState,
                             selectedSongId = selectedSongId,
-                            onRetrySync = viewModel::retryCatalogSync,
                             container = container,
                             songContentTopPadding = paddingValues.calculateTopPadding(),
                             onSongDetailBackgroundChanged = { color ->
@@ -827,10 +846,10 @@ private fun AppNavigationBar(
         onSelected = { index -> onDestinationSelected(destinations[index]) },
         backdrop = backdrop,
         tabs = listOf(
-            LiquidGlassTab(MiuixIcons.Home, stringResource(R.string.nav_home)),
-            LiquidGlassTab(MiuixIcons.Scan, stringResource(R.string.nav_scan)),
-            LiquidGlassTab(MiuixIcons.Search, stringResource(R.string.nav_library)),
-            LiquidGlassTab(MiuixIcons.Settings, stringResource(R.string.nav_settings)),
+            LiquidGlassTab(Icons.Rounded.Home, stringResource(R.string.nav_home)),
+            LiquidGlassTab(Icons.Rounded.DocumentScanner, stringResource(R.string.nav_scan)),
+            LiquidGlassTab(Icons.Rounded.Search, stringResource(R.string.nav_library)),
+            LiquidGlassTab(Icons.Rounded.Settings, stringResource(R.string.nav_settings)),
         ),
         modifier = modifier,
     )

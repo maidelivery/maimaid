@@ -42,6 +42,10 @@ class CatalogRepository(
     fun observeAliasesForSong(songIdentifier: String): Flow<List<String>> =
         catalogDao.observeAliasesForSong(songIdentifier)
 
+    suspend fun fetchStaticManifest(): StaticManifest = client.fetchManifest()
+
+    suspend fun currentStaticDataMd5(): String? = syncStateStore.currentMd5()
+
     suspend fun setFavorite(songIdentifier: String, isFavorite: Boolean) {
         catalogDao.setFavorite(songIdentifier, isFavorite)
     }
