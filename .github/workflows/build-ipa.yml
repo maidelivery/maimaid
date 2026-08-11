@@ -4,7 +4,6 @@ name: Build maimaid IPA
   push:
     paths:
       - ios/**
-  workflow_dispatch:
 
 jobs:
   build-ipa:
