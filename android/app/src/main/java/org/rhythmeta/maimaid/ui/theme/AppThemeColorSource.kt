@@ -5,4 +5,4 @@ enum class AppThemeColorSource {
     Custom,
 }
 
-val DefaultThemeCustomColorArgb: Int = 0xFF00A4A6.toInt()
+val DefaultThemeCustomColorArgb: Int = 0xFF3F8C8E.toInt()

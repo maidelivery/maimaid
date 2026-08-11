@@ -1,5 +1,6 @@
 package org.rhythmeta.maimaid.ui.settings
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,6 +8,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AcUnit
+import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.DocumentScanner
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.People
+import androidx.compose.material.icons.rounded.SetMeal
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -17,34 +27,25 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.rhythmeta.maimaid.BuildConfig
 import org.rhythmeta.maimaid.R
-import org.rhythmeta.maimaid.ui.MainUiState
-import org.rhythmeta.maimaid.ui.components.CatalogSyncBanner
+import org.rhythmeta.maimaid.ui.components.OpaqueColorPalette
+import org.rhythmeta.maimaid.ui.components.SquircleExtension
 import org.rhythmeta.maimaid.ui.navigation.AppDetail
 import org.rhythmeta.maimaid.ui.theme.AppThemeColorSource
 import org.rhythmeta.maimaid.ui.theme.AppThemeMode
+import org.rhythmeta.maimaid.ui.theme.toMutedThemeSeed
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.ColorPalette
-import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.TabRowWithContour
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.CloudFill
-import top.yukonga.miuix.kmp.icon.extended.Contacts
-import top.yukonga.miuix.kmp.icon.extended.Download
-import top.yukonga.miuix.kmp.icon.extended.Import
-import top.yukonga.miuix.kmp.icon.extended.Info
-import top.yukonga.miuix.kmp.icon.extended.Scan
-import top.yukonga.miuix.kmp.icon.extended.Theme
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.preference.RadioButtonPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
+import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
+import top.yukonga.miuix.kmp.squircle.squircleBackground
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun SettingsScreen(
-    state: MainUiState,
     themeMode: AppThemeMode,
     themeColorSource: AppThemeColorSource,
     themeCustomColorArgb: Int,
@@ -55,7 +56,6 @@ fun SettingsScreen(
     showScannerBoundingBoxes: Boolean,
     onShowScannerBoundingBoxesChange: (Boolean) -> Unit,
     onOpenDetail: (AppDetail) -> Unit,
-    onRetrySync: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -65,123 +65,137 @@ fun SettingsScreen(
         ),
     ) {
         item {
-            SmallTitle(text = stringResource(R.string.settings_profiles))
-            SettingsGroup {
+            SettingsSection(title = stringResource(R.string.settings_user_management)) {
                 SettingsRow(
-                    icon = MiuixIcons.Contacts,
+                    icon = Icons.Rounded.People,
                     title = stringResource(R.string.settings_profiles),
-                    summary = stringResource(
-                        R.string.settings_profiles_summary,
-                        state.activeProfile?.name ?: stringResource(R.string.default_profile_name),
-                    ),
+                    summary = stringResource(R.string.settings_profiles_description),
                     onClick = { onOpenDetail(AppDetail.Profiles) },
                 )
             }
         }
         item {
-            SmallTitle(text = stringResource(R.string.settings_data))
-            CatalogSyncBanner(
-                status = state.catalogSyncStatus,
-                onRetry = onRetrySync,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
-            SettingsGroup {
+            SettingsSection(title = stringResource(R.string.settings_data)) {
                 SettingsRow(
-                    icon = MiuixIcons.Download,
+                    icon = Icons.Rounded.Download,
                     title = stringResource(R.string.settings_static_data),
-                    summary = stringResource(R.string.catalog_song_count, state.songCount),
+                    summary = stringResource(R.string.settings_static_data_description),
                     onClick = { onOpenDetail(AppDetail.StaticData) },
                 )
-                HorizontalDivider(modifier = Modifier.padding(start = 58.dp))
                 SettingsRow(
-                    icon = MiuixIcons.CloudFill,
+                    icon = Icons.Rounded.Cloud,
                     title = stringResource(R.string.settings_cloud),
+                    summary = stringResource(R.string.settings_cloud_description),
                     onClick = { onOpenDetail(AppDetail.BackendAuth) },
                 )
             }
         }
         item {
-            SmallTitle(text = stringResource(R.string.settings_import))
-            SettingsGroup {
+            SettingsSection(title = stringResource(R.string.settings_import)) {
                 SettingsRow(
-                    icon = MiuixIcons.Import,
+                    icon = Icons.Rounded.SetMeal,
                     title = stringResource(R.string.settings_diving_fish),
+                    summary = stringResource(R.string.settings_diving_fish_description),
                     onClick = { onOpenDetail(AppDetail.DivingFishImport) },
                 )
-                HorizontalDivider(modifier = Modifier.padding(start = 58.dp))
                 SettingsRow(
-                    icon = MiuixIcons.Import,
+                    icon = Icons.Rounded.AcUnit,
                     title = stringResource(R.string.settings_lxns),
+                    summary = stringResource(R.string.settings_lxns_description),
                     onClick = { onOpenDetail(AppDetail.LxnsImport) },
                 )
             }
         }
         item {
-            SmallTitle(text = stringResource(R.string.settings_appearance))
-            SettingsGroup {
-                BasicComponent(
+            val themeOptions = listOf(
+                stringResource(R.string.theme_system),
+                stringResource(R.string.theme_light),
+                stringResource(R.string.theme_dark),
+            )
+            val colorSourceOptions = listOf(
+                stringResource(R.string.theme_color_wallpaper),
+                stringResource(R.string.theme_color_custom),
+            )
+
+            SettingsSection(title = stringResource(R.string.settings_appearance)) {
+                WindowDropdownPreference(
+                    items = themeOptions,
+                    selectedIndex = themeMode.ordinal,
                     title = stringResource(R.string.settings_theme),
-                    startAction = { SettingsPreferenceIcon(MiuixIcons.Theme) },
-                    bottomAction = {
-                        TabRowWithContour(
-                            tabs = listOf(
-                                stringResource(R.string.theme_system),
-                                stringResource(R.string.theme_light),
-                                stringResource(R.string.theme_dark),
-                            ),
-                            selectedTabIndex = themeMode.ordinal,
-                            onTabSelected = { index -> onThemeModeChange(AppThemeMode.entries[index]) },
-                        )
+                    summary = stringResource(R.string.settings_theme_description),
+                    startAction = {
+                        SettingsPreferenceIcon(Icons.Rounded.Palette)
+                    },
+                    onSelectedIndexChange = { index ->
+                        AppThemeMode.entries.getOrNull(index)?.let(onThemeModeChange)
                     },
                 )
-            }
-            SmallTitle(text = stringResource(R.string.settings_monet_colors))
-            SettingsGroup {
-                RadioButtonPreference(
-                    title = stringResource(R.string.theme_color_wallpaper),
-                    summary = stringResource(R.string.theme_color_wallpaper_summary),
-                    selected = themeColorSource == AppThemeColorSource.Wallpaper,
-                    onClick = { onThemeColorSourceChange(AppThemeColorSource.Wallpaper) },
+                WindowDropdownPreference(
+                    items = colorSourceOptions,
+                    selectedIndex = themeColorSource.ordinal,
+                    title = stringResource(R.string.settings_monet_colors),
+                    summary = stringResource(
+                        when (themeColorSource) {
+                            AppThemeColorSource.Wallpaper -> R.string.theme_color_wallpaper_summary
+                            AppThemeColorSource.Custom -> R.string.theme_color_custom_summary
+                        },
+                    ),
+                    startAction = {
+                        SettingsPreferenceIcon(Icons.Rounded.Palette)
+                    },
+                    onSelectedIndexChange = { index ->
+                        AppThemeColorSource.entries.getOrNull(index)?.let(onThemeColorSourceChange)
+                    },
                 )
-                HorizontalDivider(modifier = Modifier.padding(start = 58.dp))
-                RadioButtonPreference(
-                    title = stringResource(R.string.theme_color_custom),
-                    summary = stringResource(R.string.theme_color_custom_summary),
-                    selected = themeColorSource == AppThemeColorSource.Custom,
-                    onClick = { onThemeColorSourceChange(AppThemeColorSource.Custom) },
-                    bottomAction = if (themeColorSource == AppThemeColorSource.Custom) {
-                        {
-                            ColorPalette(
-                                color = Color(themeCustomColorArgb),
-                                onColorChanged = { color -> onThemeCustomColorChange(color.toArgb()) },
+                if (themeColorSource == AppThemeColorSource.Custom) {
+                    BasicComponent(
+                        title = stringResource(R.string.theme_color_custom),
+                        startAction = {
+                            SettingsPreferenceIcon(Icons.Rounded.Palette)
+                        },
+                        endActions = {
+                            SettingsColorSwatch(
+                                color = Color(themeCustomColorArgb).toMutedThemeSeed(),
                             )
-                        }
-                    } else {
-                        null
-                    },
-                )
-            }
-            SettingsGroup {
+                        },
+                        bottomAction = {
+                            OpaqueColorPalette(
+                                color = Color(themeCustomColorArgb),
+                                onColorChanged = { color ->
+                                    onThemeCustomColorChange(color.toArgb())
+                                },
+                            )
+                        },
+                    )
+                }
                 SettingsToggleRow(
-                    icon = MiuixIcons.Scan,
+                    icon = Icons.Rounded.DocumentScanner,
                     title = stringResource(R.string.settings_scanner_boxes),
+                    summary = stringResource(R.string.settings_scanner_boxes_description),
                     checked = showScannerBoundingBoxes,
                     onCheckedChange = onShowScannerBoundingBoxesChange,
                 )
             }
         }
         item {
-            SmallTitle(text = stringResource(R.string.settings_about))
-            SettingsGroup {
-                SettingsRow(
-                    icon = MiuixIcons.Info,
-                    title = stringResource(R.string.settings_about),
-                    summary = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
-                    onClick = { onOpenDetail(AppDetail.About) },
+            SettingsSection(title = stringResource(R.string.settings_about)) {
+                SettingsValueRow(
+                    icon = Icons.Rounded.Info,
+                    title = stringResource(R.string.settings_version_label),
+                    value = BuildConfig.VERSION_NAME,
                 )
             }
         }
     }
+}
+
+@Composable
+private fun SettingsSection(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    SmallTitle(text = title)
+    SettingsGroup(content = content)
 }
 
 @Composable
@@ -200,7 +214,7 @@ private fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
 private fun SettingsRow(
     icon: ImageVector,
     title: String,
-    summary: String? = null,
+    summary: String,
     onClick: () -> Unit,
 ) {
     ArrowPreference(
@@ -216,6 +230,7 @@ private fun SettingsRow(
 private fun SettingsToggleRow(
     icon: ImageVector,
     title: String,
+    summary: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
@@ -223,16 +238,53 @@ private fun SettingsToggleRow(
         checked = checked,
         onCheckedChange = onCheckedChange,
         title = title,
+        summary = summary,
         startAction = { SettingsPreferenceIcon(icon) },
     )
 }
 
 @Composable
-private fun SettingsPreferenceIcon(icon: ImageVector) {
+private fun SettingsValueRow(
+    icon: ImageVector,
+    title: String,
+    value: String,
+) {
+    BasicComponent(
+        title = title,
+        startAction = { SettingsPreferenceIcon(icon) },
+        endActions = {
+            Text(
+                text = value,
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+            )
+        },
+    )
+}
+
+@Composable
+private fun SettingsPreferenceIcon(
+    icon: ImageVector,
+) {
     Icon(
         imageVector = icon,
         contentDescription = null,
-        modifier = Modifier.size(26.dp),
-        tint = MiuixTheme.colorScheme.primary,
+        modifier = Modifier
+            .padding(end = 6.dp)
+            .size(24.dp),
+        tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
+    )
+}
+
+@Composable
+private fun SettingsColorSwatch(color: Color) {
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .squircleBackground(
+                color = color,
+                cornerRadius = 10.dp,
+                extension = SquircleExtension,
+            ),
     )
 }
