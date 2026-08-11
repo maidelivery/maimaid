@@ -1,0 +1,53 @@
+name: Build maimaid APK
+
+"on":
+  push:
+    paths:
+      - android/**
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-37"
+
+      - name: Build release APK
+        working-directory: android
+        run: >-
+          ./gradlew :app:assembleRelease
+          -PMAIMAID_SPLIT_RELEASE_APKS=true
+          --warning-mode all
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: maimaid-apk-${{ github.sha }}
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      - name: Upload R8 mapping
+        uses: actions/upload-artifact@v4
+        with:
+          name: maimaid-r8-mapping-${{ github.sha }}
+          path: android/app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error

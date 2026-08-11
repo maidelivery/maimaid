@@ -7,6 +7,9 @@ plugins {
 
 val maimaidBackendUrl = providers.gradleProperty("MAIMAID_BACKEND_URL")
     .orElse("https://api.shikoch.in")
+val splitReleaseApks = providers.gradleProperty("MAIMAID_SPLIT_RELEASE_APKS")
+    .map { it.toBoolean() }
+    .orElse(false)
 
 android {
     namespace = "org.rhythmeta.maimaid"
@@ -25,11 +28,20 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+    splits {
+        abi {
+            isEnable = splitReleaseApks.get()
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk = false
         }
     }
     compileOptions {
