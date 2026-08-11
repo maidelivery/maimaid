@@ -184,7 +184,7 @@ private fun CatalogGrid(
     var liveColumnCount by remember(committedColumns) {
         mutableFloatStateOf(committedColumns.coerceIn(MinGridColumns, MaxGridColumns).toFloat())
     }
-    val transformState = rememberTransformableState { zoomChange, _, _ ->
+    val transformState = rememberTransformableState { _, zoomChange, _, _ ->
         liveColumnCount = (liveColumnCount / zoomChange).coerceIn(
             MinGridColumns.toFloat(),
             MaxGridColumns.toFloat(),
