@@ -86,3 +86,60 @@ If SwiftData is configured to use CloudKit:
 ## XcodeBuildMCP
                                             
 - If using XcodeBuildMCP, use the installed XcodeBuildMCP skill before calling XcodeBuildMCP tools.
+
+## Android maimaid port
+
+This section is the persistent source of truth for porting the current iOS maimaid app to Android.
+
+### Technical baseline
+
+- Use Kotlin, Jetpack Compose, MIUIX 0.9.3, Room, DataStore, and ONNX Runtime.
+- Keep `compileSdk` and `targetSdk` at 37 or later.
+- Use modern APK packaging with legacy packaging disabled.
+- Maintain English, Simplified Chinese, Traditional Chinese, and Japanese resources together.
+
+### UI requirements
+
+- Use Backdrop for the Apple-style Liquid Glass floating tab bar.
+- Use MIUIX basic components directly. Use MIUIX squircle modifiers with a `1.2f` extension for app-owned rounded rectangular surfaces, and adapt `Path.addSquircleRect` only where an API requires a Compose `Shape`.
+- Allow page content to extend behind the floating tab bar without an opaque bottom layer.
+- Preserve global predictive back gestures: detail screens return to their source, non-home root tabs return to Home, and Home delegates back to the system.
+- Match the established tab bar interaction: a gray default ripple, a briefly enlarged liquid selection during a short press, and an enlarged draggable ripple and bar during a long press on the selected tab.
+- Use `com.kowx712.supermanager` on the PLZ110 device as the interaction reference where needed.
+
+### OCR and vision requirements
+
+- Use PaddleOCR PP-OCRv6 for OCR.
+- Run vision models with ONNX Runtime.
+- Apply class-aware NMS to relevant detector output.
+
+### Data requirements
+
+- Use Room and the current backend static-data protocol as Android data sources.
+- Exclude the legacy iOS JSON data from the Android app.
+- Preserve profile-scoped scores and play records throughout all repository, calculation, import, and synchronization flows.
+
+### Current Android status
+
+- The app skeleton, four root tabs, basic navigation, catalog synchronization, Room entities, basic settings, vision models, Liquid Glass tab bar, and Squircle components are present.
+- Stage 1, Score domain foundation, is complete: score entry, update rules, score history, profile isolation, and focused unit/device validation are in place.
+- Stage 2, Best 50, is complete: B35/B15 version classification, Rating calculation, Room-driven cache invalidation, list presentation, and image export are in place.
+- The project currently uses `compileSdk = 37`, `targetSdk = 37`, MIUIX 0.9.3, Backdrop 2.0.0, and ONNX Runtime 1.28.0.
+- PLZ110 runs Android 16 and is connected through ADB for installation, interaction checks, screenshots, logs, and performance validation.
+- Existing Android worktree changes are active project work and must be preserved.
+
+### Fixed implementation order
+
+1. Score domain foundation: fully port `ScoreService`, score entry, update rules, score history, and multi-profile isolation.
+2. Best 50: implement B35/B15 grouping, version boundaries, Rating calculations, cache invalidation, list presentation, and image export.
+3. Song details: implement chart information, personal scores, play records, chart statistics, and the community-alias entry point.
+4. Score query: implement combined filters, sorting, persisted filter settings, and empty-result states.
+5. Rating recommendations: implement B35/B15 replacement thresholds, target achievements, recommendation lists, and caching.
+6. Utilities: implement random song selection, constant tables, and constant-table image export.
+7. Progress: implement plate progress, version groups, achievement conditions, Dan lists, and Dan details.
+8. Community aliases: implement candidate submission, duplicate detection, voting board, daily quota, and approved-alias synchronization.
+9. Accounts and synchronization: implement profiles, DivingFish/LXNS imports, backend authentication, incremental synchronization, conflict resolution, backup, and restore.
+10. Complete OCR pipeline: implement camera and photo input, PP-OCRv6 detection and recognition, all three vision models, NMS, song/chart matching, result confirmation, and score persistence.
+11. Final acceptance: complete all four localizations, accessibility, dark theme, offline and failure states, predictive back behavior, device performance validation, and visual regression checks.
+
+For every stage, port the current iOS business contract and its test cases first, then implement the Android Repository, ViewModel, and Compose UI. Complete each stage with focused unit tests, `compileDebugKotlin`, `assembleDebug`, and PLZ110 device validation.

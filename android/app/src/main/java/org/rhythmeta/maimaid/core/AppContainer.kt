@@ -1,0 +1,60 @@
+package org.rhythmeta.maimaid.core
+
+import android.content.Context
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import kotlinx.serialization.json.Json
+import org.rhythmeta.maimaid.BuildConfig
+import org.rhythmeta.maimaid.R
+import org.rhythmeta.maimaid.core.data.CatalogRepository
+import org.rhythmeta.maimaid.core.data.CatalogSyncStateStore
+import org.rhythmeta.maimaid.core.data.CoverImageStore
+import org.rhythmeta.maimaid.core.data.AppPreferencesRepository
+import org.rhythmeta.maimaid.core.data.Best50Repository
+import org.rhythmeta.maimaid.core.data.ProfileRepository
+import org.rhythmeta.maimaid.core.data.ScoreRepository
+import org.rhythmeta.maimaid.core.database.MaimaidDatabase
+import org.rhythmeta.maimaid.core.ml.OnnxSessionFactory
+import org.rhythmeta.maimaid.core.network.StaticBundleClient
+
+class AppContainer(context: Context) {
+    private val applicationContext = context.applicationContext
+    private val json = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+        explicitNulls = false
+    }
+
+    val database: MaimaidDatabase = Room.databaseBuilder(
+        applicationContext,
+        MaimaidDatabase::class.java,
+        "maimaid.db",
+    ).setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+        .build()
+
+    val appPreferencesRepository = AppPreferencesRepository(applicationContext)
+    val onnxSessionFactory = OnnxSessionFactory(applicationContext)
+    val coverImageStore = CoverImageStore(applicationContext)
+
+    val profileRepository = ProfileRepository(
+        profileDao = database.profileDao(),
+        defaultProfileName = applicationContext.getString(R.string.default_profile_name),
+    )
+
+    val scoreRepository = ScoreRepository(
+        database = database,
+        profileRepository = profileRepository,
+    )
+
+    val best50Repository = Best50Repository(
+        database = database,
+        profileRepository = profileRepository,
+    )
+
+    val catalogRepository = CatalogRepository(
+        database = database,
+        client = StaticBundleClient(BuildConfig.BACKEND_URL, json),
+        syncStateStore = CatalogSyncStateStore(applicationContext),
+        coverImageStore = coverImageStore,
+    )
+}

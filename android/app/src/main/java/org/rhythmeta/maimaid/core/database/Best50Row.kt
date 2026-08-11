@@ -1,0 +1,23 @@
+package org.rhythmeta.maimaid.core.database
+
+data class Best50Row(
+    val profileId: String,
+    val sheetKey: String,
+    val achievement: Double,
+    val resultRank: String,
+    val dxScore: Int,
+    val fc: String?,
+    val fs: String?,
+    val songIdentifier: String,
+    val title: String,
+    val imageName: String,
+    val category: String,
+    val songVersion: String?,
+    val type: String,
+    val difficulty: String,
+    val sheetVersion: String?,
+    val internalLevelValue: Double?,
+    val regionJp: Boolean,
+    val regionIntl: Boolean,
+    val regionCn: Boolean,
+)
