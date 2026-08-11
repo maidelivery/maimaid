@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DocumentScanner
+import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -44,9 +47,6 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Photos
-import top.yukonga.miuix.kmp.icon.extended.Scan
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -130,7 +130,7 @@ fun ScannerScreen(
             if (preview == null) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
-                        imageVector = MiuixIcons.Scan,
+                        imageVector = Icons.Rounded.DocumentScanner,
                         contentDescription = null,
                         modifier = Modifier.size(56.dp),
                         tint = MiuixTheme.colorScheme.onBackgroundVariant,
@@ -181,7 +181,7 @@ fun ScannerScreen(
                 onClick = { photoLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                 modifier = Modifier.weight(1f),
             ) {
-                Icon(MiuixIcons.Photos, contentDescription = null)
+                Icon(Icons.Rounded.PhotoLibrary, contentDescription = null)
                 Spacer(Modifier.size(8.dp))
                 Text(stringResource(R.string.action_photos))
             }
@@ -190,7 +190,7 @@ fun ScannerScreen(
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColorsPrimary(),
             ) {
-                Icon(MiuixIcons.Scan, contentDescription = null)
+                Icon(Icons.Rounded.DocumentScanner, contentDescription = null)
                 Spacer(Modifier.size(8.dp))
                 Text(stringResource(R.string.action_camera))
             }

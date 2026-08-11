@@ -12,6 +12,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.FactCheck
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
+import androidx.compose.material.icons.automirrored.rounded.ViewList
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.GridOn
+import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,15 +41,6 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Community
-import top.yukonga.miuix.kmp.icon.extended.Link
-import top.yukonga.miuix.kmp.icon.extended.ListView
-import top.yukonga.miuix.kmp.icon.extended.Music
-import top.yukonga.miuix.kmp.icon.extended.Notes
-import top.yukonga.miuix.kmp.icon.extended.Promotions
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.extended.Tasks
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -157,7 +157,7 @@ private fun BestTableAction(onClick: () -> Unit) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                imageVector = MiuixIcons.Promotions,
+                imageVector = Icons.Rounded.EmojiEvents,
                 contentDescription = null,
                 modifier = Modifier.size(34.dp),
                 tint = MiuixTheme.colorScheme.primary,
@@ -182,14 +182,14 @@ private fun BestTableAction(onClick: () -> Unit) {
 @Composable
 private fun ToolList(onOpenDetail: (AppDetail) -> Unit) {
     val tools = listOf(
-        ToolItem(R.string.home_random, MiuixIcons.Music, AppDetail.RandomSong),
-        ToolItem(R.string.home_recommendations, MiuixIcons.Refresh, AppDetail.Recommendations),
-        ToolItem(R.string.home_score_query, MiuixIcons.ListView, AppDetail.ScoreQuery),
-        ToolItem(R.string.home_constant_table, MiuixIcons.Notes, AppDetail.ConstantTable),
-        ToolItem(R.string.home_plate, MiuixIcons.Tasks, AppDetail.PlateProgress),
-        ToolItem(R.string.home_dan, MiuixIcons.Promotions, AppDetail.Dan),
-        ToolItem(R.string.home_aliases, MiuixIcons.Community, AppDetail.CommunityAliases),
-        ToolItem(R.string.home_links, MiuixIcons.Link, AppDetail.UsefulLinks),
+        ToolItem(R.string.home_random, Icons.Rounded.MusicNote, AppDetail.RandomSong),
+        ToolItem(R.string.home_recommendations, Icons.AutoMirrored.Rounded.TrendingUp, AppDetail.Recommendations),
+        ToolItem(R.string.home_score_query, Icons.AutoMirrored.Rounded.ViewList, AppDetail.ScoreQuery),
+        ToolItem(R.string.home_constant_table, Icons.Rounded.GridOn, AppDetail.ConstantTable),
+        ToolItem(R.string.home_plate, Icons.AutoMirrored.Rounded.FactCheck, AppDetail.PlateProgress),
+        ToolItem(R.string.home_dan, Icons.Rounded.EmojiEvents, AppDetail.Dan),
+        ToolItem(R.string.home_aliases, Icons.Rounded.Groups, AppDetail.CommunityAliases),
+        ToolItem(R.string.home_links, Icons.Rounded.Link, AppDetail.UsefulLinks),
     )
     Card(
         modifier = Modifier

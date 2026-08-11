@@ -9,6 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Sort
+import androidx.compose.material.icons.automirrored.rounded.ViewList
+import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,11 +32,6 @@ import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Filter
-import top.yukonga.miuix.kmp.icon.extended.GridView
-import top.yukonga.miuix.kmp.icon.extended.ListView
-import top.yukonga.miuix.kmp.icon.extended.Sort
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowListPopup
 
@@ -55,7 +55,11 @@ internal fun CatalogTopBarActions(
         },
     ) {
         Icon(
-            imageVector = if (displayMode == CatalogDisplayMode.Grid) MiuixIcons.ListView else MiuixIcons.GridView,
+            imageVector = if (displayMode == CatalogDisplayMode.Grid) {
+                Icons.AutoMirrored.Rounded.ViewList
+            } else {
+                Icons.Rounded.GridView
+            },
             contentDescription = stringResource(
                 if (displayMode == CatalogDisplayMode.Grid) {
                     R.string.catalog_display_list
@@ -69,7 +73,7 @@ internal fun CatalogTopBarActions(
     Box {
         IconButton(onClick = { sortMenuExpanded = !sortMenuExpanded }) {
             Icon(
-                imageVector = MiuixIcons.Sort,
+                imageVector = Icons.AutoMirrored.Rounded.Sort,
                 contentDescription = stringResource(R.string.catalog_sort_title),
             )
         }
@@ -77,7 +81,7 @@ internal fun CatalogTopBarActions(
         WindowListPopup(
             show = sortMenuExpanded,
             alignment = PopupPositionProvider.Align.End,
-            enableWindowDim = false,
+            enableWindowDim = true,
             onDismissRequest = { sortMenuExpanded = false },
         ) {
             ListPopupColumn {
@@ -137,7 +141,7 @@ internal fun CatalogTopBarActions(
         },
     ) {
         Icon(
-            imageVector = MiuixIcons.Filter,
+            imageVector = Icons.Rounded.FilterList,
             contentDescription = stringResource(R.string.catalog_filter_title),
             tint = if (filterActive) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface,
         )

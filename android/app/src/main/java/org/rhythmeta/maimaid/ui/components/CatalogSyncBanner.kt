@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,9 +21,6 @@ import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Info
-import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -45,12 +45,12 @@ fun CatalogSyncBanner(
                     is CatalogSyncStatus.Downloading,
                     -> CircularProgressIndicator(size = 20.dp, strokeWidth = 3.dp)
                     is CatalogSyncStatus.Failed -> Icon(
-                        imageVector = MiuixIcons.Info,
+                        imageVector = Icons.Rounded.Info,
                         contentDescription = null,
                         tint = MiuixTheme.colorScheme.error,
                     )
                     is CatalogSyncStatus.Ready -> Icon(
-                        imageVector = MiuixIcons.Refresh,
+                        imageVector = Icons.Rounded.Refresh,
                         contentDescription = null,
                         tint = MiuixTheme.colorScheme.primary,
                     )

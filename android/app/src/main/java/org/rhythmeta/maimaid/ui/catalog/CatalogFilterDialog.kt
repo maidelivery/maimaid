@@ -16,6 +16,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.runtime.Composable
@@ -37,11 +42,6 @@ import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.RangeSlider
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Favorites
-import top.yukonga.miuix.kmp.icon.extended.Hide
-import top.yukonga.miuix.kmp.icon.extended.Ok
-import top.yukonga.miuix.kmp.icon.extended.Reset
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -79,7 +79,7 @@ internal fun CatalogFilterDialog(
                 modifier = Modifier.align(Alignment.CenterStart),
             ) {
                 Icon(
-                    imageVector = MiuixIcons.Reset,
+                    imageVector = Icons.Rounded.RestartAlt,
                     contentDescription = resetLabel,
                 )
             }
@@ -94,7 +94,7 @@ internal fun CatalogFilterDialog(
                 modifier = Modifier.align(Alignment.CenterEnd),
             ) {
                 Icon(
-                    imageVector = MiuixIcons.Ok,
+                    imageVector = Icons.Rounded.Check,
                     contentDescription = doneLabel,
                     tint = MiuixTheme.colorScheme.primary,
                 )
@@ -114,7 +114,7 @@ internal fun CatalogFilterDialog(
             item {
                 CatalogFilterSection(title = stringResource(R.string.catalog_filter_quick)) {
                     CatalogFilterToggleRow(
-                        icon = MiuixIcons.Favorites,
+                        icon = Icons.Rounded.FavoriteBorder,
                         title = stringResource(R.string.catalog_filter_favorites),
                         checked = settings.showFavoritesOnly,
                         onCheckedChange = {
@@ -122,7 +122,7 @@ internal fun CatalogFilterDialog(
                         },
                     )
                     CatalogFilterToggleRow(
-                        icon = MiuixIcons.Hide,
+                        icon = Icons.Rounded.VisibilityOff,
                         title = stringResource(R.string.catalog_filter_hide_unavailable),
                         checked = settings.hideUnavailableSongs,
                         onCheckedChange = {
