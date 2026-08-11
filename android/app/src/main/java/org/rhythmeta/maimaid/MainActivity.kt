@@ -4,13 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import org.rhythmeta.maimaid.ui.MaimaidApp
 import org.rhythmeta.maimaid.ui.theme.MaimaidTheme
 
 class MainActivity : ComponentActivity() {
@@ -18,30 +15,29 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MaimaidTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+            val maimaidApplication = application as MaimaidApplication
+            val mainViewModel: org.rhythmeta.maimaid.ui.MainViewModel = viewModel(
+                factory = org.rhythmeta.maimaid.ui.MainViewModel.Factory(maimaidApplication.container),
+            )
+            val themeMode by mainViewModel.themeMode.collectAsStateWithLifecycle()
+            val themeColorSource by mainViewModel.themeColorSource.collectAsStateWithLifecycle()
+            val themeCustomColorArgb by mainViewModel.themeCustomColorArgb.collectAsStateWithLifecycle()
+            MaimaidTheme(
+                themeMode = themeMode,
+                colorSource = themeColorSource,
+                customColorArgb = themeCustomColorArgb,
+            ) {
+                MaimaidApp(
+                    viewModel = mainViewModel,
+                    container = maimaidApplication.container,
+                    themeMode = themeMode,
+                    themeColorSource = themeColorSource,
+                    themeCustomColorArgb = themeCustomColorArgb,
+                    onThemeModeChange = mainViewModel::setThemeMode,
+                    onThemeColorSourceChange = mainViewModel::setThemeColorSource,
+                    onThemeCustomColorChange = mainViewModel::setThemeCustomColorArgb,
+                )
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    MaimaidTheme {
-        Greeting("Android")
     }
 }

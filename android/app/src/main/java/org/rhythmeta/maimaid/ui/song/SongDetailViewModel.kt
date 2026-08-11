@@ -1,0 +1,109 @@
+package org.rhythmeta.maimaid.ui.song
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import org.rhythmeta.maimaid.core.AppContainer
+import org.rhythmeta.maimaid.core.data.ScoreInput
+import org.rhythmeta.maimaid.ui.util.SongVisualUtils
+
+class SongDetailViewModel(
+    private val songIdentifier: String,
+    private val container: AppContainer,
+) : ViewModel() {
+    private val entrySheetKey = MutableStateFlow<String?>(null)
+    private val saveStatus = MutableStateFlow(ScoreSaveStatus.Idle)
+
+    val uiState = combine(
+        container.catalogRepository.observeSheetsForSong(songIdentifier),
+        container.scoreRepository.observeSongScoreData(songIdentifier),
+        entrySheetKey,
+        saveStatus,
+    ) { sheets, scoreData, selectedSheetKey, status ->
+        val scoresBySheet = scoreData.scores.associateBy { it.sheetKey }
+        val historyBySheet = scoreData.playRecords.groupBy { it.sheetKey }
+        SongDetailUiState(
+            profileId = scoreData.profileId,
+            charts = sheets
+                .sortedWith(
+                    compareByDescending<org.rhythmeta.maimaid.core.database.SheetEntity> {
+                        chartTypeOrder(it.type)
+                    }.thenByDescending { SongVisualUtils.difficultyOrder(it.difficulty) },
+                )
+                .map { sheet ->
+                    SheetScoreUiState(
+                        sheet = sheet,
+                        score = scoresBySheet[sheet.sheetKey],
+                        history = historyBySheet[sheet.sheetKey].orEmpty(),
+                    )
+                },
+            entrySheetKey = selectedSheetKey,
+            saveStatus = status,
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = SongDetailUiState(),
+    )
+
+    fun openScoreEntry(sheetKey: String) {
+        entrySheetKey.value = sheetKey
+        saveStatus.value = ScoreSaveStatus.Idle
+    }
+
+    fun dismissScoreEntry() {
+        entrySheetKey.value = null
+        saveStatus.value = ScoreSaveStatus.Idle
+    }
+
+    fun markEntryChanged() {
+        if (saveStatus.value == ScoreSaveStatus.Saved || saveStatus.value == ScoreSaveStatus.Failed) {
+            saveStatus.value = ScoreSaveStatus.Idle
+        }
+    }
+
+    fun saveScore(input: ScoreInput) {
+        val sheetKey = entrySheetKey.value ?: return
+        if (saveStatus.value == ScoreSaveStatus.Saving) return
+        viewModelScope.launch {
+            saveStatus.value = ScoreSaveStatus.Saving
+            saveStatus.value = runCatching {
+                container.scoreRepository.saveScore(sheetKey, input)
+            }.fold(
+                onSuccess = { ScoreSaveStatus.Saved },
+                onFailure = { ScoreSaveStatus.Failed },
+            )
+        }
+    }
+
+    fun deletePlayRecord(recordId: String) {
+        viewModelScope.launch {
+            container.scoreRepository.deletePlayRecord(recordId)
+        }
+    }
+
+    class Factory(
+        private val songIdentifier: String,
+        private val container: AppContainer,
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            require(modelClass.isAssignableFrom(SongDetailViewModel::class.java))
+            return SongDetailViewModel(songIdentifier, container) as T
+        }
+    }
+
+    private companion object {
+        fun chartTypeOrder(type: String): Int = when (type.lowercase()) {
+            "dx" -> 3
+            "std", "standard" -> 2
+            "utage" -> 1
+            else -> 0
+        }
+    }
+}
