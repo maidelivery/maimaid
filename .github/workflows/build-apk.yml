@@ -29,7 +29,10 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install Android platform
-        run: sdkmanager "platforms;android-37"
+        run: >-
+          sdkmanager
+          "platforms;android-37.0"
+          "build-tools;37.0.0"
 
       - name: Build release APK
         working-directory: android
