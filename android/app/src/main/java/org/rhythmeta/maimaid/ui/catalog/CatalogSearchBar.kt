@@ -37,6 +37,7 @@ internal fun CatalogSearchBar(
     focusRequestToken: Int,
     backEnabled: Boolean,
     interactionSource: MutableInteractionSource,
+    labelResource: Int = R.string.catalog_search_hint,
 ) {
     val imeVisible = WindowInsets.isImeVisible
     var imeShownSinceFocus by remember { mutableStateOf(false) }
@@ -67,7 +68,7 @@ internal fun CatalogSearchBar(
                         expanded = expanded,
                         onExpandedChange = onExpandedChange,
                         interactionSource = interactionSource,
-                        label = stringResource(R.string.catalog_search_hint),
+                        label = stringResource(labelResource),
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }

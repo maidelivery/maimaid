@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.rounded.Casino
@@ -60,6 +61,7 @@ import org.rhythmeta.maimaid.ui.catalog.CatalogFilterDialog
 import org.rhythmeta.maimaid.ui.catalog.CatalogFilterSettings
 import org.rhythmeta.maimaid.ui.catalog.SongCard
 import org.rhythmeta.maimaid.ui.catalog.SongJacket
+import org.rhythmeta.maimaid.ui.components.SongListScrollBar
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -104,6 +106,7 @@ internal fun RandomSongScreen(
         sessionState.resultIds.mapNotNull(songsById::get)
     }
     val slotOffsets = remember { List(4) { Animatable(0f) } }
+    val resultsListState = rememberLazyListState()
     var displayedColumns by remember {
         val songsById = songs.associateBy(SongEntity::songIdentifier)
         val restored = sessionState.resultIds.mapNotNull(songsById::get)
@@ -269,32 +272,39 @@ internal fun RandomSongScreen(
                 exit = fadeOut(tween(180)),
                 modifier = Modifier.weight(1f),
             ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, top = 6.dp, end = 16.dp, bottom = 28.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.random_results),
-                            style = MiuixTheme.textStyles.footnote1,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            modifier = Modifier.padding(start = 8.dp, bottom = 4.dp),
-                        )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = resultsListState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, top = 6.dp, end = 16.dp, bottom = 28.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.random_results),
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                modifier = Modifier.padding(start = 8.dp, bottom = 4.dp),
+                            )
+                        }
+                        itemsIndexed(
+                            items = results,
+                            key = { index, song -> "$index-${song.songIdentifier}" },
+                        ) { _, song ->
+                            SongCard(
+                                song = song,
+                                sheets = sheetsBySong[song.songIdentifier].orEmpty(),
+                                scoresBySheetKey = scoresBySheetKey,
+                                versions = versions,
+                                coverImageStore = coverImageStore,
+                                onClick = { onOpenSong(song.songIdentifier) },
+                            )
+                        }
                     }
-                    itemsIndexed(
-                        items = results,
-                        key = { index, song -> "$index-${song.songIdentifier}" },
-                    ) { _, song ->
-                        SongCard(
-                            song = song,
-                            sheets = sheetsBySong[song.songIdentifier].orEmpty(),
-                            scoresBySheetKey = scoresBySheetKey,
-                            versions = versions,
-                            coverImageStore = coverImageStore,
-                            onClick = { onOpenSong(song.songIdentifier) },
-                        )
-                    }
+                    SongListScrollBar(
+                        state = resultsListState,
+                        trackPadding = PaddingValues(top = 6.dp, bottom = 28.dp),
+                    )
                 }
             }
             if (results.isEmpty() || isSpinning) Spacer(Modifier.weight(1f))
