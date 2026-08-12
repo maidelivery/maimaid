@@ -1,5 +1,6 @@
 package org.rhythmeta.maimaid.core.data
 
+import java.time.LocalDate
 import kotlin.math.floor
 import org.rhythmeta.maimaid.core.database.GameVersionEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
@@ -105,26 +106,58 @@ object RatingUtils {
         sheets: List<SheetEntity>,
         versions: List<GameVersionEntity>,
         server: String,
+        currentDate: LocalDate = LocalDate.now(),
     ): String? {
         val orderedVersions = versions.sortedBy(GameVersionEntity::sortOrder).map(GameVersionEntity::name)
-        val songsById = songs.associateBy(SongEntity::songIdentifier)
-        return orderedVersions.lastOrNull { candidate ->
-            val candidateIndex = versionIndex(candidate, orderedVersions)
-            sheets.any { sheet ->
-                val song = songsById[sheet.songIdentifier] ?: return@any false
-                val activeRegion = when (server.lowercase()) {
-                    "cn" -> sheet.regionCn
-                    "intl", "us", "usa" -> sheet.regionIntl
-                    else -> sheet.regionJp
-                }
-                val chartVersion = sheet.version ?: song.version
-                activeRegion &&
-                    !sheet.type.contains("utage", ignoreCase = true) &&
-                    !song.category.contains("utage", ignoreCase = true) &&
-                    !song.category.contains("宴") &&
-                    chartVersion?.let { versionIndex(it, orderedVersions) } == candidateIndex
+        if (orderedVersions.isEmpty()) return null
+        val sheetsBySong = sheets.groupBy(SheetEntity::songIdentifier)
+        val cutoff = when (server.lowercase()) {
+            "cn" -> currentDate.minusMonths(15)
+            "intl", "us", "usa" -> currentDate.minusMonths(4)
+            else -> LocalDate.MAX
+        }
+        var serverVersion = orderedVersions.first()
+
+        for (version in orderedVersions) {
+            val activeVersionSongs = songs.filter { song ->
+                song.version.equals(version, ignoreCase = true) &&
+                    !song.isUtage &&
+                    sheetsBySong[song.songIdentifier]
+                        .orEmpty()
+                        .any { sheet -> sheet.isActiveInAnyRegion() }
             }
-        } ?: orderedVersions.lastOrNull()
+            if (activeVersionSongs.isEmpty()) continue
+
+            val playableCount = activeVersionSongs.count { song ->
+                val songSheets = sheetsBySong[song.songIdentifier].orEmpty()
+                songSheets.any { it.isActiveOnServer(server) } ||
+                    song.releaseDate
+                        ?.takeIf(String::isNotBlank)
+                        ?.let { releaseDate ->
+                            runCatching { LocalDate.parse(releaseDate) }
+                                .getOrNull()
+                                ?.let { it <= cutoff }
+                                ?: true
+                        }
+                        ?: true
+            }
+            if (playableCount == 0) break
+
+            serverVersion = version
+            if (playableCount < activeVersionSongs.size) break
+        }
+        return serverVersion
+    }
+
+    private val SongEntity.isUtage: Boolean
+        get() = category.contains("utage", ignoreCase = true) || category.contains("宴")
+
+    private fun SheetEntity.isActiveInAnyRegion(): Boolean = regionJp || regionIntl || regionCn
+
+    private fun SheetEntity.isActiveOnServer(server: String): Boolean = when (server.lowercase()) {
+        "cn" -> regionCn
+        "intl", "us", "usa" -> regionIntl
+        else -> regionJp
     }
 
     private fun versionIndex(version: String, versions: List<String>): Int? {

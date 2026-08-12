@@ -10,6 +10,7 @@ import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material.icons.rounded.Search
@@ -85,6 +86,7 @@ import org.rhythmeta.maimaid.ui.home.HomeScreen
 import org.rhythmeta.maimaid.ui.navigation.AppDetail
 import org.rhythmeta.maimaid.ui.navigation.RootDestination
 import org.rhythmeta.maimaid.ui.profile.ProfileEditorSheet
+import org.rhythmeta.maimaid.ui.random.RandomSongSessionState
 import org.rhythmeta.maimaid.ui.scanner.ScannerScreen
 import org.rhythmeta.maimaid.ui.settings.SettingsScreen
 import org.rhythmeta.maimaid.ui.theme.AppThemeColorSource
@@ -142,6 +144,10 @@ fun MaimaidApp(
     var showHomeProfileEditor by rememberSaveable { mutableStateOf(false) }
     var profileCreateRequested by rememberSaveable { mutableStateOf(false) }
     var bestTableExportRequested by rememberSaveable { mutableStateOf(false) }
+    var randomSongFilterRequested by rememberSaveable { mutableStateOf(false) }
+    var randomSongFilterActive by rememberSaveable { mutableStateOf(false) }
+    var songReturnDetail by rememberSaveable { mutableStateOf<AppDetail?>(null) }
+    val randomSongSessionState = remember { RandomSongSessionState() }
     val backProgress = remember { Animatable(0f) }
     val detailEntranceProgress = remember { Animatable(0f) }
     val homeTabTransitionProgress = remember {
@@ -255,8 +261,16 @@ fun MaimaidApp(
                 animationSpec = tween(completionDuration, easing = FastOutSlowInEasing),
             )
             if (detail != null) {
-                detail = null
+                if (detail == AppDetail.RandomSong) {
+                    randomSongFilterActive = false
+                    randomSongFilterRequested = false
+                }
+                val returnDetail = if (detail == AppDetail.Song) songReturnDetail else null
+                detail = returnDetail
                 selectedSongId = null
+                if (returnDetail != AppDetail.RandomSong) {
+                    songReturnDetail = null
+                }
             } else if (destination != RootDestination.Home) {
                 animateRootDestinationChange = false
                 homeTabTransitionJob?.cancel()
@@ -266,6 +280,7 @@ fun MaimaidApp(
                 destination = RootDestination.Home
             }
             backProgress.snapTo(0f)
+            songReturnDetail = null
         } catch (cancelled: CancellationException) {
             withContext(NonCancellable) {
                 backProgress.animateTo(
@@ -295,6 +310,12 @@ fun MaimaidApp(
             focusManager.clearFocus()
             softwareKeyboardController?.hide()
         }
+        songReturnDetail = null
+        selectedSongId = songId
+        openDetail(AppDetail.Song)
+    }
+    val openSongFromDetail: (String) -> Unit = { songId ->
+        songReturnDetail = detail.takeIf { it == AppDetail.RandomSong }
         selectedSongId = songId
         openDetail(AppDetail.Song)
     }
@@ -369,9 +390,18 @@ fun MaimaidApp(
                         easing = FastOutSlowInEasing,
                     ),
                 )
-                detail = null
+                if (detail == AppDetail.RandomSong) {
+                    randomSongFilterActive = false
+                    randomSongFilterRequested = false
+                }
+                val returnDetail = if (detail == AppDetail.Song) songReturnDetail else null
+                detail = returnDetail
                 selectedSongId = null
+                if (returnDetail != AppDetail.RandomSong) {
+                    songReturnDetail = null
+                }
                 backProgress.snapTo(0f)
+                songReturnDetail = null
             }
         }
     }
@@ -382,8 +412,8 @@ fun MaimaidApp(
             }
         }
     }
-    val detailActions: @Composable RowScope.() -> Unit = {
-        if (detail == AppDetail.Song && selectedSong != null) {
+    val detailActions: @Composable RowScope.(AppDetail) -> Unit = { activeDetail ->
+        if (activeDetail == AppDetail.Song && selectedSong != null) {
             IconButton(onClick = {
                 viewModel.setSongFavorite(selectedSong.songIdentifier, !selectedSong.isFavorite)
             }) {
@@ -395,18 +425,30 @@ fun MaimaidApp(
                     tint = if (selectedSong.isFavorite) Color(0xFFE85D5D) else MiuixTheme.colorScheme.onSurface,
                 )
             }
-        } else if (detail == AppDetail.Profiles) {
+        } else if (activeDetail == AppDetail.Profiles) {
             IconButton(onClick = { profileCreateRequested = true }) {
                 Icon(
                     imageVector = Icons.Rounded.Add,
                     contentDescription = stringResource(R.string.profile_create),
                 )
             }
-        } else if (detail == AppDetail.BestTable) {
+        } else if (activeDetail == AppDetail.BestTable) {
             IconButton(onClick = { bestTableExportRequested = true }) {
                 Icon(
                     imageVector = Icons.Rounded.IosShare,
                     contentDescription = stringResource(R.string.best50_export),
+                )
+            }
+        } else if (activeDetail == AppDetail.RandomSong) {
+            IconButton(onClick = { randomSongFilterRequested = true }) {
+                Icon(
+                    imageVector = Icons.Rounded.FilterList,
+                    contentDescription = stringResource(R.string.catalog_filter_title),
+                    tint = if (randomSongFilterActive) {
+                        MiuixTheme.colorScheme.primary
+                    } else {
+                        MiuixTheme.colorScheme.onSurface
+                    },
                 )
             }
         }
@@ -629,7 +671,82 @@ fun MaimaidApp(
                 .padding(bottom = 8.dp),
         )
 
-        detail?.let { activeDetail ->
+        if (detail == AppDetail.RandomSong || songReturnDetail == AppDetail.RandomSong) {
+            val randomSongIsForeground = detail == AppDetail.RandomSong
+            val randomSongSourceDimAlpha = if (randomSongIsForeground) {
+                0f
+            } else {
+                0.1f * (1f - detailSourceProgress)
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        if (randomSongIsForeground) {
+                            translationX = when {
+                                songReturnDetail == AppDetail.RandomSong -> 0f
+                                gestureInProgress -> size.width * backProgress.value
+                                else -> size.width * detailEntranceProgress.value
+                            }
+                            shape = foregroundShape
+                            clip = detailIsMoving
+                            shadowElevation = if (detailIsMoving) 12.dp.toPx() else 0f
+                        } else {
+                            translationX = -size.width * 0.25f * (1f - detailSourceProgress)
+                        }
+                    }
+                    .background(backgroundColor),
+            ) {
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    topBar = {
+                        val title = detailTitle(AppDetail.RandomSong)
+                        TopAppBar(
+                            title = title,
+                            largeTitle = title,
+                            navigationIcon = detailNavigationIcon,
+                            actions = { detailActions(AppDetail.RandomSong) },
+                            defaultWindowInsetsPadding = true,
+                        )
+                    },
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                ) { paddingValues ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                    ) {
+                        DetailScreen(
+                            detail = AppDetail.RandomSong,
+                            state = uiState,
+                            selectedSongId = null,
+                            container = container,
+                            songContentTopPadding = paddingValues.calculateTopPadding(),
+                            profileCreateRequested = false,
+                            bestTableExportRequested = false,
+                            randomSongFilterRequested = randomSongFilterRequested,
+                            randomSongSessionState = randomSongSessionState,
+                            onProfileCreateRequestHandled = {},
+                            onBestTableExportRequestHandled = {},
+                            onRandomSongFilterRequestHandled = { randomSongFilterRequested = false },
+                            onRandomSongFilterActiveChanged = { randomSongFilterActive = it },
+                            onOpenSong = openSongFromDetail,
+                            onSongDetailBackgroundChanged = {},
+                            onSongDetailTitleChanged = {},
+                        )
+                        if (randomSongSourceDimAlpha > 0f) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = randomSongSourceDimAlpha)),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        detail?.takeUnless { it == AppDetail.RandomSong }?.let { activeDetail ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -667,7 +784,7 @@ fun MaimaidApp(
                                 ),
                                 color = Color.Transparent,
                                 navigationIcon = detailNavigationIcon,
-                                actions = detailActions,
+                                actions = { detailActions(activeDetail) },
                                 defaultWindowInsetsPadding = true,
                             )
                         } else if (activeDetail == AppDetail.StaticData) {
@@ -684,7 +801,7 @@ fun MaimaidApp(
                                 ),
                                 color = Color.Transparent,
                                 navigationIcon = detailNavigationIcon,
-                                actions = detailActions,
+                                actions = { detailActions(activeDetail) },
                                 defaultWindowInsetsPadding = true,
                             )
                         } else {
@@ -693,7 +810,7 @@ fun MaimaidApp(
                                 title = detailTitle,
                                 largeTitle = detailTitle,
                                 navigationIcon = detailNavigationIcon,
-                                actions = detailActions,
+                                actions = { detailActions(activeDetail) },
                                 defaultWindowInsetsPadding = true,
                             )
                         }
@@ -721,8 +838,13 @@ fun MaimaidApp(
                             songContentTopPadding = paddingValues.calculateTopPadding(),
                             profileCreateRequested = profileCreateRequested,
                             bestTableExportRequested = bestTableExportRequested,
+                            randomSongFilterRequested = randomSongFilterRequested,
+                            randomSongSessionState = randomSongSessionState,
                             onProfileCreateRequestHandled = { profileCreateRequested = false },
                             onBestTableExportRequestHandled = { bestTableExportRequested = false },
+                            onRandomSongFilterRequestHandled = { randomSongFilterRequested = false },
+                            onRandomSongFilterActiveChanged = { randomSongFilterActive = it },
+                            onOpenSong = openSongFromDetail,
                             onSongDetailBackgroundChanged = { color ->
                                 val currentSongId = selectedSongId
                                 if (detail == AppDetail.Song && currentSongId != null) {

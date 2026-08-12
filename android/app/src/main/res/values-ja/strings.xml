@@ -15,6 +15,12 @@
     <string name="action_photos">写真</string>
     <string name="action_open">開く</string>
     <string name="action_randomize">もう一度</string>
+    <string name="random_count_three">3曲</string>
+    <string name="random_count_four">4曲</string>
+    <string name="random_action_spin">今すぐスピン</string>
+    <string name="random_action_skip">今すぐスキップ</string>
+    <string name="random_results">結果</string>
+    <string name="random_ready">準備はいい？</string>
     <string name="home_greeting">おかえりなさい</string>
     <string name="home_rating">Rating</string>
     <string name="home_best">Best 50</string>
@@ -178,6 +184,10 @@
     <string name="profile_lxns_token">LXNS リフレッシュトークン</string>
     <string name="profile_change_avatar">アバターを変更</string>
     <string name="profile_clear_avatar">削除</string>
+    <string name="avatar_editor_title">アバターの調整</string>
+    <string name="avatar_editor_hint">ドラッグして位置を決めたり、ピンチしてズームしたり、2 本の指で回転したりできます。</string>
+    <string name="avatar_editor_reset">リセット</string>
+    <string name="avatar_editor_apply">クロップを適用する</string>
     <string name="profile_sheet_expand">プロフィール編集を展開</string>
     <string name="profile_sheet_collapse">プロフィール編集を折りたたむ</string>
     <string name="profile_sheet_expanded">プロフィール編集を全画面表示</string>

@@ -101,6 +101,7 @@ This section is the persistent source of truth for porting the current iOS maima
 ### UI requirements
 
 - Use Backdrop for the Apple-style Liquid Glass floating tab bar.
+- When MIUIX provides a suitable component, use it directly and remove parallel app-owned component implementations.
 - Use MIUIX basic components directly. Use MIUIX squircle modifiers with a `1.2f` extension for app-owned rounded rectangular surfaces, and adapt `Path.addSquircleRect` only where an API requires a Compose `Shape`.
 - Allow page content to extend behind the floating tab bar without an opaque bottom layer.
 - Preserve global predictive back gestures: detail screens return to their source, non-home root tabs return to Home, and Home delegates back to the system.

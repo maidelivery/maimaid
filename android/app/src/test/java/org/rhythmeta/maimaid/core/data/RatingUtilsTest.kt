@@ -1,5 +1,6 @@
 package org.rhythmeta.maimaid.core.data
 
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -46,32 +47,48 @@ class RatingUtilsTest {
     }
 
     @Test
-    fun `latest server version follows playable chart regions`() {
+    fun `latest server version follows iOS release cutoffs`() {
         val versionEntities = listOf(
             GameVersionEntity("PRiSM", "PRiSM", null, 0),
-            GameVersionEntity("CiRCLE", "CiRCLE", null, 1),
+            GameVersionEntity("PRiSM PLUS", "PRiSM+", null, 1),
+            GameVersionEntity("CiRCLE", "CiRCLE", null, 2),
         )
         val songs = listOf(
-            testSong("old", "PRiSM"),
-            testSong("new", "CiRCLE"),
+            testSong("prism", "PRiSM", "2024-01-01"),
+            testSong("prism-plus-released", "PRiSM PLUS", "2025-04-01"),
+            testSong("prism-plus-future", "PRiSM PLUS", "2025-07-01"),
+            testSong("circle", "CiRCLE", "2026-06-01"),
         )
         val sheets = listOf(
-            testSheet("old", "PRiSM", jp = true, intl = true),
-            testSheet("new", "CiRCLE", jp = true, intl = false),
+            testSheet("prism", "PRiSM", jp = true, intl = true, cn = true),
+            testSheet("prism-plus-released", "PRiSM PLUS", jp = true, intl = true, cn = false),
+            testSheet("prism-plus-future", "PRiSM PLUS", jp = true, intl = false, cn = false),
+            testSheet("circle", "CiRCLE", jp = true, intl = false, cn = false),
         )
+        val currentDate = LocalDate.of(2026, 8, 12)
 
-        assertEquals("CiRCLE", RatingUtils.latestVersionForServer(songs, sheets, versionEntities, "jp"))
-        assertEquals("PRiSM", RatingUtils.latestVersionForServer(songs, sheets, versionEntities, "intl"))
+        assertEquals(
+            "CiRCLE",
+            RatingUtils.latestVersionForServer(songs, sheets, versionEntities, "jp", currentDate),
+        )
+        assertEquals(
+            "PRiSM PLUS",
+            RatingUtils.latestVersionForServer(songs, sheets, versionEntities, "intl", currentDate),
+        )
+        assertEquals(
+            "PRiSM PLUS",
+            RatingUtils.latestVersionForServer(songs, sheets, versionEntities, "cn", currentDate),
+        )
     }
 
-    private fun testSong(id: String, version: String) = SongEntity(
+    private fun testSong(id: String, version: String, releaseDate: String? = null) = SongEntity(
         songIdentifier = id,
         category = "maimai",
         title = id,
         artist = "",
         imageName = "",
         version = version,
-        releaseDate = null,
+        releaseDate = releaseDate,
         sortOrder = 0,
         bpm = null,
         isNew = false,
@@ -84,6 +101,7 @@ class RatingUtilsTest {
         version: String,
         jp: Boolean,
         intl: Boolean,
+        cn: Boolean = false,
     ) = SheetEntity(
         sheetKey = "$songId-master",
         songIdentifier = songId,
@@ -104,6 +122,6 @@ class RatingUtilsTest {
         regionJp = jp,
         regionIntl = intl,
         regionUsa = false,
-        regionCn = false,
+        regionCn = cn,
     )
 }

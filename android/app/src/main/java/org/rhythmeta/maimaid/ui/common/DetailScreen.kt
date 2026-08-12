@@ -40,7 +40,6 @@ import androidx.compose.ui.unit.dp
 import org.rhythmeta.maimaid.BuildConfig
 import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.AppContainer
-import org.rhythmeta.maimaid.core.database.SongEntity
 import org.rhythmeta.maimaid.core.data.StaticManifest
 import org.rhythmeta.maimaid.core.data.CatalogSyncStatus
 import org.rhythmeta.maimaid.ui.MainUiState
@@ -60,13 +59,14 @@ import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import org.rhythmeta.maimaid.ui.best.BestTableScreen
 import org.rhythmeta.maimaid.ui.profile.ProfileScreen
+import org.rhythmeta.maimaid.ui.random.RandomSongScreen
+import org.rhythmeta.maimaid.ui.random.RandomSongSessionState
 
 @Composable
-fun DetailScreen(
+internal fun DetailScreen(
     detail: AppDetail,
     state: MainUiState,
     selectedSongId: String?,
@@ -74,8 +74,13 @@ fun DetailScreen(
     songContentTopPadding: androidx.compose.ui.unit.Dp,
     profileCreateRequested: Boolean,
     bestTableExportRequested: Boolean,
+    randomSongFilterRequested: Boolean,
+    randomSongSessionState: RandomSongSessionState,
     onProfileCreateRequestHandled: () -> Unit,
     onBestTableExportRequestHandled: () -> Unit,
+    onRandomSongFilterRequestHandled: () -> Unit,
+    onRandomSongFilterActiveChanged: (Boolean) -> Unit,
+    onOpenSong: (String) -> Unit,
     onSongDetailBackgroundChanged: (androidx.compose.ui.graphics.Color?) -> Unit,
     onSongDetailTitleChanged: (String) -> Unit,
 ) {
@@ -91,7 +96,19 @@ fun DetailScreen(
             state = state,
             container = container,
         )
-        AppDetail.RandomSong -> RandomSongDetail(songs = state.songs)
+        AppDetail.RandomSong -> RandomSongScreen(
+            songs = state.songs,
+            sheets = state.sheets,
+            scores = state.scores,
+            categories = state.songCategories,
+            versions = state.gameVersions,
+            coverImageStore = container.coverImageStore,
+            sessionState = randomSongSessionState,
+            filterRequested = randomSongFilterRequested,
+            onFilterRequestHandled = onRandomSongFilterRequestHandled,
+            onFilterActiveChanged = onRandomSongFilterActiveChanged,
+            onOpenSong = onOpenSong,
+        )
         AppDetail.BestTable -> BestTableScreen(
             container = container,
             activeProfile = state.activeProfile,
@@ -380,42 +397,6 @@ private fun staticManifestCreatedText(manifest: StaticManifest, unknownTime: Str
         }.getOrNull()
     } ?: unknownTime
     return createdAt
-}
-
-@Composable
-private fun RandomSongDetail(songs: List<SongEntity>) {
-    if (songs.isEmpty()) {
-        EmptyCatalogState()
-        return
-    }
-    var selected by remember(songs) { mutableStateOf(songs.random()) }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            text = selected.title,
-            style = MiuixTheme.textStyles.title1,
-            fontWeight = FontWeight.Bold,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = selected.artist,
-            style = MiuixTheme.textStyles.body1,
-            color = MiuixTheme.colorScheme.onBackgroundVariant,
-        )
-        Spacer(Modifier.height(24.dp))
-        TextButton(
-            text = stringResource(R.string.action_randomize),
-            onClick = { selected = songs.random() },
-            colors = ButtonDefaults.textButtonColorsPrimary(),
-        )
-    }
 }
 
 @Composable

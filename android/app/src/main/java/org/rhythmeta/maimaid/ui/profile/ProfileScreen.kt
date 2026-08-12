@@ -1,5 +1,7 @@
 package org.rhythmeta.maimaid.ui.profile
 
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -53,7 +56,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.ProfileCredentials
@@ -286,16 +291,28 @@ internal fun ProfileEditorSheet(
     var avatarPath by remember { mutableStateOf<String?>(null) }
     var stagedAvatarPath by remember { mutableStateOf<String?>(null) }
     var clearAvatar by remember { mutableStateOf(false) }
+    var avatarEditorBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    val context = LocalContext.current
     val photoLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         uri?.let {
             scope.launch {
-                container.profileAvatarStore.stage(it)?.let { staged ->
-                    container.profileAvatarStore.discard(stagedAvatarPath)
-                    stagedAvatarPath = staged
-                    avatarPath = staged
-                    clearAvatar = false
+                avatarEditorBitmap = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val source = ImageDecoder.createSource(context.contentResolver, it)
+                        ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                            val maxDimension = maxOf(info.size.width, info.size.height)
+                            if (maxDimension > 4_096) {
+                                val scale = 4_096f / maxDimension
+                                decoder.setTargetSize(
+                                    (info.size.width * scale).toInt(),
+                                    (info.size.height * scale).toInt(),
+                                )
+                            }
+                            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                        }
+                    }.getOrNull()
                 }
             }
         }
@@ -315,6 +332,7 @@ internal fun ProfileEditorSheet(
         avatarPath = profile?.avatarPath
         stagedAvatarPath = null
         clearAvatar = false
+        avatarEditorBitmap = null
     }
 
     val dismiss = {
@@ -334,7 +352,6 @@ internal fun ProfileEditorSheet(
             val committedAvatar = stagedAvatarPath?.let {
                 container.profileAvatarStore.commit(it, targetProfile.id)
             }
-            if (clearAvatar) container.profileAvatarStore.deleteStored(targetProfile.avatarPath)
             container.profileRepository.save(
                 targetProfile.copy(
                     name = name,
@@ -354,6 +371,9 @@ internal fun ProfileEditorSheet(
                     b15Count = b15Text.toIntOrNull()?.coerceAtLeast(1) ?: targetProfile.b15Count,
                 ),
             )
+            if (clearAvatar || committedAvatar != null) {
+                container.profileAvatarStore.deleteStored(targetProfile.avatarPath)
+            }
             container.profileCredentialStore.save(
                 targetProfile.id,
                 ProfileCredentials(dfToken.trim(), lxnsToken.trim()),
@@ -512,6 +532,24 @@ internal fun ProfileEditorSheet(
                 }
             }
         }
+    }
+
+    avatarEditorBitmap?.let { editorBitmap ->
+        AvatarCropEditor(
+            bitmap = editorBitmap,
+            onDismiss = { avatarEditorBitmap = null },
+            onApply = { croppedBitmap ->
+                scope.launch {
+                    container.profileAvatarStore.stage(croppedBitmap)?.let { staged ->
+                        container.profileAvatarStore.discard(stagedAvatarPath)
+                        stagedAvatarPath = staged
+                        avatarPath = staged
+                        clearAvatar = false
+                    }
+                    avatarEditorBitmap = null
+                }
+            },
+        )
     }
 }
 

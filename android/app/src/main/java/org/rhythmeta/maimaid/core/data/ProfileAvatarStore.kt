@@ -1,6 +1,7 @@
 package org.rhythmeta.maimaid.core.data
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import java.io.File
 import java.util.UUID
@@ -29,10 +30,23 @@ class ProfileAvatarStore(context: Context) {
         }
     }
 
+    suspend fun stage(bitmap: Bitmap): String? = withContext(Dispatchers.IO) {
+        val target = File(stagingDirectory, "${UUID.randomUUID()}.png")
+        runCatching {
+            target.outputStream().use { output ->
+                check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output))
+            }
+            target.takeIf { it.length() > 0L }?.absolutePath
+        }.getOrElse {
+            target.delete()
+            null
+        }
+    }
+
     suspend fun commit(stagedPath: String, profileId: String): String? = withContext(Dispatchers.IO) {
         val staged = File(stagedPath)
         if (!staged.isFile || staged.parentFile != stagingDirectory) return@withContext null
-        val target = File(avatarDirectory, "$profileId.image")
+        val target = File(avatarDirectory, "$profileId-${UUID.randomUUID()}.png")
         runCatching {
             staged.inputStream().use { input ->
                 target.outputStream().use { output -> input.copyTo(output) }

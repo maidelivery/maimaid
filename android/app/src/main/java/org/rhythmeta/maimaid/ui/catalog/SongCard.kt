@@ -306,9 +306,11 @@ internal fun ScoreEntrySongCard(
 }
 
 @Composable
-private fun SongJacket(
+internal fun SongJacket(
     imageName: String,
     coverImageStore: CoverImageStore,
+    size: androidx.compose.ui.unit.Dp = 52.dp,
+    cornerRadius: androidx.compose.ui.unit.Dp = 12.dp,
 ) {
     val context = LocalContext.current
     val cachedCover = remember(imageName) { coverImageStore.fileFor(imageName) }
@@ -320,16 +322,16 @@ private fun SongJacket(
 
     Box(
         modifier = Modifier
-            .size(52.dp)
+            .size(size)
             .squircleSurface(
                 color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.05f),
-                cornerRadius = 12.dp,
+                cornerRadius = cornerRadius,
                 extension = SquircleExtension,
             )
             .squircleBorder(
                 width = 0.5.dp,
                 color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.1f),
-                cornerRadius = 12.dp,
+                cornerRadius = cornerRadius,
                 extension = SquircleExtension,
             ),
     ) {
