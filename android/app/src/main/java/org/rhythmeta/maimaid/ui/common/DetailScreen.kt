@@ -61,9 +61,17 @@ import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import org.rhythmeta.maimaid.ui.best.BestTableScreen
+import org.rhythmeta.maimaid.ui.constanttable.ConstantTableScreen
+import org.rhythmeta.maimaid.ui.dan.DanDetailScreen
+import org.rhythmeta.maimaid.ui.dan.DanListScreen
+import org.rhythmeta.maimaid.ui.links.UsefulLinksScreen
+import org.rhythmeta.maimaid.ui.plate.PlateProgressScreen
 import org.rhythmeta.maimaid.ui.profile.ProfileScreen
 import org.rhythmeta.maimaid.ui.random.RandomSongScreen
 import org.rhythmeta.maimaid.ui.random.RandomSongSessionState
+import org.rhythmeta.maimaid.ui.recommendation.RecommendationScreen
+import org.rhythmeta.maimaid.ui.scorequery.ScoreQueryScreen
+import org.rhythmeta.maimaid.ui.scorequery.ScoreQueryViewModel
 import org.rhythmeta.maimaid.ui.settings.BackendAuthScreen
 
 @Composable
@@ -71,8 +79,13 @@ internal fun DetailScreen(
     detail: AppDetail,
     state: MainUiState,
     selectedSongId: String?,
+    selectedDanCategoryId: String?,
     container: AppContainer,
     songContentTopPadding: androidx.compose.ui.unit.Dp,
+    recommendationSelectedPage: Int,
+    danSelectedPage: Int,
+    scoreQueryViewModel: ScoreQueryViewModel?,
+    showScoreQueryFilter: Boolean,
     profileCreateRequested: Boolean,
     bestTableExportRequested: Boolean,
     randomSongFilterRequested: Boolean,
@@ -81,7 +94,9 @@ internal fun DetailScreen(
     onBestTableExportRequestHandled: () -> Unit,
     onRandomSongFilterRequestHandled: () -> Unit,
     onRandomSongFilterActiveChanged: (Boolean) -> Unit,
+    onDismissScoreQueryFilter: () -> Unit,
     onOpenSong: (String) -> Unit,
+    onOpenDanCategory: (String, String) -> Unit,
     onSongDetailBackgroundChanged: (androidx.compose.ui.graphics.Color?) -> Unit,
     onSongDetailTitleChanged: (String) -> Unit,
 ) {
@@ -117,6 +132,51 @@ internal fun DetailScreen(
             contentTopPadding = songContentTopPadding,
             exportRequested = bestTableExportRequested,
             onExportRequestHandled = onBestTableExportRequestHandled,
+        )
+        AppDetail.Recommendations -> RecommendationScreen(
+            container = container,
+            contentTopPadding = songContentTopPadding,
+            selectedPage = recommendationSelectedPage,
+            onOpenSong = onOpenSong,
+        )
+        AppDetail.ScoreQuery -> scoreQueryViewModel?.let { viewModel ->
+            ScoreQueryScreen(
+                container = container,
+                viewModel = viewModel,
+                contentTopPadding = songContentTopPadding,
+                showFilterDialog = showScoreQueryFilter,
+                onDismissFilter = onDismissScoreQueryFilter,
+                onOpenSong = onOpenSong,
+            )
+        }
+        AppDetail.ConstantTable -> ConstantTableScreen(
+            container = container,
+            contentTopPadding = songContentTopPadding,
+            onOpenSong = onOpenSong,
+        )
+        AppDetail.PlateProgress -> PlateProgressScreen(
+            container = container,
+            contentTopPadding = songContentTopPadding,
+            onOpenSong = onOpenSong,
+        )
+        AppDetail.Dan -> DanListScreen(
+            container = container,
+            contentTopPadding = songContentTopPadding,
+            onOpenCategory = { category ->
+                onOpenDanCategory(category.id, category.title)
+            },
+        )
+        AppDetail.DanDetail -> selectedDanCategoryId?.let { categoryId ->
+            DanDetailScreen(
+                categoryId = categoryId,
+                container = container,
+                contentTopPadding = songContentTopPadding,
+                selectedPage = danSelectedPage,
+                onOpenSong = onOpenSong,
+            )
+        }
+        AppDetail.UsefulLinks -> UsefulLinksScreen(
+            contentTopPadding = songContentTopPadding,
         )
         AppDetail.Profiles -> ProfileScreen(
             container = container,

@@ -15,6 +15,7 @@ enum class AppDetail {
     ConstantTable,
     PlateProgress,
     Dan,
+    DanDetail,
     CommunityAliases,
     UsefulLinks,
     StaticData,

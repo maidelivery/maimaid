@@ -14,11 +14,18 @@ import org.rhythmeta.maimaid.core.data.BackendTokenStore
 import org.rhythmeta.maimaid.core.data.Best50Repository
 import org.rhythmeta.maimaid.core.data.CatalogRepository
 import org.rhythmeta.maimaid.core.data.CatalogSyncStateStore
+import org.rhythmeta.maimaid.core.data.ChartFitStore
 import org.rhythmeta.maimaid.core.data.CoverImageStore
+import org.rhythmeta.maimaid.core.data.ConstantTableRepository
+import org.rhythmeta.maimaid.core.data.DanRepository
+import org.rhythmeta.maimaid.core.data.DanStore
+import org.rhythmeta.maimaid.core.data.PlateProgressRepository
 import org.rhythmeta.maimaid.core.data.ProfileAvatarStore
 import org.rhythmeta.maimaid.core.data.ProfileCredentialStore
 import org.rhythmeta.maimaid.core.data.ProfileRepository
+import org.rhythmeta.maimaid.core.data.RecommendationRepository
 import org.rhythmeta.maimaid.core.data.ScoreRepository
+import org.rhythmeta.maimaid.core.data.ScoreQueryRepository
 import org.rhythmeta.maimaid.core.database.MaimaidDatabase
 import org.rhythmeta.maimaid.core.ml.OnnxSessionFactory
 import org.rhythmeta.maimaid.core.network.BackendApiClient
@@ -72,6 +79,35 @@ class AppContainer(context: Context) {
         client = StaticBundleClient(BuildConfig.BACKEND_URL, json),
         syncStateStore = CatalogSyncStateStore(applicationContext),
         coverImageStore = coverImageStore,
+        chartFitStore = ChartFitStore(applicationContext, json),
+        danStore = DanStore(applicationContext, json),
+    )
+
+    val recommendationRepository = RecommendationRepository(
+        catalogRepository = catalogRepository,
+        scoreRepository = scoreRepository,
+        profileRepository = profileRepository,
+    )
+
+    val scoreQueryRepository = ScoreQueryRepository(
+        catalogRepository = catalogRepository,
+        scoreRepository = scoreRepository,
+    )
+
+    val constantTableRepository = ConstantTableRepository(
+        catalogRepository = catalogRepository,
+        scoreRepository = scoreRepository,
+        profileRepository = profileRepository,
+    )
+
+    val plateProgressRepository = PlateProgressRepository(
+        catalogRepository = catalogRepository,
+        scoreRepository = scoreRepository,
+    )
+
+    val danRepository = DanRepository(
+        catalogRepository = catalogRepository,
+        scoreRepository = scoreRepository,
     )
 
     val backendSyncCoordinator = BackendSyncCoordinator(

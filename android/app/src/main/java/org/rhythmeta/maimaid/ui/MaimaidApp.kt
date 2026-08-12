@@ -45,9 +45,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel as composeViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -81,12 +82,21 @@ import org.rhythmeta.maimaid.ui.catalog.CatalogTopBarActions
 import org.rhythmeta.maimaid.ui.common.DetailScreen
 import org.rhythmeta.maimaid.ui.components.LiquidGlassTab
 import org.rhythmeta.maimaid.ui.components.LiquidGlassTabBar
+import org.rhythmeta.maimaid.ui.components.TopBarBottomShape
 import org.rhythmeta.maimaid.ui.components.squircleShape
 import org.rhythmeta.maimaid.ui.home.HomeScreen
+import org.rhythmeta.maimaid.ui.dan.DanDetailScreen
+import org.rhythmeta.maimaid.ui.dan.DanListScreen
+import org.rhythmeta.maimaid.ui.dan.DanPageSwitcher
+import org.rhythmeta.maimaid.ui.dan.DanRegularPage
 import org.rhythmeta.maimaid.ui.navigation.AppDetail
 import org.rhythmeta.maimaid.ui.navigation.RootDestination
 import org.rhythmeta.maimaid.ui.profile.ProfileEditorSheet
 import org.rhythmeta.maimaid.ui.random.RandomSongSessionState
+import org.rhythmeta.maimaid.ui.recommendation.RecommendationNewPage
+import org.rhythmeta.maimaid.ui.recommendation.RecommendationPageSwitcher
+import org.rhythmeta.maimaid.ui.scorequery.ScoreQueryTopBarActions
+import org.rhythmeta.maimaid.ui.scorequery.ScoreQueryViewModel
 import org.rhythmeta.maimaid.ui.scanner.ScannerScreen
 import org.rhythmeta.maimaid.ui.settings.SettingsScreen
 import org.rhythmeta.maimaid.ui.theme.AppThemeColorSource
@@ -131,6 +141,8 @@ fun MaimaidApp(
     var detailBackTransitionJob by remember { mutableStateOf<Job?>(null) }
     var detail by rememberSaveable { mutableStateOf<AppDetail?>(null) }
     var selectedSongId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedDanCategoryId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedDanCategoryTitle by rememberSaveable { mutableStateOf<String?>(null) }
     var songDetailBackground by remember { mutableStateOf<Pair<String, Color>?>(null) }
     var songDetailTitle by remember { mutableStateOf<Pair<String, String>?>(null) }
     var catalogDisplayMode by rememberSaveable { mutableStateOf(CatalogDisplayMode.List) }
@@ -146,6 +158,18 @@ fun MaimaidApp(
     var bestTableExportRequested by rememberSaveable { mutableStateOf(false) }
     var randomSongFilterRequested by rememberSaveable { mutableStateOf(false) }
     var randomSongFilterActive by rememberSaveable { mutableStateOf(false) }
+    var recommendationSelectedPage by rememberSaveable {
+        mutableIntStateOf(RecommendationNewPage)
+    }
+    var recommendationSwitcherVisible by rememberSaveable { mutableStateOf(true) }
+    var danSelectedPage by rememberSaveable { mutableIntStateOf(DanRegularPage) }
+    var danSwitcherVisible by rememberSaveable { mutableStateOf(true) }
+    var danHasTruePage by rememberSaveable { mutableStateOf(false) }
+    var scoreQuerySearchExpanded by rememberSaveable { mutableStateOf(false) }
+    var scoreQuerySearchVisible by rememberSaveable { mutableStateOf(true) }
+    var scoreQuerySearchFocusRequestToken by rememberSaveable { mutableIntStateOf(0) }
+    var restoreScoreQuerySearchFocus by rememberSaveable { mutableStateOf(false) }
+    var showScoreQueryFilter by rememberSaveable { mutableStateOf(false) }
     var songReturnDetail by rememberSaveable { mutableStateOf<AppDetail?>(null) }
     val randomSongSessionState = remember { RandomSongSessionState() }
     val backProgress = remember { Animatable(0f) }
@@ -155,6 +179,8 @@ fun MaimaidApp(
     }
     val catalogSearchInteractionSource = remember { MutableInteractionSource() }
     val catalogSearchFocused by catalogSearchInteractionSource.collectIsFocusedAsState()
+    val scoreQuerySearchInteractionSource = remember { MutableInteractionSource() }
+    val scoreQuerySearchFocused by scoreQuerySearchInteractionSource.collectIsFocusedAsState()
     val focusManager = LocalFocusManager.current
     val softwareKeyboardController = LocalSoftwareKeyboardController.current
     val density = LocalDensity.current
@@ -194,6 +220,133 @@ fun MaimaidApp(
                             upwardDistance -= available.y
                             if (upwardDistance >= catalogSearchHideThreshold) {
                                 catalogSearchVisible = false
+                                upwardDistance = 0f
+                            }
+                        } else {
+                            upwardDistance = 0f
+                        }
+                    }
+                }
+                return Offset.Zero
+            }
+        }
+    }
+    val recommendationSwitcherScrollConnection = remember(
+        catalogSearchShowThreshold,
+        catalogSearchHideThreshold,
+    ) {
+        object : NestedScrollConnection {
+            private var downwardDistance = 0f
+            private var upwardDistance = 0f
+
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (source != NestedScrollSource.UserInput) return Offset.Zero
+
+                when {
+                    available.y > 0f -> {
+                        upwardDistance = 0f
+                        if (recommendationSwitcherVisible) {
+                            downwardDistance = 0f
+                        } else {
+                            downwardDistance += available.y
+                            if (downwardDistance >= catalogSearchShowThreshold) {
+                                recommendationSwitcherVisible = true
+                                downwardDistance = 0f
+                            }
+                        }
+                    }
+                    available.y < 0f -> {
+                        downwardDistance = 0f
+                        if (recommendationSwitcherVisible) {
+                            upwardDistance -= available.y
+                            if (upwardDistance >= catalogSearchHideThreshold) {
+                                recommendationSwitcherVisible = false
+                                upwardDistance = 0f
+                            }
+                        } else {
+                            upwardDistance = 0f
+                        }
+                    }
+                }
+                return Offset.Zero
+            }
+        }
+    }
+    val danSwitcherScrollConnection = remember(
+        catalogSearchShowThreshold,
+        catalogSearchHideThreshold,
+    ) {
+        object : NestedScrollConnection {
+            private var downwardDistance = 0f
+            private var upwardDistance = 0f
+
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (source != NestedScrollSource.UserInput) return Offset.Zero
+
+                when {
+                    available.y > 0f -> {
+                        upwardDistance = 0f
+                        if (danSwitcherVisible) {
+                            downwardDistance = 0f
+                        } else {
+                            downwardDistance += available.y
+                            if (downwardDistance >= catalogSearchShowThreshold) {
+                                danSwitcherVisible = true
+                                downwardDistance = 0f
+                            }
+                        }
+                    }
+                    available.y < 0f -> {
+                        downwardDistance = 0f
+                        if (danSwitcherVisible) {
+                            upwardDistance -= available.y
+                            if (upwardDistance >= catalogSearchHideThreshold) {
+                                danSwitcherVisible = false
+                                upwardDistance = 0f
+                            }
+                        } else {
+                            upwardDistance = 0f
+                        }
+                    }
+                }
+                return Offset.Zero
+            }
+        }
+    }
+    val scoreQuerySearchScrollConnection = remember(
+        catalogSearchShowThreshold,
+        catalogSearchHideThreshold,
+        scoreQuerySearchFocused,
+        restoreScoreQuerySearchFocus,
+    ) {
+        object : NestedScrollConnection {
+            private var downwardDistance = 0f
+            private var upwardDistance = 0f
+
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (source != NestedScrollSource.UserInput) return Offset.Zero
+
+                when {
+                    available.y > 0f -> {
+                        upwardDistance = 0f
+                        if (scoreQuerySearchVisible) {
+                            downwardDistance = 0f
+                        } else {
+                            downwardDistance += available.y
+                            if (downwardDistance >= catalogSearchShowThreshold) {
+                                scoreQuerySearchVisible = true
+                                downwardDistance = 0f
+                            }
+                        }
+                    }
+                    available.y < 0f -> {
+                        downwardDistance = 0f
+                        if (scoreQuerySearchFocused || restoreScoreQuerySearchFocus) {
+                            upwardDistance = 0f
+                        } else if (scoreQuerySearchVisible) {
+                            upwardDistance -= available.y
+                            if (upwardDistance >= catalogSearchHideThreshold) {
+                                scoreQuerySearchVisible = false
                                 upwardDistance = 0f
                             }
                         } else {
@@ -245,6 +398,27 @@ fun MaimaidApp(
         }
     }
 
+    LaunchedEffect(detail, restoreScoreQuerySearchFocus) {
+        if (restoreScoreQuerySearchFocus && detail == AppDetail.ScoreQuery) {
+            scoreQuerySearchVisible = true
+            scoreQuerySearchExpanded = true
+            withFrameNanos { }
+            scoreQuerySearchFocusRequestToken++
+        }
+    }
+
+    LaunchedEffect(scoreQuerySearchFocused, detail, restoreScoreQuerySearchFocus) {
+        if (
+            restoreScoreQuerySearchFocus &&
+            scoreQuerySearchFocused &&
+            detail == AppDetail.ScoreQuery
+        ) {
+            withFrameNanos { }
+            softwareKeyboardController?.show()
+            restoreScoreQuerySearchFocus = false
+        }
+    }
+
     PredictiveBackHandler(enabled = canHandleBack) { progress: Flow<BackEventCompat> ->
         try {
             detailBackTransitionJob?.cancel()
@@ -265,7 +439,11 @@ fun MaimaidApp(
                     randomSongFilterActive = false
                     randomSongFilterRequested = false
                 }
-                val returnDetail = if (detail == AppDetail.Song) songReturnDetail else null
+                val returnDetail = when (detail) {
+                    AppDetail.Song -> songReturnDetail
+                    AppDetail.DanDetail -> AppDetail.Dan
+                    else -> null
+                }
                 detail = returnDetail
                 selectedSongId = null
                 if (returnDetail != AppDetail.RandomSong) {
@@ -294,6 +472,12 @@ fun MaimaidApp(
 
     val openDetail: (AppDetail) -> Unit = { next ->
         detailBackTransitionJob?.cancel()
+        if (next == AppDetail.Recommendations) {
+            recommendationSwitcherVisible = true
+        }
+        if (next == AppDetail.ScoreQuery) {
+            scoreQuerySearchVisible = true
+        }
         coroutineScope.launch {
             detailEntranceProgress.stop()
             detailEntranceProgress.snapTo(1f)
@@ -315,7 +499,17 @@ fun MaimaidApp(
         openDetail(AppDetail.Song)
     }
     val openSongFromDetail: (String) -> Unit = { songId ->
-        songReturnDetail = detail.takeIf { it == AppDetail.RandomSong }
+        if (detail == AppDetail.ScoreQuery && scoreQuerySearchFocused) {
+            restoreScoreQuerySearchFocus = true
+            focusManager.clearFocus()
+            softwareKeyboardController?.hide()
+        }
+        songReturnDetail = detail.takeIf {
+            it == AppDetail.RandomSong ||
+                it == AppDetail.Recommendations ||
+                it == AppDetail.ScoreQuery ||
+                it == AppDetail.DanDetail
+        }
         selectedSongId = songId
         openDetail(AppDetail.Song)
     }
@@ -394,7 +588,11 @@ fun MaimaidApp(
                     randomSongFilterActive = false
                     randomSongFilterRequested = false
                 }
-                val returnDetail = if (detail == AppDetail.Song) songReturnDetail else null
+                val returnDetail = when (detail) {
+                    AppDetail.Song -> songReturnDetail
+                    AppDetail.DanDetail -> AppDetail.Dan
+                    else -> null
+                }
                 detail = returnDetail
                 selectedSongId = null
                 if (returnDetail != AppDetail.RandomSong) {
@@ -704,6 +902,7 @@ fun MaimaidApp(
                         TopAppBar(
                             title = title,
                             largeTitle = title,
+                            modifier = Modifier.clip(TopBarBottomShape),
                             navigationIcon = detailNavigationIcon,
                             actions = { detailActions(AppDetail.RandomSong) },
                             defaultWindowInsetsPadding = true,
@@ -720,8 +919,13 @@ fun MaimaidApp(
                             detail = AppDetail.RandomSong,
                             state = uiState,
                             selectedSongId = null,
+                            selectedDanCategoryId = selectedDanCategoryId,
                             container = container,
                             songContentTopPadding = paddingValues.calculateTopPadding(),
+                            recommendationSelectedPage = recommendationSelectedPage,
+                            danSelectedPage = danSelectedPage,
+                            scoreQueryViewModel = null,
+                            showScoreQueryFilter = false,
                             profileCreateRequested = false,
                             bestTableExportRequested = false,
                             randomSongFilterRequested = randomSongFilterRequested,
@@ -730,7 +934,9 @@ fun MaimaidApp(
                             onBestTableExportRequestHandled = {},
                             onRandomSongFilterRequestHandled = { randomSongFilterRequested = false },
                             onRandomSongFilterActiveChanged = { randomSongFilterActive = it },
+                            onDismissScoreQueryFilter = {},
                             onOpenSong = openSongFromDetail,
+                            onOpenDanCategory = { _, _ -> },
                             onSongDetailBackgroundChanged = {},
                             onSongDetailTitleChanged = {},
                         )
@@ -746,8 +952,136 @@ fun MaimaidApp(
             }
         }
 
-        detail?.takeUnless { it == AppDetail.RandomSong }?.let { activeDetail ->
+        val showDanListLayer = detail == AppDetail.Dan ||
+            detail == AppDetail.DanDetail ||
+            (detail == AppDetail.Song && songReturnDetail == AppDetail.DanDetail)
+        val showDanDetailLayer = detail == AppDetail.DanDetail ||
+            (detail == AppDetail.Song && songReturnDetail == AppDetail.DanDetail)
+
+        if (showDanListLayer) {
+            val isForeground = detail == AppDetail.Dan
+            val isImmediateSource = detail == AppDetail.DanDetail
+            val sourceDimAlpha = when {
+                isForeground -> 0f
+                isImmediateSource -> 0.1f * (1f - detailSourceProgress)
+                else -> 0.1f
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationX = when {
+                            isForeground && gestureInProgress -> size.width * backProgress.value
+                            isForeground -> size.width * detailEntranceProgress.value
+                            isImmediateSource -> -size.width * 0.25f * (1f - detailSourceProgress)
+                            else -> -size.width * 0.25f
+                        }
+                        if (isForeground) {
+                            shape = foregroundShape
+                            clip = detailIsMoving
+                            shadowElevation = if (detailIsMoving) 12.dp.toPx() else 0f
+                        }
+                    },
+            ) {
+                DanNavigationLayer(
+                    title = detailTitle(AppDetail.Dan),
+                    onBack = closeDetail,
+                ) { contentTopPadding ->
+                    DanListScreen(
+                        container = container,
+                        contentTopPadding = contentTopPadding,
+                        onOpenCategory = { category ->
+                            selectedDanCategoryId = category.id
+                            selectedDanCategoryTitle = category.title
+                            danSelectedPage = DanRegularPage
+                            danSwitcherVisible = true
+                            danHasTruePage = false
+                            openDetail(AppDetail.DanDetail)
+                        },
+                    )
+                }
+                if (sourceDimAlpha > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = sourceDimAlpha)),
+                    )
+                }
+            }
+        }
+
+        if (showDanDetailLayer) {
+            val isForeground = detail == AppDetail.DanDetail
+            val sourceDimAlpha = if (isForeground) 0f else 0.1f * (1f - detailSourceProgress)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationX = if (isForeground) {
+                            if (gestureInProgress) {
+                                size.width * backProgress.value
+                            } else {
+                                size.width * detailEntranceProgress.value
+                            }
+                        } else {
+                            -size.width * 0.25f * (1f - detailSourceProgress)
+                        }
+                        if (isForeground) {
+                            shape = foregroundShape
+                            clip = detailIsMoving
+                            shadowElevation = if (detailIsMoving) 12.dp.toPx() else 0f
+                        }
+                    },
+            ) {
+                DanNavigationLayer(
+                    title = selectedDanCategoryTitle ?: detailTitle(AppDetail.Dan),
+                    onBack = closeDetail,
+                    scrollObserver = danSwitcherScrollConnection,
+                    bottomContent = {
+                        if (danHasTruePage) {
+                            DanPageSwitcher(
+                                selectedPage = danSelectedPage,
+                                visible = danSwitcherVisible,
+                                onSelectedPageChange = { danSelectedPage = it },
+                            )
+                        }
+                    },
+                ) { contentTopPadding ->
+                    selectedDanCategoryId?.let { categoryId ->
+                        DanDetailScreen(
+                            categoryId = categoryId,
+                            container = container,
+                            contentTopPadding = contentTopPadding,
+                            selectedPage = danSelectedPage,
+                            onTrueDanAvailabilityChanged = { hasTruePage ->
+                                danHasTruePage = hasTruePage
+                                if (!hasTruePage) danSelectedPage = DanRegularPage
+                            },
+                            onOpenSong = openSongFromDetail,
+                        )
+                    }
+                }
+                if (sourceDimAlpha > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = sourceDimAlpha)),
+                    )
+                }
+            }
+        }
+
+        detail?.takeUnless {
+            it == AppDetail.RandomSong || it == AppDetail.Dan || it == AppDetail.DanDetail
+        }?.let { activeDetail ->
             val detailScrollBehavior = MiuixScrollBehavior()
+            val scoreQueryViewModel = if (activeDetail == AppDetail.ScoreQuery) {
+                composeViewModel<ScoreQueryViewModel>(factory = ScoreQueryViewModel.Factory(container))
+            } else {
+                null
+            }
+            val scoreQueryState = scoreQueryViewModel?.state?.collectAsStateWithLifecycle()?.value
+            val scoreQueryText = scoreQueryViewModel?.query?.collectAsStateWithLifecycle()?.value.orEmpty()
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -771,8 +1105,29 @@ fun MaimaidApp(
                     modifier = Modifier
                         .fillMaxSize()
                         .then(
-                            if (activeDetail == AppDetail.BestTable) {
-                                Modifier.nestedScroll(detailScrollBehavior.nestedScrollConnection)
+                            if (
+                                activeDetail == AppDetail.BestTable ||
+                                activeDetail == AppDetail.Recommendations ||
+                                activeDetail == AppDetail.ScoreQuery ||
+                                activeDetail == AppDetail.ConstantTable ||
+                                activeDetail == AppDetail.PlateProgress ||
+                                activeDetail == AppDetail.Dan ||
+                                activeDetail == AppDetail.DanDetail ||
+                                activeDetail == AppDetail.UsefulLinks
+                            ) {
+                                Modifier
+                                    .nestedScroll(detailScrollBehavior.nestedScrollConnection)
+                                    .then(
+                                        when (activeDetail) {
+                                            AppDetail.Recommendations -> Modifier.nestedScroll(
+                                                recommendationSwitcherScrollConnection,
+                                            )
+                                            AppDetail.ScoreQuery -> Modifier.nestedScroll(
+                                                scoreQuerySearchScrollConnection,
+                                            )
+                                            else -> Modifier
+                                        },
+                                    )
                             } else {
                                 Modifier
                             },
@@ -786,11 +1141,11 @@ fun MaimaidApp(
                                     ?: selectedSong?.title.orEmpty(),
                                 modifier = Modifier.drawPlainBackdrop(
                                     backdrop = detailBackdrop,
-                                    shape = { RectangleShape },
+                                    shape = { TopBarBottomShape },
                                     effects = {
                                         blur(24.dp.toPx())
                                     },
-                                ),
+                                ).clip(TopBarBottomShape),
                                 color = Color.Transparent,
                                 navigationIcon = detailNavigationIcon,
                                 actions = { detailActions(activeDetail) },
@@ -802,41 +1157,99 @@ fun MaimaidApp(
                                 title = detailTitle,
                                 modifier = Modifier.drawPlainBackdrop(
                                     backdrop = detailBackdrop,
-                                    shape = { RectangleShape },
+                                    shape = { TopBarBottomShape },
                                     effects = { blur(24.dp.toPx()) },
                                     onDrawSurface = {
                                         drawRect(backgroundColor.copy(alpha = 0.52f))
                                     },
-                                ),
+                                ).clip(TopBarBottomShape),
                                 color = Color.Transparent,
                                 navigationIcon = detailNavigationIcon,
                                 actions = { detailActions(activeDetail) },
                                 defaultWindowInsetsPadding = true,
                             )
-                        } else if (activeDetail == AppDetail.BestTable) {
-                            val detailTitle = detailTitle(activeDetail)
+                        } else if (
+                            activeDetail == AppDetail.BestTable ||
+                            activeDetail == AppDetail.Recommendations ||
+                            activeDetail == AppDetail.ScoreQuery ||
+                            activeDetail == AppDetail.ConstantTable ||
+                            activeDetail == AppDetail.PlateProgress ||
+                            activeDetail == AppDetail.Dan ||
+                            activeDetail == AppDetail.DanDetail ||
+                            activeDetail == AppDetail.UsefulLinks
+                        ) {
+                            val detailTitle = if (activeDetail == AppDetail.DanDetail) {
+                                selectedDanCategoryTitle ?: detailTitle(AppDetail.Dan)
+                            } else {
+                                detailTitle(activeDetail)
+                            }
                             TopAppBar(
                                 title = detailTitle,
                                 largeTitle = detailTitle,
                                 modifier = Modifier.drawPlainBackdrop(
                                     backdrop = detailBackdrop,
-                                    shape = { RectangleShape },
+                                    shape = { TopBarBottomShape },
                                     effects = { blur(24.dp.toPx()) },
                                     onDrawSurface = {
                                         drawRect(backgroundColor.copy(alpha = 0.52f))
                                     },
-                                ),
+                                ).clip(TopBarBottomShape),
                                 color = Color.Transparent,
                                 navigationIcon = detailNavigationIcon,
-                                actions = { detailActions(activeDetail) },
+                                actions = {
+                                    if (activeDetail == AppDetail.ScoreQuery && scoreQueryState != null) {
+                                        ScoreQueryTopBarActions(
+                                            displayMode = scoreQueryState.displayMode,
+                                            sortMode = scoreQueryState.sortMode,
+                                            sortAscending = scoreQueryState.sortAscending,
+                                            filterActive = !scoreQueryState.filterSettings.isEmpty,
+                                            onDisplayModeChange = scoreQueryViewModel::setDisplayMode,
+                                            onSortModeChange = scoreQueryViewModel::setSortMode,
+                                            onSortAscendingChange = scoreQueryViewModel::setSortAscending,
+                                            onShowFilter = { showScoreQueryFilter = true },
+                                        )
+                                    } else {
+                                        detailActions(activeDetail)
+                                    }
+                                },
                                 scrollBehavior = detailScrollBehavior,
                                 defaultWindowInsetsPadding = true,
+                                bottomContent = {
+                                    if (activeDetail == AppDetail.Recommendations) {
+                                        RecommendationPageSwitcher(
+                                            selectedPage = recommendationSelectedPage,
+                                            visible = recommendationSwitcherVisible,
+                                            onSelectedPageChange = {
+                                                recommendationSelectedPage = it
+                                            },
+                                        )
+                                    } else if (
+                                        activeDetail == AppDetail.ScoreQuery &&
+                                        scoreQueryViewModel != null
+                                    ) {
+                                        CatalogSearchBar(
+                                            query = scoreQueryText,
+                                            onQueryChange = scoreQueryViewModel::setQuery,
+                                            expanded = scoreQuerySearchExpanded,
+                                            onExpandedChange = { scoreQuerySearchExpanded = it },
+                                            visible = scoreQuerySearchVisible ||
+                                                scoreQuerySearchFocused ||
+                                                restoreScoreQuerySearchFocus,
+                                            focusRequestToken = scoreQuerySearchFocusRequestToken,
+                                            backEnabled = detail == AppDetail.ScoreQuery &&
+                                                scoreQuerySearchFocused,
+                                            interactionSource = scoreQuerySearchInteractionSource,
+                                            labelResource = R.string.score_query_search_hint,
+                                        )
+                                    }
+                                },
                             )
                         } else {
                             val detailTitle = detailTitle(activeDetail)
                             TopAppBar(
                                 title = detailTitle,
                                 largeTitle = detailTitle,
+                                modifier = Modifier.clip(TopBarBottomShape),
                                 navigationIcon = detailNavigationIcon,
                                 actions = { detailActions(activeDetail) },
                                 defaultWindowInsetsPadding = true,
@@ -852,6 +1265,13 @@ fun MaimaidApp(
                                 when (activeDetail) {
                                     AppDetail.Song,
                                     AppDetail.BestTable,
+                                    AppDetail.Recommendations,
+                                    AppDetail.ScoreQuery,
+                                    AppDetail.ConstantTable,
+                                    AppDetail.PlateProgress,
+                                    AppDetail.Dan,
+                                    AppDetail.DanDetail,
+                                    AppDetail.UsefulLinks,
                                     -> Modifier.layerBackdrop(detailBackdrop)
                                     AppDetail.StaticData -> Modifier
                                         .padding(paddingValues)
@@ -864,8 +1284,13 @@ fun MaimaidApp(
                             detail = activeDetail,
                             state = uiState,
                             selectedSongId = selectedSongId,
+                            selectedDanCategoryId = selectedDanCategoryId,
                             container = container,
                             songContentTopPadding = paddingValues.calculateTopPadding(),
+                            recommendationSelectedPage = recommendationSelectedPage,
+                            danSelectedPage = danSelectedPage,
+                            scoreQueryViewModel = scoreQueryViewModel,
+                            showScoreQueryFilter = showScoreQueryFilter,
                             profileCreateRequested = profileCreateRequested,
                             bestTableExportRequested = bestTableExportRequested,
                             randomSongFilterRequested = randomSongFilterRequested,
@@ -874,7 +1299,13 @@ fun MaimaidApp(
                             onBestTableExportRequestHandled = { bestTableExportRequested = false },
                             onRandomSongFilterRequestHandled = { randomSongFilterRequested = false },
                             onRandomSongFilterActiveChanged = { randomSongFilterActive = it },
+                            onDismissScoreQueryFilter = { showScoreQueryFilter = false },
                             onOpenSong = openSongFromDetail,
+                            onOpenDanCategory = { categoryId, categoryTitle ->
+                                selectedDanCategoryId = categoryId
+                                selectedDanCategoryTitle = categoryTitle
+                                openDetail(AppDetail.DanDetail)
+                            },
                             onSongDetailBackgroundChanged = { color ->
                                 val currentSongId = selectedSongId
                                 if (detail == AppDetail.Song && currentSongId != null) {
@@ -899,6 +1330,88 @@ fun MaimaidApp(
             container = container,
             onDismiss = { showHomeProfileEditor = false },
         )
+    }
+}
+
+@Composable
+private fun DanNavigationLayer(
+    title: String,
+    onBack: () -> Unit,
+    scrollObserver: NestedScrollConnection? = null,
+    bottomContent: @Composable () -> Unit = {},
+    content: @Composable (Dp) -> Unit,
+) {
+    val scrollBehavior = MiuixScrollBehavior()
+    val backgroundColor = MiuixTheme.colorScheme.background
+    val pageBackdrop = rememberLayerBackdrop()
+    val scrollConnection = remember(scrollBehavior, scrollObserver) {
+        val topBarConnection = scrollBehavior.nestedScrollConnection
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                scrollObserver?.onPreScroll(available, source)
+                return topBarConnection.onPreScroll(available, source)
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                scrollObserver?.onPostScroll(consumed, available, source)
+                return topBarConnection.onPostScroll(consumed, available, source)
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity =
+                topBarConnection.onPreFling(available)
+
+            override suspend fun onPostFling(
+                consumed: Velocity,
+                available: Velocity,
+            ): Velocity = topBarConnection.onPostFling(consumed, available)
+        }
+    }
+
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(scrollConnection),
+        containerColor = Color.Transparent,
+        topBar = {
+            TopAppBar(
+                title = title,
+                largeTitle = title,
+                modifier = Modifier.drawPlainBackdrop(
+                    backdrop = pageBackdrop,
+                    shape = { TopBarBottomShape },
+                    effects = { blur(24.dp.toPx()) },
+                    onDrawSurface = {
+                        drawRect(backgroundColor.copy(alpha = 0.52f))
+                    },
+                ).clip(TopBarBottomShape),
+                color = Color.Transparent,
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                        )
+                    }
+                },
+                scrollBehavior = scrollBehavior,
+                defaultWindowInsetsPadding = true,
+                bottomContent = bottomContent,
+            )
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .layerBackdrop(pageBackdrop)
+                .background(backgroundColor),
+        ) {
+            content(paddingValues.calculateTopPadding())
+        }
     }
 }
 
@@ -953,12 +1466,12 @@ private fun RootLayer(
                     largeTitle = title,
                     modifier = Modifier.drawPlainBackdrop(
                         backdrop = pageBackdrop,
-                        shape = { RectangleShape },
+                        shape = { TopBarBottomShape },
                         effects = { blur(24.dp.toPx()) },
                         onDrawSurface = {
                             drawRect(backgroundColor.copy(alpha = 0.52f))
                         },
-                    ),
+                    ).clip(TopBarBottomShape),
                     color = Color.Transparent,
                     actions = actions,
                     scrollBehavior = scrollBehavior,
@@ -1044,6 +1557,7 @@ private fun detailTitle(detail: AppDetail): String = when (detail) {
     AppDetail.ConstantTable -> stringResource(R.string.detail_constant_table)
     AppDetail.PlateProgress -> stringResource(R.string.detail_plate_progress)
     AppDetail.Dan -> stringResource(R.string.detail_dan)
+    AppDetail.DanDetail -> stringResource(R.string.detail_dan)
     AppDetail.CommunityAliases -> stringResource(R.string.detail_community_aliases)
     AppDetail.UsefulLinks -> stringResource(R.string.detail_useful_links)
     AppDetail.StaticData -> stringResource(R.string.detail_static_data)

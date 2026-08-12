@@ -55,6 +55,26 @@ class AppPreferencesRepository(
         preferences[CatalogHideUnavailableSongsKey] ?: false
     }
 
+    val scoreQueryDisplayMode: Flow<ScoreQueryDisplayMode> = context.appPreferencesDataStore.data.map { preferences ->
+        preferences[ScoreQueryDisplayModeKey]
+            ?.let { stored -> ScoreQueryDisplayMode.entries.firstOrNull { it.name == stored } }
+            ?: ScoreQueryDisplayMode.Grid
+    }
+
+    val scoreQueryGridColumns: Flow<Int> = context.appPreferencesDataStore.data.map { preferences ->
+        (preferences[ScoreQueryGridColumnsKey] ?: 5).coerceIn(3, 9)
+    }
+
+    val scoreQuerySortMode: Flow<ScoreQuerySortMode> = context.appPreferencesDataStore.data.map { preferences ->
+        preferences[ScoreQuerySortModeKey]
+            ?.let { stored -> ScoreQuerySortMode.entries.firstOrNull { it.name == stored } }
+            ?: ScoreQuerySortMode.Rating
+    }
+
+    val scoreQuerySortAscending: Flow<Boolean> = context.appPreferencesDataStore.data.map { preferences ->
+        preferences[ScoreQuerySortAscendingKey] ?: false
+    }
+
     suspend fun setThemeMode(themeMode: AppThemeMode) {
         context.appPreferencesDataStore.edit { preferences ->
             preferences[ThemeModeKey] = themeMode.name
@@ -103,6 +123,30 @@ class AppPreferencesRepository(
         }
     }
 
+    suspend fun setScoreQueryDisplayMode(displayMode: ScoreQueryDisplayMode) {
+        context.appPreferencesDataStore.edit { preferences ->
+            preferences[ScoreQueryDisplayModeKey] = displayMode.name
+        }
+    }
+
+    suspend fun setScoreQueryGridColumns(columns: Int) {
+        context.appPreferencesDataStore.edit { preferences ->
+            preferences[ScoreQueryGridColumnsKey] = columns.coerceIn(3, 9)
+        }
+    }
+
+    suspend fun setScoreQuerySortMode(sortMode: ScoreQuerySortMode) {
+        context.appPreferencesDataStore.edit { preferences ->
+            preferences[ScoreQuerySortModeKey] = sortMode.name
+        }
+    }
+
+    suspend fun setScoreQuerySortAscending(ascending: Boolean) {
+        context.appPreferencesDataStore.edit { preferences ->
+            preferences[ScoreQuerySortAscendingKey] = ascending
+        }
+    }
+
     private companion object {
         val ThemeModeKey = stringPreferencesKey("theme_mode")
         val ThemeColorSourceKey = stringPreferencesKey("theme_color_source")
@@ -112,5 +156,9 @@ class AppPreferencesRepository(
         val CatalogSortAscendingKey = booleanPreferencesKey("catalog_sort_ascending")
         val CatalogGridColumnsKey = intPreferencesKey("catalog_grid_columns")
         val CatalogHideUnavailableSongsKey = booleanPreferencesKey("catalog_hide_unavailable_songs")
+        val ScoreQueryDisplayModeKey = stringPreferencesKey("score_query_display_mode")
+        val ScoreQueryGridColumnsKey = intPreferencesKey("score_query_grid_columns")
+        val ScoreQuerySortModeKey = stringPreferencesKey("score_query_sort_mode")
+        val ScoreQuerySortAscendingKey = booleanPreferencesKey("score_query_sort_ascending")
     }
 }

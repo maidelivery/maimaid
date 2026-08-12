@@ -19,6 +19,20 @@ data class StaticBundleResponse(
         @SerialName("data_json") val catalog: CatalogPayload,
         @SerialName("songid_json") val songIds: List<SongIdItem> = emptyList(),
         @SerialName("lxns_aliases") val aliases: AliasPayload? = null,
+        @SerialName("chart_fit") val chartFit: ChartFitPayload? = null,
+        @SerialName("df_chart_fit") val legacyChartFit: ChartFitPayload? = null,
+        @SerialName("dan_info") val danInfo: List<DanCategory> = emptyList(),
+    )
+
+    @Serializable
+    data class ChartFitPayload(
+        val charts: Map<String, List<ChartFitStat>> = emptyMap(),
+    )
+
+    @Serializable
+    data class ChartFitStat(
+        val diff: String? = null,
+        @SerialName("fit_diff") val fitDifficulty: Double? = null,
     )
 
     @Serializable

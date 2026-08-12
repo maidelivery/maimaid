@@ -19,6 +19,14 @@ class StaticBundleResponseTest {
         assertEquals("Song A", response.payload.resources.catalog.songs.single().title)
         assertEquals(10_001, response.payload.resources.songIds.single().id)
         assertEquals("song a", response.payload.resources.aliases?.aliases?.single()?.aliases?.single())
+        assertEquals(
+            13.42,
+            response.payload.resources.chartFit?.charts?.get("10001")?.single()?.fitDifficulty ?: 0.0,
+            0.0001,
+        )
+        val dan = response.payload.resources.danInfo.single()
+        assertEquals("circle-plus-dan", dan.id)
+        assertEquals("Song A|dx|master", dan.sections.single().sheets.single())
     }
 
     @Test
@@ -55,7 +63,17 @@ class StaticBundleResponseTest {
                     "versions": [{"version": "maimai", "abbr": "真"}]
                   },
                   "songid_json": [{"id": 10001, "name": "Song A"}],
-                  "lxns_aliases": {"aliases": [{"song_id": 10001, "aliases": ["song a"]}]}
+                  "lxns_aliases": {"aliases": [{"song_id": 10001, "aliases": ["song a"]}]},
+                  "chart_fit": {"charts": {"10001": [{"diff": "13+", "fit_diff": 13.42}]}},
+                  "dan_info": [{
+                    "title": "CiRCLE PLUS 段位認定",
+                    "id": "circle-plus-dan",
+                    "sections": [{
+                      "title": "【初段】",
+                      "description": "❤ 350｜-0/-2/-5｜+20",
+                      "sheets": ["Song A|dx|master"]
+                    }]
+                  }]
                 }
               }
             }
