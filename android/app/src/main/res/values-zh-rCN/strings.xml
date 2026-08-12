@@ -15,6 +15,12 @@
     <string name="action_photos">照片</string>
     <string name="action_open">打开</string>
     <string name="action_randomize">重新随机</string>
+    <string name="random_count_three">一次 3 首</string>
+    <string name="random_count_four">一次 4 首</string>
+    <string name="random_action_spin">立刻随机抽取</string>
+    <string name="random_action_skip">直接跳过</string>
+    <string name="random_results">抽选结果</string>
+    <string name="random_ready">准备好了吗？</string>
     <string name="home_greeting">欢迎回来</string>
     <string name="home_rating">Rating</string>
     <string name="home_best">Best 50</string>
@@ -178,6 +184,10 @@
     <string name="profile_lxns_token">落雪刷新 Token</string>
     <string name="profile_change_avatar">更换头像</string>
     <string name="profile_clear_avatar">清除</string>
+    <string name="avatar_editor_title">调整头像</string>
+    <string name="avatar_editor_hint">拖动调整位置，双指缩放或旋转。</string>
+    <string name="avatar_editor_reset">重置</string>
+    <string name="avatar_editor_apply">应用裁剪</string>
     <string name="profile_sheet_expand">展开档案编辑</string>
     <string name="profile_sheet_collapse">收起档案编辑</string>
     <string name="profile_sheet_expanded">档案编辑已全屏展开</string>

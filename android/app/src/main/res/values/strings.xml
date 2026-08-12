@@ -15,6 +15,12 @@
     <string name="action_photos">Photos</string>
     <string name="action_open">Open</string>
     <string name="action_randomize">Randomize</string>
+    <string name="random_count_three">3 Songs</string>
+    <string name="random_count_four">4 Songs</string>
+    <string name="random_action_spin">Spin Now</string>
+    <string name="random_action_skip">Skip Now</string>
+    <string name="random_results">Results</string>
+    <string name="random_ready">Ready?</string>
     <string name="home_greeting">Welcome back</string>
     <string name="home_rating">Rating</string>
     <string name="home_best">Best 50</string>
@@ -178,6 +184,10 @@
     <string name="profile_lxns_token">LXNS refresh token</string>
     <string name="profile_change_avatar">Change avatar</string>
     <string name="profile_clear_avatar">Clear</string>
+    <string name="avatar_editor_title">Adjust Avatar</string>
+    <string name="avatar_editor_hint">Drag to position, pinch to zoom, or rotate with two fingers.</string>
+    <string name="avatar_editor_reset">Reset</string>
+    <string name="avatar_editor_apply">Apply Crop</string>
     <string name="profile_sheet_expand">Expand profile editor</string>
     <string name="profile_sheet_collapse">Collapse profile editor</string>
     <string name="profile_sheet_expanded">Profile editor expanded</string>
