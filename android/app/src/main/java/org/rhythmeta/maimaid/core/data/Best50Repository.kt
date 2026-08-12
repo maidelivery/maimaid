@@ -1,7 +1,9 @@
 package org.rhythmeta.maimaid.core.data
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.combine
@@ -49,7 +51,7 @@ class Best50Repository(
                     )
                 }
             }
-        }
+        }.flowOn(Dispatchers.Default)
 
     private fun calculate(
         rows: List<Best50Row>,
@@ -83,6 +85,7 @@ class Best50Repository(
                 RatingUtils.Entry(
                     sheetKey = row.sheetKey,
                     songIdentifier = row.songIdentifier,
+                    songId = row.songId,
                     title = row.title,
                     imageName = row.imageName,
                     achievement = row.achievement,
@@ -91,6 +94,7 @@ class Best50Repository(
                     difficulty = row.difficulty,
                     type = row.type,
                     dxScore = row.dxScore,
+                    maxDxScore = row.maxDxScore,
                     fc = row.fc,
                     fs = row.fs,
                     isNew = isNew,

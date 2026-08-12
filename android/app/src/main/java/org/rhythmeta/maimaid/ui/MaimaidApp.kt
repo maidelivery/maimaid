@@ -747,6 +747,7 @@ fun MaimaidApp(
         }
 
         detail?.takeUnless { it == AppDetail.RandomSong }?.let { activeDetail ->
+            val detailScrollBehavior = MiuixScrollBehavior()
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -767,7 +768,15 @@ fun MaimaidApp(
                         .background(songTopBarColor),
                 )
                 Scaffold(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (activeDetail == AppDetail.BestTable) {
+                                Modifier.nestedScroll(detailScrollBehavior.nestedScrollConnection)
+                            } else {
+                                Modifier
+                            },
+                        ),
                     topBar = {
                         if (activeDetail == AppDetail.Song) {
                             SmallTopAppBar(
@@ -804,6 +813,25 @@ fun MaimaidApp(
                                 actions = { detailActions(activeDetail) },
                                 defaultWindowInsetsPadding = true,
                             )
+                        } else if (activeDetail == AppDetail.BestTable) {
+                            val detailTitle = detailTitle(activeDetail)
+                            TopAppBar(
+                                title = detailTitle,
+                                largeTitle = detailTitle,
+                                modifier = Modifier.drawPlainBackdrop(
+                                    backdrop = detailBackdrop,
+                                    shape = { RectangleShape },
+                                    effects = { blur(24.dp.toPx()) },
+                                    onDrawSurface = {
+                                        drawRect(backgroundColor.copy(alpha = 0.52f))
+                                    },
+                                ),
+                                color = Color.Transparent,
+                                navigationIcon = detailNavigationIcon,
+                                actions = { detailActions(activeDetail) },
+                                scrollBehavior = detailScrollBehavior,
+                                defaultWindowInsetsPadding = true,
+                            )
                         } else {
                             val detailTitle = detailTitle(activeDetail)
                             TopAppBar(
@@ -822,7 +850,9 @@ fun MaimaidApp(
                             .fillMaxSize()
                             .then(
                                 when (activeDetail) {
-                                    AppDetail.Song -> Modifier.layerBackdrop(detailBackdrop)
+                                    AppDetail.Song,
+                                    AppDetail.BestTable,
+                                    -> Modifier.layerBackdrop(detailBackdrop)
                                     AppDetail.StaticData -> Modifier
                                         .padding(paddingValues)
                                         .layerBackdrop(detailBackdrop)

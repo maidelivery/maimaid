@@ -2,9 +2,7 @@ package org.rhythmeta.maimaid.ui.best
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
@@ -32,6 +32,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.onFocusChanged
@@ -44,13 +46,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import java.io.File
-import java.io.FileOutputStream
 import java.util.Locale
 import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.R
@@ -79,6 +81,7 @@ fun BestTableScreen(
     container: AppContainer,
     activeProfile: UserProfileEntity?,
     versions: List<GameVersionEntity>,
+    contentTopPadding: Dp,
     exportRequested: Boolean,
     onExportRequestHandled: () -> Unit,
 ) {
@@ -103,6 +106,10 @@ fun BestTableScreen(
         version?.let { SongVisualUtils.versionAbbreviation(it, versions) }
             ?: stringResource(R.string.best50_version_auto)
     }
+    val exportVersion = best50.latestVersion?.let { version ->
+        SongVisualUtils.versionAbbreviation(version, versions)
+    }
+    val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
 
     LaunchedEffect(activeProfile?.b35Count, activeProfile?.b15Count) {
         activeProfile?.let {
@@ -110,9 +117,18 @@ fun BestTableScreen(
             b15Text = it.b15Count.toString()
         }
     }
-    LaunchedEffect(exportRequested, best50) {
+    LaunchedEffect(exportRequested, best50, activeProfile?.name, exportVersion, darkTheme) {
         if (exportRequested) {
-            if (!best50.isEmpty) shareBest50(context, best50)
+            if (!best50.isEmpty) {
+                shareBest50(
+                    context = context,
+                    state = best50,
+                    userName = activeProfile?.name,
+                    version = exportVersion,
+                    coverImageStore = container.coverImageStore,
+                    darkTheme = darkTheme,
+                )
+            }
             onExportRequestHandled()
         }
     }
@@ -121,7 +137,12 @@ fun BestTableScreen(
     val b15Sum = best50.b15.sumOf(RatingUtils.Entry::rating)
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            top = contentTopPadding + 12.dp,
+            end = 16.dp,
+            bottom = 12.dp,
+        ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
@@ -179,26 +200,20 @@ fun BestTableScreen(
                 },
             )
         }
-        item {
-            BestEntrySection(
-                title = stringResource(
-                    R.string.best50_new_section,
-                    activeProfile?.b15Count ?: 15,
-                ),
-                entries = best50.b15,
-                coverImageStore = container.coverImageStore,
-            )
-        }
-        item {
-            BestEntrySection(
-                title = stringResource(
-                    R.string.best50_old_section,
-                    activeProfile?.b35Count ?: 35,
-                ),
-                entries = best50.b35,
-                coverImageStore = container.coverImageStore,
-            )
-        }
+        bestEntrySection(
+            sectionKey = "new",
+            titleResource = R.string.best50_new_section,
+            capacity = activeProfile?.b15Count ?: 15,
+            entries = best50.b15,
+            coverImageStore = container.coverImageStore,
+        )
+        bestEntrySection(
+            sectionKey = "old",
+            titleResource = R.string.best50_old_section,
+            capacity = activeProfile?.b35Count ?: 35,
+            entries = best50.b35,
+            coverImageStore = container.coverImageStore,
+        )
     }
 }
 
@@ -225,8 +240,9 @@ private fun BestRatingSummary(total: Int, b35Sum: Int, b15Sum: Int) {
                     style = MiuixTheme.textStyles.headline1.copy(
                         fontWeight = FontWeight.Black,
                         fontFamily = FontFamily.SansSerif,
+                        brush = ratingBrush(total),
                     ),
-                    color = ratingColor(total),
+                    color = Color.Unspecified,
                 )
             }
             Column(
@@ -263,50 +279,35 @@ private fun BestCapacityCard(
         insideMargin = PaddingValues(14.dp),
         colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            BestCapacityField(
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            CapacityTextField(
                 label = stringResource(R.string.best50_capacity_old),
                 value = b35Text,
                 onValueChange = onB35Change,
                 onCommit = onCommit,
-                modifier = Modifier.weight(1f),
             )
-            Text(
-                text = "+",
-                style = MiuixTheme.textStyles.body1,
-                fontWeight = FontWeight.Bold,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-            )
-            BestCapacityField(
+            CapacityTextField(
                 label = stringResource(R.string.best50_capacity_new),
                 value = b15Text,
                 onValueChange = onB15Change,
                 onCommit = onCommit,
-                modifier = Modifier.weight(1f),
             )
-            Box(
+            Row(
                 modifier = Modifier
-                    .width(1.dp)
-                    .height(36.dp)
-                    .background(MiuixTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
-            )
-            Column(
-                modifier = Modifier.weight(0.8f),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .fillMaxWidth()
+                    .padding(top = 2.dp, end = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(R.string.best50_capacity_total),
-                    style = MiuixTheme.textStyles.footnote2,
+                    style = MiuixTheme.textStyles.body1,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
+                Spacer(Modifier.weight(1f))
                 Text(
                     text = total.toString(),
-                    style = MiuixTheme.textStyles.body1,
-                    fontWeight = FontWeight.Bold,
+                    style = MiuixTheme.textStyles.headline1,
+                    fontWeight = FontWeight.Black,
                     color = BestAccent,
                 )
             }
@@ -315,79 +316,93 @@ private fun BestCapacityCard(
 }
 
 @Composable
-private fun BestCapacityField(
+private fun CapacityTextField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
     onCommit: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     var wasFocused by remember { mutableStateOf(false) }
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(5.dp),
-    ) {
-        Text(
-            text = label,
-            style = MiuixTheme.textStyles.footnote2,
-            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-        )
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.Done,
-            ),
-            keyboardActions = KeyboardActions(onDone = { onCommit() }),
-            textStyle = MiuixTheme.textStyles.body1.copy(
-                fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
-                textAlign = TextAlign.Center,
-            ),
-            singleLine = true,
-            cornerRadius = 8.dp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .onFocusChanged { focusState ->
-                    if (wasFocused && !focusState.isFocused) onCommit()
-                    wasFocused = focusState.isFocused
-                },
-        )
-    }
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = label,
+        useLabelAsPlaceholder = false,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Done,
+        ),
+        keyboardActions = KeyboardActions(onDone = { onCommit() }),
+        textStyle = MiuixTheme.textStyles.body1.copy(
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace,
+            textAlign = TextAlign.Start,
+        ),
+        singleLine = true,
+        cornerRadius = 8.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { focusState ->
+                if (wasFocused && !focusState.isFocused) onCommit()
+                wasFocused = focusState.isFocused
+            },
+    )
 }
 
-@Composable
-private fun BestEntrySection(
-    title: String,
+private fun LazyListScope.bestEntrySection(
+    sectionKey: String,
+    titleResource: Int,
+    capacity: Int,
     entries: List<RatingUtils.Entry>,
     coverImageStore: CoverImageStore,
 ) {
-    Column {
+    item(key = "$sectionKey-title") {
         SmallTitle(
-            text = title,
+            text = stringResource(titleResource, capacity),
             insideMargin = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
         )
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            cornerRadius = 16.dp,
-            insideMargin = PaddingValues(vertical = 4.dp),
-            colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
-        ) {
-            if (entries.isEmpty()) {
+    }
+    if (entries.isEmpty()) {
+        item(key = "$sectionKey-empty") {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                cornerRadius = 16.dp,
+                insideMargin = PaddingValues(horizontal = 16.dp, vertical = 18.dp),
+                colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
+            ) {
                 Text(
                     text = stringResource(R.string.best50_empty),
                     style = MiuixTheme.textStyles.body2,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
                 )
-            } else {
-                entries.forEach { entry ->
-                    BestEntryRow(entry = entry, coverImageStore = coverImageStore)
-                }
             }
         }
+    } else {
+        items(
+            items = entries,
+            key = { entry -> "$sectionKey-${entry.sheetKey}" },
+            contentType = { "best-entry" },
+        ) { entry ->
+            BestEntryCard(
+                entry = entry,
+                coverImageStore = coverImageStore,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BestEntryCard(
+    entry: RatingUtils.Entry,
+    coverImageStore: CoverImageStore,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        cornerRadius = 16.dp,
+        insideMargin = PaddingValues(start = 8.dp),
+        colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
+    ) {
+        BestEntryRow(entry = entry, coverImageStore = coverImageStore)
     }
 }
 
@@ -434,7 +449,10 @@ private fun BestEntryRow(
                 style = MiuixTheme.textStyles.body1,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.Clip,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .basicMarquee(),
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -477,7 +495,10 @@ private fun BestEntryRow(
                     BestBadge(ScoreRules.displayFc(it) ?: it.uppercase(), ScoreStatusColors.combo(it))
                 }
                 entry.fs?.takeIf(String::isNotBlank)?.let {
-                    BestBadge(ScoreRules.displayFs(it) ?: it.uppercase(), ScoreStatusColors.sync(it))
+                    val sync = ScoreRules.displayFs(it)?.let { display ->
+                        if (display == "S") "SYNC" else display
+                    } ?: it.uppercase()
+                    BestBadge(sync, ScoreStatusColors.sync(it))
                 }
             }
         }
@@ -543,33 +564,22 @@ private fun BestBadge(text: String, color: Color?) {
     )
 }
 
-private fun shareBest50(context: Context, state: Best50State) {
-    val bitmap = Bitmap.createBitmap(
-        1200,
-        180 + (state.b35.size + state.b15.size) * 70,
-        Bitmap.Config.ARGB_8888,
-    )
-    val canvas = Canvas(bitmap)
-    canvas.drawColor(android.graphics.Color.WHITE)
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = android.graphics.Color.BLACK
-        textSize = 42f
-    }
-    canvas.drawText("maimaid Best 50  ${state.total}", 48f, 64f, paint)
-    var y = 130f
-    listOf("B15" to state.b15, "B35" to state.b35).forEach { (label, entries) ->
-        paint.textSize = 30f
-        canvas.drawText(label, 48f, y, paint)
-        y += 42f
-        paint.textSize = 24f
-        entries.forEach { entry ->
-            val achievement = String.format(Locale.ROOT, "%.4f", entry.achievement)
-            canvas.drawText("${entry.rating}  ${entry.title.take(36)}  $achievement%", 72f, y, paint)
-            y += 58f
-        }
-    }
-    val file = File(context.cacheDir, "best50.png")
-    FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+private suspend fun shareBest50(
+    context: Context,
+    state: Best50State,
+    userName: String?,
+    version: String?,
+    coverImageStore: CoverImageStore,
+    darkTheme: Boolean,
+) {
+    val file = Best50ImageExporter.renderToCache(
+        context = context,
+        state = state,
+        userName = userName,
+        version = version,
+        coverImageStore = coverImageStore,
+        darkTheme = darkTheme,
+    ) ?: return
     val uri = runCatching {
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     }.getOrNull() ?: return
@@ -597,6 +607,35 @@ private fun ratingColor(rating: Int): Color = when {
     rating >= 2_000 -> Color(0xFF46D246)
     rating >= 1_000 -> Color(0xFF56A6FF)
     else -> Color(0xFF8E8E93)
+}
+
+private fun ratingBrush(rating: Int): Brush = when {
+    rating >= 15_000 -> Brush.linearGradient(
+        colors = listOf(
+            Color(0xFFFF5E5E),
+            Color(0xFFFFBA5E),
+            Color(0xFFFFF75E),
+            Color(0xFF5EFF5E),
+            Color(0xFF5EBAFF),
+            Color(0xFFBA5EFF),
+            Color(0xFFFF5EBA),
+        ),
+        start = Offset.Zero,
+        end = Offset.Infinite,
+    )
+    rating >= 14_500 -> Brush.linearGradient(
+        colors = listOf(
+            Color(0xFFD3D3D3),
+            Color.White,
+            Color(0xFFD3D3D3),
+        ),
+        start = Offset.Zero,
+        end = Offset.Infinite,
+    )
+    rating >= 14_000 -> Brush.verticalGradient(
+        colors = listOf(Color(0xFFFFD700), Color(0xFFFFA500)),
+    )
+    else -> Brush.linearGradient(listOf(ratingColor(rating), ratingColor(rating)))
 }
 
 private val BestAccent = Color(0xFFFF9500)

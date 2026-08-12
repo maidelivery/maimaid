@@ -12,6 +12,7 @@ object RatingUtils {
     data class Entry(
         val sheetKey: String,
         val songIdentifier: String,
+        val songId: Int,
         val title: String,
         val imageName: String,
         val achievement: Double,
@@ -20,6 +21,7 @@ object RatingUtils {
         val difficulty: String,
         val type: String,
         val dxScore: Int,
+        val maxDxScore: Int,
         val fc: String?,
         val fs: String?,
         val isNew: Boolean,

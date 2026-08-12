@@ -15,7 +15,9 @@
 "home.profile.unbound" = "未綁定使用者";
 "home.profile.editHint" = "點選編輯";
 "home.bestTable.button.title %lld" = "檢視 Best %lld 成績表";
-"home.bestTable.button.subtitle %lld %lld" = "基於 B%lld + N%lld 計算的 DX Rating";
+"home.bestTable.button.subtitle %lld %lld" = "基於 B%lld + B%lld 計算的 DX Rating";
+"userProfile.delete.confirm.title" = "刪除檔案？";
+"userProfile.delete.confirm.message" = "這會刪除檔案及其本機成績。";
 "home.randomSong.title" = "隨機歌曲";
 "home.randomSong.subtitle" = "老虎機式隨機抽曲";
 "home.recommendation.title" = "吃分推薦";

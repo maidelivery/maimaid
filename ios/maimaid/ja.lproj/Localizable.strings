@@ -15,7 +15,9 @@
 "home.profile.unbound" = "未連携ユーザー";
 "home.profile.editHint" = "タップして編集";
 "home.bestTable.button.title %lld" = "ベスト %lld テーブルを表示";
-"home.bestTable.button.subtitle %lld %lld" = "B%lld + N%lld に基づく DX Rating";
+"home.bestTable.button.subtitle %lld %lld" = "B%lld + B%lld に基づく DX Rating";
+"userProfile.delete.confirm.title" = "プロフィールを削除しますか？";
+"userProfile.delete.confirm.message" = "プロフィールとローカルの成績を削除します。";
 "home.randomSong.title" = "ランダムソング";
 "home.randomSong.subtitle" = "スロット風ランダム";
 "home.recommendation.title" = "おすすめ";

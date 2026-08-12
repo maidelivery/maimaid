@@ -6,6 +6,7 @@ struct UserProfileListView: View {
     @Query(sort: \UserProfile.createdAt) private var profiles: [UserProfile]
     @State private var showingCreateProfile = false
     @State private var editingProfile: UserProfile?
+    @State private var deletingProfile: UserProfile?
     
     // Cache server versions to avoid recomputing per-row
     @State private var serverVersionCache: [GameServer: String] = [:]
@@ -40,7 +41,7 @@ struct UserProfileListView: View {
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         if !profile.isActive {
                             Button(role: .destructive) {
-                                deleteProfile(profile)
+                                deletingProfile = profile
                             } label: {
                                 Label("userProfile.delete", systemImage: "trash")
                             }
@@ -57,6 +58,25 @@ struct UserProfileListView: View {
             }
         }
         .navigationTitle("userProfile.title")
+        .confirmationDialog(
+            "userProfile.delete.confirm.title",
+            isPresented: Binding(
+                get: { deletingProfile != nil },
+                set: { if !$0 { deletingProfile = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: deletingProfile
+        ) { profile in
+            Button("userProfile.delete", role: .destructive) {
+                deleteProfile(profile)
+                deletingProfile = nil
+            }
+            Button("userProfile.cancel", role: .cancel) {
+                deletingProfile = nil
+            }
+        } message: { _ in
+            Text("userProfile.delete.confirm.message")
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {

@@ -114,6 +114,7 @@ internal fun DetailScreen(
             container = container,
             activeProfile = state.activeProfile,
             versions = state.gameVersions,
+            contentTopPadding = songContentTopPadding,
             exportRequested = bestTableExportRequested,
             onExportRequestHandled = onBestTableExportRequestHandled,
         )

@@ -15,7 +15,9 @@
 "home.profile.unbound" = "未绑定用户";
 "home.profile.editHint" = "点击编辑";
 "home.bestTable.button.title %lld" = "查看 Best %lld 成绩表";
-"home.bestTable.button.subtitle %lld %lld" = "基于 B%lld + N%lld 计算的 DX Rating";
+"home.bestTable.button.subtitle %lld %lld" = "基于 B%lld + B%lld 计算的 DX Rating";
+"userProfile.delete.confirm.title" = "删除档案？";
+"userProfile.delete.confirm.message" = "这会删除档案及其本地成绩。";
 "home.randomSong.title" = "随机歌曲";
 "home.randomSong.subtitle" = "老虎机式随机抽曲";
 "home.recommendation.title" = "吃分推荐";
