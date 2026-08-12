@@ -11,6 +11,7 @@ import org.rhythmeta.maimaid.core.database.UserProfileEntity
 
 data class MainUiState(
     val activeProfile: UserProfileEntity? = null,
+    val best50Rating: Int = 0,
     val songCount: Int = 0,
     val sheetCount: Int = 0,
     val featuredSongs: List<SongEntity> = emptyList(),

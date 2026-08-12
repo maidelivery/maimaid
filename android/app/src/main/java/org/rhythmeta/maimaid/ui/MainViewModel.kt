@@ -91,18 +91,27 @@ class MainViewModel(
         )
     }
 
-    val uiState = combine(
-        container.profileRepository.activeProfile,
+    private val catalogContentState = combine(
         catalogState,
         container.catalogRepository.sheets,
         container.scoreRepository.observeActiveScores(),
         container.catalogRepository.versions,
-    ) { activeProfile, catalogState, sheets, scores, versions ->
+    ) { catalogState, sheets, scores, versions ->
+        catalogState.copy(
+            sheets = sheets,
+            scores = scores,
+            gameVersions = versions,
+        )
+    }
+
+    val uiState = combine(
+        container.profileRepository.activeProfile,
+        catalogContentState,
+        container.best50Repository.observeBest50(),
+    ) { activeProfile, catalogState, best50 ->
         catalogState.copy(
             activeProfile = activeProfile,
-            sheets = sheets,
-            scores = scores.filter { it.profileId == activeProfile?.id },
-            gameVersions = versions,
+            best50Rating = best50.total,
         )
     }.stateIn(
         scope = viewModelScope,
