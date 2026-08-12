@@ -46,18 +46,7 @@ import org.rhythmeta.maimaid.core.data.CatalogSyncStatus
 import org.rhythmeta.maimaid.ui.MainUiState
 import org.rhythmeta.maimaid.ui.navigation.AppDetail
 import org.rhythmeta.maimaid.ui.song.SongDetailScreen
-import org.rhythmeta.maimaid.core.data.Best50State
-import org.rhythmeta.maimaid.core.data.RatingUtils
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import android.content.Intent
-import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
-import androidx.core.content.FileProvider
-import java.io.File
-import java.io.FileOutputStream
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -73,6 +62,8 @@ import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import org.rhythmeta.maimaid.ui.best.BestTableScreen
+import org.rhythmeta.maimaid.ui.profile.ProfileScreen
 
 @Composable
 fun DetailScreen(
@@ -81,6 +72,10 @@ fun DetailScreen(
     selectedSongId: String?,
     container: AppContainer,
     songContentTopPadding: androidx.compose.ui.unit.Dp,
+    profileCreateRequested: Boolean,
+    bestTableExportRequested: Boolean,
+    onProfileCreateRequestHandled: () -> Unit,
+    onBestTableExportRequestHandled: () -> Unit,
     onSongDetailBackgroundChanged: (androidx.compose.ui.graphics.Color?) -> Unit,
     onSongDetailTitleChanged: (String) -> Unit,
 ) {
@@ -97,7 +92,21 @@ fun DetailScreen(
             container = container,
         )
         AppDetail.RandomSong -> RandomSongDetail(songs = state.songs)
-        AppDetail.BestTable -> BestTableDetail(state = state, container = container)
+        AppDetail.BestTable -> BestTableScreen(
+            container = container,
+            activeProfile = state.activeProfile,
+            versions = state.gameVersions,
+            exportRequested = bestTableExportRequested,
+            onExportRequestHandled = onBestTableExportRequestHandled,
+        )
+        AppDetail.Profiles -> ProfileScreen(
+            container = container,
+            versions = state.gameVersions,
+            songs = state.songs,
+            sheets = state.sheets,
+            createRequested = profileCreateRequested,
+            onCreateRequestHandled = onProfileCreateRequestHandled,
+        )
         AppDetail.About -> AboutDetail()
         else -> FeatureDetail(state = state)
     }
@@ -407,103 +416,6 @@ private fun RandomSongDetail(songs: List<SongEntity>) {
             colors = ButtonDefaults.textButtonColorsPrimary(),
         )
     }
-}
-
-@Composable
-private fun BestTableDetail(state: MainUiState, container: AppContainer) {
-    val best50 by container.best50Repository.observeBest50().collectAsStateWithLifecycle(initialValue = Best50State())
-    val context = LocalContext.current
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = 14.dp,
-                insideMargin = PaddingValues(16.dp),
-            ) {
-                Text(
-                    text = best50.total.toString(),
-                    style = MiuixTheme.textStyles.headline1,
-                    fontWeight = FontWeight.Bold,
-                    color = MiuixTheme.colorScheme.primary,
-                )
-                Text(
-                    text = stringResource(R.string.best50_total),
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                )
-                Text(
-                    text = stringResource(R.string.best50_capacity, best50.b35.size, best50.b15.size),
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                )
-            }
-        }
-        item {
-            TextButton(
-                text = stringResource(R.string.best50_export),
-                onClick = { shareBest50(context, best50) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.textButtonColorsPrimary(),
-            )
-        }
-        if (best50.isEmpty) {
-            item { Text(text = stringResource(R.string.detail_no_scores), color = MiuixTheme.colorScheme.onBackgroundVariant) }
-        } else {
-            item { SmallTitle(text = stringResource(R.string.best50_new, best50.b15.size)) }
-            items(best50.b15, key = { it.sheetKey }) { Best50Row(it) }
-            item { SmallTitle(text = stringResource(R.string.best50_old, best50.b35.size)) }
-            items(best50.b35, key = { it.sheetKey }) { Best50Row(it) }
-        }
-    }
-}
-
-@Composable
-private fun Best50Row(entry: RatingUtils.Entry) {
-    Card(modifier = Modifier.fillMaxWidth(), cornerRadius = 12.dp, insideMargin = PaddingValues(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = entry.title, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    text = "${entry.difficulty} ${entry.type.uppercase()} · ${"%.4f".format(entry.achievement)}%",
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                )
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(text = entry.rating.toString(), fontWeight = FontWeight.Bold, color = MiuixTheme.colorScheme.primary)
-                Text(text = "Lv ${"%.1f".format(entry.level)}", color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-            }
-        }
-    }
-}
-
-private fun shareBest50(context: android.content.Context, state: Best50State) {
-    val bitmap = Bitmap.createBitmap(1200, 180 + (state.b35.size + state.b15.size) * 70, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
-    canvas.drawColor(android.graphics.Color.WHITE)
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.BLACK; textSize = 42f }
-    canvas.drawText("maimaid Best 50  ${state.total}", 48f, 64f, paint)
-    var y = 130f
-    (listOf("B15" to state.b15, "B35" to state.b35)).forEach { (label, entries) ->
-        paint.textSize = 30f
-        canvas.drawText(label, 48f, y, paint)
-        y += 42f
-        paint.textSize = 24f
-        entries.forEach { entry ->
-            canvas.drawText("${entry.rating}  ${entry.title.take(36)}  ${"%.4f".format(entry.achievement)}%", 72f, y, paint)
-            y += 58f
-        }
-    }
-    val file = File(context.cacheDir, "best50.png")
-    FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-    val uri = runCatching { FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file) }.getOrNull() ?: return
-    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-        type = "image/png"
-        putExtra(Intent.EXTRA_STREAM, uri)
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }, null))
 }
 
 @Composable

@@ -1,6 +1,5 @@
 package org.rhythmeta.maimaid.ui.home
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,7 +38,6 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -48,12 +46,12 @@ import coil.compose.AsyncImage
 import java.io.File
 import kotlin.math.max
 import org.rhythmeta.maimaid.R
-import org.rhythmeta.maimaid.core.data.CatalogSyncStatus
 import org.rhythmeta.maimaid.core.database.UserProfileEntity
 import org.rhythmeta.maimaid.ui.MainUiState
-import org.rhythmeta.maimaid.ui.components.CatalogSyncBanner
 import org.rhythmeta.maimaid.ui.components.SquircleExtension
 import org.rhythmeta.maimaid.ui.navigation.AppDetail
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.squircle.squircleBorder
@@ -65,7 +63,7 @@ fun HomeScreen(
     state: MainUiState,
     contentTopPadding: Dp,
     onOpenDetail: (AppDetail) -> Unit,
-    onRetrySync: () -> Unit,
+    onEditProfile: () -> Unit,
 ) {
     val profile = state.activeProfile
     val b35Count = profile?.b35Count ?: 35
@@ -88,18 +86,10 @@ fun HomeScreen(
         item(span = { GridItemSpan(maxLineSpan) }) {
             ProfileCard(
                 profile = profile,
+                isLoading = !state.isActiveProfileReady,
                 displayRating = displayRating,
-                onClick = { onOpenDetail(AppDetail.Profiles) },
+                onClick = onEditProfile,
             )
-        }
-
-        if (state.catalogSyncStatus !is CatalogSyncStatus.Ready) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                CatalogSyncBanner(
-                    status = state.catalogSyncStatus,
-                    onRetry = onRetrySync,
-                )
-            }
         }
 
         item(span = { GridItemSpan(maxLineSpan) }) {
@@ -123,70 +113,114 @@ fun HomeScreen(
 @Composable
 private fun ProfileCard(
     profile: UserProfileEntity?,
+    isLoading: Boolean,
     displayRating: Int,
     onClick: () -> Unit,
 ) {
     val surfaceColor = MiuixTheme.colorScheme.surfaceContainer
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .squircleSurface(
-                color = surfaceColor,
-                cornerRadius = 20.dp,
-                extension = SquircleExtension,
-            )
             .squircleBorder(
                 width = 1.dp,
                 color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.05f),
                 cornerRadius = 20.dp,
                 extension = SquircleExtension,
-            )
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ),
+        cornerRadius = 20.dp,
+        insideMargin = PaddingValues(16.dp),
+        colors = CardDefaults.defaultColors(color = surfaceColor),
+        onClick = if (isLoading) null else onClick,
     ) {
-        ProfileAvatar(
-            profile = profile,
-            displayRating = displayRating,
-        )
-
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    text = profile?.name
-                        ?.takeIf(String::isNotBlank)
-                        ?: stringResource(R.string.home_profile_unbound),
-                    style = MiuixTheme.textStyles.title3,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            if (isLoading) {
+                ProfileCardPlaceholder(modifier = Modifier.weight(1f))
+            } else {
+                ProfileAvatar(
+                    profile = profile,
+                    displayRating = displayRating,
                 )
-                profile?.let {
-                    ServerBadge(server = it.server)
-                }
-            }
-            Spacer(Modifier.size(4.dp))
-            Text(
-                text = profile?.plate
-                    ?.takeIf(String::isNotBlank)
-                    ?: stringResource(R.string.home_profile_edit_hint),
-                style = MiuixTheme.textStyles.footnote1,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
 
-        Icon(
-            imageVector = Icons.Rounded.ChevronRight,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MiuixTheme.colorScheme.onSurfaceVariantActions.copy(alpha = 0.5f),
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            text = profile?.name
+                                ?.takeIf(String::isNotBlank)
+                                ?: stringResource(R.string.home_profile_unbound),
+                            style = MiuixTheme.textStyles.title3,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        profile?.let {
+                            ServerBadge(server = it.server)
+                        }
+                    }
+                    Spacer(Modifier.size(4.dp))
+                    Text(
+                        text = profile?.plate
+                            ?.takeIf(String::isNotBlank)
+                            ?: stringResource(R.string.home_profile_edit_hint),
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                Icon(
+                    imageVector = Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MiuixTheme.colorScheme.onSurfaceVariantActions.copy(alpha = 0.5f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileCardPlaceholder(modifier: Modifier = Modifier) {
+    val placeholderColor = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.07f)
+    Box(
+        modifier = Modifier
+            .size(64.dp)
+            .squircleSurface(
+                color = placeholderColor,
+                cornerRadius = 32.dp,
+                extension = SquircleExtension,
+            ),
+    )
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .width(112.dp)
+                .height(20.dp)
+                .squircleSurface(
+                    color = placeholderColor,
+                    cornerRadius = 6.dp,
+                    extension = SquircleExtension,
+                ),
+        )
+        Box(
+            modifier = Modifier
+                .width(72.dp)
+                .height(14.dp)
+                .squircleSurface(
+                    color = placeholderColor,
+                    cornerRadius = 5.dp,
+                    extension = SquircleExtension,
+                ),
         )
     }
 }
@@ -302,53 +336,51 @@ private fun BestTableCard(
     b15Count: Int,
     onClick: () -> Unit,
 ) {
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .squircleSurface(
-                color = BestTableAccent.copy(alpha = 0.1f),
-                cornerRadius = 16.dp,
-                extension = SquircleExtension,
-            )
             .squircleBorder(
                 width = 1.dp,
                 color = BestTableAccent.copy(alpha = 0.2f),
                 cornerRadius = 16.dp,
                 extension = SquircleExtension,
-            )
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            ),
+        cornerRadius = 16.dp,
+        insideMargin = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
+        colors = CardDefaults.defaultColors(color = BestTableAccent.copy(alpha = 0.1f)),
+        onClick = onClick,
     ) {
-        Icon(
-            imageVector = Icons.Rounded.EmojiEvents,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
-        )
-        Spacer(Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.home_best_table_title, totalCount),
-                style = MiuixTheme.textStyles.body1,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Rounded.EmojiEvents,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
             )
-            Text(
-                text = stringResource(R.string.home_best_table_subtitle, b35Count, b15Count),
-                style = MiuixTheme.textStyles.footnote2,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.home_best_table_title, totalCount),
+                    style = MiuixTheme.textStyles.body1,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = stringResource(R.string.home_best_table_subtitle, b35Count, b15Count),
+                    style = MiuixTheme.textStyles.footnote2,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Icon(
+                imageVector = Icons.Rounded.ChevronRight,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MiuixTheme.colorScheme.onSurfaceVariantActions.copy(alpha = 0.5f),
             )
         }
-        Icon(
-            imageVector = Icons.Rounded.ChevronRight,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MiuixTheme.colorScheme.onSurfaceVariantActions.copy(alpha = 0.5f),
-        )
     }
 }
 
@@ -357,24 +389,20 @@ private fun FunctionCard(
     tool: HomeTool,
     onClick: () -> Unit,
 ) {
-    Column(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(140.dp)
-            .squircleSurface(
-                color = MiuixTheme.colorScheme.surfaceContainer,
-                cornerRadius = 16.dp,
-                extension = SquircleExtension,
-            )
             .squircleBorder(
                 width = 1.dp,
                 color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.05f),
                 cornerRadius = 16.dp,
                 extension = SquircleExtension,
-            )
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            ),
+        cornerRadius = 16.dp,
+        insideMargin = PaddingValues(16.dp),
+        colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
+        onClick = onClick,
     ) {
         Icon(
             imageVector = tool.icon,
@@ -382,6 +410,7 @@ private fun FunctionCard(
             modifier = Modifier.size(30.dp),
             tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
         )
+        Spacer(Modifier.height(12.dp))
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 text = stringResource(tool.title),
