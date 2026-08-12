@@ -26,8 +26,8 @@ export class SyncService {
 		return this.toJsonValue(value);
 	}
 
-	async recordEvent(input: RecordEventInput) {
-		return this.prisma.syncEvent.create({
+	async recordEvent(input: RecordEventInput, database: PrismaClient | Prisma.TransactionClient = this.prisma) {
+		return database.syncEvent.create({
 			data: {
 				userId: input.userId,
 				profileId: input.profileId ?? null,
@@ -39,8 +39,8 @@ export class SyncService {
 		});
 	}
 
-	async findMutation(userId: string, idempotencyKey: string) {
-		return this.prisma.syncMutation.findUnique({
+	async findMutation(userId: string, idempotencyKey: string, database: PrismaClient | Prisma.TransactionClient = this.prisma) {
+		return database.syncMutation.findUnique({
 			where: {
 				userId_idempotencyKey: {
 					userId,
@@ -50,8 +50,13 @@ export class SyncService {
 		});
 	}
 
-	async saveMutationResult(userId: string, idempotencyKey: string, result: Record<string, unknown>) {
-		return this.prisma.syncMutation.upsert({
+	async saveMutationResult(
+		userId: string,
+		idempotencyKey: string,
+		result: Record<string, unknown>,
+		database: PrismaClient | Prisma.TransactionClient = this.prisma,
+	) {
+		return database.syncMutation.upsert({
 			where: {
 				userId_idempotencyKey: {
 					userId,

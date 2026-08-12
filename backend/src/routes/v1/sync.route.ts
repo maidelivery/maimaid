@@ -38,6 +38,7 @@ const playRecordSchema = scoreEntrySchema.extend({
 
 const pushSchema = z.object({
 	idempotencyKey: z.string().min(8),
+	forceProfileOverwrite: z.boolean().default(false),
 	profileUpserts: z
 		.array(
 			z.object({
@@ -218,6 +219,7 @@ syncV1Route.post("/sync:push", authRequired, standardValidator("json", pushSchem
 			reason: string;
 			serverProfile: unknown;
 		}>;
+		profileVersions: Record<string, string>;
 		latestRevision: string;
 	} = {
 		applied: {
@@ -226,129 +228,196 @@ syncV1Route.post("/sync:push", authRequired, standardValidator("json", pushSchem
 			records: 0,
 		},
 		conflicts: [],
+		profileVersions: {},
 		latestRevision: "0",
 	};
 
-	const existingProfilesById = new Map(
-		(body.profileUpserts.length > 0
-			? await prisma.profile.findMany({
-					where: {
-						id: {
-							in: Array.from(new Set(body.profileUpserts.map((item) => item.profileId))),
-						},
+	const appliedResult = await prisma.$transaction(
+		async (transaction) => {
+			await transaction.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${auth.userId}::uuid FOR UPDATE`;
+			const replay = await syncService.findMutation(auth.userId, body.idempotencyKey, transaction);
+			if (replay) {
+				return replay.resultJson;
+			}
+			const existingProfilesById = new Map(
+				(body.profileUpserts.length > 0
+					? await transaction.profile.findMany({
+							where: {
+								id: {
+									in: Array.from(new Set(body.profileUpserts.map((item) => item.profileId))),
+								},
+							},
+						})
+					: []
+				).map((item) => [item.id, item]),
+			);
+			let successfulActiveProfileId: string | null = null;
+
+			for (const item of body.profileUpserts) {
+				const existingProfile = existingProfilesById.get(item.profileId) ?? null;
+				if (existingProfile && existingProfile.userId !== auth.userId) {
+					result.conflicts.push({
+						profileId: item.profileId,
+						reason: "forbidden",
+						serverProfile: null,
+					});
+					continue;
+				}
+				if (existingProfile && !body.forceProfileOverwrite && !item.clientUpdatedAt) {
+					result.conflicts.push({
+						profileId: item.profileId,
+						reason: "server_newer",
+						serverProfile: existingProfile,
+					});
+					continue;
+				}
+				const payload: Parameters<ProfileService["upsertByClientId"]>[2] = {
+					name: item.name,
+					server: item.server,
+				};
+				if (item.isActive !== undefined && !webClient) payload.isActive = item.isActive;
+				if (item.playerRating !== undefined) payload.playerRating = item.playerRating;
+				if (item.plate !== undefined) payload.plate = item.plate;
+				if (item.avatarUrl !== undefined) payload.avatarUrl = item.avatarUrl;
+				if (item.dfUsername !== undefined) payload.dfUsername = item.dfUsername;
+				if (item.b35Count !== undefined) payload.b35Count = item.b35Count;
+				if (item.b15Count !== undefined) payload.b15Count = item.b15Count;
+				if (item.b35RecLimit !== undefined) payload.b35RecLimit = item.b35RecLimit;
+				if (item.b15RecLimit !== undefined) payload.b15RecLimit = item.b15RecLimit;
+				if (item.createdAt !== undefined) payload.createdAt = item.createdAt;
+
+				const profile = await profileService.upsertByClientId(
+					auth.userId,
+					item.profileId,
+					payload,
+					body.forceProfileOverwrite ? undefined : item.clientUpdatedAt,
+					false,
+					transaction,
+				);
+				if (!profile) {
+					const serverProfile = await transaction.profile.findFirst({
+						where: { id: item.profileId, userId: auth.userId },
+					});
+					result.conflicts.push({
+						profileId: item.profileId,
+						reason: "server_newer",
+						serverProfile,
+					});
+					continue;
+				}
+				existingProfilesById.set(profile.id, profile);
+				if (profile.isActive) successfulActiveProfileId = profile.id;
+				result.profileVersions[profile.id] = profile.updatedAt.toISOString();
+				await syncService.recordEvent(
+					{
+						userId: auth.userId,
+						profileId: profile.id,
+						entityType: "profile",
+						entityId: profile.id,
+						op: "upsert",
+						payload: { updatedAt: profile.updatedAt.toISOString() },
 					},
-				})
-			: []
-		).map((item) => [item.id, item]),
+					transaction,
+				);
+				if (item.avatarUrl !== undefined) {
+					await syncService.recordEvent(
+						{
+							userId: auth.userId,
+							profileId: profile.id,
+							entityType: "avatar",
+							entityId: profile.id,
+							op: "upsert",
+							payload: { avatarUrl: item.avatarUrl },
+						},
+						transaction,
+					);
+				}
+				result.applied.profiles += 1;
+			}
+
+			if (successfulActiveProfileId) {
+				const deactivatedProfiles = await transaction.profile.updateManyAndReturn({
+					where: {
+						userId: auth.userId,
+						isActive: true,
+						id: { not: successfulActiveProfileId },
+					},
+					data: { isActive: false },
+				});
+				for (const profile of deactivatedProfiles) {
+					result.profileVersions[profile.id] = profile.updatedAt.toISOString();
+					await syncService.recordEvent(
+						{
+							userId: auth.userId,
+							profileId: profile.id,
+							entityType: "profile",
+							entityId: profile.id,
+							op: "upsert",
+							payload: { updatedAt: profile.updatedAt.toISOString() },
+						},
+						transaction,
+					);
+				}
+			}
+
+			for (const scoreSet of body.scoreUpserts) {
+				await scoreService.requireProfileOwnership(scoreSet.profileId, auth.userId, transaction);
+				const mapped = mapScoresForUpsert(scoreSet.scores);
+				const response = await scoreService.bulkUpsertBestScores(scoreSet.profileId, mapped, "sync_push", transaction);
+				result.applied.scores += response.applied.length;
+				if (response.applied.length > 0) {
+					await syncService.recordEvent(
+						{
+							userId: auth.userId,
+							profileId: scoreSet.profileId,
+							entityType: "best_scores",
+							entityId: scoreSet.profileId,
+							op: "bulk_upsert",
+							payload: { count: response.applied.length },
+						},
+						transaction,
+					);
+				}
+			}
+
+			for (const recordSet of body.playRecordUpserts) {
+				await scoreService.requireProfileOwnership(recordSet.profileId, auth.userId, transaction);
+				const mapped = mapPlayRecords(recordSet.records);
+				const response = await scoreService.bulkInsertPlayRecords(recordSet.profileId, mapped, "sync_push", transaction);
+				result.applied.records += response.created.length;
+				if (response.created.length > 0) {
+					await syncService.recordEvent(
+						{
+							userId: auth.userId,
+							profileId: recordSet.profileId,
+							entityType: "play_records",
+							entityId: recordSet.profileId,
+							op: "bulk_upsert",
+							payload: { count: response.created.length },
+						},
+						transaction,
+					);
+				}
+			}
+
+			const latestEvent = await transaction.syncEvent.findFirst({
+				where: { userId: auth.userId },
+				orderBy: { revision: "desc" },
+			});
+			result.latestRevision = latestEvent ? latestEvent.revision.toString() : "0";
+
+			await syncService.saveMutationResult(
+				auth.userId,
+				body.idempotencyKey,
+				result as unknown as Record<string, unknown>,
+				transaction,
+			);
+			return result;
+		},
+		{ maxWait: 10_000, timeout: 120_000 },
 	);
 
-	for (const item of body.profileUpserts) {
-		const existingProfile = existingProfilesById.get(item.profileId) ?? null;
-		if (existingProfile && existingProfile.userId !== auth.userId) {
-			result.conflicts.push({
-				profileId: item.profileId,
-				reason: "forbidden",
-				serverProfile: null,
-			});
-			continue;
-		}
-		if (existingProfile && item.clientUpdatedAt && existingProfile.updatedAt.getTime() > item.clientUpdatedAt.getTime()) {
-			result.conflicts.push({
-				profileId: item.profileId,
-				reason: "server_newer",
-				serverProfile: existingProfile,
-			});
-			continue;
-		}
-
-		const payload: Parameters<ProfileService["upsertByClientId"]>[2] = {
-			name: item.name,
-			server: item.server,
-		};
-		if (item.isActive !== undefined && !webClient) payload.isActive = item.isActive;
-		if (item.playerRating !== undefined) payload.playerRating = item.playerRating;
-		if (item.plate !== undefined) payload.plate = item.plate;
-		if (item.avatarUrl !== undefined) payload.avatarUrl = item.avatarUrl;
-		if (item.dfUsername !== undefined) payload.dfUsername = item.dfUsername;
-		if (item.b35Count !== undefined) payload.b35Count = item.b35Count;
-		if (item.b15Count !== undefined) payload.b15Count = item.b15Count;
-		if (item.b35RecLimit !== undefined) payload.b35RecLimit = item.b35RecLimit;
-		if (item.b15RecLimit !== undefined) payload.b15RecLimit = item.b15RecLimit;
-		if (item.createdAt !== undefined) payload.createdAt = item.createdAt;
-
-		const profile = await profileService.upsertByClientId(auth.userId, item.profileId, payload);
-		existingProfilesById.set(profile.id, profile);
-		await syncService.recordEvent({
-			userId: auth.userId,
-			profileId: profile.id,
-			entityType: "profile",
-			entityId: profile.id,
-			op: "upsert",
-			payload: {
-				updatedAt: profile.updatedAt.toISOString(),
-			},
-		});
-		if (item.avatarUrl !== undefined) {
-			await syncService.recordEvent({
-				userId: auth.userId,
-				profileId: profile.id,
-				entityType: "avatar",
-				entityId: profile.id,
-				op: "upsert",
-				payload: {
-					avatarUrl: item.avatarUrl,
-				},
-			});
-		}
-		result.applied.profiles += 1;
-	}
-
-	for (const scoreSet of body.scoreUpserts) {
-		await scoreService.requireProfileOwnership(scoreSet.profileId, auth.userId);
-		const mapped = mapScoresForUpsert(scoreSet.scores);
-		const response = await scoreService.bulkUpsertBestScores(scoreSet.profileId, mapped, "sync_push");
-		result.applied.scores += response.applied.length;
-		if (response.applied.length > 0) {
-			await syncService.recordEvent({
-				userId: auth.userId,
-				profileId: scoreSet.profileId,
-				entityType: "best_scores",
-				entityId: scoreSet.profileId,
-				op: "bulk_upsert",
-				payload: {
-					count: response.applied.length,
-				},
-			});
-		}
-	}
-
-	for (const recordSet of body.playRecordUpserts) {
-		await scoreService.requireProfileOwnership(recordSet.profileId, auth.userId);
-		const mapped = mapPlayRecords(recordSet.records);
-		const response = await scoreService.bulkInsertPlayRecords(recordSet.profileId, mapped, "sync_push");
-		result.applied.records += response.created.length;
-		if (response.created.length > 0) {
-			await syncService.recordEvent({
-				userId: auth.userId,
-				profileId: recordSet.profileId,
-				entityType: "play_records",
-				entityId: recordSet.profileId,
-				op: "bulk_upsert",
-				payload: {
-					count: response.created.length,
-				},
-			});
-		}
-	}
-
-	const latestEvent = await prisma.syncEvent.findFirst({
-		where: { userId: auth.userId },
-		orderBy: { revision: "desc" },
-	});
-	result.latestRevision = latestEvent ? latestEvent.revision.toString() : "0";
-
-	await syncService.saveMutationResult(auth.userId, body.idempotencyKey, result as unknown as Record<string, unknown>);
-	return ok(c, result);
+	return ok(c, appliedResult);
 });
 
 syncV1Route.get("/sync:pull", authRequired, standardValidator("query", pullQuerySchema, validationHook), async (c) => {
@@ -357,6 +426,7 @@ syncV1Route.get("/sync:pull", authRequired, standardValidator("query", pullQuery
 		return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 	}
 	const syncService = c.var.resolve(SyncService);
+	const prisma = c.var.resolve<PrismaClient>(TOKENS.Prisma);
 	const query = c.req.valid("query");
 	const listInput: Parameters<SyncService["listEvents"]>[0] = {
 		userId: auth.userId,
@@ -377,6 +447,15 @@ syncV1Route.get("/sync:pull", authRequired, standardValidator("query", pullQuery
 	};
 	if (shouldIncludeSnapshot) {
 		const profileIds = new Set<string>();
+		if (query.sinceRevision === 0n && !query.profileId) {
+			const profiles = await prisma.profile.findMany({
+				where: { userId: auth.userId },
+				select: { id: true },
+			});
+			for (const profile of profiles) {
+				profileIds.add(profile.id);
+			}
+		}
 		if (query.profileId) {
 			profileIds.add(query.profileId);
 		}

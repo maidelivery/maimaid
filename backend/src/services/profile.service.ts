@@ -48,8 +48,11 @@ export class ProfileService {
 			b15RecLimit?: number;
 			createdAt?: Date;
 		},
+		expectedUpdatedAt?: Date,
+		manageActiveProfile = true,
+		database: PrismaClient | Prisma.TransactionClient = this.prisma,
 	) {
-		const existing = await this.prisma.profile.findUnique({
+		const existing = await database.profile.findUnique({
 			where: { id: profileId },
 		});
 
@@ -57,12 +60,11 @@ export class ProfileService {
 			throw new AppError(403, "forbidden", "Profile does not belong to current user.");
 		}
 
-		const shouldActivateFirstProfile =
-			existing === null ? (await this.prisma.profile.count({ where: { userId } })) === 0 : false;
+		const shouldActivateFirstProfile = existing === null ? (await database.profile.count({ where: { userId } })) === 0 : false;
 		const shouldActivate = input.isActive ?? shouldActivateFirstProfile;
 
 		if (!existing) {
-			const created = await this.prisma.profile.create({
+			const created = await database.profile.create({
 				data: {
 					id: profileId,
 					userId,
@@ -81,11 +83,12 @@ export class ProfileService {
 				},
 			});
 
-			if (shouldActivate) {
-				await this.prisma.profile.updateMany({
+			if (shouldActivate && manageActiveProfile) {
+				await database.profile.updateMany({
 					where: {
 						userId,
 						id: { not: created.id },
+						isActive: true,
 					},
 					data: { isActive: false },
 				});
@@ -108,16 +111,32 @@ export class ProfileService {
 		if (input.b35RecLimit !== undefined) data.b35RecLimit = input.b35RecLimit;
 		if (input.b15RecLimit !== undefined) data.b15RecLimit = input.b15RecLimit;
 
-		const updated = await this.prisma.profile.update({
-			where: { id: profileId },
-			data,
-		});
+		const updated = expectedUpdatedAt
+			? await database.profile
+					.updateManyAndReturn({
+						where: {
+							id: profileId,
+							userId,
+							updatedAt: expectedUpdatedAt,
+						},
+						data,
+					})
+					.then((profiles) => profiles[0] ?? null)
+			: await database.profile.update({
+					where: { id: profileId },
+					data,
+				});
 
-		if (input.isActive) {
-			await this.prisma.profile.updateMany({
+		if (!updated) {
+			return null;
+		}
+
+		if (input.isActive && manageActiveProfile) {
+			await database.profile.updateMany({
 				where: {
 					userId,
 					id: { not: profileId },
+					isActive: true,
 				},
 				data: { isActive: false },
 			});
@@ -203,7 +222,7 @@ export class ProfileService {
 		});
 	}
 
-	async createAvatarUploadUrl(userId: string, profileId: string, contentType: string) {
+	async createAvatarUploadUrl(userId: string, profileId: string, contentType: string, expectedUpdatedAt?: Date) {
 		const profile = await this.prisma.profile.findFirst({
 			where: { id: profileId, userId },
 		});
@@ -212,13 +231,19 @@ export class ProfileService {
 		}
 
 		const { key, uploadUrl } = await this.storageService.createAvatarUploadUrl(profileId, contentType);
-		await this.prisma.profile.update({
-			where: { id: profileId },
-			data: {
-				avatarObjectKey: key,
-			},
-		});
-		return { key, uploadUrl };
+		const updated = expectedUpdatedAt
+			? await this.prisma.profile
+					.updateManyAndReturn({
+						where: { id: profileId, userId, updatedAt: expectedUpdatedAt },
+						data: { avatarObjectKey: key },
+					})
+					.then((profiles) => profiles[0] ?? null)
+			: await this.prisma.profile.update({
+					where: { id: profileId },
+					data: { avatarObjectKey: key },
+				});
+		if (!updated) return null;
+		return { key, uploadUrl, updatedAt: updated.updatedAt.toISOString() };
 	}
 
 	async getAvatar(profileId: string) {
