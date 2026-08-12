@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
@@ -64,6 +65,7 @@ import org.rhythmeta.maimaid.core.data.ScoreRules
 import org.rhythmeta.maimaid.core.database.GameVersionEntity
 import org.rhythmeta.maimaid.core.database.UserProfileEntity
 import org.rhythmeta.maimaid.ui.components.SquircleExtension
+import org.rhythmeta.maimaid.ui.components.SongListScrollBar
 import org.rhythmeta.maimaid.ui.util.ScoreStatusColors
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
 import top.yukonga.miuix.kmp.basic.Card
@@ -135,84 +137,92 @@ fun BestTableScreen(
 
     val b35Sum = best50.b35.sumOf(RatingUtils.Entry::rating)
     val b15Sum = best50.b15.sumOf(RatingUtils.Entry::rating)
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            top = contentTopPadding + 12.dp,
-            end = 16.dp,
-            bottom = 12.dp,
-        ),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            BestRatingSummary(
-                total = best50.total,
-                b35Sum = b35Sum,
-                b15Sum = b15Sum,
-            )
-        }
-        item {
-            SmallTitle(
-                text = stringResource(R.string.best50_version_section),
-                insideMargin = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
-            )
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = 16.dp,
-                insideMargin = PaddingValues(0.dp),
-                colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
-            ) {
-                WindowDropdownPreference(
-                    items = versionLabels,
-                    selectedIndex = versionOptions.indexOf(selectedVersion).coerceAtLeast(0),
-                    title = stringResource(R.string.best50_current_version),
-                    summary = selectedVersion?.let { stringResource(R.string.best50_version_overridden) },
-                    onSelectedIndexChange = { index -> selectedVersion = versionOptions[index] },
+    val listState = rememberLazyListState()
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                top = contentTopPadding + 12.dp,
+                end = 16.dp,
+                bottom = 12.dp,
+            ),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item {
+                BestRatingSummary(
+                    total = best50.total,
+                    b35Sum = b35Sum,
+                    b15Sum = b15Sum,
                 )
             }
-        }
-        item {
-            SmallTitle(
-                text = stringResource(R.string.best50_capacity_section),
-                insideMargin = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+            item {
+                SmallTitle(
+                    text = stringResource(R.string.best50_version_section),
+                    insideMargin = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 16.dp,
+                    insideMargin = PaddingValues(0.dp),
+                    colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
+                ) {
+                    WindowDropdownPreference(
+                        items = versionLabels,
+                        selectedIndex = versionOptions.indexOf(selectedVersion).coerceAtLeast(0),
+                        title = stringResource(R.string.best50_current_version),
+                        summary = selectedVersion?.let { stringResource(R.string.best50_version_overridden) },
+                        onSelectedIndexChange = { index -> selectedVersion = versionOptions[index] },
+                    )
+                }
+            }
+            item {
+                SmallTitle(
+                    text = stringResource(R.string.best50_capacity_section),
+                    insideMargin = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                )
+                BestCapacityCard(
+                    b35Text = b35Text,
+                    b15Text = b15Text,
+                    onB35Change = { input ->
+                        if (input.length <= 2 && input.all(Char::isDigit)) {
+                            b35Text = input
+                        }
+                    },
+                    onB15Change = { input ->
+                        if (input.length <= 2 && input.all(Char::isDigit)) {
+                            b15Text = input
+                        }
+                    },
+                    onCommit = {
+                        val b35 = b35Text.toIntOrNull()?.coerceAtLeast(1) ?: 35
+                        val b15 = b15Text.toIntOrNull()?.coerceAtLeast(1) ?: 15
+                        b35Text = b35.toString()
+                        b15Text = b15.toString()
+                        focusManager.clearFocus()
+                        scope.launch { container.profileRepository.updateBestCapacity(b35, b15) }
+                    },
+                )
+            }
+            bestEntrySection(
+                sectionKey = "new",
+                titleResource = R.string.best50_new_section,
+                capacity = activeProfile?.b15Count ?: 15,
+                entries = best50.b15,
+                coverImageStore = container.coverImageStore,
             )
-            BestCapacityCard(
-                b35Text = b35Text,
-                b15Text = b15Text,
-                onB35Change = { input ->
-                    if (input.length <= 2 && input.all(Char::isDigit)) {
-                        b35Text = input
-                    }
-                },
-                onB15Change = { input ->
-                    if (input.length <= 2 && input.all(Char::isDigit)) {
-                        b15Text = input
-                    }
-                },
-                onCommit = {
-                    val b35 = b35Text.toIntOrNull()?.coerceAtLeast(1) ?: 35
-                    val b15 = b15Text.toIntOrNull()?.coerceAtLeast(1) ?: 15
-                    b35Text = b35.toString()
-                    b15Text = b15.toString()
-                    focusManager.clearFocus()
-                    scope.launch { container.profileRepository.updateBestCapacity(b35, b15) }
-                },
+            bestEntrySection(
+                sectionKey = "old",
+                titleResource = R.string.best50_old_section,
+                capacity = activeProfile?.b35Count ?: 35,
+                entries = best50.b35,
+                coverImageStore = container.coverImageStore,
             )
         }
-        bestEntrySection(
-            sectionKey = "new",
-            titleResource = R.string.best50_new_section,
-            capacity = activeProfile?.b15Count ?: 15,
-            entries = best50.b15,
-            coverImageStore = container.coverImageStore,
-        )
-        bestEntrySection(
-            sectionKey = "old",
-            titleResource = R.string.best50_old_section,
-            capacity = activeProfile?.b35Count ?: 35,
-            entries = best50.b35,
-            coverImageStore = container.coverImageStore,
+        SongListScrollBar(
+            state = listState,
+            trackPadding = PaddingValues(top = contentTopPadding + 12.dp, bottom = 12.dp),
         )
     }
 }

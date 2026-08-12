@@ -6,12 +6,14 @@ import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
@@ -37,6 +39,7 @@ import org.rhythmeta.maimaid.core.database.SongAliasEntity
 import org.rhythmeta.maimaid.core.database.SongCategoryEntity
 import org.rhythmeta.maimaid.core.database.SongEntity
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
+import org.rhythmeta.maimaid.ui.components.SongListScrollBar
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.roundToInt
@@ -137,26 +140,34 @@ fun CatalogScreen(
             onOpenSong = onOpenSong,
         )
     } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                top = contentTopPadding + 6.dp,
-                end = 16.dp,
-                bottom = 96.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            columnItems(displayedSongs, key = SongEntity::songIdentifier) { song ->
-                SongCard(
-                    song = song,
-                    sheets = sheetsBySong[song.songIdentifier].orEmpty(),
-                    scoresBySheetKey = scoresBySheetKey,
-                    versions = gameVersions,
-                    coverImageStore = coverImageStore,
-                    onClick = { onOpenSong(song.songIdentifier) },
-                )
+        val listState = rememberLazyListState()
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    top = contentTopPadding + 6.dp,
+                    end = 16.dp,
+                    bottom = 96.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                columnItems(displayedSongs, key = SongEntity::songIdentifier) { song ->
+                    SongCard(
+                        song = song,
+                        sheets = sheetsBySong[song.songIdentifier].orEmpty(),
+                        scoresBySheetKey = scoresBySheetKey,
+                        versions = gameVersions,
+                        coverImageStore = coverImageStore,
+                        onClick = { onOpenSong(song.songIdentifier) },
+                    )
+                }
             }
+            SongListScrollBar(
+                state = listState,
+                trackPadding = PaddingValues(top = contentTopPadding + 6.dp, bottom = 96.dp),
+            )
         }
     }
 

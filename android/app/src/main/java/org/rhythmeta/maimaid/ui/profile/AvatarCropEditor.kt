@@ -55,6 +55,7 @@ import kotlin.math.sin
 import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.ui.components.squircleShape
+import org.rhythmeta.maimaid.ui.components.TopBarBottomShape
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -85,6 +86,7 @@ internal fun AvatarCropEditor(
             topBar = {
                 SmallTopAppBar(
                     title = stringResource(R.string.avatar_editor_title),
+                    modifier = Modifier.clip(TopBarBottomShape),
                     navigationIcon = {
                         IconButton(onClick = onDismiss) {
                             Icon(
