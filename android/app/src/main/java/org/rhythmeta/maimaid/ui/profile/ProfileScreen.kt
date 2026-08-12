@@ -5,7 +5,6 @@ import android.graphics.ImageDecoder
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,7 +44,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -196,9 +194,7 @@ private fun ProfileListCard(
         SongVisualUtils.versionAbbreviation(it, versions)
     }
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button, onClick = onActivate),
+        modifier = Modifier.fillMaxWidth(),
         cornerRadius = 18.dp,
         insideMargin = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
         colors = CardDefaults.defaultColors(
@@ -208,6 +204,8 @@ private fun ProfileListCard(
                 MiuixTheme.colorScheme.surfaceContainer
             },
         ),
+        showIndication = true,
+        onClick = onActivate,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             ProfileAvatar(profile = profile, size = 50)
