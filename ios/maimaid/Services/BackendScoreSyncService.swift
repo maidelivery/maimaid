@@ -40,56 +40,16 @@ private struct BackendBulkRecordSyncRequest: Encodable {
     let records: [BackendPlayRecordEntry]
 }
 
-private struct BackendProfileUpsertPayload: Encodable {
-    let name: String
-    let server: String
-    let isActive: Bool
-    let playerRating: Int
-    let plate: String?
-    let avatarUrl: String?
-    let dfUsername: String
-    let b35Count: Int
-    let b15Count: Int
-    let b35RecLimit: Int
-    let b15RecLimit: Int
-    let createdAt: Date
-}
-
 private struct BackendScoreSyncAck: Decodable {}
 
+@MainActor
 enum BackendScoreSyncService {
     static func ensureProfileExists(profile: UserProfile) async throws {
         guard !profile.id.uuidString.isEmpty else {
             throw URLError(.badURL)
         }
 
-        guard BackendSessionManager.shared.isAuthenticated else {
-            throw BackendAPIError.unauthorized
-        }
-
-        let profileId = profile.id.uuidString.lowercased()
-        let escapedProfileId = profileId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? profileId
-        let profileUpsert = BackendProfileUpsertPayload(
-            name: profile.name,
-            server: profile.server,
-            isActive: profile.isActive,
-            playerRating: profile.playerRating,
-            plate: profile.plate,
-            avatarUrl: profile.avatarUrl,
-            dfUsername: profile.dfUsername,
-            b35Count: profile.b35Count,
-            b15Count: profile.b15Count,
-            b35RecLimit: profile.b35RecLimit,
-            b15RecLimit: profile.b15RecLimit,
-            createdAt: profile.createdAt
-        )
-
-        let _: BackendScoreSyncAck = try await BackendAPIClient.request(
-            path: "v1/profiles/\(escapedProfileId)",
-            method: "PUT",
-            body: profileUpsert,
-            authentication: .required
-        )
+        try await BackendIncrementalSyncService.pushProfileUpdate(profile: profile, clientUpdatedAt: nil)
     }
 
     static func uploadScore(profile: UserProfile, sheet: Sheet, score: Score) async throws {

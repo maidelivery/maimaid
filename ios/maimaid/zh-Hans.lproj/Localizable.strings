@@ -617,6 +617,7 @@
 "settings.import.resolution.more.hide" = "收起其余冲突成绩";
 "settings.cloud.error.badResponse" = "服务器响应无效。";
 "settings.cloud.error.profileNotFound" = "未找到本地档案。";
+"settings.cloud.error.profileConflict" = "此档案已在另一台设备更新，请同步最新数据后再次保存。";
 "settings.cloud.error.avatarUploadFailed" = "头像上传失败。";
 "settings.cloud.error.playRecordMappingFailed" = "无法将云端游玩记录匹配到本地谱面。";
 "settings.cloud.error.scoreMappingFailed" = "无法将云端成绩匹配到本地谱面。";

@@ -617,6 +617,7 @@
 "settings.import.resolution.more.hide" = "Collapse remaining conflicts";
 "settings.cloud.error.badResponse" = "Invalid server response.";
 "settings.cloud.error.profileNotFound" = "Local profile not found.";
+"settings.cloud.error.profileConflict" = "This profile changed on another device. Sync the latest data before saving again.";
 "settings.cloud.error.avatarUploadFailed" = "Avatar upload failed.";
 "settings.cloud.error.playRecordMappingFailed" = "Failed to map remote play records to local charts.";
 "settings.cloud.error.scoreMappingFailed" = "Failed to map remote scores to local charts.";

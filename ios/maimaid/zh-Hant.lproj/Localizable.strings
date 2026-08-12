@@ -617,6 +617,7 @@
 "settings.import.resolution.more.hide" = "收起其餘衝突成績";
 "settings.cloud.error.badResponse" = "伺服器回應無效。";
 "settings.cloud.error.profileNotFound" = "找不到本機檔案。";
+"settings.cloud.error.profileConflict" = "此檔案已在另一台裝置更新，請同步最新資料後再次儲存。";
 "settings.cloud.error.avatarUploadFailed" = "頭像上傳失敗。";
 "settings.cloud.error.playRecordMappingFailed" = "無法將雲端遊玩紀錄匹配到本機譜面。";
 "settings.cloud.error.scoreMappingFailed" = "無法將雲端成績匹配到本機譜面。";

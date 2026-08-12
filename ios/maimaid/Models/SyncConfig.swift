@@ -19,6 +19,7 @@ final class SyncConfig {
     @Attribute(originalName: "lastSupabaseBackupDate")
     var lastCloudBackupDate: Date?
     var lastSyncRevision: String = "0"
+    var remoteProfileVersionsData: Data?
     var localDataOwnerUserId: String?
     var pendingResolutionForUserId: String?
     var pendingResolutionDetectedAt: Date?
@@ -50,5 +51,27 @@ final class SyncConfig {
         self.backgroundSyncInterval = backgroundSyncInterval
         self.cloudBackupInterval = cloudBackupInterval
         self.themeRawValue = themeRawValue
+    }
+
+    func remoteProfileVersion(for profileId: UUID) -> Date? {
+        remoteProfileVersions[profileId.uuidString.lowercased()]
+    }
+
+    func setRemoteProfileVersions(_ versions: [String: Date]) {
+        guard !versions.isEmpty else { return }
+        var merged = remoteProfileVersions
+        for (profileId, updatedAt) in versions {
+            merged[profileId.lowercased()] = updatedAt
+        }
+        remoteProfileVersionsData = try? JSONEncoder().encode(merged)
+    }
+
+    func clearRemoteProfileVersions() {
+        remoteProfileVersionsData = nil
+    }
+
+    private var remoteProfileVersions: [String: Date] {
+        guard let remoteProfileVersionsData else { return [:] }
+        return (try? JSONDecoder().decode([String: Date].self, from: remoteProfileVersionsData)) ?? [:]
     }
 }
