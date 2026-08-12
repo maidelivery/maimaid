@@ -20,3 +20,10 @@ DerivedData/
 .playwright-cli/
 
 .build-benchmark/
+
+# Android signing keys
+*.jks
+*.jks.old
+*.p12
+*.pfx
+*.keystore

@@ -10,6 +10,16 @@ val maimaidBackendUrl = providers.gradleProperty("MAIMAID_BACKEND_URL")
 val splitReleaseApks = providers.gradleProperty("MAIMAID_SPLIT_RELEASE_APKS")
     .map { it.toBoolean() }
     .orElse(false)
+val releaseKeystorePath = providers.environmentVariable("ANDROID_KEYSTORE_PATH")
+val releaseKeystorePassword = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD")
+val releaseKeyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS")
+val releaseKeyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD")
+val releaseSigningConfigured = listOf(
+    releaseKeystorePath,
+    releaseKeystorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { provider -> provider.orNull?.isNotBlank() == true }
 
 android {
     namespace = "org.rhythmeta.maimaid"
@@ -26,10 +36,25 @@ android {
         buildConfigField("String", "BACKEND_URL", "\"${maimaidBackendUrl.get()}\"")
     }
 
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            create("release") {
+                storeFile = file(releaseKeystorePath.get())
+                storePassword = releaseKeystorePassword.get()
+                keyAlias = releaseKeyAlias.get()
+                keyPassword = releaseKeyPassword.get()
+                storeType = "PKCS12"
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

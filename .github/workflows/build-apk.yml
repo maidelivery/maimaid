@@ -34,18 +34,75 @@ jobs:
           "platforms;android-37.0"
           "build-tools;37.0.0"
 
+      - name: Prepare release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          : "${ANDROID_KEYSTORE_BASE64:?Missing secret ANDROID_KEYSTORE_BASE64}"
+          : "${ANDROID_KEYSTORE_PASSWORD:?Missing secret ANDROID_KEYSTORE_PASSWORD}"
+          : "${ANDROID_KEY_ALIAS:?Missing secret ANDROID_KEY_ALIAS}"
+          : "${ANDROID_KEY_PASSWORD:?Missing secret ANDROID_KEY_PASSWORD}"
+          keystore_path="${RUNNER_TEMP}/rhythmeta-release.p12"
+          printf '%s' "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > "${keystore_path}"
+          chmod 600 "${keystore_path}"
+          keytool -list \
+            -storetype PKCS12 \
+            -keystore "${keystore_path}" \
+            -storepass:env ANDROID_KEYSTORE_PASSWORD \
+            -alias "${ANDROID_KEY_ALIAS}" > /dev/null
+          echo "ANDROID_KEYSTORE_PATH=${keystore_path}" >> "${GITHUB_ENV}"
+
       - name: Build release APK
         working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: >-
           ./gradlew :app:assembleRelease
           -PMAIMAID_SPLIT_RELEASE_APKS=true
           --warning-mode all
 
-      - name: Upload APK artifact
+      - name: Verify APK signatures
+        run: |
+          set -euo pipefail
+          for apk in android/app/build/outputs/apk/release/*.apk; do
+            "${ANDROID_HOME}/build-tools/37.0.0/apksigner" verify \
+              --verbose \
+              --print-certs \
+              "${apk}"
+          done
+
+      - name: Upload arm64-v8a APK
         uses: actions/upload-artifact@v4
         with:
-          name: maimaid-apk-${{ github.sha }}
-          path: android/app/build/outputs/apk/release/*.apk
+          name: maimaid-apk-arm64-v8a-${{ github.sha }}
+          path: android/app/build/outputs/apk/release/app-arm64-v8a-release.apk
+          if-no-files-found: error
+
+      - name: Upload armeabi-v7a APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: maimaid-apk-armeabi-v7a-${{ github.sha }}
+          path: android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk
+          if-no-files-found: error
+
+      - name: Upload x86_64 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: maimaid-apk-x86_64-${{ github.sha }}
+          path: android/app/build/outputs/apk/release/app-x86_64-release.apk
+          if-no-files-found: error
+
+      - name: Upload x86 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: maimaid-apk-x86-${{ github.sha }}
+          path: android/app/build/outputs/apk/release/app-x86-release.apk
           if-no-files-found: error
 
       - name: Upload R8 mapping
