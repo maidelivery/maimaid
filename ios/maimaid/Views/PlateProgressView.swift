@@ -484,10 +484,20 @@ struct PlateProgressView: View {
     private var progressTitle: String {
         guard let group = selectedGroup else { return String(localized: "plate.title") }
         
-        let groupName = group.name == "舞代" || group.name != group.platePrefix
-            ? group.platePrefix
-            : group.name
-        return String(localized: "plate.progress.title \(groupName) \(localizedPlateName(selectedPlate))")
+        let groupName = plateTitlePrefix(for: group)
+        return String(localized: "plate.progress.title \(groupName) \(selectedPlate.shortName)")
+    }
+
+    private func plateTitlePrefix(for group: VersionPlateGroup) -> String {
+        let prefix = group.platePrefix
+        guard let opening = prefix.lastIndex(of: "("),
+              let closing = prefix[opening...].firstIndex(of: ")"),
+              opening < closing else {
+            return prefix
+        }
+        let value = prefix[prefix.index(after: opening)..<closing]
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? prefix : value
     }
     
     private var summarySubtitle: String {
