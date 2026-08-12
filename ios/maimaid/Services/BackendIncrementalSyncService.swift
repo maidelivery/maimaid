@@ -1,8 +1,50 @@
 import Foundation
 import SwiftData
 
+@MainActor
+final class BackendSyncOperationGate {
+    static let shared = BackendSyncOperationGate()
+
+    private var isLocked = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    private init() {}
+
+    func withLock<T>(_ operation: @MainActor () async throws -> T) async rethrows -> T {
+        await acquire()
+        defer { release() }
+        return try await operation()
+    }
+
+    private func acquire() async {
+        if !isLocked {
+            isLocked = true
+            return
+        }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    private func release() {
+        guard !waiters.isEmpty else {
+            isLocked = false
+            return
+        }
+        waiters.removeFirst().resume()
+    }
+}
+
 private struct BackendSyncPushResponse: Decodable {
     let latestRevision: String
+    let conflicts: [BackendSyncConflict]?
+    let profileVersions: [String: Date]?
+}
+
+private struct BackendSyncConflict: Decodable {
+    let profileId: String
+    let reason: String
+    let serverProfile: BackendSyncRemoteProfile?
 }
 
 private struct BackendProfileDeleteResponse: Decodable {
@@ -46,6 +88,7 @@ private struct BackendSyncRemoteProfile: Codable {
     let createdAt: Date
     let lastImportDateDf: Date?
     let lastImportDateLxns: Date?
+    let updatedAt: Date
 }
 
 private struct BackendSyncRemoteSheet: Decodable {
@@ -141,6 +184,7 @@ private struct BackendSyncRecordSet: Encodable {
 
 private struct BackendSyncPushPayload: Encodable {
     let idempotencyKey: String
+    let forceProfileOverwrite: Bool
     let profileUpserts: [BackendSyncProfileUpsertPayload]
     let scoreUpserts: [BackendSyncScoreSet]
     let playRecordUpserts: [BackendSyncRecordSet]
@@ -183,6 +227,7 @@ struct ImportScoreConflictItem: Identifiable {
 struct ImportSyncConflictPreview: Identifiable {
     let id = UUID()
     let profileId: UUID
+    let baseRevision: String
     let latestRevision: String
     let localOnlyCount: Int
     let differentCount: Int
@@ -195,6 +240,12 @@ struct ImportSyncConflictPreview: Identifiable {
 @MainActor
 enum BackendIncrementalSyncService {
     static func pushScoreUpdate(profile: UserProfile, sheet: Sheet, score: Score) async throws {
+        try await BackendSyncOperationGate.shared.withLock {
+            try await pushScoreUpdateUnlocked(profile: profile, sheet: sheet, score: score)
+        }
+    }
+
+    private static func pushScoreUpdateUnlocked(profile: UserProfile, sheet: Sheet, score: Score) async throws {
         guard BackendSessionManager.shared.isAuthenticated else {
             throw BackendAPIError.unauthorized
         }
@@ -207,6 +258,7 @@ enum BackendIncrementalSyncService {
 
         let payload = BackendSyncPushPayload(
             idempotencyKey: UUID().uuidString.lowercased(),
+            forceProfileOverwrite: false,
             profileUpserts: [],
             scoreUpserts: [
                 BackendSyncScoreSet(
@@ -252,66 +304,203 @@ enum BackendIncrementalSyncService {
             ]
         )
 
-        let response: BackendSyncPushResponse = try await BackendAPIClient.request(
+        let _: BackendSyncPushResponse = try await BackendAPIClient.request(
             path: "v1/sync:push",
             method: "POST",
             body: payload,
             authentication: .required
         )
-        if let context = profile.modelContext {
-            let config = ensureSyncConfig(context: context)
-            config.lastSyncRevision = response.latestRevision
-            try context.save()
-        }
     }
 
     static func pushProfileUpdate(profile: UserProfile, clientUpdatedAt: Date?) async throws {
+        try await BackendSyncOperationGate.shared.withLock {
+            try await pushProfileUpdateUnlocked(profile: profile, clientUpdatedAt: clientUpdatedAt)
+        }
+    }
+
+    private static func pushProfileUpdateUnlocked(profile: UserProfile, clientUpdatedAt: Date?) async throws {
         guard BackendSessionManager.shared.isAuthenticated else {
             throw BackendAPIError.unauthorized
         }
         let profileId = profile.id.uuidString.lowercased()
-        let resolvedAvatarURL = try await BackendCloudSyncService.uploadAvatarIfNeeded(for: profile)
+        let context = profile.modelContext
+        let config = context.map(ensureSyncConfig(context:))
+        let knownVersion = clientUpdatedAt ?? config?.remoteProfileVersion(for: profile.id)
 
-        let payload = BackendSyncPushPayload(
-            idempotencyKey: UUID().uuidString.lowercased(),
-            profileUpserts: [
-                BackendSyncProfileUpsertPayload(
-                    profileId: profileId,
-                    name: profile.name,
-                    server: profile.server,
-                    isActive: profile.isActive,
-                    playerRating: profile.playerRating,
-                    plate: profile.plate,
-                    avatarUrl: resolvedAvatarURL,
-                    dfUsername: profile.dfUsername,
-                    b35Count: profile.b35Count,
-                    b15Count: profile.b15Count,
-                    b35RecLimit: profile.b35RecLimit,
-                    b15RecLimit: profile.b15RecLimit,
-                    createdAt: profile.createdAt,
-                    clientUpdatedAt: clientUpdatedAt
-                )
-            ],
-            scoreUpserts: [],
-            playRecordUpserts: []
-        )
-
-        let response: BackendSyncPushResponse = try await BackendAPIClient.request(
+        var response: BackendSyncPushResponse = try await BackendAPIClient.request(
             path: "v1/sync:push",
             method: "POST",
-            body: payload,
+            body: BackendSyncPushPayload(
+                idempotencyKey: UUID().uuidString.lowercased(),
+                forceProfileOverwrite: false,
+                profileUpserts: [profileUpsert(profile, avatarURL: profile.avatarUrl, clientUpdatedAt: knownVersion)],
+                scoreUpserts: [],
+                playRecordUpserts: []
+            ),
             authentication: .required
         )
-        guard let context = profile.modelContext else {
-            return
+        config?.setRemoteProfileVersions(response.profileVersions ?? [:])
+        if let context { try context.save() }
+        try throwIfProfileConflict(response)
+
+        let avatarUpload = try await BackendCloudSyncService.uploadAvatarIfNeeded(
+            for: profile,
+            clientUpdatedAt: response.profileVersions?[profileId] ?? knownVersion
+        )
+        if let avatarVersion = avatarUpload.updatedAt {
+            response = try await BackendAPIClient.request(
+                path: "v1/sync:push",
+                method: "POST",
+                body: BackendSyncPushPayload(
+                    idempotencyKey: UUID().uuidString.lowercased(),
+                    forceProfileOverwrite: false,
+                    profileUpserts: [
+                        profileUpsert(profile, avatarURL: avatarUpload.avatarURL, clientUpdatedAt: avatarVersion)
+                    ],
+                    scoreUpserts: [],
+                    playRecordUpserts: []
+                ),
+                authentication: .required
+            )
+            try throwIfProfileConflict(response)
         }
-        let config = ensureSyncConfig(context: context)
-        config.lastSyncRevision = response.latestRevision
+
+        guard let context, let config else { return }
+        config.setRemoteProfileVersions(response.profileVersions ?? [:])
         try context.save()
-        try await pullUpdates(context: context, profileId: profile.id, force: false)
+        try await pullUpdatesUnlocked(context: context, force: false)
+    }
+
+    static func pushAllLocalData(context: ModelContext) async throws {
+        try await BackendSyncOperationGate.shared.withLock {
+            try await pushAllLocalDataUnlocked(context: context)
+        }
+    }
+
+    static func pushAllLocalDataUnlocked(context: ModelContext) async throws {
+        guard BackendSessionManager.shared.isAuthenticated else {
+            throw BackendAPIError.unauthorized
+        }
+
+        let profiles = try context.fetch(FetchDescriptor<UserProfile>())
+        guard !profiles.isEmpty else { return }
+        let sheets = try context.fetch(FetchDescriptor<Sheet>())
+        let scoreSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["_", "-"])
+        let recordSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["-", "_"])
+        let config = ensureSyncConfig(context: context)
+
+        let profileUpserts = profiles.map { profile in
+            profileUpsert(
+                profile,
+                avatarURL: profile.avatarUrl,
+                clientUpdatedAt: config.remoteProfileVersion(for: profile.id)
+            )
+        }
+        let scoreUpserts = try profiles.compactMap { profile -> BackendSyncScoreSet? in
+            let profileId = profile.id
+            let scores = try context.fetch(
+                FetchDescriptor<Score>(predicate: #Predicate<Score> { $0.userProfileId == profileId })
+            ).compactMap { score in
+                buildScoreEntry(from: score, scoreSheetMap: scoreSheetMap)
+            }
+            return scores.isEmpty ? nil : BackendSyncScoreSet(
+                profileId: profileId.uuidString.lowercased(),
+                scores: scores
+            )
+        }
+        let playRecordUpserts = try profiles.compactMap { profile -> BackendSyncRecordSet? in
+            let profileId = profile.id
+            let records = try context.fetch(
+                FetchDescriptor<PlayRecord>(predicate: #Predicate<PlayRecord> { $0.userProfileId == profileId })
+            ).compactMap { record in
+                buildPlayRecordEntry(from: record, recordSheetMap: recordSheetMap)
+            }
+            return records.isEmpty ? nil : BackendSyncRecordSet(
+                profileId: profileId.uuidString.lowercased(),
+                records: records
+            )
+        }
+
+        var response: BackendSyncPushResponse = try await BackendAPIClient.request(
+            path: "v1/sync:push",
+            method: "POST",
+            body: BackendSyncPushPayload(
+                idempotencyKey: UUID().uuidString.lowercased(),
+                forceProfileOverwrite: false,
+                profileUpserts: profileUpserts,
+                scoreUpserts: scoreUpserts,
+                playRecordUpserts: playRecordUpserts
+            ),
+            authentication: .required
+        )
+        config.setRemoteProfileVersions(response.profileVersions ?? [:])
+        try context.save()
+        try throwIfProfileConflict(response)
+
+        var avatarUpserts: [BackendSyncProfileUpsertPayload] = []
+        for profile in profiles {
+            let profileId = profile.id.uuidString.lowercased()
+            let avatarUpload = try await BackendCloudSyncService.uploadAvatarIfNeeded(
+                for: profile,
+                clientUpdatedAt: config.remoteProfileVersion(for: profile.id)
+            )
+            guard let avatarVersion = avatarUpload.updatedAt else { continue }
+            avatarUpserts.append(
+                profileUpsert(profile, avatarURL: avatarUpload.avatarURL, clientUpdatedAt: avatarVersion)
+            )
+            config.setRemoteProfileVersions([profileId: avatarVersion])
+        }
+
+        if !avatarUpserts.isEmpty {
+            try context.save()
+            response = try await BackendAPIClient.request(
+                path: "v1/sync:push",
+                method: "POST",
+                body: BackendSyncPushPayload(
+                    idempotencyKey: UUID().uuidString.lowercased(),
+                    forceProfileOverwrite: false,
+                    profileUpserts: avatarUpserts,
+                    scoreUpserts: [],
+                    playRecordUpserts: []
+                ),
+                authentication: .required
+            )
+            config.setRemoteProfileVersions(response.profileVersions ?? [:])
+            try context.save()
+            try throwIfProfileConflict(response)
+        }
+    }
+
+    private static func profileUpsert(
+        _ profile: UserProfile,
+        avatarURL: String?,
+        clientUpdatedAt: Date?
+    ) -> BackendSyncProfileUpsertPayload {
+        BackendSyncProfileUpsertPayload(
+            profileId: profile.id.uuidString.lowercased(),
+            name: profile.name,
+            server: profile.server,
+            isActive: profile.isActive,
+            playerRating: profile.playerRating,
+            plate: profile.plate,
+            avatarUrl: avatarURL,
+            dfUsername: profile.dfUsername,
+            b35Count: profile.b35Count,
+            b15Count: profile.b15Count,
+            b35RecLimit: profile.b35RecLimit,
+            b15RecLimit: profile.b15RecLimit,
+            createdAt: profile.createdAt,
+            clientUpdatedAt: clientUpdatedAt
+        )
     }
 
     static func pullUpdates(context: ModelContext, profileId: UUID? = nil, force: Bool = false) async throws {
+        try await BackendSyncOperationGate.shared.withLock {
+            try await pullUpdatesUnlocked(context: context, profileId: profileId, force: force)
+        }
+    }
+
+    static func pullUpdatesUnlocked(context: ModelContext, profileId: UUID? = nil, force: Bool = false) async throws {
         guard BackendSessionManager.shared.isAuthenticated else {
             throw BackendAPIError.unauthorized
         }
@@ -326,12 +515,24 @@ enum BackendIncrementalSyncService {
         try await applySnapshot(response.snapshot, context: context)
         ScoreService.shared.repairDetachedRecordsIfNeeded(context: context, force: true)
         config.lastSyncRevision = response.latestRevision
+        config.setRemoteProfileVersions(
+            Dictionary(uniqueKeysWithValues: response.snapshot.profiles.map { ($0.id.lowercased(), $0.updatedAt) })
+        )
         try context.save()
         ScoreService.shared.invalidateAllCaches()
         ScoreService.shared.notifyScoresChanged(for: profileId)
     }
 
     static func previewImportConflicts(context: ModelContext, profileId: UUID) async throws -> ImportSyncConflictPreview {
+        try await BackendSyncOperationGate.shared.withLock {
+            try await previewImportConflictsUnlocked(context: context, profileId: profileId)
+        }
+    }
+
+    private static func previewImportConflictsUnlocked(
+        context: ModelContext,
+        profileId: UUID
+    ) async throws -> ImportSyncConflictPreview {
         guard BackendSessionManager.shared.isAuthenticated else {
             throw BackendAPIError.unauthorized
         }
@@ -352,6 +553,7 @@ enum BackendIncrementalSyncService {
 
         return ImportSyncConflictPreview(
             profileId: profileId,
+            baseRevision: config.lastSyncRevision,
             latestRevision: response.latestRevision,
             localOnlyCount: localOnlyCount,
             differentCount: differentCount,
@@ -360,27 +562,32 @@ enum BackendIncrementalSyncService {
         )
     }
 
-    static func updateLastSyncRevisionIfAvailable(_ latestRevision: String?, context: ModelContext) throws {
-        guard let latestRevision else {
-            return
+    static func applyImportConflictResolution(
+        _ option: ImportSyncResolutionOption,
+        preview: ImportSyncConflictPreview,
+        context: ModelContext
+    ) async throws {
+        try await BackendSyncOperationGate.shared.withLock {
+            try await applyImportConflictResolutionUnlocked(option, preview: preview, context: context)
         }
-        let normalized = latestRevision.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !normalized.isEmpty else {
-            return
-        }
-
-        let config = ensureSyncConfig(context: context)
-        config.lastSyncRevision = normalized
-        try context.save()
     }
 
-    static func applyImportConflictResolution(
+    private static func applyImportConflictResolutionUnlocked(
         _ option: ImportSyncResolutionOption,
         preview: ImportSyncConflictPreview,
         context: ModelContext
     ) async throws {
         guard BackendSessionManager.shared.isAuthenticated else {
             throw BackendAPIError.unauthorized
+        }
+
+        let config = ensureSyncConfig(context: context)
+        guard config.lastSyncRevision == preview.baseRevision else {
+            throw BackendAPIError(
+                statusCode: 409,
+                code: "stale_sync_preview",
+                message: String(localized: "settings.cloud.error.profileConflict")
+            )
         }
 
         switch option {
@@ -409,15 +616,13 @@ enum BackendIncrementalSyncService {
 
         ScoreService.shared.repairDetachedRecordsIfNeeded(context: context, force: true)
 
-        let config = ensureSyncConfig(context: context)
-        config.lastSyncRevision = preview.latestRevision
+        config.setRemoteProfileVersions(
+            Dictionary(uniqueKeysWithValues: preview.snapshot.profiles.map { ($0.id.lowercased(), $0.updatedAt) })
+        )
         try context.save()
 
         if option != .overwriteLocalWithImport {
-            try await BackendCloudSyncService.overwriteRemoteProfileData(
-                context: context,
-                profileId: preview.profileId
-            )
+            try await pushAllLocalDataUnlocked(context: context)
         }
 
         ScoreService.shared.invalidateAllCaches()
@@ -425,6 +630,12 @@ enum BackendIncrementalSyncService {
     }
 
     static func deleteProfile(profileId: UUID, context: ModelContext) async throws {
+        try await BackendSyncOperationGate.shared.withLock {
+            try await deleteProfileUnlocked(profileId: profileId, context: context)
+        }
+    }
+
+    private static func deleteProfileUnlocked(profileId: UUID, context: ModelContext) async throws {
         guard BackendSessionManager.shared.isAuthenticated else {
             throw BackendAPIError.unauthorized
         }
@@ -435,14 +646,17 @@ enum BackendIncrementalSyncService {
             method: "DELETE",
             authentication: .required
         )
-        try? await pullUpdates(context: context, profileId: profileId, force: false)
+        try? await pullUpdatesUnlocked(context: context, force: false)
     }
 
     private static func fetchPullResponse(
         sinceRevision: String,
         profileId: UUID? = nil
     ) async throws -> BackendSyncPullResponse {
-        var queryItems = [URLQueryItem(name: "sinceRevision", value: sinceRevision)]
+        var queryItems = [
+            URLQueryItem(name: "sinceRevision", value: sinceRevision),
+            URLQueryItem(name: "includeSnapshot", value: "true")
+        ]
         if let profileId {
             queryItems.append(URLQueryItem(name: "profileId", value: profileId.uuidString.lowercased()))
         }
@@ -459,6 +673,15 @@ enum BackendIncrementalSyncService {
             path: "v1/sync:pull?\(query)",
             method: "GET",
             authentication: .required
+        )
+    }
+
+    private static func throwIfProfileConflict(_ response: BackendSyncPushResponse) throws {
+        guard let conflict = response.conflicts?.first else { return }
+        throw BackendAPIError(
+            statusCode: 409,
+            code: conflict.reason,
+            message: String(localized: "settings.cloud.error.profileConflict")
         )
     }
 
@@ -672,6 +895,54 @@ enum BackendIncrementalSyncService {
             context.insert(score)
             sheet.scores.append(score)
         }
+    }
+
+    private static func buildScoreEntry(
+        from score: Score,
+        scoreSheetMap: [String: Sheet]
+    ) -> BackendSyncScoreEntry? {
+        guard let sheet = score.sheet ?? BackendSyncShared.resolveSheet(for: score.sheetId, sheetMap: scoreSheetMap) else {
+            return nil
+        }
+        let songId = sheet.songId > 0 ? sheet.songId : nil
+        return BackendSyncScoreEntry(
+            songIdentifier: sheet.songIdentifier,
+            songId: songId,
+            title: sheet.song?.title,
+            type: sheet.type.lowercased(),
+            difficulty: sheet.difficulty.lowercased(),
+            levelIndex: ThemeUtils.mapDifficultyToIndex(sheet.difficulty),
+            achievements: score.rate,
+            rank: score.rank,
+            dxScore: score.dxScore,
+            fc: score.fc,
+            fs: score.fs,
+            achievedAt: score.achievementDate.ISO8601Format()
+        )
+    }
+
+    private static func buildPlayRecordEntry(
+        from record: PlayRecord,
+        recordSheetMap: [String: Sheet]
+    ) -> BackendSyncPlayRecordEntry? {
+        guard let sheet = record.sheet ?? BackendSyncShared.resolveSheet(for: record.sheetId, sheetMap: recordSheetMap) else {
+            return nil
+        }
+        let songId = sheet.songId > 0 ? sheet.songId : nil
+        return BackendSyncPlayRecordEntry(
+            songIdentifier: sheet.songIdentifier,
+            songId: songId,
+            title: sheet.song?.title,
+            type: sheet.type.lowercased(),
+            difficulty: sheet.difficulty.lowercased(),
+            levelIndex: ThemeUtils.mapDifficultyToIndex(sheet.difficulty),
+            achievements: record.rate,
+            rank: record.rank,
+            dxScore: record.dxScore,
+            fc: record.fc,
+            fs: record.fs,
+            playTime: record.playDate.ISO8601Format()
+        )
     }
 
     private enum ImportMergeMode {

@@ -617,6 +617,7 @@
 "settings.import.resolution.more.hide" = "残りの競合を折りたたむ";
 "settings.cloud.error.badResponse" = "サーバーから無効な応答が返されました。";
 "settings.cloud.error.profileNotFound" = "ローカルプロフィールが見つかりません。";
+"settings.cloud.error.profileConflict" = "このプロフィールは別の端末で更新されています。最新データを同期してから再度保存してください。";
 "settings.cloud.error.avatarUploadFailed" = "アバターのアップロードに失敗しました。";
 "settings.cloud.error.playRecordMappingFailed" = "クラウドのプレイ履歴をローカル譜面に対応付けられませんでした。";
 "settings.cloud.error.scoreMappingFailed" = "クラウドのスコアをローカル譜面に対応付けられませんでした。";

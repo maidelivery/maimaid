@@ -115,12 +115,19 @@ final class AccountDataResolutionCoordinator {
         config.pendingResolutionForUserId = nil
         config.pendingResolutionDetectedAt = nil
         config.lastSyncRevision = "0"
+        config.clearRemoteProfileVersions()
         try context.save()
         ScoreService.shared.invalidateAllCaches()
         latestConflictState = nil
     }
 
     func applyResolution(_ option: AccountResolutionOption, context: ModelContext) async throws {
+        try await BackendSyncOperationGate.shared.withLock {
+            try await applyResolutionUnlocked(option, context: context)
+        }
+    }
+
+    private func applyResolutionUnlocked(_ option: AccountResolutionOption, context: ModelContext) async throws {
         guard
             BackendSessionManager.shared.isAuthenticated,
             let currentUserId = BackendSessionManager.shared.currentUser?.id
@@ -150,10 +157,11 @@ final class AccountDataResolutionCoordinator {
 
         let previousRevision = config.lastSyncRevision
         config.lastSyncRevision = "0"
+        config.clearRemoteProfileVersions()
         try context.save()
 
         do {
-            try await BackendIncrementalSyncService.pullUpdates(context: context, force: true)
+            try await BackendIncrementalSyncService.pullUpdatesUnlocked(context: context, force: true)
         } catch {
             config.lastSyncRevision = previousRevision
             try? context.save()
@@ -234,7 +242,7 @@ private extension AccountDataResolutionCoordinator {
 
     private func overwriteCloudFromLocal(context: ModelContext) async throws {
         try await clearRemoteProfiles()
-        try await BackendCloudSyncService.backupToCloud(context: context)
+        try await BackendCloudSyncService.backupToCloudUnlocked(context: context)
     }
 
     private func clearRemoteProfiles() async throws {
