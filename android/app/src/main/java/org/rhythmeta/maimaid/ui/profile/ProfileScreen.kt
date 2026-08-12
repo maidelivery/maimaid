@@ -70,6 +70,7 @@ import org.rhythmeta.maimaid.ui.components.SquircleExtension
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -80,6 +81,7 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.window.WindowDialog
 
 private sealed interface ProfileEditorTarget {
     data object Create : ProfileEditorTarget
@@ -98,6 +100,7 @@ fun ProfileScreen(
     val profiles by container.profileRepository.profiles.collectAsStateWithLifecycle(emptyList())
     val scope = rememberCoroutineScope()
     var editorTarget by remember { mutableStateOf<ProfileEditorTarget?>(null) }
+    var deleteTarget by remember { mutableStateOf<UserProfileEntity?>(null) }
 
     LaunchedEffect(createRequested) {
         if (createRequested) {
@@ -126,14 +129,7 @@ fun ProfileScreen(
                         }
                     },
                     onEdit = { editorTarget = ProfileEditorTarget.Edit(profile) },
-                    onDelete = {
-                        scope.launch {
-                            if (container.profileRepository.delete(profile)) {
-                                container.profileAvatarStore.deleteStored(profile.avatarPath)
-                                container.profileCredentialStore.delete(profile.id)
-                            }
-                        }
-                    },
+                    onDelete = { deleteTarget = profile },
                 )
             }
         }
@@ -145,6 +141,48 @@ fun ProfileScreen(
         container = container,
         onDismiss = { editorTarget = null },
     )
+
+    val profileToDelete = deleteTarget
+    WindowDialog(
+        show = profileToDelete != null,
+        title = stringResource(R.string.profile_delete_confirm_title),
+        summary = stringResource(R.string.profile_delete_confirm_message),
+        onDismissRequest = { deleteTarget = null },
+        outsideMargin = DpSize(24.dp, 24.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Button(
+                onClick = { deleteTarget = null },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(),
+            ) {
+                Text(stringResource(R.string.action_cancel))
+            }
+            Button(
+                onClick = {
+                    profileToDelete?.let { profile ->
+                        scope.launch {
+                            if (container.profileRepository.delete(profile)) {
+                                container.profileAvatarStore.deleteStored(profile.avatarPath)
+                                container.profileCredentialStore.delete(profile.id)
+                            }
+                            deleteTarget = null
+                        }
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    color = MiuixTheme.colorScheme.errorContainer,
+                    contentColor = MiuixTheme.colorScheme.onErrorContainer,
+                ),
+            ) {
+                Text(stringResource(R.string.action_delete))
+            }
+        }
+    }
 }
 
 @Composable

@@ -17,6 +17,8 @@ interface ScoreDao {
                songs.version AS songVersion, sheets.type AS type,
                sheets.difficulty AS difficulty, sheets.version AS sheetVersion,
                sheets.internalLevelValue AS internalLevelValue,
+               sheets.providerSongId AS songId,
+               COALESCE(sheets.total, 0) * 3 AS maxDxScore,
                sheets.regionJp AS regionJp, sheets.regionIntl AS regionIntl,
                sheets.regionCn AS regionCn
         FROM scores

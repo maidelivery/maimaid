@@ -114,7 +114,7 @@ struct ScoreEntryView: View {
         
         switch selectedFS {
         case "sync":
-            return "S"
+            return "Sync"
         case "fs":
             return "FS"
         case "fsp":
@@ -427,7 +427,7 @@ struct ScoreEntryView: View {
                 Menu {
                     Picker(String(localized: "score.entry.sync"), selection: $selectedFS) {
                         Text("common.none").tag(String?.none)
-                        Text("S").tag(String?("sync"))
+                        Text("Sync").tag(String?("sync"))
                         Text("FS").tag(String?("fs"))
                         Text("FS+").tag(String?("fsp"))
                         Text("FDX").tag(String?("fsd"))

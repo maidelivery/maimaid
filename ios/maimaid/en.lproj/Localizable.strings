@@ -15,7 +15,9 @@
 "home.profile.unbound" = "Unbound User";
 "home.profile.editHint" = "Tap to edit";
 "home.bestTable.button.title %lld" = "View Best %lld Table";
-"home.bestTable.button.subtitle %lld %lld" = "DX Rating based on B%lld + N%lld";
+"home.bestTable.button.subtitle %lld %lld" = "DX Rating based on B%lld + B%lld";
+"userProfile.delete.confirm.title" = "Delete Profile?";
+"userProfile.delete.confirm.message" = "This removes the profile and its local scores.";
 "home.randomSong.title" = "Random Song";
 "home.randomSong.subtitle" = "Slot-machine random";
 "home.recommendation.title" = "Recommendation";

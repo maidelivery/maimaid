@@ -30,7 +30,7 @@
     <string name="home_profile_unbound">未連携ユーザー</string>
     <string name="home_profile_edit_hint">タップして編集</string>
     <string name="home_best_table_title">ベスト %1$d テーブルを表示</string>
-    <string name="home_best_table_subtitle">B%1$d + N%2$d に基づく DX Rating</string>
+    <string name="home_best_table_subtitle">B%1$d + B%2$d に基づく DX Rating</string>
     <string name="home_random">ランダムソング</string>
     <string name="home_random_subtitle">スロット風ランダム</string>
     <string name="home_recommendations">おすすめ</string>
@@ -163,11 +163,15 @@
     <string name="best50_old_section">古い B%1$d</string>
     <string name="best50_empty">データなし</string>
     <string name="best50_base">定数 %1$.1f</string>
+    <string name="best50_export_section_rating">Rating: %1$d</string>
+    <string name="best50_export_watermark">maimaidで生成</string>
     <string name="profile_empty_title">プロフィールがありません</string>
     <string name="profile_empty_description">始めるにはプロフィールを作成してください</string>
     <string name="profile_create">プロフィールを作成</string>
     <string name="profile_edit">編集</string>
     <string name="profile_delete">削除</string>
+    <string name="profile_delete_confirm_title">プロフィールを削除しますか？</string>
+    <string name="profile_delete_confirm_message">プロフィールとローカルの成績を削除します。</string>
     <string name="profile_active">使用中</string>
     <string name="profile_unnamed">無名</string>
     <string name="profile_create_title">プロフィールの作成</string>

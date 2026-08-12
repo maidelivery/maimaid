@@ -30,7 +30,7 @@
     <string name="home_profile_unbound">未绑定用户</string>
     <string name="home_profile_edit_hint">点击编辑</string>
     <string name="home_best_table_title">查看 Best %1$d 成绩表</string>
-    <string name="home_best_table_subtitle">基于 B%1$d + N%2$d 计算的 DX Rating</string>
+    <string name="home_best_table_subtitle">基于 B%1$d + B%2$d 计算的 DX Rating</string>
     <string name="home_random">随机歌曲</string>
     <string name="home_random_subtitle">老虎机式随机抽曲</string>
     <string name="home_recommendations">吃分推荐</string>
@@ -163,11 +163,15 @@
     <string name="best50_old_section">旧曲 B%1$d</string>
     <string name="best50_empty">暂无数据</string>
     <string name="best50_base">定数 %1$.1f</string>
+    <string name="best50_export_section_rating">Rating: %1$d</string>
+    <string name="best50_export_watermark">由 maimaid 生成</string>
     <string name="profile_empty_title">暂无档案</string>
     <string name="profile_empty_description">创建一个用户档案以开始使用</string>
     <string name="profile_create">创建档案</string>
     <string name="profile_edit">编辑</string>
     <string name="profile_delete">删除</string>
+    <string name="profile_delete_confirm_title">删除档案？</string>
+    <string name="profile_delete_confirm_message">这会删除档案及其本地成绩。</string>
     <string name="profile_active">使用中</string>
     <string name="profile_unnamed">未命名</string>
     <string name="profile_create_title">创建档案</string>
