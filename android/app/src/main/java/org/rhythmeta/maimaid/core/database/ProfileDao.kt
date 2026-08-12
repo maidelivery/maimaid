@@ -21,6 +21,9 @@ interface ProfileDao {
     @Query("SELECT * FROM user_profiles ORDER BY createdAt LIMIT 1")
     suspend fun firstProfile(): UserProfileEntity?
 
+    @Query("SELECT * FROM user_profiles ORDER BY createdAt")
+    suspend fun profiles(): List<UserProfileEntity>
+
     @Query("UPDATE user_profiles SET isActive = 0")
     suspend fun clearActiveProfile()
 
@@ -29,6 +32,9 @@ interface ProfileDao {
 
     @Delete
     suspend fun delete(profile: UserProfileEntity)
+
+    @Query("DELETE FROM user_profiles")
+    suspend fun deleteAll()
 
     @Transaction
     suspend fun activate(profile: UserProfileEntity) {

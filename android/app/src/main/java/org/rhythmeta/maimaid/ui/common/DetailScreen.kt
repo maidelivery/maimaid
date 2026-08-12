@@ -64,6 +64,7 @@ import org.rhythmeta.maimaid.ui.best.BestTableScreen
 import org.rhythmeta.maimaid.ui.profile.ProfileScreen
 import org.rhythmeta.maimaid.ui.random.RandomSongScreen
 import org.rhythmeta.maimaid.ui.random.RandomSongSessionState
+import org.rhythmeta.maimaid.ui.settings.BackendAuthScreen
 
 @Composable
 internal fun DetailScreen(
@@ -124,6 +125,7 @@ internal fun DetailScreen(
             createRequested = profileCreateRequested,
             onCreateRequestHandled = onProfileCreateRequestHandled,
         )
+        AppDetail.BackendAuth -> BackendAuthScreen(container = container)
         AppDetail.About -> AboutDetail()
         else -> FeatureDetail(state = state)
     }

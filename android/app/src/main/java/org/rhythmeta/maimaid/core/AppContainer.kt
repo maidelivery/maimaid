@@ -6,17 +6,22 @@ import androidx.room.RoomDatabase
 import kotlinx.serialization.json.Json
 import org.rhythmeta.maimaid.BuildConfig
 import org.rhythmeta.maimaid.R
+import org.rhythmeta.maimaid.core.data.AppPreferencesRepository
+import org.rhythmeta.maimaid.core.data.BackendSessionManager
+import org.rhythmeta.maimaid.core.data.BackendSyncCoordinator
+import org.rhythmeta.maimaid.core.data.BackendSyncStateStore
+import org.rhythmeta.maimaid.core.data.BackendTokenStore
+import org.rhythmeta.maimaid.core.data.Best50Repository
 import org.rhythmeta.maimaid.core.data.CatalogRepository
 import org.rhythmeta.maimaid.core.data.CatalogSyncStateStore
 import org.rhythmeta.maimaid.core.data.CoverImageStore
-import org.rhythmeta.maimaid.core.data.AppPreferencesRepository
-import org.rhythmeta.maimaid.core.data.Best50Repository
-import org.rhythmeta.maimaid.core.data.ProfileRepository
 import org.rhythmeta.maimaid.core.data.ProfileAvatarStore
 import org.rhythmeta.maimaid.core.data.ProfileCredentialStore
+import org.rhythmeta.maimaid.core.data.ProfileRepository
 import org.rhythmeta.maimaid.core.data.ScoreRepository
 import org.rhythmeta.maimaid.core.database.MaimaidDatabase
 import org.rhythmeta.maimaid.core.ml.OnnxSessionFactory
+import org.rhythmeta.maimaid.core.network.BackendApiClient
 import org.rhythmeta.maimaid.core.network.StaticBundleClient
 
 class AppContainer(context: Context) {
@@ -39,6 +44,13 @@ class AppContainer(context: Context) {
     val coverImageStore = CoverImageStore(applicationContext)
     val profileAvatarStore = ProfileAvatarStore(applicationContext)
     val profileCredentialStore = ProfileCredentialStore(applicationContext)
+    private val backendApiClient = BackendApiClient(BuildConfig.BACKEND_URL, json)
+    val backendSessionManager = BackendSessionManager(
+        authBaseUrl = BuildConfig.BACKEND_AUTH_URL,
+        apiClient = backendApiClient,
+        tokenStore = BackendTokenStore(applicationContext, json),
+    )
+    private val backendSyncStateStore = BackendSyncStateStore(applicationContext, json)
 
     val profileRepository = ProfileRepository(
         profileDao = database.profileDao(),
@@ -60,5 +72,15 @@ class AppContainer(context: Context) {
         client = StaticBundleClient(BuildConfig.BACKEND_URL, json),
         syncStateStore = CatalogSyncStateStore(applicationContext),
         coverImageStore = coverImageStore,
+    )
+
+    val backendSyncCoordinator = BackendSyncCoordinator(
+        database = database,
+        profileRepository = profileRepository,
+        sessionManager = backendSessionManager,
+        apiClient = backendApiClient,
+        syncStateStore = backendSyncStateStore,
+        profileAvatarStore = profileAvatarStore,
+        json = json,
     )
 }
