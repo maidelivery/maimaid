@@ -56,6 +56,17 @@ class ProfileAvatarStore(context: Context) {
         }.getOrNull()
     }
 
+    suspend fun saveRemote(bytes: ByteArray, profileId: String): String? = withContext(Dispatchers.IO) {
+        val target = File(avatarDirectory, "$profileId-${UUID.randomUUID()}.image")
+        runCatching {
+            target.outputStream().use { it.write(bytes) }
+            target.takeIf { it.length() > 0L }?.absolutePath
+        }.getOrElse {
+            target.delete()
+            null
+        }
+    }
+
     fun discard(stagedPath: String?) {
         stagedPath?.let(::File)?.takeIf { it.parentFile == stagingDirectory }?.delete()
     }

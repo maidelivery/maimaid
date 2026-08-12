@@ -7,6 +7,8 @@ plugins {
 
 val maimaidBackendUrl = providers.gradleProperty("MAIMAID_BACKEND_URL")
     .orElse("https://api.shikoch.in")
+val maimaidBackendAuthUrl = providers.gradleProperty("MAIMAID_BACKEND_AUTH_URL")
+    .orElse("https://dashboard.shikoch.in")
 val splitReleaseApks = providers.gradleProperty("MAIMAID_SPLIT_RELEASE_APKS")
     .map { it.toBoolean() }
     .orElse(false)
@@ -34,6 +36,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "BACKEND_URL", "\"${maimaidBackendUrl.get()}\"")
+        buildConfigField("String", "BACKEND_AUTH_URL", "\"${maimaidBackendAuthUrl.get()}\"")
     }
 
     signingConfigs {

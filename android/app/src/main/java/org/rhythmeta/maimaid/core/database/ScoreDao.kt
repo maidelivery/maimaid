@@ -32,6 +32,12 @@ interface ScoreDao {
     @Query("SELECT * FROM scores WHERE profileId = :profileId")
     fun observeScores(profileId: String): Flow<List<ScoreEntity>>
 
+    @Query("SELECT * FROM scores WHERE profileId = :profileId")
+    suspend fun scores(profileId: String): List<ScoreEntity>
+
+    @Query("SELECT * FROM play_records WHERE profileId = :profileId ORDER BY playedAt DESC")
+    suspend fun playRecords(profileId: String): List<PlayRecordEntity>
+
     @Query("SELECT * FROM scores WHERE profileId = :profileId AND sheetKey = :sheetKey LIMIT 1")
     suspend fun score(profileId: String, sheetKey: String): ScoreEntity?
 
@@ -61,4 +67,10 @@ interface ScoreDao {
 
     @Query("DELETE FROM scores WHERE profileId = :profileId AND sheetKey = :sheetKey")
     suspend fun deleteScore(profileId: String, sheetKey: String)
+
+    @Query("DELETE FROM scores WHERE profileId = :profileId")
+    suspend fun deleteScores(profileId: String)
+
+    @Query("DELETE FROM play_records WHERE profileId = :profileId")
+    suspend fun deletePlayRecords(profileId: String)
 }

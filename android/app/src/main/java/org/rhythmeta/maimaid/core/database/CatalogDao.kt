@@ -37,6 +37,9 @@ interface CatalogDao {
     @Query("SELECT * FROM sheets WHERE sheetKey = :sheetKey LIMIT 1")
     suspend fun sheet(sheetKey: String): SheetEntity?
 
+    @Query("SELECT * FROM sheets WHERE isRemoved = 0")
+    suspend fun sheets(): List<SheetEntity>
+
     @Query("SELECT * FROM game_versions ORDER BY sortOrder")
     fun observeVersions(): Flow<List<GameVersionEntity>>
 
