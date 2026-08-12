@@ -181,11 +181,35 @@ export class ScoreService {
 		};
 	}
 
-	async bulkUpsertBestScores(profileId: string, scores: UpsertScoreInput[], source: string) {
+	async bulkUpsertBestScores(
+		profileId: string,
+		scores: UpsertScoreInput[],
+		source: string,
+		database?: Prisma.TransactionClient,
+	) {
+		if (database) {
+			await database.$queryRaw`SELECT "id" FROM "profiles" WHERE "id" = ${profileId}::uuid FOR UPDATE`;
+			return this.bulkUpsertBestScoresLocked(profileId, scores, source, database);
+		}
+		return this.prisma.$transaction(
+			async (transaction) => {
+				await transaction.$queryRaw`SELECT "id" FROM "profiles" WHERE "id" = ${profileId}::uuid FOR UPDATE`;
+				return this.bulkUpsertBestScoresLocked(profileId, scores, source, transaction);
+			},
+			{ maxWait: 10_000, timeout: 60_000 },
+		);
+	}
+
+	private async bulkUpsertBestScoresLocked(
+		profileId: string,
+		scores: UpsertScoreInput[],
+		source: string,
+		database: Prisma.TransactionClient,
+	) {
 		const applied: Array<{ sheetId: bigint; action: "created" | "updated" }> = [];
 		const skipped: Array<{ reason: string; locator: ScoreLocator }> = [];
 
-		const sheets = await this.resolveSheets(scores);
+		const sheets = await this.resolveSheets(scores, database);
 
 		type PreparedScore = {
 			locator: ScoreLocator;
@@ -233,7 +257,7 @@ export class ScoreService {
 		}
 
 		const sheetIds = Array.from(groupedBySheetId.values()).map((entries) => entries[0]!.sheetId);
-		const existingRows = await this.prisma.bestScore.findMany({
+		const existingRows = await database.bestScore.findMany({
 			where: {
 				profileId,
 				sheetId: {
@@ -311,7 +335,7 @@ export class ScoreService {
 			const mergedAchievedAt = mergedAchievements > existing.achievements.toNumber() ? achievedAtForMax : existing.achievedAt;
 
 			updateOps.push(
-				this.prisma.bestScore.update({
+				database.bestScore.update({
 					where: { id: existing.id },
 					data: {
 						achievements: mergedAchievements,
@@ -331,12 +355,12 @@ export class ScoreService {
 		}
 
 		if (createRows.length > 0) {
-			await this.prisma.bestScore.createMany({
+			await database.bestScore.createMany({
 				data: createRows,
 			});
 		}
 		if (updateOps.length > 0) {
-			await this.prisma.$transaction(updateOps);
+			await Promise.all(updateOps);
 		}
 
 		return {
@@ -356,11 +380,35 @@ export class ScoreService {
 		};
 	}
 
-	async bulkInsertPlayRecords(profileId: string, records: PlayRecordInput[], source: string) {
+	async bulkInsertPlayRecords(
+		profileId: string,
+		records: PlayRecordInput[],
+		source: string,
+		database?: Prisma.TransactionClient,
+	) {
+		if (database) {
+			await database.$queryRaw`SELECT "id" FROM "profiles" WHERE "id" = ${profileId}::uuid FOR UPDATE`;
+			return this.bulkInsertPlayRecordsLocked(profileId, records, source, database);
+		}
+		return this.prisma.$transaction(
+			async (transaction) => {
+				await transaction.$queryRaw`SELECT "id" FROM "profiles" WHERE "id" = ${profileId}::uuid FOR UPDATE`;
+				return this.bulkInsertPlayRecordsLocked(profileId, records, source, transaction);
+			},
+			{ maxWait: 10_000, timeout: 60_000 },
+		);
+	}
+
+	private async bulkInsertPlayRecordsLocked(
+		profileId: string,
+		records: PlayRecordInput[],
+		source: string,
+		database: Prisma.TransactionClient,
+	) {
 		const created: Array<{ sheetId: bigint }> = [];
 		const skipped: Array<{ reason: string; locator: ScoreLocator }> = [];
 
-		const sheets = await this.resolveSheets(records);
+		const sheets = await this.resolveSheets(records, database);
 
 		type PreparedRecord = {
 			locator: ScoreLocator;
@@ -415,7 +463,7 @@ export class ScoreService {
 			}
 		}
 
-		const existingRows = await this.prisma.playRecord.findMany({
+		const existingRows = await database.playRecord.findMany({
 			where: {
 				profileId,
 				sheetId: { in: Array.from(sheetIds) },
@@ -478,7 +526,7 @@ export class ScoreService {
 		}
 
 		if (createRows.length > 0) {
-			await this.prisma.playRecord.createMany({
+			await database.playRecord.createMany({
 				data: createRows,
 			});
 		}
@@ -500,8 +548,12 @@ export class ScoreService {
 		};
 	}
 
-	async requireProfileOwnership(profileId: string, userId: string) {
-		const profile = await this.prisma.profile.findFirst({
+	async requireProfileOwnership(
+		profileId: string,
+		userId: string,
+		database: PrismaClient | Prisma.TransactionClient = this.prisma,
+	) {
+		const profile = await database.profile.findFirst({
 			where: { id: profileId, userId },
 		});
 		if (!profile) {
@@ -514,7 +566,10 @@ export class ScoreService {
 		return normalizeLxnsSongId(songId);
 	}
 
-	private async resolveSheets(locators: ScoreLocator[]): Promise<Array<ResolvedSheet | null>> {
+	private async resolveSheets(
+		locators: ScoreLocator[],
+		database: PrismaClient | Prisma.TransactionClient = this.prisma,
+	): Promise<Array<ResolvedSheet | null>> {
 		const resolved = new Array<ResolvedSheet | null>(locators.length).fill(null);
 
 		const sheetIds = new Set<bigint>();
@@ -543,7 +598,7 @@ export class ScoreService {
 		}
 
 		if (sheetIds.size > 0) {
-			const rows = await this.prisma.sheet.findMany({
+			const rows = await database.sheet.findMany({
 				where: {
 					id: {
 						in: Array.from(sheetIds),
@@ -575,7 +630,7 @@ export class ScoreService {
 			const typeSet = Array.from(new Set(Array.from(normalizedByIndex.values()).map((item) => item.type)));
 			const difficultySet = Array.from(new Set(Array.from(normalizedByIndex.values()).map((item) => item.difficulty)));
 			if (typeSet.length > 0 && difficultySet.length > 0) {
-				const rows = await this.prisma.sheet.findMany({
+				const rows = await database.sheet.findMany({
 					where: {
 						songIdentifier: {
 							in: Array.from(identifierCandidates),
@@ -667,7 +722,7 @@ export class ScoreService {
 				),
 			);
 			if (titles.length > 0 && typeSet.length > 0 && difficultySet.length > 0) {
-				const rows = await this.prisma.sheet.findMany({
+				const rows = await database.sheet.findMany({
 					where: {
 						chartType: {
 							in: typeSet,

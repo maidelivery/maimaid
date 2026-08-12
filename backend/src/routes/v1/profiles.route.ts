@@ -44,6 +44,7 @@ const updateProfileSchema = z
 
 const avatarUploadSchema = z.object({
 	contentType: z.string().default("image/png"),
+	clientUpdatedAt: z.coerce.date().optional(),
 });
 
 const profileIdParamSchema = z.object({
@@ -146,6 +147,9 @@ profilesV1Route.put(
 		if (body.b15RecLimit !== undefined) payload.b15RecLimit = body.b15RecLimit;
 		if (body.createdAt !== undefined) payload.createdAt = body.createdAt;
 		const profile = await profileService.upsertByClientId(auth.userId, params.profileId, payload);
+		if (!profile) {
+			return ok(c, { code: "profile_update_conflict", message: "Profile changed before update." }, 409);
+		}
 		await syncService.recordEvent({
 			userId: auth.userId,
 			profileId: profile.id,
@@ -240,13 +244,30 @@ profilesV1Route.post(
 	standardValidator("json", avatarUploadSchema, validationHook),
 	async (c) => {
 		const profileService = c.var.resolve(ProfileService);
+		const syncService = c.var.resolve(SyncService);
 		const auth = c.get("auth");
 		if (!auth) {
 			return ok(c, { code: "unauthorized", message: "Authentication required." }, 401);
 		}
 		const params = c.req.valid("param");
 		const body = c.req.valid("json");
-		const result = await profileService.createAvatarUploadUrl(auth.userId, params.profileId, body.contentType);
+		const result = await profileService.createAvatarUploadUrl(
+			auth.userId,
+			params.profileId,
+			body.contentType,
+			body.clientUpdatedAt,
+		);
+		if (!result) {
+			return ok(c, { code: "server_newer", message: "Profile changed before avatar upload." }, 409);
+		}
+		await syncService.recordEvent({
+			userId: auth.userId,
+			profileId: params.profileId,
+			entityType: "avatar",
+			entityId: params.profileId,
+			op: "upsert",
+			payload: { updatedAt: result.updatedAt },
+		});
 		return ok(c, result);
 	},
 );
