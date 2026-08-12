@@ -22,23 +22,49 @@ class Best50Repository(
     private val database: MaimaidDatabase,
     private val profileRepository: ProfileRepository,
 ) {
-    fun observeBest50(): Flow<Best50State> = profileRepository.activeProfile.flatMapLatest { profile ->
-        if (profile == null) flowOf(Best50State())
-        else combine(
-            database.scoreDao().observeBest50Rows(profile.id),
-            database.catalogDao().observeVersions(),
-        ) { rows, versions -> calculate(rows, versions, profile.server, profile.b35Count, profile.b15Count) }
-    }
+    fun observeBest50(
+        versionOverride: String? = null,
+        b35CountOverride: Int? = null,
+        b15CountOverride: Int? = null,
+    ): Flow<Best50State> =
+        profileRepository.activeProfile.flatMapLatest { profile ->
+            if (profile == null) {
+                flowOf(Best50State())
+            } else {
+                combine(
+                    database.scoreDao().observeBest50Rows(profile.id),
+                    database.catalogDao().observeVersions(),
+                    database.catalogDao().observeSongs(),
+                    database.catalogDao().observeSheets(),
+                ) { rows, versions, songs, sheets ->
+                    calculate(
+                        rows = rows,
+                        versions = versions,
+                        songs = songs,
+                        sheets = sheets,
+                        server = profile.server,
+                        b35Count = b35CountOverride ?: profile.b35Count,
+                        b15Count = b15CountOverride ?: profile.b15Count,
+                        versionOverride = versionOverride,
+                    )
+                }
+            }
+        }
 
     private fun calculate(
         rows: List<Best50Row>,
         versions: List<GameVersionEntity>,
+        songs: List<org.rhythmeta.maimaid.core.database.SongEntity>,
+        sheets: List<org.rhythmeta.maimaid.core.database.SheetEntity>,
         server: String,
         b35Count: Int,
         b15Count: Int,
+        versionOverride: String?,
     ): Best50State {
         val versionNames = versions.sortedBy { it.sortOrder }.map { it.name }
-        val latest = versionNames.lastOrNull()
+        val latest = versionOverride?.takeIf { candidate ->
+            versionNames.any { it.equals(candidate, ignoreCase = true) }
+        } ?: RatingUtils.latestVersionForServer(songs, sheets, versions, server)
         val afterCircle = RatingUtils.isAfterCircle(latest, versionNames)
         val b35 = mutableListOf<RatingUtils.Entry>()
         val b15 = mutableListOf<RatingUtils.Entry>()

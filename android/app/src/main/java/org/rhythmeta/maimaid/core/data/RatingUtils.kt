@@ -1,6 +1,9 @@
 package org.rhythmeta.maimaid.core.data
 
 import kotlin.math.floor
+import org.rhythmeta.maimaid.core.database.GameVersionEntity
+import org.rhythmeta.maimaid.core.database.SheetEntity
+import org.rhythmeta.maimaid.core.database.SongEntity
 
 object RatingUtils {
     data class RankThreshold(val rank: String, val threshold: Double)
@@ -95,6 +98,33 @@ object RatingUtils {
                 }
             }
         }
+    }
+
+    fun latestVersionForServer(
+        songs: List<SongEntity>,
+        sheets: List<SheetEntity>,
+        versions: List<GameVersionEntity>,
+        server: String,
+    ): String? {
+        val orderedVersions = versions.sortedBy(GameVersionEntity::sortOrder).map(GameVersionEntity::name)
+        val songsById = songs.associateBy(SongEntity::songIdentifier)
+        return orderedVersions.lastOrNull { candidate ->
+            val candidateIndex = versionIndex(candidate, orderedVersions)
+            sheets.any { sheet ->
+                val song = songsById[sheet.songIdentifier] ?: return@any false
+                val activeRegion = when (server.lowercase()) {
+                    "cn" -> sheet.regionCn
+                    "intl", "us", "usa" -> sheet.regionIntl
+                    else -> sheet.regionJp
+                }
+                val chartVersion = sheet.version ?: song.version
+                activeRegion &&
+                    !sheet.type.contains("utage", ignoreCase = true) &&
+                    !song.category.contains("utage", ignoreCase = true) &&
+                    !song.category.contains("宴") &&
+                    chartVersion?.let { versionIndex(it, orderedVersions) } == candidateIndex
+            }
+        } ?: orderedVersions.lastOrNull()
     }
 
     private fun versionIndex(version: String, versions: List<String>): Int? {

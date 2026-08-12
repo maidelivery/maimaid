@@ -12,6 +12,8 @@ import org.rhythmeta.maimaid.core.data.CoverImageStore
 import org.rhythmeta.maimaid.core.data.AppPreferencesRepository
 import org.rhythmeta.maimaid.core.data.Best50Repository
 import org.rhythmeta.maimaid.core.data.ProfileRepository
+import org.rhythmeta.maimaid.core.data.ProfileAvatarStore
+import org.rhythmeta.maimaid.core.data.ProfileCredentialStore
 import org.rhythmeta.maimaid.core.data.ScoreRepository
 import org.rhythmeta.maimaid.core.database.MaimaidDatabase
 import org.rhythmeta.maimaid.core.ml.OnnxSessionFactory
@@ -35,6 +37,8 @@ class AppContainer(context: Context) {
     val appPreferencesRepository = AppPreferencesRepository(applicationContext)
     val onnxSessionFactory = OnnxSessionFactory(applicationContext)
     val coverImageStore = CoverImageStore(applicationContext)
+    val profileAvatarStore = ProfileAvatarStore(applicationContext)
+    val profileCredentialStore = ProfileCredentialStore(applicationContext)
 
     val profileRepository = ProfileRepository(
         profileDao = database.profileDao(),

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.core.AppContainer
@@ -105,12 +106,16 @@ class MainViewModel(
     }
 
     val uiState = combine(
-        container.profileRepository.activeProfile,
+        container.profileRepository.activeProfile.filterNotNull(),
         catalogContentState,
-        container.best50Repository.observeBest50(),
+        container.best50Repository.observeBest50(
+            b35CountOverride = 35,
+            b15CountOverride = 15,
+        ),
     ) { activeProfile, catalogState, best50 ->
         catalogState.copy(
             activeProfile = activeProfile,
+            isActiveProfileReady = true,
             best50Rating = best50.total,
         )
     }.stateIn(
@@ -123,12 +128,6 @@ class MainViewModel(
         viewModelScope.launch {
             container.profileRepository.ensureDefaultProfile()
             container.catalogRepository.refresh()
-        }
-    }
-
-    fun retryCatalogSync() {
-        viewModelScope.launch {
-            container.catalogRepository.refresh(force = true)
         }
     }
 

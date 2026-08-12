@@ -7,9 +7,11 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.DocumentScanner
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.animation.AnimatedContent
@@ -82,6 +84,7 @@ import org.rhythmeta.maimaid.ui.components.squircleShape
 import org.rhythmeta.maimaid.ui.home.HomeScreen
 import org.rhythmeta.maimaid.ui.navigation.AppDetail
 import org.rhythmeta.maimaid.ui.navigation.RootDestination
+import org.rhythmeta.maimaid.ui.profile.ProfileEditorSheet
 import org.rhythmeta.maimaid.ui.scanner.ScannerScreen
 import org.rhythmeta.maimaid.ui.settings.SettingsScreen
 import org.rhythmeta.maimaid.ui.theme.AppThemeColorSource
@@ -136,6 +139,9 @@ fun MaimaidApp(
     var catalogSearchFocusRequestToken by rememberSaveable { mutableIntStateOf(0) }
     var restoreCatalogSearchFocus by rememberSaveable { mutableStateOf(false) }
     var showCatalogFilter by rememberSaveable { mutableStateOf(false) }
+    var showHomeProfileEditor by rememberSaveable { mutableStateOf(false) }
+    var profileCreateRequested by rememberSaveable { mutableStateOf(false) }
+    var bestTableExportRequested by rememberSaveable { mutableStateOf(false) }
     val backProgress = remember { Animatable(0f) }
     val detailEntranceProgress = remember { Animatable(0f) }
     val homeTabTransitionProgress = remember {
@@ -298,7 +304,7 @@ fun MaimaidApp(
                 state = uiState,
                 contentTopPadding = contentTopPadding,
                 onOpenDetail = openDetail,
-                onRetrySync = viewModel::retryCatalogSync,
+                onEditProfile = { showHomeProfileEditor = true },
             )
             RootDestination.Scanner -> ScannerScreen(
                 showBoundingBoxes = showScannerBoundingBoxes,
@@ -387,6 +393,20 @@ fun MaimaidApp(
                         if (selectedSong.isFavorite) R.string.song_remove_favorite else R.string.song_add_favorite,
                     ),
                     tint = if (selectedSong.isFavorite) Color(0xFFE85D5D) else MiuixTheme.colorScheme.onSurface,
+                )
+            }
+        } else if (detail == AppDetail.Profiles) {
+            IconButton(onClick = { profileCreateRequested = true }) {
+                Icon(
+                    imageVector = Icons.Rounded.Add,
+                    contentDescription = stringResource(R.string.profile_create),
+                )
+            }
+        } else if (detail == AppDetail.BestTable) {
+            IconButton(onClick = { bestTableExportRequested = true }) {
+                Icon(
+                    imageVector = Icons.Rounded.IosShare,
+                    contentDescription = stringResource(R.string.best50_export),
                 )
             }
         }
@@ -699,6 +719,10 @@ fun MaimaidApp(
                             selectedSongId = selectedSongId,
                             container = container,
                             songContentTopPadding = paddingValues.calculateTopPadding(),
+                            profileCreateRequested = profileCreateRequested,
+                            bestTableExportRequested = bestTableExportRequested,
+                            onProfileCreateRequestHandled = { profileCreateRequested = false },
+                            onBestTableExportRequestHandled = { bestTableExportRequested = false },
                             onSongDetailBackgroundChanged = { color ->
                                 val currentSongId = selectedSongId
                                 if (detail == AppDetail.Song && currentSongId != null) {
@@ -716,6 +740,13 @@ fun MaimaidApp(
                 }
             }
         }
+
+        ProfileEditorSheet(
+            visible = showHomeProfileEditor,
+            profile = uiState.activeProfile,
+            container = container,
+            onDismiss = { showHomeProfileEditor = false },
+        )
     }
 }
 

@@ -14,6 +14,7 @@ class ProfileRepository(
     private val activeProfileMutex = Mutex()
 
     val activeProfile: Flow<UserProfileEntity?> = profileDao.observeActiveProfile()
+    val profiles: Flow<List<UserProfileEntity>> = profileDao.observeProfiles()
 
     suspend fun ensureDefaultProfile() {
         ensureActiveProfile()
@@ -37,5 +38,59 @@ class ProfileRepository(
         )
         profileDao.upsert(defaultProfile)
         defaultProfile
+    }
+
+    suspend fun save(profile: UserProfileEntity) {
+        profileDao.upsert(
+            profile.copy(
+                name = profile.name.trim(),
+                plate = profile.plate?.trim()?.takeIf(String::isNotEmpty),
+                dfUsername = profile.dfUsername.trim(),
+                b35Count = profile.b35Count.coerceAtLeast(1),
+                b15Count = profile.b15Count.coerceAtLeast(1),
+            ),
+        )
+    }
+
+    suspend fun create(
+        name: String,
+        server: String,
+        avatarPath: String?,
+        dfUsername: String,
+        plate: String,
+    ): UserProfileEntity {
+        val isFirstProfile = profileDao.firstProfile() == null
+        val profile = UserProfileEntity(
+            id = UUID.randomUUID().toString(),
+            name = name.trim(),
+            server = server,
+            avatarPath = avatarPath,
+            isActive = isFirstProfile,
+            createdAt = System.currentTimeMillis(),
+            dfUsername = dfUsername.trim(),
+            plate = plate.trim().takeIf(String::isNotEmpty),
+        )
+        profileDao.upsert(profile)
+        return profile
+    }
+
+    suspend fun activate(profile: UserProfileEntity) = activeProfileMutex.withLock {
+        profileDao.activate(profile)
+    }
+
+    suspend fun delete(profile: UserProfileEntity): Boolean {
+        if (profile.isActive) return false
+        profileDao.delete(profile)
+        return true
+    }
+
+    suspend fun updateBestCapacity(b35Count: Int, b15Count: Int) {
+        val profile = profileDao.activeProfile() ?: return
+        profileDao.upsert(
+            profile.copy(
+                b35Count = b35Count.coerceAtLeast(1),
+                b15Count = b15Count.coerceAtLeast(1),
+            ),
+        )
     }
 }
