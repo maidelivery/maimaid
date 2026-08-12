@@ -136,7 +136,6 @@ fun MaimaidApp(
     var catalogSearchFocusRequestToken by rememberSaveable { mutableIntStateOf(0) }
     var restoreCatalogSearchFocus by rememberSaveable { mutableStateOf(false) }
     var showCatalogFilter by rememberSaveable { mutableStateOf(false) }
-    var swipeEdge by rememberSaveable { mutableIntStateOf(BackEventCompat.EDGE_LEFT) }
     val backProgress = remember { Animatable(0f) }
     val detailEntranceProgress = remember { Animatable(0f) }
     val homeTabTransitionProgress = remember {
@@ -240,7 +239,6 @@ fun MaimaidApp(
             detailEntranceProgress.stop()
             detailEntranceProgress.snapTo(0f)
             progress.collect { event ->
-                swipeEdge = event.swipeEdge
                 backProgress.snapTo(event.progress.coerceIn(0f, 1f))
             }
             val completionDuration = ((1f - backProgress.value) * 180f)
@@ -354,7 +352,6 @@ fun MaimaidApp(
                 detailEntranceProgress.stop()
                 val initialBackProgress = detailEntranceProgress.value.coerceIn(0f, 1f)
                 backProgress.stop()
-                swipeEdge = BackEventCompat.EDGE_LEFT
                 backProgress.snapTo(initialBackProgress)
                 detailEntranceProgress.snapTo(0f)
                 backProgress.animateTo(
@@ -432,13 +429,6 @@ fun MaimaidApp(
         else -> 0f
     }
     val detailIsMoving = gestureInProgress || detailEntranceProgress.value > 0f
-    val transitionDirection = if (detail != null && !gestureInProgress) {
-        1f
-    } else if (swipeEdge == BackEventCompat.EDGE_LEFT) {
-        1f
-    } else {
-        -1f
-    }
     val foregroundShape = squircleShape(rememberDeviceCornerRadius())
     val backgroundColor = MiuixTheme.colorScheme.background
     val songTopBarColor = songDetailBackground
@@ -472,12 +462,12 @@ fun MaimaidApp(
                     .graphicsLayer {
                         when {
                             detail != null && destination == RootDestination.Home -> {
-                                translationX = -transitionDirection * size.width * 0.25f *
+                                translationX = -size.width * 0.25f *
                                     (1f - detailSourceProgress)
                                 alpha = 0.9f + 0.1f * detailSourceProgress
                             }
                             detail == null && destination != RootDestination.Home && gestureInProgress -> {
-                                translationX = -transitionDirection * size.width * 0.25f *
+                                translationX = -size.width * 0.25f *
                                     (1f - backProgress.value)
                                 alpha = 0.9f + 0.1f * backProgress.value
                             }
@@ -498,11 +488,11 @@ fun MaimaidApp(
                     .fillMaxSize()
                     .graphicsLayer {
                         if (detail != null && destination != RootDestination.Home) {
-                            translationX = -transitionDirection * size.width * 0.25f * (1f - detailSourceProgress)
+                            translationX = -size.width * 0.25f * (1f - detailSourceProgress)
                         } else if (homeTabTransitionActive || destination == RootDestination.Home) {
                             translationX = size.width * (1f - homeTabTransitionProgress.value)
                         } else if (destination != RootDestination.Home) {
-                            translationX = transitionDirection * size.width * backProgress.value
+                            translationX = size.width * backProgress.value
                             shape = foregroundShape
                             clip = gestureInProgress
                             shadowElevation = if (gestureInProgress) 12.dp.toPx() else 0f
@@ -624,9 +614,8 @@ fun MaimaidApp(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
-                        val direction = if (swipeEdge == BackEventCompat.EDGE_LEFT) 1f else -1f
                         translationX = if (gestureInProgress) {
-                            direction * size.width * backProgress.value
+                            size.width * backProgress.value
                         } else {
                             size.width * detailEntranceProgress.value
                         }
