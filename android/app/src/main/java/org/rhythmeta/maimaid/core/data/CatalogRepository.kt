@@ -3,7 +3,9 @@ package org.rhythmeta.maimaid.core.data
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.rhythmeta.maimaid.core.database.CatalogDao
@@ -21,10 +23,14 @@ class CatalogRepository(
     private val client: StaticBundleClient,
     private val syncStateStore: CatalogSyncStateStore,
     private val coverImageStore: CoverImageStore,
+    private val chartFitStore: ChartFitStore,
+    private val danStore: DanStore,
 ) {
     private val catalogDao: CatalogDao = database.catalogDao()
     private val syncMutex = Mutex()
     private val mutableSyncStatus = MutableStateFlow<CatalogSyncStatus>(CatalogSyncStatus.Checking)
+    private val mutableChartFit = MutableSharedFlow<StaticBundleResponse.ChartFitPayload>(replay = 1)
+    private val mutableDanCategories = MutableSharedFlow<List<DanCategory>>(replay = 1)
 
     val syncStatus = mutableSyncStatus.asStateFlow()
     val songCount: Flow<Int> = catalogDao.observeSongCount()
@@ -35,6 +41,12 @@ class CatalogRepository(
     val aliases: Flow<List<SongAliasEntity>> = catalogDao.observeAliases()
     val versions: Flow<List<GameVersionEntity>> = catalogDao.observeVersions()
     val categories: Flow<List<SongCategoryEntity>> = catalogDao.observeCategories()
+    val chartFit: Flow<StaticBundleResponse.ChartFitPayload> = mutableChartFit.onStart {
+        emit(chartFitStore.load())
+    }
+    val danCategories: Flow<List<DanCategory>> = mutableDanCategories.onStart {
+        emit(danStore.load())
+    }
 
     fun observeSheetsForSong(songIdentifier: String): Flow<List<SheetEntity>> =
         catalogDao.observeSheetsForSong(songIdentifier)
@@ -56,7 +68,13 @@ class CatalogRepository(
         runCatching {
             val manifest = client.fetchManifest()
             val currentMd5 = syncStateStore.currentMd5()
-            if (localSongCount > 0 && currentMd5 == manifest.md5 && !force) {
+            if (
+                localSongCount > 0 &&
+                currentMd5 == manifest.md5 &&
+                chartFitStore.hasCache() &&
+                danStore.hasCache() &&
+                !force
+            ) {
                 downloadMissingCovers(catalogDao.imageNames())
                 mutableSyncStatus.value = CatalogSyncStatus.Ready(manifest.version, fromCache = true)
                 return@runCatching
@@ -171,6 +189,12 @@ class CatalogRepository(
             catalogDao.deleteAliases()
             catalogDao.upsertAliases(aliases)
         }
+        val chartFit = resources.chartFit ?: resources.legacyChartFit
+            ?: StaticBundleResponse.ChartFitPayload()
+        chartFitStore.save(chartFit)
+        mutableChartFit.emit(chartFit)
+        danStore.save(resources.danInfo)
+        mutableDanCategories.emit(resources.danInfo)
     }
 
     private fun buildProviderIdsByTitle(items: List<StaticBundleResponse.SongIdItem>): Map<String, List<Int>> {
