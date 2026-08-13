@@ -38,7 +38,17 @@ private struct BackendErrorPayload: Decodable {
 enum BackendAPIClient {
     static let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(
+                date.formatted(
+                    Date.ISO8601FormatStyle(
+                        includingFractionalSeconds: true,
+                        timeZone: .gmt
+                    )
+                )
+            )
+        }
         return encoder
     }()
 
