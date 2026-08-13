@@ -18,37 +18,41 @@ fun Color.toMutedThemeSeed(): Color {
 }
 
 fun Colors.withSeedBrightness(seed: Color, darkTheme: Boolean): Colors {
-    val seedValue = seed.toHsv().v.coerceIn(0f, 1f)
+    val seedValue = (seed.toHsv().v / 100f).coerceIn(0f, 1f)
     val targetPrimaryValue = if (darkTheme) {
-        lerp(0.62f, 0.92f, seedValue)
+        lerp(62f, 92f, seedValue)
     } else {
-        lerp(0.40f, 0.70f, seedValue)
+        lerp(40f, 70f, seedValue)
     }
     val valueShift = targetPrimaryValue - primary.toHsv().v
-    val adjustedPrimary = primary.shiftValue(valueShift, minValue = 0.36f, maxValue = if (darkTheme) 0.94f else 0.72f)
+    val adjustedPrimary = primary.shiftValue(
+        valueShift,
+        minValue = 36f,
+        maxValue = if (darkTheme) 94f else 72f,
+    )
     val adjustedPrimaryVariant = primaryVariant.shiftValue(
         shift = valueShift,
         influence = 0.65f,
-        minValue = if (darkTheme) 0.54f else 0.46f,
-        maxValue = 0.94f,
+        minValue = if (darkTheme) 54f else 46f,
+        maxValue = 94f,
     )
     val adjustedPrimaryContainer = primaryContainer.shiftValue(
         shift = valueShift,
         influence = 0.5f,
-        minValue = if (darkTheme) 0.20f else 0.54f,
-        maxValue = if (darkTheme) 0.68f else 0.96f,
+        minValue = if (darkTheme) 20f else 54f,
+        maxValue = if (darkTheme) 68f else 96f,
     )
     val adjustedSecondaryContainer = secondaryContainer.shiftValue(
         shift = valueShift,
         influence = 0.3f,
-        minValue = if (darkTheme) 0.16f else 0.68f,
-        maxValue = if (darkTheme) 0.58f else 0.98f,
+        minValue = if (darkTheme) 16f else 68f,
+        maxValue = if (darkTheme) 58f else 98f,
     )
     val adjustedTertiaryContainer = tertiaryContainer.shiftValue(
         shift = valueShift,
         influence = 0.3f,
-        minValue = if (darkTheme) 0.16f else 0.68f,
-        maxValue = if (darkTheme) 0.58f else 0.98f,
+        minValue = if (darkTheme) 16f else 68f,
+        maxValue = if (darkTheme) 58f else 98f,
     )
 
     return copy(
@@ -66,8 +70,8 @@ fun Colors.withSeedBrightness(seed: Color, darkTheme: Boolean): Colors {
         sliderBackground = sliderBackground.shiftValue(
             shift = valueShift,
             influence = 0.25f,
-            minValue = if (darkTheme) 0.16f else 0.64f,
-            maxValue = if (darkTheme) 0.52f else 0.96f,
+            minValue = if (darkTheme) 16f else 64f,
+            maxValue = if (darkTheme) 52f else 96f,
         ),
     )
 }

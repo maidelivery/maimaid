@@ -52,6 +52,9 @@ interface CatalogDao {
     @Query("SELECT imageName FROM songs WHERE isRemoved = 0 AND imageName != ''")
     suspend fun imageNames(): List<String>
 
+    @Query("SELECT songIdentifier FROM songs WHERE isRemoved = 0")
+    suspend fun songIdentifiers(): List<String>
+
     @Query("UPDATE songs SET isFavorite = :isFavorite WHERE songIdentifier = :songIdentifier")
     suspend fun setFavorite(songIdentifier: String, isFavorite: Boolean)
 

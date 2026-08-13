@@ -67,6 +67,7 @@ import org.rhythmeta.maimaid.core.database.SongEntity
 import org.rhythmeta.maimaid.core.database.UserProfileEntity
 import org.rhythmeta.maimaid.ui.components.ExpandableBottomSheet
 import org.rhythmeta.maimaid.ui.components.SquircleExtension
+import org.rhythmeta.maimaid.ui.components.appTextFieldColors
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -417,7 +418,6 @@ internal fun ProfileEditorSheet(
             stagedAvatarPath = null
             onDismiss()
         }
-        Unit
     }
 
     ExpandableBottomSheet(
@@ -486,6 +486,7 @@ internal fun ProfileEditorSheet(
                     TextField(
                         value = name,
                         onValueChange = { name = it },
+                        colors = appTextFieldColors(),
                         label = stringResource(R.string.profile_name),
                         useLabelAsPlaceholder = true,
                         singleLine = true,
@@ -495,6 +496,7 @@ internal fun ProfileEditorSheet(
                     TextField(
                         value = plate,
                         onValueChange = { plate = it },
+                        colors = appTextFieldColors(),
                         label = stringResource(R.string.profile_plate),
                         useLabelAsPlaceholder = true,
                         singleLine = true,
@@ -538,6 +540,7 @@ internal fun ProfileEditorSheet(
                         TextField(
                             value = dfUsername,
                             onValueChange = { dfUsername = it },
+                            colors = appTextFieldColors(),
                             label = stringResource(R.string.profile_df_username),
                             useLabelAsPlaceholder = true,
                             singleLine = true,
@@ -547,6 +550,7 @@ internal fun ProfileEditorSheet(
                         TextField(
                             value = dfToken,
                             onValueChange = { dfToken = it },
+                            colors = appTextFieldColors(),
                             label = stringResource(R.string.profile_df_token),
                             useLabelAsPlaceholder = true,
                             singleLine = true,
@@ -557,6 +561,7 @@ internal fun ProfileEditorSheet(
                         TextField(
                             value = lxnsToken,
                             onValueChange = { lxnsToken = it },
+                            colors = appTextFieldColors(),
                             label = stringResource(R.string.profile_lxns_token),
                             useLabelAsPlaceholder = true,
                             singleLine = true,
@@ -721,6 +726,7 @@ private fun ProfileNumberField(
         onValueChange = { input ->
             if (input.length <= 2 && input.all(Char::isDigit)) onValueChange(input)
         },
+        colors = appTextFieldColors(),
         label = label,
         useLabelAsPlaceholder = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),

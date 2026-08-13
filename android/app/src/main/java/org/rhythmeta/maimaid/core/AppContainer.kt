@@ -17,6 +17,7 @@ import org.rhythmeta.maimaid.core.data.CatalogSyncStateStore
 import org.rhythmeta.maimaid.core.data.ChartFitStore
 import org.rhythmeta.maimaid.core.data.CoverImageStore
 import org.rhythmeta.maimaid.core.data.ConstantTableRepository
+import org.rhythmeta.maimaid.core.data.CommunityAliasService
 import org.rhythmeta.maimaid.core.data.DanRepository
 import org.rhythmeta.maimaid.core.data.DanStore
 import org.rhythmeta.maimaid.core.data.PlateProgressRepository
@@ -57,6 +58,12 @@ class AppContainer(context: Context) {
         apiClient = backendApiClient,
         tokenStore = BackendTokenStore(applicationContext, json),
     )
+    val communityAliasService = CommunityAliasService(
+        apiClient = backendApiClient,
+        sessionManager = backendSessionManager,
+        catalogDao = database.catalogDao(),
+        json = json,
+    )
     private val backendSyncStateStore = BackendSyncStateStore(applicationContext, json)
 
     val profileRepository = ProfileRepository(
@@ -92,6 +99,7 @@ class AppContainer(context: Context) {
     val scoreQueryRepository = ScoreQueryRepository(
         catalogRepository = catalogRepository,
         scoreRepository = scoreRepository,
+        communityAliasService = communityAliasService,
     )
 
     val constantTableRepository = ConstantTableRepository(

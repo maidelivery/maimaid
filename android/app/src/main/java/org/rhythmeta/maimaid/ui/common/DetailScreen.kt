@@ -62,6 +62,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import org.rhythmeta.maimaid.ui.best.BestTableScreen
 import org.rhythmeta.maimaid.ui.constanttable.ConstantTableScreen
+import org.rhythmeta.maimaid.ui.community.CommunityAliasScreen
 import org.rhythmeta.maimaid.ui.dan.DanDetailScreen
 import org.rhythmeta.maimaid.ui.dan.DanListScreen
 import org.rhythmeta.maimaid.ui.links.UsefulLinksScreen
@@ -97,6 +98,7 @@ internal fun DetailScreen(
     onDismissScoreQueryFilter: () -> Unit,
     onOpenSong: (String) -> Unit,
     onOpenDanCategory: (String, String) -> Unit,
+    onOpenCommunityAliases: () -> Unit,
     onSongDetailBackgroundChanged: (androidx.compose.ui.graphics.Color?) -> Unit,
     onSongDetailTitleChanged: (String) -> Unit,
 ) {
@@ -107,6 +109,7 @@ internal fun DetailScreen(
             contentTopPadding = songContentTopPadding,
             onBackgroundChanged = onSongDetailBackgroundChanged,
             onTitleChanged = onSongDetailTitleChanged,
+            onOpenCommunityAliases = onOpenCommunityAliases,
         )
         AppDetail.StaticData -> StaticDataDetail(
             state = state,
@@ -132,6 +135,7 @@ internal fun DetailScreen(
             contentTopPadding = songContentTopPadding,
             exportRequested = bestTableExportRequested,
             onExportRequestHandled = onBestTableExportRequestHandled,
+            onOpenSong = onOpenSong,
         )
         AppDetail.Recommendations -> RecommendationScreen(
             container = container,
@@ -176,6 +180,11 @@ internal fun DetailScreen(
             )
         }
         AppDetail.UsefulLinks -> UsefulLinksScreen(
+            contentTopPadding = songContentTopPadding,
+        )
+        AppDetail.CommunityAliases -> CommunityAliasScreen(
+            container = container,
+            songs = state.songs,
             contentTopPadding = songContentTopPadding,
         )
         AppDetail.Profiles -> ProfileScreen(

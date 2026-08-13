@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,6 +67,7 @@ import org.rhythmeta.maimaid.core.database.GameVersionEntity
 import org.rhythmeta.maimaid.core.database.UserProfileEntity
 import org.rhythmeta.maimaid.ui.components.SquircleExtension
 import org.rhythmeta.maimaid.ui.components.SongListScrollBar
+import org.rhythmeta.maimaid.ui.components.appTextFieldColors
 import org.rhythmeta.maimaid.ui.util.ScoreStatusColors
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
 import top.yukonga.miuix.kmp.basic.Card
@@ -86,6 +88,7 @@ fun BestTableScreen(
     contentTopPadding: Dp,
     exportRequested: Boolean,
     onExportRequestHandled: () -> Unit,
+    onOpenSong: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -211,6 +214,7 @@ fun BestTableScreen(
                 capacity = activeProfile?.b15Count ?: 15,
                 entries = best50.b15,
                 coverImageStore = container.coverImageStore,
+                onOpenSong = onOpenSong,
             )
             bestEntrySection(
                 sectionKey = "old",
@@ -218,6 +222,7 @@ fun BestTableScreen(
                 capacity = activeProfile?.b35Count ?: 35,
                 entries = best50.b35,
                 coverImageStore = container.coverImageStore,
+                onOpenSong = onOpenSong,
             )
         }
         SongListScrollBar(
@@ -336,6 +341,7 @@ private fun CapacityTextField(
     TextField(
         value = value,
         onValueChange = onValueChange,
+        colors = appTextFieldColors(),
         label = label,
         useLabelAsPlaceholder = false,
         keyboardOptions = KeyboardOptions(
@@ -365,6 +371,7 @@ private fun LazyListScope.bestEntrySection(
     capacity: Int,
     entries: List<RatingUtils.Entry>,
     coverImageStore: CoverImageStore,
+    onOpenSong: (String) -> Unit,
 ) {
     item(key = "$sectionKey-title") {
         SmallTitle(
@@ -396,6 +403,7 @@ private fun LazyListScope.bestEntrySection(
             BestEntryCard(
                 entry = entry,
                 coverImageStore = coverImageStore,
+                onClick = { onOpenSong(entry.songIdentifier) },
             )
         }
     }
@@ -405,9 +413,12 @@ private fun LazyListScope.bestEntrySection(
 private fun BestEntryCard(
     entry: RatingUtils.Entry,
     coverImageStore: CoverImageStore,
+    onClick: () -> Unit,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         cornerRadius = 16.dp,
         insideMargin = PaddingValues(start = 8.dp),
         colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),

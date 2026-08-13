@@ -171,6 +171,7 @@ fun MaimaidApp(
     var restoreScoreQuerySearchFocus by rememberSaveable { mutableStateOf(false) }
     var showScoreQueryFilter by rememberSaveable { mutableStateOf(false) }
     var songReturnDetail by rememberSaveable { mutableStateOf<AppDetail?>(null) }
+    var communityAliasesFromSong by rememberSaveable { mutableStateOf(false) }
     val randomSongSessionState = remember { RandomSongSessionState() }
     val backProgress = remember { Animatable(0f) }
     val detailEntranceProgress = remember { Animatable(0f) }
@@ -440,15 +441,18 @@ fun MaimaidApp(
                     randomSongFilterRequested = false
                 }
                 val returnDetail = when (detail) {
+                    AppDetail.CommunityAliases if communityAliasesFromSong -> AppDetail.Song
                     AppDetail.Song -> songReturnDetail
                     AppDetail.DanDetail -> AppDetail.Dan
                     else -> null
                 }
+                val currentDetail = detail
                 detail = returnDetail
-                selectedSongId = null
-                if (returnDetail != AppDetail.RandomSong) {
+                if (returnDetail != AppDetail.Song) selectedSongId = null
+                if (currentDetail == AppDetail.Song) {
                     songReturnDetail = null
                 }
+                if (currentDetail == AppDetail.CommunityAliases) communityAliasesFromSong = false
             } else if (destination != RootDestination.Home) {
                 animateRootDestinationChange = false
                 homeTabTransitionJob?.cancel()
@@ -458,7 +462,6 @@ fun MaimaidApp(
                 destination = RootDestination.Home
             }
             backProgress.snapTo(0f)
-            songReturnDetail = null
         } catch (cancelled: CancellationException) {
             withContext(NonCancellable) {
                 backProgress.animateTo(
@@ -472,6 +475,9 @@ fun MaimaidApp(
 
     val openDetail: (AppDetail) -> Unit = { next ->
         detailBackTransitionJob?.cancel()
+        if (next == AppDetail.CommunityAliases && detail != AppDetail.Song) {
+            communityAliasesFromSong = false
+        }
         if (next == AppDetail.Recommendations) {
             recommendationSwitcherVisible = true
         }
@@ -506,12 +512,18 @@ fun MaimaidApp(
         }
         songReturnDetail = detail.takeIf {
             it == AppDetail.RandomSong ||
+                it == AppDetail.BestTable ||
                 it == AppDetail.Recommendations ||
                 it == AppDetail.ScoreQuery ||
+                it == AppDetail.PlateProgress ||
                 it == AppDetail.DanDetail
         }
         selectedSongId = songId
         openDetail(AppDetail.Song)
+    }
+    val openCommunityAliasesFromSong: () -> Unit = {
+        communityAliasesFromSong = true
+        openDetail(AppDetail.CommunityAliases)
     }
     val rootPage: @Composable (RootDestination, Dp) -> Unit = { page, contentTopPadding ->
         when (page) {
@@ -589,17 +601,19 @@ fun MaimaidApp(
                     randomSongFilterRequested = false
                 }
                 val returnDetail = when (detail) {
+                    AppDetail.CommunityAliases if communityAliasesFromSong -> AppDetail.Song
                     AppDetail.Song -> songReturnDetail
                     AppDetail.DanDetail -> AppDetail.Dan
                     else -> null
                 }
+                val currentDetail = detail
                 detail = returnDetail
-                selectedSongId = null
-                if (returnDetail != AppDetail.RandomSong) {
+                if (returnDetail != AppDetail.Song) selectedSongId = null
+                if (currentDetail == AppDetail.Song) {
                     songReturnDetail = null
                 }
+                if (currentDetail == AppDetail.CommunityAliases) communityAliasesFromSong = false
                 backProgress.snapTo(0f)
-                songReturnDetail = null
             }
         }
     }
@@ -937,6 +951,7 @@ fun MaimaidApp(
                             onDismissScoreQueryFilter = {},
                             onOpenSong = openSongFromDetail,
                             onOpenDanCategory = { _, _ -> },
+                            onOpenCommunityAliases = {},
                             onSongDetailBackgroundChanged = {},
                             onSongDetailTitleChanged = {},
                         )
@@ -952,11 +967,16 @@ fun MaimaidApp(
             }
         }
 
+        val communityAliasesFromDanSong = detail == AppDetail.CommunityAliases &&
+            communityAliasesFromSong &&
+            songReturnDetail == AppDetail.DanDetail
         val showDanListLayer = detail == AppDetail.Dan ||
             detail == AppDetail.DanDetail ||
-            (detail == AppDetail.Song && songReturnDetail == AppDetail.DanDetail)
+            (detail == AppDetail.Song && songReturnDetail == AppDetail.DanDetail) ||
+            communityAliasesFromDanSong
         val showDanDetailLayer = detail == AppDetail.DanDetail ||
-            (detail == AppDetail.Song && songReturnDetail == AppDetail.DanDetail)
+            (detail == AppDetail.Song && songReturnDetail == AppDetail.DanDetail) ||
+            communityAliasesFromDanSong
 
         if (showDanListLayer) {
             val isForeground = detail == AppDetail.Dan
@@ -983,7 +1003,7 @@ fun MaimaidApp(
                         }
                     },
             ) {
-                DanNavigationLayer(
+                DetailNavigationLayer(
                     title = detailTitle(AppDetail.Dan),
                     onBack = closeDetail,
                 ) { contentTopPadding ->
@@ -1033,7 +1053,7 @@ fun MaimaidApp(
                         }
                     },
             ) {
-                DanNavigationLayer(
+                DetailNavigationLayer(
                     title = selectedDanCategoryTitle ?: detailTitle(AppDetail.Dan),
                     onBack = closeDetail,
                     scrollObserver = danSwitcherScrollConnection,
@@ -1071,8 +1091,236 @@ fun MaimaidApp(
             }
         }
 
+        val retainedSongSourceDetail = when {
+            detail == AppDetail.BestTable ||
+            detail == AppDetail.Recommendations ||
+                detail == AppDetail.ScoreQuery ||
+                detail == AppDetail.PlateProgress -> detail
+            detail == AppDetail.Song && (
+                songReturnDetail == AppDetail.BestTable ||
+                    songReturnDetail == AppDetail.Recommendations ||
+                    songReturnDetail == AppDetail.ScoreQuery ||
+                    songReturnDetail == AppDetail.PlateProgress
+                ) -> songReturnDetail
+            detail == AppDetail.CommunityAliases && communityAliasesFromSong && (
+                songReturnDetail == AppDetail.BestTable ||
+                    songReturnDetail == AppDetail.Recommendations ||
+                    songReturnDetail == AppDetail.ScoreQuery ||
+                    songReturnDetail == AppDetail.PlateProgress
+                ) -> songReturnDetail
+            else -> null
+        }
+
+        retainedSongSourceDetail?.let { sourceDetail ->
+            val isForeground = detail == sourceDetail
+            val sourceDimAlpha = if (isForeground) 0f else 0.1f * (1f - detailSourceProgress)
+            val scoreQueryViewModel = if (sourceDetail == AppDetail.ScoreQuery) {
+                composeViewModel<ScoreQueryViewModel>(factory = ScoreQueryViewModel.Factory(container))
+            } else {
+                null
+            }
+            val scoreQueryState = scoreQueryViewModel?.state?.collectAsStateWithLifecycle()?.value
+            val scoreQueryText = scoreQueryViewModel?.query?.collectAsStateWithLifecycle()?.value.orEmpty()
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationX = if (isForeground) {
+                            if (gestureInProgress) {
+                                size.width * backProgress.value
+                            } else {
+                                size.width * detailEntranceProgress.value
+                            }
+                        } else {
+                            -size.width * 0.25f * (1f - detailSourceProgress)
+                        }
+                        if (isForeground) {
+                            shape = foregroundShape
+                            clip = detailIsMoving
+                            shadowElevation = if (detailIsMoving) 12.dp.toPx() else 0f
+                        }
+                    },
+            ) {
+                DetailNavigationLayer(
+                    title = detailTitle(sourceDetail),
+                    onBack = closeDetail,
+                    actions = {
+                        if (sourceDetail == AppDetail.BestTable) {
+                            detailActions(AppDetail.BestTable)
+                        }
+                        scoreQueryViewModel?.let { queryViewModel ->
+                            val queryState = scoreQueryState ?: return@let
+                            ScoreQueryTopBarActions(
+                                displayMode = queryState.displayMode,
+                                sortMode = queryState.sortMode,
+                                sortAscending = queryState.sortAscending,
+                                filterActive = !queryState.filterSettings.isEmpty,
+                                onDisplayModeChange = queryViewModel::setDisplayMode,
+                                onSortModeChange = queryViewModel::setSortMode,
+                                onSortAscendingChange = queryViewModel::setSortAscending,
+                                onShowFilter = { showScoreQueryFilter = true },
+                            )
+                        }
+                    },
+                    scrollObserver = when (sourceDetail) {
+                        AppDetail.Recommendations -> recommendationSwitcherScrollConnection
+                        AppDetail.ScoreQuery -> scoreQuerySearchScrollConnection
+                        else -> null
+                    },
+                    bottomContent = {
+                        when (sourceDetail) {
+                            AppDetail.Recommendations -> RecommendationPageSwitcher(
+                                selectedPage = recommendationSelectedPage,
+                                visible = recommendationSwitcherVisible,
+                                onSelectedPageChange = { recommendationSelectedPage = it },
+                            )
+                            AppDetail.ScoreQuery -> if (scoreQueryViewModel != null) {
+                                CatalogSearchBar(
+                                    query = scoreQueryText,
+                                    onQueryChange = scoreQueryViewModel::setQuery,
+                                    expanded = scoreQuerySearchExpanded,
+                                    onExpandedChange = { scoreQuerySearchExpanded = it },
+                                    visible = scoreQuerySearchVisible ||
+                                        scoreQuerySearchFocused ||
+                                        restoreScoreQuerySearchFocus,
+                                    focusRequestToken = scoreQuerySearchFocusRequestToken,
+                                    backEnabled = detail == AppDetail.ScoreQuery &&
+                                        scoreQuerySearchFocused,
+                                    interactionSource = scoreQuerySearchInteractionSource,
+                                    labelResource = R.string.score_query_search_hint,
+                                )
+                            }
+                            else -> Unit
+                        }
+                    },
+                ) { contentTopPadding ->
+                    DetailScreen(
+                        detail = sourceDetail,
+                        state = uiState,
+                        selectedSongId = null,
+                        selectedDanCategoryId = selectedDanCategoryId,
+                        container = container,
+                        songContentTopPadding = contentTopPadding,
+                        recommendationSelectedPage = recommendationSelectedPage,
+                        danSelectedPage = danSelectedPage,
+                        scoreQueryViewModel = scoreQueryViewModel,
+                        showScoreQueryFilter = showScoreQueryFilter,
+                        profileCreateRequested = false,
+                        bestTableExportRequested = sourceDetail == AppDetail.BestTable &&
+                            bestTableExportRequested,
+                        randomSongFilterRequested = false,
+                        randomSongSessionState = randomSongSessionState,
+                        onProfileCreateRequestHandled = {},
+                        onBestTableExportRequestHandled = { bestTableExportRequested = false },
+                        onRandomSongFilterRequestHandled = {},
+                        onRandomSongFilterActiveChanged = {},
+                        onDismissScoreQueryFilter = { showScoreQueryFilter = false },
+                        onOpenSong = openSongFromDetail,
+                        onOpenDanCategory = { _, _ -> },
+                        onOpenCommunityAliases = {},
+                        onSongDetailBackgroundChanged = {},
+                        onSongDetailTitleChanged = {},
+                    )
+                }
+                if (sourceDimAlpha > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = sourceDimAlpha)),
+                    )
+                }
+            }
+        }
+
+        val showSongLayer = detail == AppDetail.Song ||
+            (detail == AppDetail.CommunityAliases && communityAliasesFromSong)
+        if (showSongLayer) {
+            val isForeground = detail == AppDetail.Song
+            val sourceDimAlpha = if (isForeground) 0f else 0.1f * (1f - detailSourceProgress)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationX = if (isForeground) {
+                            if (gestureInProgress) {
+                                size.width * backProgress.value
+                            } else {
+                                size.width * detailEntranceProgress.value
+                            }
+                        } else {
+                            -size.width * 0.25f * (1f - detailSourceProgress)
+                        }
+                        if (isForeground) {
+                            shape = foregroundShape
+                            clip = detailIsMoving
+                            shadowElevation = if (detailIsMoving) 12.dp.toPx() else 0f
+                        }
+                    },
+            ) {
+                SongNavigationLayer(
+                    title = songDetailTitle
+                        ?.takeIf { it.first == selectedSongId }
+                        ?.second
+                        ?: selectedSong?.title.orEmpty(),
+                    backgroundColor = songTopBarColor,
+                    onBack = closeDetail,
+                    actions = { detailActions(AppDetail.Song) },
+                ) { contentTopPadding ->
+                    DetailScreen(
+                        detail = AppDetail.Song,
+                        state = uiState,
+                        selectedSongId = selectedSongId,
+                        selectedDanCategoryId = selectedDanCategoryId,
+                        container = container,
+                        songContentTopPadding = contentTopPadding,
+                        recommendationSelectedPage = recommendationSelectedPage,
+                        danSelectedPage = danSelectedPage,
+                        scoreQueryViewModel = null,
+                        showScoreQueryFilter = false,
+                        profileCreateRequested = false,
+                        bestTableExportRequested = false,
+                        randomSongFilterRequested = false,
+                        randomSongSessionState = randomSongSessionState,
+                        onProfileCreateRequestHandled = {},
+                        onBestTableExportRequestHandled = {},
+                        onRandomSongFilterRequestHandled = {},
+                        onRandomSongFilterActiveChanged = {},
+                        onDismissScoreQueryFilter = {},
+                        onOpenSong = openSongFromDetail,
+                        onOpenDanCategory = { _, _ -> },
+                        onOpenCommunityAliases = openCommunityAliasesFromSong,
+                        onSongDetailBackgroundChanged = { color ->
+                            selectedSongId?.let { songId ->
+                                songDetailBackground = color?.let { songId to it }
+                            }
+                        },
+                        onSongDetailTitleChanged = { title ->
+                            selectedSongId?.let { songId ->
+                                songDetailTitle = songId to title
+                            }
+                        },
+                    )
+                }
+                if (sourceDimAlpha > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = sourceDimAlpha)),
+                    )
+                }
+            }
+        }
+
         detail?.takeUnless {
-            it == AppDetail.RandomSong || it == AppDetail.Dan || it == AppDetail.DanDetail
+            it == AppDetail.RandomSong ||
+                it == AppDetail.BestTable ||
+                it == AppDetail.Recommendations ||
+                it == AppDetail.ScoreQuery ||
+                it == AppDetail.PlateProgress ||
+                it == AppDetail.Dan ||
+                it == AppDetail.DanDetail ||
+                it == AppDetail.Song
         }?.let { activeDetail ->
             val detailScrollBehavior = MiuixScrollBehavior()
             val scoreQueryViewModel = if (activeDetail == AppDetail.ScoreQuery) {
@@ -1113,6 +1361,7 @@ fun MaimaidApp(
                                 activeDetail == AppDetail.PlateProgress ||
                                 activeDetail == AppDetail.Dan ||
                                 activeDetail == AppDetail.DanDetail ||
+                                activeDetail == AppDetail.CommunityAliases ||
                                 activeDetail == AppDetail.UsefulLinks
                             ) {
                                 Modifier
@@ -1176,6 +1425,7 @@ fun MaimaidApp(
                             activeDetail == AppDetail.PlateProgress ||
                             activeDetail == AppDetail.Dan ||
                             activeDetail == AppDetail.DanDetail ||
+                            activeDetail == AppDetail.CommunityAliases ||
                             activeDetail == AppDetail.UsefulLinks
                         ) {
                             val detailTitle = if (activeDetail == AppDetail.DanDetail) {
@@ -1271,6 +1521,7 @@ fun MaimaidApp(
                                     AppDetail.PlateProgress,
                                     AppDetail.Dan,
                                     AppDetail.DanDetail,
+                                    AppDetail.CommunityAliases,
                                     AppDetail.UsefulLinks,
                                     -> Modifier.layerBackdrop(detailBackdrop)
                                     AppDetail.StaticData -> Modifier
@@ -1306,6 +1557,7 @@ fun MaimaidApp(
                                 selectedDanCategoryTitle = categoryTitle
                                 openDetail(AppDetail.DanDetail)
                             },
+                            onOpenCommunityAliases = openCommunityAliasesFromSong,
                             onSongDetailBackgroundChanged = { color ->
                                 val currentSongId = selectedSongId
                                 if (detail == AppDetail.Song && currentSongId != null) {
@@ -1334,9 +1586,10 @@ fun MaimaidApp(
 }
 
 @Composable
-private fun DanNavigationLayer(
+private fun DetailNavigationLayer(
     title: String,
     onBack: () -> Unit,
+    actions: @Composable RowScope.() -> Unit = {},
     scrollObserver: NestedScrollConnection? = null,
     bottomContent: @Composable () -> Unit = {},
     content: @Composable (Dp) -> Unit,
@@ -1397,9 +1650,56 @@ private fun DanNavigationLayer(
                         )
                     }
                 },
+                actions = actions,
                 scrollBehavior = scrollBehavior,
                 defaultWindowInsetsPadding = true,
                 bottomContent = bottomContent,
+            )
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .layerBackdrop(pageBackdrop)
+                .background(backgroundColor),
+        ) {
+            content(paddingValues.calculateTopPadding())
+        }
+    }
+}
+
+@Composable
+private fun SongNavigationLayer(
+    title: String,
+    backgroundColor: Color,
+    onBack: () -> Unit,
+    actions: @Composable RowScope.() -> Unit = {},
+    content: @Composable (Dp) -> Unit,
+) {
+    val pageBackdrop = rememberLayerBackdrop()
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = Color.Transparent,
+        topBar = {
+            SmallTopAppBar(
+                title = title,
+                modifier = Modifier.drawPlainBackdrop(
+                    backdrop = pageBackdrop,
+                    shape = { TopBarBottomShape },
+                    effects = { blur(24.dp.toPx()) },
+                ).clip(TopBarBottomShape),
+                color = Color.Transparent,
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                        )
+                    }
+                },
+                actions = actions,
+                defaultWindowInsetsPadding = true,
             )
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),

@@ -77,6 +77,7 @@ class BackendSessionManager(
     private val mutableState = MutableStateFlow(BackendSessionState(user = tokens?.user))
 
     val state: StateFlow<BackendSessionState> = mutableState.asStateFlow()
+    val isConfigured: Boolean get() = authBaseUrl.isNotBlank()
 
     fun webAuthUrl(mode: BackendWebAuthMode): String? {
         val base = authBaseUrl.trim().trimEnd('/')
