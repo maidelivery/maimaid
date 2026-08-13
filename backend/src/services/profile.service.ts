@@ -111,13 +111,19 @@ export class ProfileService {
 		if (input.b35RecLimit !== undefined) data.b35RecLimit = input.b35RecLimit;
 		if (input.b15RecLimit !== undefined) data.b15RecLimit = input.b15RecLimit;
 
-		const updated = expectedUpdatedAt
+		const expectedUpdatedAtRange = expectedUpdatedAt
+			? {
+					gte: expectedUpdatedAt,
+					lt: new Date(expectedUpdatedAt.getTime() + 1),
+				}
+			: undefined;
+		const updated = expectedUpdatedAtRange
 			? await database.profile
 					.updateManyAndReturn({
 						where: {
 							id: profileId,
 							userId,
-							updatedAt: expectedUpdatedAt,
+							updatedAt: expectedUpdatedAtRange,
 						},
 						data,
 					})
