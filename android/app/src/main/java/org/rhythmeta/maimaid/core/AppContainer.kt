@@ -33,7 +33,7 @@ import org.rhythmeta.maimaid.core.network.BackendApiClient
 import org.rhythmeta.maimaid.core.network.StaticBundleClient
 
 class AppContainer(context: Context) {
-    private val applicationContext = context.applicationContext
+    val applicationContext: Context = context.applicationContext
     private val json = Json {
         ignoreUnknownKeys = true
         coerceInputValues = true

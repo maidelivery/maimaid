@@ -16,6 +16,7 @@ coroutines = "1.11.0"
 miuix = "0.9.3"
 onnxRuntime = "1.28.0"
 backdrop = "2.0.0"
+camerax = "1.5.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -45,6 +46,9 @@ miuix-ui = { group = "top.yukonga.miuix.kmp", name = "miuix-ui", version.ref = "
 miuix-preference = { group = "top.yukonga.miuix.kmp", name = "miuix-preference", version.ref = "miuix" }
 onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxRuntime" }
 backdrop = { group = "io.github.kyant0", name = "backdrop", version.ref = "backdrop" }
+androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
+androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
+androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
