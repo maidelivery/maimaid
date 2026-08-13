@@ -74,6 +74,8 @@ import org.rhythmeta.maimaid.ui.recommendation.RecommendationScreen
 import org.rhythmeta.maimaid.ui.scorequery.ScoreQueryScreen
 import org.rhythmeta.maimaid.ui.scorequery.ScoreQueryViewModel
 import org.rhythmeta.maimaid.ui.settings.BackendAuthScreen
+import org.rhythmeta.maimaid.ui.settings.DivingFishImportScreen
+import org.rhythmeta.maimaid.ui.settings.LxnsImportScreen
 
 @Composable
 internal fun DetailScreen(
@@ -196,6 +198,14 @@ internal fun DetailScreen(
             onCreateRequestHandled = onProfileCreateRequestHandled,
         )
         AppDetail.BackendAuth -> BackendAuthScreen(container = container)
+        AppDetail.DivingFishImport -> DivingFishImportScreen(
+            container = container,
+            contentTopPadding = songContentTopPadding,
+        )
+        AppDetail.LxnsImport -> LxnsImportScreen(
+            container = container,
+            contentTopPadding = songContentTopPadding,
+        )
         AppDetail.About -> AboutDetail()
         else -> FeatureDetail(state = state)
     }

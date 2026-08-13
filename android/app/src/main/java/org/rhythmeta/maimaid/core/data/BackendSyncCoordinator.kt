@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import java.io.File
 import java.time.Instant
 import java.util.UUID
+import kotlin.math.roundToLong
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -24,6 +25,23 @@ enum class BackendAccountResolution {
     UseCloud,
 }
 
+enum class ImportSyncResolution {
+    MergeBest,
+    KeepLocal,
+    UseImport,
+}
+
+data class ImportSyncConflictPreview(
+    val profileId: String,
+    val baseRevision: String,
+    val latestRevision: String,
+    val localOnlyCount: Int,
+    val differentCount: Int,
+    val snapshot: BackendSyncSnapshot,
+) {
+    val conflictCount: Int get() = localOnlyCount + differentCount
+}
+
 data class BackendAccountConflict(
     val ownerUserId: String,
     val currentUserId: String,
@@ -41,6 +59,84 @@ class BackendSyncCoordinator(
     private val json: Json,
 ) {
     private val syncMutex = Mutex()
+
+    suspend fun ensureProfileExists(profile: UserProfileEntity) = syncMutex.withLock {
+        sessionManager.state.value.user ?: error("Authentication required.")
+        sessionManager.authorizedRequest(
+            path = "v1/profiles/${profile.id}",
+            method = "PUT",
+            body = json.encodeToJsonElement(
+                BackendProfileUpsert.serializer(),
+                profile.toUpsert(clientUpdatedAt = null),
+            ),
+        )
+    }
+
+    suspend fun previewImportConflicts(profileId: String): ImportSyncConflictPreview = syncMutex.withLock {
+        sessionManager.state.value.user ?: error("Authentication required.")
+        val state = syncStateStore.load()
+        val responseElement = sessionManager.authorizedRequest(
+            path = "v1/sync:pull?sinceRevision=${state.lastRevision}&includeSnapshot=true&limit=500&profileId=$profileId",
+        )
+        val response = json.decodeFromJsonElement(BackendSyncPullResponse.serializer(), responseElement)
+        val snapshot = response.snapshot.filtered(profileId)
+        val sheetMap = buildSheetMap(database.catalogDao().sheets())
+        val remoteBySheet = snapshot.scores.mapNotNull { remote ->
+            val sheetKey = remote.sheet?.let { resolveSheetKey(it, sheetMap) } ?: return@mapNotNull null
+            sheetKey to remote
+        }.toMap()
+        if (snapshot.scores.isNotEmpty() && remoteBySheet.isEmpty()) {
+            error("Imported scores could not be mapped to the local catalog.")
+        }
+        val localBySheet = database.scoreDao().scores(profileId).associateBy(ScoreEntity::sheetKey)
+        var localOnlyCount = 0
+        var differentCount = 0
+        (localBySheet.keys + remoteBySheet.keys).forEach { sheetKey ->
+            val local = localBySheet[sheetKey]
+            val remote = remoteBySheet[sheetKey]
+            when {
+                local != null && remote == null -> localOnlyCount += 1
+                local != null && remote != null && !sameScoreValue(local, remote) -> differentCount += 1
+            }
+        }
+        ImportSyncConflictPreview(
+            profileId = profileId,
+            baseRevision = state.lastRevision,
+            latestRevision = response.latestRevision,
+            localOnlyCount = localOnlyCount,
+            differentCount = differentCount,
+            snapshot = snapshot,
+        )
+    }
+
+    suspend fun applyImportConflictResolution(
+        resolution: ImportSyncResolution,
+        preview: ImportSyncConflictPreview,
+    ) = syncMutex.withLock {
+        val user = sessionManager.state.value.user ?: error("Authentication required.")
+        check(syncStateStore.load().lastRevision == preview.baseRevision) {
+            "Cloud data changed. Check import conflicts again."
+        }
+        applyImportSnapshot(preview.snapshot, preview.profileId, resolution)
+        val appliedProfile = database.profileDao().profiles().firstOrNull { it.id == preview.profileId }
+        syncStateStore.update { current ->
+            current.copy(
+                lastRevision = preview.latestRevision,
+                pendingMutation = null,
+                remoteUpdatedAtByProfile = current.remoteUpdatedAtByProfile + preview.snapshot.profiles
+                    .mapNotNull { profile -> profile.updatedAt?.let { profile.id to it } },
+                syncedFingerprintByProfile = if (appliedProfile == null) {
+                    current.syncedFingerprintByProfile
+                } else {
+                    current.syncedFingerprintByProfile + (
+                        appliedProfile.id to BackendSyncStateStore.profileFingerprint(appliedProfile)
+                    )
+                },
+            )
+        }
+        if (resolution != ImportSyncResolution.UseImport) pushImportedProfileData(preview.profileId)
+        recordSyncedState(user.id)
+    }
 
     suspend fun accountConflict(currentUserId: String): BackendAccountConflict? {
         val state = syncStateStore.load()
@@ -327,6 +423,74 @@ class BackendSyncCoordinator(
         oldAvatarPaths.forEach(profileAvatarStore::deleteStored)
     }
 
+    private suspend fun applyImportSnapshot(
+        snapshot: BackendSyncSnapshot,
+        profileId: String,
+        resolution: ImportSyncResolution,
+    ) {
+        val oldAvatarPaths = mutableListOf<String>()
+        database.withTransaction {
+            val profileDao = database.profileDao()
+            val scoreDao = database.scoreDao()
+            snapshot.profiles.firstOrNull { it.id == profileId }?.let { remote ->
+                val existing = profileDao.profiles().firstOrNull { it.id == profileId }
+                if (remote.avatarUrl != existing?.avatarUrl) existing?.avatarPath?.let(oldAvatarPaths::add)
+                profileDao.upsert(remote.toEntity(existing))
+                if (remote.isActive) {
+                    profileDao.profiles().forEach { profile ->
+                        if (profile.isActive != (profile.id == profileId)) {
+                            profileDao.upsert(profile.copy(isActive = profile.id == profileId))
+                        }
+                    }
+                }
+            }
+
+            if (profileDao.profiles().none { it.id == profileId }) return@withTransaction
+            val sheetMap = buildSheetMap(database.catalogDao().sheets())
+            val localScores = scoreDao.scores(profileId).associateBy(ScoreEntity::sheetKey)
+            val remoteScores = snapshot.scores.mapNotNull { remote ->
+                val sheetKey = remote.sheet?.let { resolveSheetKey(it, sheetMap) } ?: return@mapNotNull null
+                sheetKey to remote.toScoreEntity(sheetKey)
+            }.toMap()
+            if (snapshot.scores.isNotEmpty() && remoteScores.isEmpty()) {
+                error("Imported scores could not be mapped to the local catalog.")
+            }
+            val resolvedScores = when (resolution) {
+                ImportSyncResolution.UseImport -> remoteScores
+                ImportSyncResolution.KeepLocal -> remoteScores + localScores
+                ImportSyncResolution.MergeBest -> buildMap {
+                    putAll(localScores)
+                    remoteScores.forEach { (sheetKey, remote) ->
+                        val local = get(sheetKey)
+                        if (local == null || isScoreBetter(remote, local)) put(sheetKey, remote)
+                    }
+                }
+            }
+            scoreDao.deleteScores(profileId)
+            resolvedScores.values.forEach { scoreDao.upsertScore(it) }
+
+            val localRecords = scoreDao.playRecords(profileId).associateBy(::recordFingerprint)
+            val remoteRecords = snapshot.records.mapNotNull { remote ->
+                val sheetKey = remote.sheet?.let { resolveSheetKey(it, sheetMap) } ?: return@mapNotNull null
+                val playedAt = parseTime(remote.playTime)
+                val record = remote.toPlayRecordEntity(sheetKey, playedAt)
+                recordFingerprint(record) to record
+            }.toMap()
+            if (snapshot.records.isNotEmpty() && remoteRecords.isEmpty()) {
+                error("Imported play records could not be mapped to the local catalog.")
+            }
+            val resolvedRecords = when (resolution) {
+                ImportSyncResolution.UseImport -> remoteRecords
+                ImportSyncResolution.KeepLocal,
+                ImportSyncResolution.MergeBest,
+                -> localRecords + remoteRecords
+            }
+            scoreDao.deletePlayRecords(profileId)
+            resolvedRecords.values.forEach { scoreDao.upsertPlayRecord(it) }
+        }
+        oldAvatarPaths.forEach(profileAvatarStore::deleteStored)
+    }
+
     private suspend fun pushAll(
         forceProfiles: Boolean,
         overwriteProfileMetadata: Boolean = false,
@@ -380,6 +544,40 @@ class BackendSyncCoordinator(
             )
         }
         if (uploadLocalAvatars()) pushAll(forceProfiles = false)
+    }
+
+    private suspend fun pushImportedProfileData(profileId: String) {
+        val sheets = database.catalogDao().sheets().associateBy(SheetEntity::sheetKey)
+        val scores = database.scoreDao().scores(profileId).mapNotNull { score ->
+            sheets[score.sheetKey]?.let { sheet -> score.toEntry(sheet) }
+        }
+        val records = database.scoreDao().playRecords(profileId).mapNotNull { record ->
+            sheets[record.sheetKey]?.let { sheet -> record.toEntry(sheet) }
+        }
+        if (scores.isEmpty() && records.isEmpty()) return
+
+        val payload = BackendSyncPushPayload(
+            idempotencyKey = UUID.randomUUID().toString(),
+            profileUpserts = emptyList(),
+            scoreUpserts = scores.takeIf(List<BackendScoreEntry>::isNotEmpty)
+                ?.let { listOf(BackendScoreSet(profileId, it)) }
+                .orEmpty(),
+            playRecordUpserts = records.takeIf(List<BackendPlayRecordEntry>::isNotEmpty)
+                ?.let { listOf(BackendRecordSet(profileId, it)) }
+                .orEmpty(),
+        )
+        val responseElement = sessionManager.authorizedRequest(
+            path = "v1/sync:push",
+            method = "POST",
+            body = json.encodeToJsonElement(BackendSyncPushPayload.serializer(), payload),
+        )
+        val response = json.decodeFromJsonElement(BackendSyncPushResponse.serializer(), responseElement)
+        syncStateStore.update { current ->
+            current.copy(
+                lastRevision = response.latestRevision,
+                pendingMutation = null,
+            )
+        }
     }
 
     private suspend fun createPendingMutation(
@@ -598,6 +796,64 @@ class BackendSyncCoordinator(
             input = ScoreInput(incoming.achievement, incoming.dxScore, incoming.fc, incoming.fs),
             now = incoming.achievedAt,
         )
+    }
+
+    private fun BackendSyncSnapshot.filtered(profileId: String) = BackendSyncSnapshot(
+        profiles = profiles.filter { it.id == profileId },
+        scores = scores.filter { it.profileId == profileId },
+        records = records.filter { it.profileId == profileId },
+    )
+
+    private fun BackendRemoteScore.toScoreEntity(sheetKey: String) = ScoreEntity(
+        profileId = profileId,
+        sheetKey = sheetKey,
+        achievement = achievements,
+        rank = rank,
+        dxScore = dxScore,
+        fc = ScoreRules.canonicalFc(fc),
+        fs = ScoreRules.canonicalFs(fs),
+        achievedAt = parseTime(achievedAt),
+    )
+
+    private fun BackendRemotePlayRecord.toPlayRecordEntity(sheetKey: String, playedAt: Long) = PlayRecordEntity(
+        id = stableRecordId(profileId, sheetKey, this, playedAt),
+        profileId = profileId,
+        sheetKey = sheetKey,
+        achievement = achievements,
+        rank = rank,
+        dxScore = dxScore,
+        fc = ScoreRules.canonicalFc(fc),
+        fs = ScoreRules.canonicalFs(fs),
+        playedAt = playedAt,
+    )
+
+    private fun sameScoreValue(local: ScoreEntity, remote: BackendRemoteScore): Boolean =
+        (local.achievement * 10_000).roundToLong() == (remote.achievements * 10_000).roundToLong() &&
+            local.rank.trim().lowercase() == remote.rank.trim().lowercase() &&
+            local.dxScore == remote.dxScore &&
+            ScoreRules.canonicalFc(local.fc) == ScoreRules.canonicalFc(remote.fc) &&
+            ScoreRules.canonicalFs(local.fs) == ScoreRules.canonicalFs(remote.fs)
+
+    private fun isScoreBetter(candidate: ScoreEntity, current: ScoreEntity): Boolean = when {
+        candidate.achievement != current.achievement -> candidate.achievement > current.achievement
+        candidate.achievedAt != current.achievedAt -> candidate.achievedAt > current.achievedAt
+        candidate.dxScore != current.dxScore -> candidate.dxScore > current.dxScore
+        else -> scoreProgressOrder(candidate) > scoreProgressOrder(current)
+    }
+
+    private fun scoreProgressOrder(score: ScoreEntity): Int = when (ScoreRules.canonicalFc(score.fc)) {
+        "app" -> 400
+        "ap" -> 300
+        "fcp" -> 200
+        "fc" -> 100
+        else -> 0
+    } + when (ScoreRules.canonicalFs(score.fs)) {
+        "fsdp" -> 50
+        "fsd" -> 40
+        "fsp" -> 30
+        "fs" -> 20
+        "sync" -> 10
+        else -> 0
     }
 
     private fun buildSheetMap(sheets: List<SheetEntity>): Map<String, String> = buildMap {
