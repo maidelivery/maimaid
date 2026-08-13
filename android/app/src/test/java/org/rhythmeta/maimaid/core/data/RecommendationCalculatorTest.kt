@@ -1,5 +1,6 @@
 package org.rhythmeta.maimaid.core.data
 
+import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -109,6 +110,56 @@ class RecommendationCalculatorTest {
         )
 
         assertEquals(listOf("first", "second"), result.b35.map { it.song.songIdentifier })
+    }
+
+    @Test
+    fun `large old candidate set uses a transitive fit ordering`() {
+        val candidates = List(300) { index ->
+            val group = index % 3
+            val level = when (group) {
+                0 -> 14.0
+                1 -> 13.0
+                else -> 12.0
+            }
+            val gap = when (group) {
+                0 -> 0.00
+                1 -> 0.09
+                else -> 0.18
+            }
+            val song = song("old-$index", "BUDDiES")
+            val sheet = sheet(
+                songId = song.songIdentifier,
+                version = "BUDDiES",
+                level = level,
+                providerSongId = 1_000 + index,
+            )
+            Triple(song, sheet, level - gap)
+        }
+        val chartFit = StaticBundleResponse.ChartFitPayload(
+            charts = candidates.associate { (_, sheet, fitDifficulty) ->
+                sheet.providerSongId.toString() to listOf(
+                    StaticBundleResponse.ChartFitStat(sheet.level, fitDifficulty),
+                )
+            },
+        )
+        val latestSong = song("latest", "CiRCLE")
+        val latestSheet = sheet("latest", "CiRCLE", 13.0)
+
+        val result = RecommendationCalculator.calculate(
+            songs = candidates.map { it.first } + latestSong,
+            sheets = candidates.map { it.second } + latestSheet,
+            scores = emptyList(),
+            versions = versions,
+            profile = profile(15),
+            chartFit = chartFit,
+        )
+
+        assertEquals(50, result.b35.size)
+        assertTrue(result.b35.zipWithNext().all { (left, right) ->
+            val leftBand = ((left.difficultyGap ?: 0.0) * 10.0).roundToInt()
+            val rightBand = ((right.difficultyGap ?: 0.0) * 10.0).roundToInt()
+            leftBand >= rightBand
+        })
     }
 
     private fun calculate(
