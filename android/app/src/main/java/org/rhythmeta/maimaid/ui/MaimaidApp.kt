@@ -1370,7 +1370,9 @@ fun MaimaidApp(
                                 activeDetail == AppDetail.Dan ||
                                 activeDetail == AppDetail.DanDetail ||
                                 activeDetail == AppDetail.CommunityAliases ||
-                                activeDetail == AppDetail.UsefulLinks
+                                activeDetail == AppDetail.UsefulLinks ||
+                                activeDetail == AppDetail.DivingFishImport ||
+                                activeDetail == AppDetail.LxnsImport
                             ) {
                                 Modifier
                                     .nestedScroll(detailScrollBehavior.nestedScrollConnection)
@@ -1434,7 +1436,9 @@ fun MaimaidApp(
                             activeDetail == AppDetail.Dan ||
                             activeDetail == AppDetail.DanDetail ||
                             activeDetail == AppDetail.CommunityAliases ||
-                            activeDetail == AppDetail.UsefulLinks
+                            activeDetail == AppDetail.UsefulLinks ||
+                            activeDetail == AppDetail.DivingFishImport ||
+                            activeDetail == AppDetail.LxnsImport
                         ) {
                             val detailTitle = if (activeDetail == AppDetail.DanDetail) {
                                 selectedDanCategoryTitle ?: detailTitle(AppDetail.Dan)
@@ -1531,6 +1535,8 @@ fun MaimaidApp(
                                     AppDetail.DanDetail,
                                     AppDetail.CommunityAliases,
                                     AppDetail.UsefulLinks,
+                                    AppDetail.DivingFishImport,
+                                    AppDetail.LxnsImport,
                                     -> Modifier.layerBackdrop(detailBackdrop)
                                     AppDetail.StaticData -> Modifier
                                         .padding(paddingValues)
@@ -1727,13 +1733,13 @@ private fun SongNavigationLayer(
 private fun RootLayer(
     destination: RootDestination,
     modifier: Modifier = Modifier,
+    showTopBar: Boolean = true,
     actions: @Composable RowScope.() -> Unit = {},
     bottomContent: @Composable () -> Unit = {},
     scrollObserver: NestedScrollConnection? = null,
     content: @Composable (RootDestination, Dp) -> Unit,
 ) {
     val title = rootTitle(destination)
-    showTopBar: Boolean = true,
     val scrollBehavior = MiuixScrollBehavior()
     val backgroundColor = MiuixTheme.colorScheme.background
     val pageBackdrop = rememberLayerBackdrop()

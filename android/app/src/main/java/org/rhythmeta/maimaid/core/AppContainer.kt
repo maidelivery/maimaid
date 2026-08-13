@@ -8,6 +8,7 @@ import org.rhythmeta.maimaid.BuildConfig
 import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.data.AppPreferencesRepository
 import org.rhythmeta.maimaid.core.data.BackendSessionManager
+import org.rhythmeta.maimaid.core.data.BackendImportService
 import org.rhythmeta.maimaid.core.data.BackendSyncCoordinator
 import org.rhythmeta.maimaid.core.data.BackendSyncStateStore
 import org.rhythmeta.maimaid.core.data.BackendTokenStore
@@ -57,6 +58,10 @@ class AppContainer(context: Context) {
         authBaseUrl = BuildConfig.BACKEND_AUTH_URL,
         apiClient = backendApiClient,
         tokenStore = BackendTokenStore(applicationContext, json),
+    )
+    val backendImportService = BackendImportService(
+        sessionManager = backendSessionManager,
+        json = json,
     )
     val communityAliasService = CommunityAliasService(
         apiClient = backendApiClient,
