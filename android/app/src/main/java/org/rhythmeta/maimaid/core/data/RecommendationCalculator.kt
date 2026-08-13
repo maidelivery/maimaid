@@ -1,6 +1,7 @@
 package org.rhythmeta.maimaid.core.data
 
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import org.rhythmeta.maimaid.core.database.GameVersionEntity
 import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
@@ -177,18 +178,22 @@ object RecommendationCalculator {
         val leftGap = left.difficultyGap
         val rightGap = right.difficultyGap
         if (leftGap != null && rightGap != null) {
-            return if (abs(leftGap - rightGap) < 0.1) {
-                right.potentialGain.compareTo(left.potentialGain)
+            val gapBandComparison = gapBand(rightGap).compareTo(gapBand(leftGap))
+            if (gapBandComparison != 0) return gapBandComparison
+            return right.potentialGain.compareTo(left.potentialGain)
+                .takeIf { it != 0 }
+                ?: rightGap.compareTo(leftGap)
                     .takeIf { it != 0 }
-                    ?: rightGap.compareTo(leftGap)
-            } else {
-                rightGap.compareTo(leftGap)
-            }
+                ?: left.sheet.sheetKey.compareTo(right.sheet.sheetKey)
         }
         if (leftGap != null) return -1
         if (rightGap != null) return 1
         return right.potentialGain.compareTo(left.potentialGain)
+            .takeIf { it != 0 }
+            ?: left.sheet.sheetKey.compareTo(right.sheet.sheetKey)
     }
+
+    private fun gapBand(gap: Double): Int = (gap * 10.0).roundToInt()
 
     private fun fitDifficulty(
         sheet: SheetEntity,
