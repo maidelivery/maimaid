@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -50,6 +52,7 @@ class ScannerViewModel(
     private val engine = ScannerRecognitionEngine(container.applicationContext, container.onnxSessionFactory)
     private val stabilizer = ScannerStabilizer()
     private val analysisMutex = Mutex()
+    private var photoResultDismissJob: Job? = null
     @Volatile
     private var liveRecognitionEnabled = true
     private var catalog = ScannerCatalog(emptyList(), emptyList(), emptyMap())
@@ -115,6 +118,7 @@ class ScannerViewModel(
     }
 
     fun analyzePhotoWhenReady(bitmap: Bitmap) {
+        photoResultDismissJob?.cancel()
         liveRecognitionEnabled = false
         mutableState.update { it.copy(isProcessingPhoto = true, message = null) }
         viewModelScope.launch {
@@ -149,7 +153,11 @@ class ScannerViewModel(
                     message = ScannerMessage.RecognitionFailed.takeIf { match == null },
                 )
             }
-            liveRecognitionEnabled = true
+            if (match == null) {
+                liveRecognitionEnabled = true
+            } else {
+                schedulePhotoResultDismissal()
+            }
         } catch (_: Exception) {
             mutableState.update {
                 it.copy(
@@ -165,13 +173,29 @@ class ScannerViewModel(
     }
 
     fun reset() {
-        liveRecognitionEnabled = true
+        photoResultDismissJob?.cancel()
+        photoResultDismissJob = null
+        clearResultAndResumeLiveRecognition()
+    }
+
+    private fun clearResultAndResumeLiveRecognition() {
         stabilizer.reset()
         mutableState.update { ScannerUiState(isLoadingModels = false) }
+        liveRecognitionEnabled = true
+    }
+
+    private fun schedulePhotoResultDismissal() {
+        photoResultDismissJob = viewModelScope.launch {
+            delay(PhotoResultDurationMillis)
+            photoResultDismissJob = null
+            clearResultAndResumeLiveRecognition()
+        }
     }
 
     fun openScoreEntry() {
         if (mutableState.value.match?.sheet == null) return
+        photoResultDismissJob?.cancel()
+        photoResultDismissJob = null
         mutableState.update {
             it.copy(scoreEntryVisible = true, scoreSaveStatus = ScoreSaveStatus.Idle)
         }
@@ -213,6 +237,7 @@ class ScannerViewModel(
     }
 
     override fun onCleared() {
+        photoResultDismissJob?.cancel()
         engine.close()
     }
 
@@ -224,5 +249,9 @@ class ScannerViewModel(
             require(modelClass.isAssignableFrom(ScannerViewModel::class.java))
             return ScannerViewModel(container) as T
         }
+    }
+
+    private companion object {
+        const val PhotoResultDurationMillis = 5_000L
     }
 }
