@@ -54,6 +54,7 @@ class CommunityAliasService(
         limit: Int = 30,
     ): List<CommunityAliasMyCandidate> {
         val rows = fetchMyCandidates(songIdentifier, limit)
+            .filter { it.songIdentifier == songIdentifier }
         updateMyAliasesForSong(songIdentifier, rows)
         return rows
     }

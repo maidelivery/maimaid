@@ -219,3 +219,24 @@ describe("community alias submit duplicate rules", () => {
 		});
 	});
 });
+
+describe("community alias candidate queries", () => {
+	it("preserves a whitespace-only song identifier as an exact filter", async () => {
+		const findMany = vi.fn().mockResolvedValue([]);
+		const prisma = {
+			communityAliasCandidate: {
+				findMany,
+			},
+		};
+		const service = new CommunityAliasService(prisma as never, { listAliases: vi.fn() } as never);
+
+		await service.fetchMyCandidates("user-id", 30, "　");
+
+		expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
+			where: {
+				submitterId: "user-id",
+				songIdentifier: "　",
+			},
+		}));
+	});
+});
