@@ -2202,31 +2202,35 @@ private fun HistoryRow(
 }
 
 @Composable
-private fun ScoreEntrySheet(
+internal fun ScoreEntrySheet(
     visible: Boolean,
     song: SongEntity,
     chart: SheetScoreUiState,
     saveStatus: ScoreSaveStatus,
+    initialAchievement: Double? = null,
+    initialDxScore: Int? = null,
+    initialFc: String? = null,
+    initialFs: String? = null,
     onInputChanged: () -> Unit,
     onSave: (ScoreInput) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val currentScore = chart.score
     var achievementText by rememberSaveable(chart.sheet.sheetKey) {
-        mutableStateOf(currentScore?.achievement?.let(::formatAchievement).orEmpty())
+        mutableStateOf((initialAchievement ?: currentScore?.achievement)?.let(::formatAchievement).orEmpty())
     }
     var dxScoreText by rememberSaveable(chart.sheet.sheetKey) {
-        mutableStateOf(currentScore?.dxScore?.takeIf { it > 0 }?.toString().orEmpty())
+        mutableStateOf((initialDxScore ?: currentScore?.dxScore)?.takeIf { it > 0 }?.toString().orEmpty())
     }
-    var selectedFc by rememberSaveable(chart.sheet.sheetKey) { mutableStateOf(currentScore?.fc) }
-    var selectedFs by rememberSaveable(chart.sheet.sheetKey) { mutableStateOf(currentScore?.fs) }
+    var selectedFc by rememberSaveable(chart.sheet.sheetKey) { mutableStateOf(initialFc ?: currentScore?.fc) }
+    var selectedFs by rememberSaveable(chart.sheet.sheetKey) { mutableStateOf(initialFs ?: currentScore?.fs) }
     val focusManager = LocalFocusManager.current
     LaunchedEffect(visible, chart.sheet.sheetKey) {
         if (visible) {
-            achievementText = currentScore?.achievement?.let(::formatAchievement).orEmpty()
-            dxScoreText = currentScore?.dxScore?.takeIf { it > 0 }?.toString().orEmpty()
-            selectedFc = currentScore?.fc
-            selectedFs = currentScore?.fs
+            achievementText = (initialAchievement ?: currentScore?.achievement)?.let(::formatAchievement).orEmpty()
+            dxScoreText = (initialDxScore ?: currentScore?.dxScore)?.takeIf { it > 0 }?.toString().orEmpty()
+            selectedFc = initialFc ?: currentScore?.fc
+            selectedFs = initialFs ?: currentScore?.fs
         }
     }
 

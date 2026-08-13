@@ -93,6 +93,14 @@
     <string name="scanner_no_image">No result image</string>
     <string name="scanner_score_result">Score result</string>
     <string name="scanner_chart_result">Chart result</string>
+    <string name="scanner_library_button">Choose a screenshot</string>
+    <string name="scanner_camera_permission">Camera access is required for live scanning</string>
+    <string name="scanner_camera_permission_action">Allow camera access</string>
+    <string name="scanner_processing">Recognizing screenshot…</string>
+    <string name="scanner_model_error">Scanner model failed to load</string>
+    <string name="scanner_error_title">No matching song was found</string>
+    <string name="scanner_photo_saved">Photo saved</string>
+    <string name="scanner_photo_error">Photo could not be saved</string>
     <string name="settings_user_management">User Management</string>
     <string name="settings_profiles">Profiles</string>
     <string name="settings_profiles_summary">Active: %1$s</string>

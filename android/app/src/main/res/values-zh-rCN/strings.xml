@@ -93,6 +93,14 @@
     <string name="scanner_no_image">尚未选择成绩图片</string>
     <string name="scanner_score_result">成绩画面</string>
     <string name="scanner_chart_result">选曲画面</string>
+    <string name="scanner_library_button">选择截图</string>
+    <string name="scanner_camera_permission">实时扫描需要相机权限</string>
+    <string name="scanner_camera_permission_action">允许使用相机</string>
+    <string name="scanner_processing">正在识别截图…</string>
+    <string name="scanner_model_error">扫描模型加载失败</string>
+    <string name="scanner_error_title">没有找到匹配的歌曲</string>
+    <string name="scanner_photo_saved">照片已保存</string>
+    <string name="scanner_photo_error">照片保存失败</string>
     <string name="settings_user_management">用户管理</string>
     <string name="settings_profiles">玩家档案</string>
     <string name="settings_profiles_summary">当前：%1$s</string>

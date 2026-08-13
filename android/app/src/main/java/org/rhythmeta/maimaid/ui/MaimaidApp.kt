@@ -534,8 +534,15 @@ fun MaimaidApp(
                 onEditProfile = { showHomeProfileEditor = true },
             )
             RootDestination.Scanner -> ScannerScreen(
+                container = container,
+                songs = uiState.songs,
+                sheets = uiState.sheets,
+                aliases = uiState.songAliases,
+                scores = uiState.scores,
                 showBoundingBoxes = showScannerBoundingBoxes,
                 contentTopPadding = contentTopPadding,
+                enabled = destination == RootDestination.Scanner && detail == null,
+                onOpenSong = openSong,
             )
             RootDestination.Catalog -> CatalogScreen(
                 songs = uiState.songs,
@@ -808,6 +815,7 @@ fun MaimaidApp(
                         RootLayer(
                             destination = page,
                             modifier = Modifier.fillMaxSize(),
+                            showTopBar = page != RootDestination.Scanner,
                             actions = { rootActions(page) },
                             bottomContent = { rootBottomContent(page) },
                             scrollObserver = catalogSearchScrollConnection.takeIf {
@@ -1725,6 +1733,7 @@ private fun RootLayer(
     content: @Composable (RootDestination, Dp) -> Unit,
 ) {
     val title = rootTitle(destination)
+    showTopBar: Boolean = true,
     val scrollBehavior = MiuixScrollBehavior()
     val backgroundColor = MiuixTheme.colorScheme.background
     val pageBackdrop = rememberLayerBackdrop()
@@ -1761,23 +1770,25 @@ private fun RootLayer(
                 .nestedScroll(rootScrollConnection),
             containerColor = Color.Transparent,
             topBar = {
-                TopAppBar(
-                    title = title,
-                    largeTitle = title,
-                    modifier = Modifier.drawPlainBackdrop(
-                        backdrop = pageBackdrop,
-                        shape = { TopBarBottomShape },
-                        effects = { blur(24.dp.toPx()) },
-                        onDrawSurface = {
-                            drawRect(backgroundColor.copy(alpha = 0.52f))
-                        },
-                    ).clip(TopBarBottomShape),
-                    color = Color.Transparent,
-                    actions = actions,
-                    scrollBehavior = scrollBehavior,
-                    defaultWindowInsetsPadding = true,
-                    bottomContent = bottomContent,
-                )
+                if (showTopBar) {
+                    TopAppBar(
+                        title = title,
+                        largeTitle = title,
+                        modifier = Modifier.drawPlainBackdrop(
+                            backdrop = pageBackdrop,
+                            shape = { TopBarBottomShape },
+                            effects = { blur(24.dp.toPx()) },
+                            onDrawSurface = {
+                                drawRect(backgroundColor.copy(alpha = 0.52f))
+                            },
+                        ).clip(TopBarBottomShape),
+                        color = Color.Transparent,
+                        actions = actions,
+                        scrollBehavior = scrollBehavior,
+                        defaultWindowInsetsPadding = true,
+                        bottomContent = bottomContent,
+                    )
+                }
             },
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
         ) { paddingValues ->

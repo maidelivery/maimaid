@@ -93,6 +93,14 @@
     <string name="scanner_no_image">リザルト画像が選択されていません</string>
     <string name="scanner_score_result">リザルト画面</string>
     <string name="scanner_chart_result">選曲画面</string>
+    <string name="scanner_library_button">スクリーンショットを選択</string>
+    <string name="scanner_camera_permission">ライブスキャンにはカメラへのアクセスが必要です</string>
+    <string name="scanner_camera_permission_action">カメラを許可</string>
+    <string name="scanner_processing">スクリーンショットを認識中…</string>
+    <string name="scanner_model_error">スキャンモデルを読み込めませんでした</string>
+    <string name="scanner_error_title">一致する楽曲が見つかりませんでした</string>
+    <string name="scanner_photo_saved">写真を保存しました</string>
+    <string name="scanner_photo_error">写真を保存できませんでした</string>
     <string name="settings_user_management">ユーザー管理</string>
     <string name="settings_profiles">プレイヤープロフィール</string>
     <string name="settings_profiles_summary">使用中：%1$s</string>
