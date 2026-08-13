@@ -230,7 +230,7 @@ final class CommunityAliasService {
                 method: "GET",
                 authentication: .required
             )
-            return response.rows
+            return response.rows.filter { $0.songIdentifier == songIdentifier }
         } catch {
             print("CommunityAliasService.fetchMySongCandidates failed: \(error)")
             return []

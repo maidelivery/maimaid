@@ -181,9 +181,8 @@ export class CommunityAliasService {
 		const where: Prisma.CommunityAliasCandidateWhereInput = {
 			submitterId: userId,
 		};
-		const normalizedSongIdentifier = songIdentifier?.trim();
-		if (normalizedSongIdentifier) {
-			where.songIdentifier = normalizedSongIdentifier;
+		if (songIdentifier !== undefined) {
+			where.songIdentifier = songIdentifier;
 		}
 
 		const rows = await this.prisma.communityAliasCandidate.findMany({
