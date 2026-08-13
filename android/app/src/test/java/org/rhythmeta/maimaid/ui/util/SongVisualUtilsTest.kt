@@ -1,10 +1,25 @@
 package org.rhythmeta.maimaid.ui.util
 
+import androidx.compose.ui.graphics.Color
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.rhythmeta.maimaid.core.database.GameVersionEntity
 
 class SongVisualUtilsTest {
+    @Test
+    fun utageChartTypeUsesUtageBadgeColor() {
+        val fallback = Color.Black
+
+        assertEquals(
+            Color(0xFFFF69B4),
+            SongVisualUtils.chartTypeColor("utage", darkTheme = false, fallbackColor = fallback),
+        )
+        assertEquals(
+            Color(0xFFD6549A),
+            SongVisualUtils.chartTypeColor("special-utage", darkTheme = true, fallbackColor = fallback),
+        )
+    }
+
     @Test
     fun formatsOriginalDxVersions() {
         assertEquals("DX", SongVisualUtils.formatVersionName("maimaiでらっくす"))

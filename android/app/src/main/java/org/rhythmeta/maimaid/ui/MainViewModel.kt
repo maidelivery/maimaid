@@ -5,7 +5,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.core.AppContainer
@@ -83,7 +86,7 @@ class MainViewModel(
         catalogSummaryState,
         container.catalogRepository.songs,
         container.catalogRepository.categories,
-        container.catalogRepository.aliases,
+        container.communityAliasService.searchableAliases,
     ) { summary, songs, categories, aliases ->
         summary.copy(
             songs = songs,
@@ -128,6 +131,18 @@ class MainViewModel(
         viewModelScope.launch {
             container.profileRepository.ensureDefaultProfile()
             container.catalogRepository.refresh()
+        }
+        viewModelScope.launch {
+            container.backendSessionManager.state
+                .map { it.user?.id }
+                .distinctUntilChanged()
+                .collectLatest { userId ->
+                    if (userId == null) {
+                        container.communityAliasService.clearMyAliases()
+                    } else {
+                        runCatching { container.communityAliasService.syncMyAliases() }
+                    }
+                }
         }
     }
 

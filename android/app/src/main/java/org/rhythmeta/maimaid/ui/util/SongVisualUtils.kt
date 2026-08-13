@@ -122,12 +122,17 @@ internal object SongVisualUtils {
         return hsv.toColor()
     }
 
-    fun chartTypeColor(type: String, darkTheme: Boolean, fallbackColor: Color): Color =
-        when (type.lowercase()) {
-            "std", "standard" -> if (darkTheme) Color(0xFF64B5F6) else Color(0xFF1976D2)
-            "dx" -> if (darkTheme) Color(0xFFFFB74D) else Color(0xFFE87500)
+    fun chartTypeColor(type: String, darkTheme: Boolean, fallbackColor: Color): Color {
+        val normalizedType = type.lowercase()
+        return when {
+            normalizedType == "std" || normalizedType == "standard" -> {
+                if (darkTheme) Color(0xFF64B5F6) else Color(0xFF1976D2)
+            }
+            normalizedType == "dx" -> if (darkTheme) Color(0xFFFFB74D) else Color(0xFFE87500)
+            "utage" in normalizedType -> if (darkTheme) Color(0xFFD6549A) else Color(0xFFFF69B4)
             else -> fallbackColor
         }
+    }
 
     fun versionBadgeColor(
         song: SongEntity,

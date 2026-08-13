@@ -43,6 +43,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
@@ -81,11 +82,13 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -110,6 +113,8 @@ import org.rhythmeta.maimaid.core.data.RatingUtils
 import org.rhythmeta.maimaid.core.data.ScoreRules
 import org.rhythmeta.maimaid.core.data.ScoreToleranceCalculator
 import org.rhythmeta.maimaid.core.data.ScoreValidationError
+import org.rhythmeta.maimaid.core.data.CommunityAliasDailyQuota
+import org.rhythmeta.maimaid.core.data.CommunityAliasMyCandidate
 import org.rhythmeta.maimaid.core.database.PlayRecordEntity
 import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
@@ -117,6 +122,11 @@ import org.rhythmeta.maimaid.core.database.SongEntity
 import org.rhythmeta.maimaid.ui.catalog.ScoreEntrySongCard
 import org.rhythmeta.maimaid.ui.components.ExpandableBottomSheet
 import org.rhythmeta.maimaid.ui.components.SquircleExtension
+import org.rhythmeta.maimaid.ui.components.appTextFieldColors
+import org.rhythmeta.maimaid.ui.components.dashedSquircleBorder
+import org.rhythmeta.maimaid.ui.community.CommunityAliasMessage
+import org.rhythmeta.maimaid.ui.community.SongCommunityAliasUiState
+import org.rhythmeta.maimaid.ui.community.SongCommunityAliasViewModel
 import org.rhythmeta.maimaid.ui.components.squircleShape
 import org.rhythmeta.maimaid.ui.util.ScoreStatusColors
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
@@ -131,6 +141,9 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.SnackbarDuration
@@ -158,6 +171,50 @@ private data class MetadataItem(
     val label: String,
 )
 
+private data class SongDisplayAlias(
+    val text: String,
+    val isCommunity: Boolean,
+)
+
+private fun buildDisplayAliases(
+    aliases: List<String>,
+    approvedCommunityAliases: List<String>,
+    myCandidates: List<CommunityAliasMyCandidate>,
+): List<SongDisplayAlias> {
+    val approvedCommunityKeys = approvedCommunityAliases
+        .mapTo(mutableSetOf(), ::normalizedAliasKey)
+    val communityAliases = buildList {
+        addAll(approvedCommunityAliases)
+        addAll(
+            myCandidates
+                .filter { it.status in setOf("pool_private", "voting", "approved") }
+                .map(CommunityAliasMyCandidate::aliasText),
+        )
+    }
+    val seen = mutableSetOf<String>()
+    return buildList {
+        aliases.forEach { alias ->
+            val key = normalizedAliasKey(alias)
+            if (key.isNotEmpty() && seen.add(key)) {
+                add(SongDisplayAlias(alias.trim(), key in approvedCommunityKeys))
+            }
+        }
+        communityAliases.forEach { alias ->
+            val key = normalizedAliasKey(alias)
+            if (key.isNotEmpty() && seen.add(key)) {
+                add(SongDisplayAlias(alias.trim(), isCommunity = true))
+            } else if (key.isNotEmpty()) {
+                val index = indexOfFirst { normalizedAliasKey(it.text) == key }
+                if (index >= 0 && !get(index).isCommunity) {
+                    set(index, get(index).copy(isCommunity = true))
+                }
+            }
+        }
+    }
+}
+
+private fun normalizedAliasKey(alias: String): String = alias.trim().lowercase()
+
 private fun copyToClipboard(
     context: Context,
     label: String,
@@ -181,6 +238,7 @@ fun SongDetailScreen(
     contentTopPadding: androidx.compose.ui.unit.Dp,
     onBackgroundChanged: (Color?) -> Unit,
     onTitleChanged: (String) -> Unit,
+    onOpenCommunityAliases: () -> Unit,
 ) {
     if (song == null) {
         EmptySongState()
@@ -195,6 +253,18 @@ fun SongDetailScreen(
     val aliases by container.catalogRepository
         .observeAliasesForSong(song.songIdentifier)
         .collectAsStateWithLifecycle(initialValue = emptyList())
+    val communityAliasViewModel = viewModel<SongCommunityAliasViewModel>(
+        key = "community-alias-${song.songIdentifier}",
+        factory = SongCommunityAliasViewModel.Factory(song.songIdentifier, container),
+    )
+    val communityAliasState by communityAliasViewModel.state.collectAsStateWithLifecycle()
+    val displayAliases = remember(aliases, communityAliasState.approvedAliases, communityAliasState.candidates) {
+        buildDisplayAliases(
+            aliases = aliases,
+            approvedCommunityAliases = communityAliasState.approvedAliases,
+            myCandidates = communityAliasState.candidates,
+        )
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val copiedConfirmation = stringResource(R.string.common_copied_to_clipboard)
@@ -263,7 +333,7 @@ fun SongDetailScreen(
             item {
                 SongHeader(
                     song = song,
-                    aliases = aliases,
+                    aliases = displayAliases,
                     surfaceColor = surfaceColor,
                     accentColor = accentColor,
                     cachedCover = cachedCover,
@@ -273,7 +343,18 @@ fun SongDetailScreen(
                     onMessage = showSnackbar,
                 )
             }
-            item { CommunityAliasSection(aliases, surfaceColor, accentColor) }
+            item {
+                CommunityAliasSection(
+                    state = communityAliasState,
+                    surfaceColor = surfaceColor,
+                    accentColor = accentColor,
+                    showMessage = showSnackbar,
+                    onOpenBoard = onOpenCommunityAliases,
+                    onDraftChanged = communityAliasViewModel::setDraft,
+                    onSubmit = communityAliasViewModel::submit,
+                    onMessageConsumed = communityAliasViewModel::consumeMessage,
+                )
+            }
             item { RegionAvailability(state.charts.map { it.sheet }, song.isLocked, surfaceColor, accentColor) }
             item { ExternalSearch(song.title, surfaceColor, accentColor) }
             if (chartTypes.isNotEmpty()) {
@@ -353,7 +434,7 @@ fun SongDetailScreen(
 @Composable
 private fun SongHeader(
     song: SongEntity,
-    aliases: List<String>,
+    aliases: List<SongDisplayAlias>,
     surfaceColor: Color,
     accentColor: Color,
     cachedCover: File?,
@@ -368,6 +449,8 @@ private fun SongHeader(
     val artist = song.artist.ifBlank { stringResource(R.string.song_artist_unknown) }
     val titleInteractionSource = remember { MutableInteractionSource() }
     val artistInteractionSource = remember { MutableInteractionSource() }
+    val density = LocalDensity.current
+    var artistLineStartPx by remember(song.songIdentifier) { mutableStateOf<Float?>(null) }
     val jacketShape = remember { squircleShape(26.dp) }
     var jacketMenuExpanded by remember { mutableStateOf(false) }
     var actionSourceFile by remember(cachedCover, song.imageName) { mutableStateOf(cachedCover) }
@@ -541,6 +624,13 @@ private fun SongHeader(
                     if (copyToClipboard(context, artist, artist)) onCopied()
                 },
             ),
+            onTextLayout = { result ->
+                artistLineStartPx = if (result.lineCount > 0) {
+                    result.getLineLeft(0).coerceAtLeast(0f)
+                } else {
+                    null
+                }
+            },
         )
         if (aliases.isNotEmpty()) {
             BoxWithConstraints(
@@ -548,16 +638,19 @@ private fun SongHeader(
                     .fillMaxWidth()
                     .padding(top = 8.dp),
             ) {
+                val aliasStartPadding = artistLineStartPx?.let { with(density) { it.toDp() } }
+                    ?.coerceIn(0.dp, maxWidth) ?: 0.dp
                 Row(
                     modifier = Modifier
-                        .requiredWidth(maxWidth + 16.dp)
+                        .padding(start = aliasStartPadding)
+                        .requiredWidth(maxWidth - aliasStartPadding + 16.dp)
                         .horizontalScroll(rememberScrollState())
                         .padding(end = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     aliases.forEach { alias ->
                         Text(
-                            text = alias,
+                            text = alias.text,
                             style = MiuixTheme.textStyles.footnote2,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             modifier = Modifier
@@ -565,6 +658,17 @@ private fun SongHeader(
                                     color = surfaceColor,
                                     cornerRadius = 50.dp,
                                     extension = SquircleExtension,
+                                )
+                                .then(
+                                    if (alias.isCommunity) {
+                                        Modifier.dashedSquircleBorder(
+                                            width = 1.dp,
+                                            color = accentColor.copy(alpha = 0.55f),
+                                            cornerRadius = 50.dp,
+                                        )
+                                    } else {
+                                        Modifier
+                                    },
                                 )
                                 .padding(horizontal = 10.dp, vertical = 6.dp),
                         )
@@ -718,6 +822,7 @@ private fun MarqueeText(
     fontWeight: FontWeight? = null,
     color: Color = MiuixTheme.colorScheme.onSurface,
     modifier: Modifier = Modifier,
+    onTextLayout: ((androidx.compose.ui.text.TextLayoutResult) -> Unit)? = null,
 ) {
     Text(
         text = text,
@@ -726,6 +831,7 @@ private fun MarqueeText(
         color = color,
         maxLines = 1,
         overflow = TextOverflow.Clip,
+        onTextLayout = onTextLayout,
         modifier = Modifier
             .fillMaxWidth()
             .then(modifier)
@@ -735,12 +841,40 @@ private fun MarqueeText(
 
 @Composable
 private fun CommunityAliasSection(
-    aliases: List<String>,
+    state: SongCommunityAliasUiState,
     surfaceColor: Color,
     accentColor: Color,
+    showMessage: (String) -> Unit,
+    onOpenBoard: () -> Unit,
+    onDraftChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onMessageConsumed: () -> Unit,
 ) {
+    val message = state.message
+    val localizedMessage = message?.let {
+        when (it) {
+            CommunityAliasMessage.SubmitSuccess -> stringResource(R.string.community_alias_submit_success)
+            CommunityAliasMessage.DuplicateLxns -> stringResource(R.string.community_alias_duplicate_lxns)
+            CommunityAliasMessage.DuplicateCommunity -> stringResource(R.string.community_alias_duplicate_community)
+            CommunityAliasMessage.AdminRejected -> stringResource(R.string.community_alias_admin_rejected)
+            CommunityAliasMessage.Duplicate -> stringResource(R.string.community_alias_duplicate)
+            CommunityAliasMessage.QuotaExceeded -> stringResource(R.string.community_alias_quota_exceeded)
+            CommunityAliasMessage.LoginRequired -> stringResource(R.string.community_alias_login_required)
+            CommunityAliasMessage.InvalidRequest -> stringResource(R.string.community_alias_invalid_request)
+            CommunityAliasMessage.SubmitFailed -> state.errorMessage
+                ?: stringResource(R.string.community_alias_submit_failed)
+        }
+    }
+    LaunchedEffect(localizedMessage) {
+        localizedMessage?.let(showMessage)
+        if (localizedMessage != null) onMessageConsumed()
+    }
+
     SongDetailCard(color = surfaceColor) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.song_aliases_title),
@@ -748,10 +882,10 @@ private fun CommunityAliasSection(
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = if (aliases.isEmpty()) {
+                    text = if (state.approvedAliases.isEmpty()) {
                         stringResource(R.string.song_aliases_empty)
                     } else {
-                        stringResource(R.string.song_aliases_count, aliases.size)
+                        stringResource(R.string.song_aliases_count, state.approvedAliases.size)
                     },
                     style = MiuixTheme.textStyles.footnote2,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
@@ -762,9 +896,126 @@ private fun CommunityAliasSection(
                 style = MiuixTheme.textStyles.footnote1,
                 color = accentColor,
                 fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable(onClick = onOpenBoard),
             )
         }
+        Spacer(Modifier.height(12.dp))
+        when {
+            !state.isConfigured -> Text(
+                text = stringResource(R.string.community_alias_unconfigured_message),
+                style = MiuixTheme.textStyles.footnote1,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            )
+            !state.isAuthenticated -> Text(
+                text = stringResource(R.string.community_alias_login_required),
+                style = MiuixTheme.textStyles.footnote1,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            )
+            else -> {
+                Text(
+                    text = stringResource(
+                        R.string.community_alias_daily_quota,
+                        state.dailyUsedCount,
+                        CommunityAliasDailyQuota,
+                    ),
+                    style = MiuixTheme.textStyles.footnote2,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+                Spacer(Modifier.height(6.dp))
+                LinearProgressIndicator(
+                    progress = state.dailyUsedCount.toFloat() / CommunityAliasDailyQuota,
+                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                        foregroundColor = quotaColor(state.dailyUsedCount),
+                        backgroundColor = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                    ),
+                    height = 6.dp,
+                )
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    TextField(
+                        value = state.draft,
+                        onValueChange = onDraftChanged,
+                        colors = appTextFieldColors(
+                            accentColor = accentColor,
+                            backgroundColor = accentColor
+                                .copy(alpha = 0.14f)
+                                .compositeOver(surfaceColor),
+                        ),
+                        label = stringResource(R.string.community_alias_submit_placeholder),
+                        useLabelAsPlaceholder = true,
+                        singleLine = true,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                        cornerRadius = 12.dp,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+                    )
+                    SongDetailButton(
+                        onClick = onSubmit,
+                        surfaceColor = accentColor.copy(alpha = 0.14f),
+                        modifier = Modifier.height(52.dp),
+                    ) {
+                        if (state.isSubmitting) {
+                            CircularProgressIndicator(size = 18.dp, strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.Send,
+                                contentDescription = stringResource(R.string.community_alias_submit_action),
+                                tint = accentColor,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        if (state.candidates.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.community_alias_my_submissions),
+                style = MiuixTheme.textStyles.footnote1,
+                fontWeight = FontWeight.Bold,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            )
+            Spacer(Modifier.height(4.dp))
+            state.candidates.take(4).forEach { candidate ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(candidate.aliasText, style = MiuixTheme.textStyles.footnote1)
+                    Spacer(Modifier.weight(1f))
+                    val status = communityAliasStatus(candidate.status)
+                    Text(
+                        text = stringResource(status.first),
+                        style = MiuixTheme.textStyles.footnote2,
+                        fontWeight = FontWeight.Bold,
+                        color = status.second,
+                    )
+                }
+            }
+        }
     }
+}
+
+private fun quotaColor(used: Int): Color = when {
+    used >= CommunityAliasDailyQuota -> Color(0xFFD65C5C)
+    used >= CommunityAliasDailyQuota - 1 -> Color(0xFFE59A3A)
+    else -> Color(0xFF36A65C)
+}
+
+private fun communityAliasStatus(status: String): Pair<Int, Color> = when (status) {
+    "pool_private", "voting" -> R.string.community_alias_status_voting to Color(0xFF4385D8)
+    "approved" -> R.string.community_alias_status_approved to Color(0xFF36A65C)
+    "rejected" -> R.string.community_alias_status_rejected to Color(0xFFD65C5C)
+    else -> R.string.community_alias_status_unknown to Color.Gray
 }
 
 @Composable
@@ -1080,6 +1331,7 @@ private fun SheetScoreCard(
     onDeleteRecord: (PlayRecordEntity) -> Unit,
 ) {
     var expanded by rememberSaveable(chart.sheet.sheetKey) { mutableStateOf(false) }
+    val isUtage = chart.sheet.type.contains("utage", ignoreCase = true)
     val expandInteractionSource = remember { MutableInteractionSource() }
     val chevronRotation by animateFloatAsState(
         targetValue = if (expanded) 90f else 0f,
@@ -1126,13 +1378,15 @@ private fun SheetScoreCard(
                     fontWeight = FontWeight.Bold,
                     color = accent,
                 )
-                Text(
-                    text = chart.sheet.noteDesigner.orEmpty(),
-                    style = MiuixTheme.textStyles.body2,
-                    color = accentColor.copy(alpha = 0.72f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (!isUtage) {
+                    Text(
+                        text = chart.sheet.noteDesigner.orEmpty(),
+                        style = MiuixTheme.textStyles.body2,
+                        color = accentColor.copy(alpha = 0.72f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
             Text(
                 text = chart.sheet.internalLevelValue?.let(::formatPreciseLevel)
@@ -2090,6 +2344,7 @@ private fun ScoreEntrySheet(
                                     }
                                 }
                             },
+                            colors = appTextFieldColors(difficultyColor),
                             label = stringResource(R.string.score_achievement_hint),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Decimal,
@@ -2111,6 +2366,7 @@ private fun ScoreEntrySheet(
                                     }
                                 }
                             },
+                            colors = appTextFieldColors(difficultyColor),
                             label = if (maxDxScore > 0) {
                                 stringResource(R.string.score_dx_hint_with_max, maxDxScore)
                             } else {
