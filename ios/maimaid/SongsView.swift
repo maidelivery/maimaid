@@ -23,6 +23,17 @@ struct SongsView: View {
         return descriptor
     }
 
+    private static let providerSongIdsByName: [String: Set<Int>] = {
+        guard let resourceURL = Bundle.main.url(forResource: "songid", withExtension: "json"),
+              let resourceData = try? Data(contentsOf: resourceURL),
+              let providerSongs = try? JSONDecoder().decode([SongIdItem].self, from: resourceData) else {
+            return [:]
+        }
+        return Dictionary(grouping: providerSongs, by: \.name).mapValues { songs in
+            Set(songs.map(\.id))
+        }
+    }()
+
     @Environment(\.modelContext) private var modelContext
     @Query(Self.prefetchedSongsDescriptor) private var songs: [Song]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
@@ -88,6 +99,7 @@ struct SongsView: View {
         let isFavorite: Bool
         let searchKeywords: String?
         let aliases: [String]
+        let providerSongIds: Set<Int>
         let sheets: [SheetSnapshot]
         let maxDifficulty: Double
     }
@@ -115,6 +127,7 @@ struct SongsView: View {
         let isFavorite: Bool
         let searchKeywords: String?
         let aliases: [String]
+        let providerSongIds: Set<Int>
         let sheets: [SheetExtraction]
     }
     
@@ -155,6 +168,9 @@ struct SongsView: View {
             )
         }
 
+        let providerSongIds = Self.providerSongIdsByName[song.songIdentifier, default: []]
+            .union(Self.providerSongIdsByName[song.title, default: []])
+
         return SongSnapshotExtraction(
             songIdentifier: song.songIdentifier,
             songId: song.songId,
@@ -167,6 +183,7 @@ struct SongsView: View {
             isFavorite: song.isFavorite,
             searchKeywords: song.searchKeywords,
             aliases: song.aliases,
+            providerSongIds: providerSongIds,
             sheets: sheets
         )
     }
@@ -199,6 +216,7 @@ struct SongsView: View {
             isFavorite: extraction.isFavorite,
             searchKeywords: extraction.searchKeywords,
             aliases: extraction.aliases,
+            providerSongIds: extraction.providerSongIds,
             sheets: sheetSnapshots,
             maxDifficulty: maxDifficulty
         )
@@ -212,6 +230,7 @@ struct SongsView: View {
         sortAscending: Bool
     ) -> [String] {
         let normalizedSearch = searchText.replacing(" ", with: "")
+        let searchedSongId = Int(searchText.trimmingCharacters(in: .whitespacesAndNewlines))
         let hasSearch = !searchText.isEmpty
         let hasCategories = !settings.selectedCategories.isEmpty
         let hasVersions = !settings.selectedVersions.isEmpty
@@ -234,7 +253,9 @@ struct SongsView: View {
                     ($0.noteDesigner?.localizedStandardContains(searchText) ?? false)
                         || ($0.noteDesigner?.replacing(" ", with: "").localizedStandardContains(normalizedSearch) ?? false)
                 }
-                let idMatch = String(song.songId) == searchText
+                let idMatch = searchedSongId.map { songId in
+                    songId > 0 && (song.songId == songId || song.providerSongIds.contains(songId))
+                } ?? false
                 
                 if !titleMatch && !artistMatch && !keywordMatch && !aliasMatch && !designerMatch && !idMatch {
                     return false
