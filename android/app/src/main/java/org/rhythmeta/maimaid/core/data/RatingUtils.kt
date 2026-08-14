@@ -91,7 +91,7 @@ object RatingUtils {
         val latestIndex = latestVersion?.let { versionIndex(it, versions) }
         if (songIndex == null || latestIndex == null) return false
         return when (server.lowercase()) {
-            "cn" -> songIndex >= latestIndex
+            "cn" -> songIndex == latestIndex
             else -> {
                 if (songIndex > latestIndex) null
                 else {

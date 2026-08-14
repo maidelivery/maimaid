@@ -17,7 +17,8 @@
 ### Fixed
 
 - Fixed Japanese and international Best 50 classification from CiRCLE onward to include charts from the current and immediately previous versions in B15.
-- Preserved CN preview charts in B15 while keeping the previous CN version in B35.
+- Classified CN preview charts in B35 until their version becomes the current CN version.
+- Removed the achievement-to-rating table from Utage difficulty cards on iOS and Android.
 - Fixed PRiSM and PRiSM PLUS version matching when calculating Best 50 buckets.
 - Fixed inflated recommendation gains when a Best 50 bucket has not reached its configured capacity.
 

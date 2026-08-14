@@ -41,9 +41,11 @@ class RatingUtilsTest {
     }
 
     @Test
-    fun `cn new songs are latest version and later`() {
-        assertTrue(RatingUtils.category("CiRCLE", "PRiSM", "cn", true, versions) == true)
+    fun `cn preview songs stay old until their version becomes current`() {
+        assertTrue(RatingUtils.category("PRiSM", "PRiSM", "cn", true, versions) == true)
+        assertFalse(RatingUtils.category("CiRCLE", "PRiSM", "cn", true, versions) == true)
         assertFalse(RatingUtils.category("BUDDiES", "PRiSM", "cn", true, versions) == true)
+        assertEquals(null, RatingUtils.category("PRiSM", "PRiSM", "cn", false, versions))
     }
 
     @Test
