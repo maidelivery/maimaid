@@ -451,7 +451,8 @@ class MaimaiDataFetcher {
 
                         for title in resolvedTitles {
                             let normalizedTitle = Self.normalizeSongLookupTitle(title)
-                            var merged = aliasMapByNormalizedTitle[normalizedTitle] ?? aliasMap[title] ?? []
+                            let normalizedAliases = normalizedTitle.isEmpty ? nil : aliasMapByNormalizedTitle[normalizedTitle]
+                            var merged = aliasMap[title] ?? normalizedAliases ?? []
                             var seen = Set(merged.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
                             for alias in item.aliases {
                                 let normalized = alias.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -461,7 +462,9 @@ class MaimaiDataFetcher {
                                 merged.append(normalized)
                             }
                             aliasMap[title] = merged
-                            aliasMapByNormalizedTitle[normalizedTitle] = merged
+                            if !normalizedTitle.isEmpty {
+                                aliasMapByNormalizedTitle[normalizedTitle] = merged
+                            }
                         }
                     }
                 }
@@ -639,7 +642,8 @@ class MaimaiDataFetcher {
                         if hasFreshAliasSnapshot {
                             // Full replace on each successful alias sync so stale local aliases
                             // (e.g. removed community aliases) do not survive future refreshes.
-                            let officialAliases = aliasMap[song.title] ?? aliasMapByNormalizedTitle[normalizedSongTitle] ?? []
+                            let normalizedAliases = normalizedSongTitle.isEmpty ? nil : aliasMapByNormalizedTitle[normalizedSongTitle]
+                            let officialAliases = aliasMap[song.title] ?? normalizedAliases ?? []
                             if officialAliases.isEmpty {
                                 song.aliases = []
                             } else {
@@ -1086,8 +1090,8 @@ class MaimaiDataFetcher {
         for candidateId in expandLxnsSongIdCandidates(songId) {
             guard let title = songIdToTitle[candidateId] else { continue }
             let normalizedTitle = normalizeSongLookupTitle(title)
-            guard !normalizedTitle.isEmpty else { continue }
-            guard seen.insert(normalizedTitle).inserted else { continue }
+            let deduplicationKey = normalizedTitle.isEmpty ? "raw:\(title)" : "normalized:\(normalizedTitle)"
+            guard seen.insert(deduplicationKey).inserted else { continue }
             titles.append(title)
         }
         return titles
