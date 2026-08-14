@@ -43,6 +43,7 @@ import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.StaticManifest
 import org.rhythmeta.maimaid.core.data.CatalogSyncStatus
 import org.rhythmeta.maimaid.ui.MainUiState
+import org.rhythmeta.maimaid.ui.components.CatalogDownloadProgressContent
 import org.rhythmeta.maimaid.ui.navigation.AppDetail
 import org.rhythmeta.maimaid.ui.song.SongDetailScreen
 import kotlinx.coroutines.launch
@@ -403,18 +404,19 @@ private fun StaticDataDetail(
                             .padding(horizontal = 4.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                        Text(
-                            text = when (val syncStatus = state.catalogSyncStatus) {
-                                is CatalogSyncStatus.Downloading -> stringResource(
-                                    R.string.catalog_sync_downloading,
-                                    syncStatus.version,
+                        when (val syncStatus = state.catalogSyncStatus) {
+                            is CatalogSyncStatus.Downloading -> CatalogDownloadProgressContent(
+                                progress = syncStatus.progress,
+                            )
+                            else -> {
+                                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                Text(
+                                    text = stringResource(R.string.static_update_checking),
+                                    style = MiuixTheme.textStyles.footnote1,
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 )
-                                else -> stringResource(R.string.static_update_checking)
-                            },
-                            style = MiuixTheme.textStyles.footnote1,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        )
+                            }
+                        }
                     }
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
