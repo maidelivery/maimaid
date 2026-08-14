@@ -255,8 +255,8 @@ enum RatingUtils {
 
         switch server {
         case .cn:
-            // Region-active preview charts are part of the CN new-song bucket.
-            return songIndex >= latestIndex ? .b15 : .b35
+            // CN preview charts stay in B35 until their version becomes current.
+            return songIndex == latestIndex ? .b15 : .b35
         case .jp, .intl:
             if songIndex > latestIndex {
                 return .excluded

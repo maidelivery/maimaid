@@ -1433,9 +1433,11 @@ private fun SheetScoreCard(
 
                 NoteStatisticsSection(chart.sheet)
 
-                (chart.sheet.internalLevelValue ?: chart.sheet.levelValue)
-                    ?.takeIf { it > 0.0 }
-                    ?.let { level -> RatingTableSection(level) }
+                if (!isUtage) {
+                    (chart.sheet.internalLevelValue ?: chart.sheet.levelValue)
+                        ?.takeIf { it > 0.0 }
+                        ?.let { level -> RatingTableSection(level) }
+                }
 
                 if (chart.sheet.hasNoteData()) {
                     FaultToleranceCalculator(

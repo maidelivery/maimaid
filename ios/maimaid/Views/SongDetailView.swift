@@ -1235,8 +1235,10 @@ struct SheetCardView: View {
             // Detailed Info Table (Notes)
             detailedInfoTable
             
-            // Achievement → Rating table
-            if let level = sheet.internalLevelValue ?? sheet.levelValue, level > 0 {
+            // Achievement -> Rating table
+            if !sheet.type.localizedCaseInsensitiveContains("utage"),
+               let level = sheet.internalLevelValue ?? sheet.levelValue,
+               level > 0 {
                 ratingTable(level: level)
             }
             
