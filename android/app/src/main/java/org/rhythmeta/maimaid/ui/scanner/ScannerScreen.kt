@@ -329,7 +329,7 @@ private fun ScannerStatusOverlay(state: ScannerUiState, modifier: Modifier = Mod
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (state.isProcessingPhoto) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp))
+                CircularProgressIndicator(size = 18.dp, strokeWidth = 2.dp)
             }
             Text(text = message.orEmpty(), color = Color.White)
         }
