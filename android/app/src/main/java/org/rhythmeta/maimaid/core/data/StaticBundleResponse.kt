@@ -18,6 +18,7 @@ data class StaticBundleResponse(
     data class Resources(
         @SerialName("data_json") val catalog: CatalogPayload,
         @SerialName("songid_json") val songIds: List<SongIdItem> = emptyList(),
+        @SerialName("utage_note_json") val utageStats: List<UtageChartStatsItem> = emptyList(),
         @SerialName("lxns_aliases") val aliases: AliasPayload? = null,
         @SerialName("chart_fit") val chartFit: ChartFitPayload? = null,
         @SerialName("df_chart_fit") val legacyChartFit: ChartFitPayload? = null,

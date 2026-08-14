@@ -7,6 +7,9 @@ struct DanDetailView: View {
     @Environment(\.modelContext) private var modelContext
     
     @State private var scoreCache: [String: Score] = [:]
+    @State private var selectedPage = 0
+    @State private var regularScrollPosition = ScrollPosition()
+    @State private var trueScrollPosition = ScrollPosition()
     
     private var songMap: [String: Song] {
         var map: [String: Song] = [:]
@@ -21,22 +24,48 @@ struct DanDetailView: View {
         }
         return map
     }
+
+    private var regularSections: [DanSection] {
+        category.sections.filter { !isTrueDanSection($0) }
+    }
+
+    private var trueSections: [DanSection] {
+        category.sections.filter(isTrueDanSection)
+    }
+
+    private var hasTruePage: Bool {
+        !trueSections.isEmpty
+    }
     
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 16) {
-                ForEach(category.sections) { section in
-                    DanSectionCard(
-                        categoryTitle: category.title,
-                        section: section,
-                        songMap: songMap,
-                        scoreCache: scoreCache
-                    )
+        VStack(spacing: 0) {
+            if hasTruePage {
+                Picker("dan.detail.page.selection", selection: $selectedPage) {
+                    Text("dan.detail.page.regular").tag(0)
+                    Text("dan.detail.page.true").tag(1)
                 }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 10)
-            .padding(.bottom, 24)
+
+            if selectedPage == 0 {
+                DanSectionPageView(
+                    categoryTitle: category.title,
+                    sections: regularSections,
+                    songMap: songMap,
+                    scoreCache: scoreCache,
+                    scrollPosition: $regularScrollPosition
+                )
+            } else {
+                DanSectionPageView(
+                    categoryTitle: category.title,
+                    sections: trueSections,
+                    songMap: songMap,
+                    scoreCache: scoreCache,
+                    scrollPosition: $trueScrollPosition
+                )
+            }
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle(category.title)
@@ -50,8 +79,14 @@ struct DanDetailView: View {
     }
     
     private func loadScoreCache() async {
-        try? await Task.sleep(nanoseconds: 50_000_000)
+        try? await Task.sleep(for: .milliseconds(50))
         scoreCache = ScoreService.shared.scoreMap(context: modelContext)
+    }
+
+    private func isTrueDanSection(_ section: DanSection) -> Bool {
+        let title = section.title ?? ""
+        let labels = ["真", "裏皆伝", "裏皆传", "里皆伝", "里皆传"]
+        return labels.contains { title.contains($0) }
     }
 }
 

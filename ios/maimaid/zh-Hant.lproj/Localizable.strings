@@ -348,7 +348,7 @@
 "data.sync.stage.downloadingIcons" = "正在併發下載預設頭像...";
 "data.sync.stage.saving" = "正在儲存到本地資料庫...";
 "data.sync.stage.fetchingChartStats" = "取得譜面擬合資訊...";
-"data.sync.stage.fetchingUtageChartStats" = "取得宴譜音符總數...";
+"data.sync.stage.fetchingUtageChartStats" = "取得宴譜音符統計...";
 "data.sync.stage.completed" = "同步完成";
 "data.sync.stage.failed" = "同步失敗";
 
@@ -516,6 +516,9 @@
 "common.error" = "錯誤";
 "dan.detail.noRecord" = "暫無記錄";
 "dan.detail.missing" = "缺失";
+"dan.detail.page.selection" = "段位分頁";
+"dan.detail.page.regular" = "普通段位";
+"dan.detail.page.true" = "真段位";
 "dan.list.sections %lld" = "%lld 個段位關卡";
 "avatar.editor.title" = "調整頭像";
 "avatar.editor.hint" = "拖動調整位置，雙指縮放或旋轉。";
@@ -582,9 +585,9 @@
 // MARK: - 資料同步（補充）
 "data.sync.status.fetchingChartStats" = "正在下載譜面擬合資訊…";
 "data.sync.log.chartStatsUpdated" = "譜面擬合資訊已更新並寫入本地快取";
-"data.sync.status.fetchingUtageChartStats" = "正在下載宴譜音符總數…";
-"data.sync.log.fetchedUtageChartStats %lld" = "宴譜音符總數已下載：%lld 筆";
-"data.sync.log.mergedUtageChartStats %lld" = "宴譜音符總數合併完成：更新 %lld 張譜面";
+"data.sync.status.fetchingUtageChartStats" = "正在下載宴譜音符統計…";
+"data.sync.log.fetchedUtageChartStats %lld" = "宴譜音符統計已下載：%lld 筆";
+"data.sync.log.mergedUtageChartStats %lld" = "宴譜音符統計合併完成：更新 %lld 張譜面";
 "data.sync.status.noUpdate" = "靜態資料已是最新版本。";
 "data.sync.log.danUnavailable" = "靜態資料包中沒有段位資料，繼續使用本機快取。";
 "data.sync.log.chartFitUnavailable" = "靜態資料包中沒有擬合定數資料，繼續使用本機快取。";

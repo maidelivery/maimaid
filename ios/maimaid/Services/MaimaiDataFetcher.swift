@@ -137,12 +137,6 @@ struct RemoteNoteCounts: Decodable {
     }
 }
 
-struct UtageChartStatsItem: Decodable {
-    let id: Int
-    let title: String
-    let notes: Int
-}
-
 @Observable
 @MainActor
 class MaimaiDataFetcher {
@@ -314,8 +308,8 @@ class MaimaiDataFetcher {
             var lxnsIcons: [LxnsPresetIcon] = []
             var nameToProviderIds: [String: [Int]] = [:]
             var nameToProviderIdsByNormalized: [String: [Int]] = [:]
-            var utageNotesById: [Int: Int] = [:]
-            var utageNotesByKey: [String: [Int]] = [:]
+            var utageStatsById: [Int: UtageChartStatsItem] = [:]
+            var utageStatsByKey: [String: [UtageChartStatsItem]] = [:]
             let staticBundle = try? await fetchBackendStaticBundleIfNeeded(forceApply: forceBundleApply)
             let bundleResources = staticBundle?.bundle?.payload.resources
 
@@ -509,16 +503,16 @@ class MaimaiDataFetcher {
             if options.updateUtageChartStats {
                 updateStage(.fetchingUtageChartStats, base: 0.54, message: String(localized: "data.sync.status.fetchingUtageChartStats"))
                 if let bundledStats = bundleResources?.utageNoteJSON {
-                    utageNotesById = Dictionary(uniqueKeysWithValues: bundledStats.map { ($0.id, $0.notes) })
-                    utageNotesByKey = Self.buildUtageNotesByKey(bundledStats)
+                    utageStatsById = Dictionary(uniqueKeysWithValues: bundledStats.map { ($0.id, $0) })
+                    utageStatsByKey = Self.buildUtageStatsByKey(bundledStats)
                     log(String(localized: "data.sync.log.fetchedUtageChartStats \(bundledStats.count)"))
                 } else if let utageStatsURL = URL(string: "https://maimaid.shikoch.in/utage_chart_stats.json") {
                     var request = URLRequest(url: utageStatsURL)
                     request.setValue("Mozilla/5.0 (maimaid)", forHTTPHeaderField: "User-Agent")
                     let (data, _) = try await URLSession.shared.data(for: request)
                     let stats = try JSONDecoder().decode([UtageChartStatsItem].self, from: data)
-                    utageNotesById = Dictionary(uniqueKeysWithValues: stats.map { ($0.id, $0.notes) })
-                    utageNotesByKey = Self.buildUtageNotesByKey(stats)
+                    utageStatsById = Dictionary(uniqueKeysWithValues: stats.map { ($0.id, $0) })
+                    utageStatsByKey = Self.buildUtageStatsByKey(stats)
                     log(String(localized: "data.sync.log.fetchedUtageChartStats \(stats.count)"))
                 }
             }
@@ -588,7 +582,7 @@ class MaimaiDataFetcher {
                 
                 var providerMatchCount = 0
                 var sheetMatchCount = 0
-                var utageNotesMergeCount = 0
+                var utageStatsMergeCount = 0
                 
                 for (index, remoteSong) in songsToProcess.enumerated() {
                     let song: Song
@@ -753,17 +747,16 @@ class MaimaiDataFetcher {
                         }
 
                         if options.updateUtageChartStats && remoteSheet.type.lowercased() == "utage" {
-                            let mergedNotes = Self.resolveUtageTotalNotes(
+                            let stats = Self.resolveUtageChartStats(
                                 for: sheet,
                                 songTitle: song.title,
                                 songIdentifier: song.songIdentifier,
                                 sheetLevel: sheet.level,
-                                notesById: utageNotesById,
-                                notesByKey: utageNotesByKey
+                                statsById: utageStatsById,
+                                statsByKey: utageStatsByKey
                             )
-                            if let mergedNotes, sheet.total != mergedNotes {
-                                sheet.total = mergedNotes
-                                utageNotesMergeCount += 1
+                            if let stats, Self.mergeUtageChartStats(stats, into: sheet) {
+                                utageStatsMergeCount += 1
                             }
                         }
                     }
@@ -797,7 +790,7 @@ class MaimaiDataFetcher {
                 log(String(localized: "data.sync.log.processingCompleted \(providerMatchCount) \(songsToProcess.count)"))
                 log(String(localized: "data.sync.log.syncedSummary \(providerMatchCount) \(sheetMatchCount)"))
                 if options.updateUtageChartStats {
-                    log(String(localized: "data.sync.log.mergedUtageChartStats \(utageNotesMergeCount)"))
+                    log(String(localized: "data.sync.log.mergedUtageChartStats \(utageStatsMergeCount)"))
                 }
                 
                 remoteSongs = []
@@ -951,34 +944,39 @@ class MaimaiDataFetcher {
         }
     }
 
-    private static func buildUtageNotesByKey(_ stats: [UtageChartStatsItem]) -> [String: [Int]] {
-        var lookup: [String: [Int]] = [:]
+    private static func buildUtageStatsByKey(
+        _ stats: [UtageChartStatsItem]
+    ) -> [String: [UtageChartStatsItem]] {
+        var lookup: [String: [UtageChartStatsItem]] = [:]
 
         for item in stats {
             guard let kanji = extractUtageKanji(from: item.title),
                   let key = utageLookupKey(title: item.title, kanji: kanji) else {
                 continue
             }
-            lookup[key, default: []].append(item.notes)
+            lookup[key, default: []].append(item)
         }
 
-        for key in lookup.keys {
-            let unique = Array(Set(lookup[key] ?? [])).sorted()
-            lookup[key] = unique
+        return lookup.mapValues { items in
+            var uniqueByID: [Int: UtageChartStatsItem] = [:]
+            for item in items {
+                uniqueByID[item.id] = item
+            }
+            return uniqueByID.values.sorted {
+                $0.notes == $1.notes ? $0.id < $1.id : $0.notes < $1.notes
+            }
         }
-
-        return lookup
     }
 
-    private static func resolveUtageTotalNotes(
+    private static func resolveUtageChartStats(
         for sheet: Sheet,
         songTitle: String,
         songIdentifier: String,
         sheetLevel: String,
-        notesById: [Int: Int],
-        notesByKey: [String: [Int]]
-    ) -> Int? {
-        if sheet.songId > 0, let exact = notesById[sheet.songId] {
+        statsById: [Int: UtageChartStatsItem],
+        statsByKey: [String: [UtageChartStatsItem]]
+    ) -> UtageChartStatsItem? {
+        if sheet.songId > 0, let exact = statsById[sheet.songId] {
             return exact
         }
 
@@ -1000,39 +998,67 @@ class MaimaiDataFetcher {
         }
 
         for key in Set(candidateKeys) {
-            guard let candidates = notesByKey[key], !candidates.isEmpty else { continue }
-            return selectUtageNotesCandidate(candidates, songIdentifier: songIdentifier, sheetLevel: sheetLevel)
+            guard let candidates = statsByKey[key], !candidates.isEmpty else { continue }
+            return selectUtageStatsCandidate(candidates, songIdentifier: songIdentifier, sheetLevel: sheetLevel)
         }
 
         return nil
     }
 
-    private static func selectUtageNotesCandidate(_ candidates: [Int], songIdentifier: String, sheetLevel: String) -> Int? {
-        let unique = Array(Set(candidates)).sorted()
-        guard !unique.isEmpty else { return nil }
-        if unique.count == 1 { return unique.first }
+    private static func selectUtageStatsCandidate(
+        _ candidates: [UtageChartStatsItem],
+        songIdentifier: String,
+        sheetLevel: String
+    ) -> UtageChartStatsItem? {
+        let sorted = candidates.sorted {
+            $0.notes == $1.notes ? $0.id < $1.id : $0.notes < $1.notes
+        }
+        guard !sorted.isEmpty else { return nil }
+        if sorted.count == 1 { return sorted.first }
 
         let identifierUpper = songIdentifier.uppercased()
         let difficultyOrder = ["(EASY)", "(BASIC)", "(ADVANCED)", "(EXPERT)", "(MASTER)", "(RE:MASTER)"]
         if let idx = difficultyOrder.firstIndex(where: { identifierUpper.contains($0) }) {
-            return unique[min(idx, unique.count - 1)]
+            return sorted[min(idx, sorted.count - 1)]
         }
 
         if songIdentifier.contains("入門") {
-            return unique.first
+            return sorted.first
         }
 
         if songIdentifier.contains("ヒーロー") {
-            return unique.last
+            return sorted.last
         }
 
         if let level = parseApproximateUtageLevel(sheetLevel) {
             let ratio = max(0, min((level - 1.0) / 14.0, 1.0))
-            let idx = Int((Double(unique.count - 1) * ratio).rounded())
-            return unique[idx]
+            let idx = Int((Double(sorted.count - 1) * ratio).rounded())
+            return sorted[idx]
         }
 
-        return unique.last
+        return sorted.last
+    }
+
+    private static func mergeUtageChartStats(_ stats: UtageChartStatsItem, into sheet: Sheet) -> Bool {
+        var changed = assign(stats.notes, to: \.total, on: sheet)
+        guard let noteTypes = stats.noteTypes else { return changed }
+
+        changed = assign(noteTypes.tap, to: \.tap, on: sheet) || changed
+        changed = assign(noteTypes.hold, to: \.hold, on: sheet) || changed
+        changed = assign(noteTypes.slide, to: \.slide, on: sheet) || changed
+        changed = assign(noteTypes.touch, to: \.touch, on: sheet) || changed
+        changed = assign(noteTypes.breakCount, to: \.breakCount, on: sheet) || changed
+        return changed
+    }
+
+    private static func assign(
+        _ value: Int,
+        to keyPath: ReferenceWritableKeyPath<Sheet, Int?>,
+        on sheet: Sheet
+    ) -> Bool {
+        guard sheet[keyPath: keyPath] != value else { return false }
+        sheet[keyPath: keyPath] = value
+        return true
     }
 
     private static func parseApproximateUtageLevel(_ raw: String) -> Double? {

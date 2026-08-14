@@ -183,6 +183,7 @@ class CatalogRepository(
         val resources = bundle.payload.resources
         val catalog = resources.catalog
         val providerIds = buildProviderIdsByTitle(resources.songIds)
+        val utageStats = UtageChartStatsIndex(resources.utageStats)
         val favoriteIds = catalogDao.favoriteSongIds().toSet()
         val providerIdToSongIdentifier = mutableMapOf<Int, String>()
 
@@ -211,6 +212,12 @@ class CatalogRepository(
                 ?: emptyList()
             remote.sheets.map { sheet ->
                 val providerSongId = selectProviderId(ids, sheet.type)
+                val utageStat = if (sheet.type.equals("utage", ignoreCase = true)) {
+                    utageStats.resolve(providerSongId, remote.title.orEmpty())
+                } else {
+                    null
+                }
+                val utageNoteTypes = utageStat?.noteTypes
                 if (providerSongId > 0) {
                     providerIdToSongIdentifier[providerSongId] = remote.songId
                 }
@@ -225,12 +232,12 @@ class CatalogRepository(
                     internalLevel = sheet.internalLevel,
                     internalLevelValue = sheet.internalLevelValue,
                     noteDesigner = sheet.noteDesigner,
-                    tap = sheet.noteCounts?.tap,
-                    hold = sheet.noteCounts?.hold,
-                    slide = sheet.noteCounts?.slide,
-                    touch = sheet.noteCounts?.touch,
-                    breakCount = sheet.noteCounts?.breakCount,
-                    total = sheet.noteCounts?.total,
+                    tap = utageNoteTypes?.tap ?: sheet.noteCounts?.tap,
+                    hold = utageNoteTypes?.hold ?: sheet.noteCounts?.hold,
+                    slide = utageNoteTypes?.slide ?: sheet.noteCounts?.slide,
+                    touch = utageNoteTypes?.touch ?: sheet.noteCounts?.touch,
+                    breakCount = utageNoteTypes?.breakCount ?: sheet.noteCounts?.breakCount,
+                    total = utageStat?.notes ?: sheet.noteCounts?.total,
                     regionJp = sheet.regions?.get("jp") ?: false,
                     regionIntl = sheet.regions?.get("intl") ?: false,
                     regionUsa = sheet.regions?.get("usa") ?: false,
