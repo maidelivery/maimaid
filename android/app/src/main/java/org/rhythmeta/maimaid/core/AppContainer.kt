@@ -22,12 +22,14 @@ import org.rhythmeta.maimaid.core.data.CommunityAliasService
 import org.rhythmeta.maimaid.core.data.DanRepository
 import org.rhythmeta.maimaid.core.data.DanStore
 import org.rhythmeta.maimaid.core.data.PlateProgressRepository
+import org.rhythmeta.maimaid.core.data.PresetAvatarRepository
 import org.rhythmeta.maimaid.core.data.ProfileAvatarStore
 import org.rhythmeta.maimaid.core.data.ProfileCredentialStore
 import org.rhythmeta.maimaid.core.data.ProfileRepository
 import org.rhythmeta.maimaid.core.data.RecommendationRepository
 import org.rhythmeta.maimaid.core.data.ScoreRepository
 import org.rhythmeta.maimaid.core.data.ScoreQueryRepository
+import org.rhythmeta.maimaid.core.data.ScoreSyncService
 import org.rhythmeta.maimaid.core.database.MaimaidDatabase
 import org.rhythmeta.maimaid.core.ml.OnnxSessionFactory
 import org.rhythmeta.maimaid.core.network.BackendApiClient
@@ -74,6 +76,11 @@ class AppContainer(context: Context) {
     val profileRepository = ProfileRepository(
         profileDao = database.profileDao(),
         defaultProfileName = applicationContext.getString(R.string.default_profile_name),
+    )
+
+    val presetAvatarRepository = PresetAvatarRepository(
+        apiClient = backendApiClient,
+        json = json,
     )
 
     val scoreRepository = ScoreRepository(
@@ -132,4 +139,14 @@ class AppContainer(context: Context) {
         profileAvatarStore = profileAvatarStore,
         json = json,
     )
+
+    val scoreSyncService = ScoreSyncService(
+        database = database,
+        preferences = appPreferencesRepository,
+        credentials = profileCredentialStore,
+        backendSyncCoordinator = backendSyncCoordinator,
+        backendImportService = backendImportService,
+        json = json,
+    )
+
 }

@@ -1,4 +1,4 @@
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { inject, singleton } from "tsyringe";
 import type { Env } from "../env.js";
@@ -62,6 +62,19 @@ export class StorageService {
 
 		const uploadUrl = await getSignedUrl(this.signingClient, command, { expiresIn: 300 });
 		return { key, uploadUrl };
+	}
+
+	async deleteAvatar(profileId: string) {
+		if (!this.client) {
+			throw new AppError(500, "storage_not_configured", "S3 storage is not configured.");
+		}
+
+		await this.client.send(
+			new DeleteObjectCommand({
+				Bucket: this.env.S3_BUCKET,
+				Key: `avatars/profiles/${profileId}`,
+			}),
+		);
 	}
 
 	async getObject(

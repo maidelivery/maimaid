@@ -218,8 +218,19 @@ export class ProfileService {
 		await this.prisma.profile.delete({
 			where: { id: profileId },
 		});
+		await this.deleteAvatarIfOrphaned(profileId);
 
 		return profile;
+	}
+
+	private async deleteAvatarIfOrphaned(profileId: string) {
+		const profile = await this.prisma.profile.findUnique({
+			where: { id: profileId },
+			select: { id: true },
+		});
+		if (profile) return;
+
+		await this.storageService.deleteAvatar(profileId);
 	}
 
 	async activeProfile(userId: string) {

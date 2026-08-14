@@ -127,6 +127,7 @@ fun MaimaidApp(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val showScannerBoundingBoxes by viewModel.showScannerBoundingBoxes.collectAsStateWithLifecycle()
+    val thirdPartyScoreSyncEnabled by viewModel.thirdPartyScoreSyncEnabled.collectAsStateWithLifecycle()
     val catalogSortOption by viewModel.catalogSortOption.collectAsStateWithLifecycle()
     val catalogSortAscending by viewModel.catalogSortAscending.collectAsStateWithLifecycle()
     val catalogGridColumns by viewModel.catalogGridColumns.collectAsStateWithLifecycle()
@@ -580,6 +581,10 @@ fun MaimaidApp(
                 onThemeCustomColorChange = onThemeCustomColorChange,
                 showScannerBoundingBoxes = showScannerBoundingBoxes,
                 onShowScannerBoundingBoxesChange = viewModel::setShowScannerBoundingBoxes,
+                thirdPartyScoreSyncEnabled = thirdPartyScoreSyncEnabled,
+                canSyncThirdPartyScores = uiState.activeProfile?.server
+                    ?.equals("cn", ignoreCase = true) == true,
+                onThirdPartyScoreSyncEnabledChange = viewModel::setThirdPartyScoreSyncEnabled,
                 onOpenDetail = openDetail,
             )
         }

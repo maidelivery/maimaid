@@ -17,6 +17,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.SetMeal
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,6 +56,9 @@ fun SettingsScreen(
     onThemeCustomColorChange: (Int) -> Unit,
     showScannerBoundingBoxes: Boolean,
     onShowScannerBoundingBoxesChange: (Boolean) -> Unit,
+    thirdPartyScoreSyncEnabled: Boolean,
+    canSyncThirdPartyScores: Boolean,
+    onThirdPartyScoreSyncEnabledChange: (Boolean) -> Unit,
     onOpenDetail: (AppDetail) -> Unit,
 ) {
     LazyColumn(
@@ -103,6 +107,14 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_lxns),
                     summary = stringResource(R.string.settings_lxns_description),
                     onClick = { onOpenDetail(AppDetail.LxnsImport) },
+                )
+                SettingsToggleRow(
+                    icon = Icons.Rounded.Sync,
+                    title = stringResource(R.string.settings_score_sync),
+                    summary = stringResource(R.string.settings_score_sync_description),
+                    checked = thirdPartyScoreSyncEnabled,
+                    enabled = canSyncThirdPartyScores,
+                    onCheckedChange = onThirdPartyScoreSyncEnabledChange,
                 )
             }
         }
@@ -232,6 +244,7 @@ private fun SettingsToggleRow(
     title: String,
     summary: String,
     checked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     SwitchPreference(
@@ -240,6 +253,7 @@ private fun SettingsToggleRow(
         title = title,
         summary = summary,
         startAction = { SettingsPreferenceIcon(icon) },
+        enabled = enabled,
     )
 }
 

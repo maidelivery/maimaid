@@ -3,6 +3,8 @@ import SwiftData
 
 @Model
 final class MaimaiIcon {
+    private static let iconBaseURL = "https://assets2.lxns.net/maimai/icon/"
+
     @Attribute(.unique) var id: Int
     var name: String
     var descriptionText: String
@@ -16,6 +18,20 @@ final class MaimaiIcon {
     }
     
     var iconUrl: String {
-        "https://assets2.lxns.net/maimai/icon/\(id).png"
+        Self.avatarURL(for: id)
+    }
+
+    static func avatarURL(for id: Int) -> String {
+        "\(iconBaseURL)\(id).png"
+    }
+
+    static func isPresetAvatarURL(_ avatarURL: String?) -> Bool {
+        guard let avatarURL, let url = URL(string: avatarURL) else {
+            return false
+        }
+        return url.scheme == "https"
+            && url.host == "assets2.lxns.net"
+            && url.path.hasPrefix("/maimai/icon/")
+            && url.path.hasSuffix(".png")
     }
 }

@@ -3,6 +3,24 @@ import { describe, expect, it, vi } from "vitest";
 import { ProfileService } from "../src/services/profile.service.js";
 
 describe("ProfileService", () => {
+	it("removes the R2 avatar after deleting its profile record", async () => {
+		const profileId = "018f05e0-8674-7d98-a678-8fd69a4a2d63";
+		const database = {
+			profile: {
+				findFirst: vi.fn().mockResolvedValue({ id: profileId, userId: "user", isActive: false }),
+				findUnique: vi.fn().mockResolvedValue(null),
+				delete: vi.fn().mockResolvedValue(undefined),
+			},
+		};
+		const storage = { deleteAvatar: vi.fn().mockResolvedValue(undefined) };
+		const service = new ProfileService(database as never, storage as never);
+
+		await service.remove("user", profileId);
+
+		expect(database.profile.delete).toHaveBeenCalledWith({ where: { id: profileId } });
+		expect(storage.deleteAvatar).toHaveBeenCalledWith(profileId);
+	});
+
 	it("matches optimistic-lock profile versions at API millisecond precision", async () => {
 		const expectedUpdatedAt = new Date("2026-08-13T10:20:30.123Z");
 		const updateManyAndReturn = vi.fn().mockResolvedValue([

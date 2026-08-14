@@ -115,6 +115,8 @@
     <string name="settings_diving_fish_description">Import scores for any server profile</string>
     <string name="settings_lxns">LXNS</string>
     <string name="settings_lxns_description">Import scores for any server profile</string>
+    <string name="settings_score_sync">Sync scores</string>
+    <string name="settings_score_sync_description">Upload new scores to bound Diving-Fish and LXNS accounts</string>
     <string name="settings_appearance">Appearance</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_description">Choose the system, light, or dark appearance</string>
@@ -325,6 +327,11 @@
     <string name="profile_df_token">Diving-Fish import token</string>
     <string name="profile_lxns_token">LXNS refresh token</string>
     <string name="profile_change_avatar">Change avatar</string>
+    <string name="profile_preset_avatar">Preset avatar</string>
+    <string name="profile_preset_avatar_title">Choose preset avatar</string>
+    <string name="profile_preset_avatar_search">Search avatars</string>
+    <string name="profile_preset_avatar_loading">Loading avatars</string>
+    <string name="profile_preset_avatar_empty">No preset avatars found</string>
     <string name="profile_clear_avatar">Clear</string>
     <string name="avatar_editor_title">Adjust Avatar</string>
     <string name="avatar_editor_hint">Drag to position, pinch to zoom, or rotate with two fingers.</string>

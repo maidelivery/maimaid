@@ -371,13 +371,22 @@ enum BackendIncrementalSyncService {
         try await pullUpdatesUnlocked(context: context, force: false)
     }
 
-    static func pushAllLocalData(context: ModelContext) async throws {
+    static func pushAllLocalData(
+        context: ModelContext,
+        forceProfileOverwrite: Bool = false
+    ) async throws {
         try await BackendSyncOperationGate.shared.withLock {
-            try await pushAllLocalDataUnlocked(context: context)
+            try await pushAllLocalDataUnlocked(
+                context: context,
+                forceProfileOverwrite: forceProfileOverwrite
+            )
         }
     }
 
-    static func pushAllLocalDataUnlocked(context: ModelContext) async throws {
+    static func pushAllLocalDataUnlocked(
+        context: ModelContext,
+        forceProfileOverwrite: Bool = false
+    ) async throws {
         guard BackendSessionManager.shared.isAuthenticated else {
             throw BackendAPIError.unauthorized
         }
@@ -426,7 +435,7 @@ enum BackendIncrementalSyncService {
             method: "POST",
             body: BackendSyncPushPayload(
                 idempotencyKey: UUID().uuidString.lowercased(),
-                forceProfileOverwrite: false,
+                forceProfileOverwrite: forceProfileOverwrite,
                 profileUpserts: profileUpserts,
                 scoreUpserts: scoreUpserts,
                 playRecordUpserts: playRecordUpserts
@@ -458,7 +467,7 @@ enum BackendIncrementalSyncService {
                 method: "POST",
                 body: BackendSyncPushPayload(
                     idempotencyKey: UUID().uuidString.lowercased(),
-                    forceProfileOverwrite: false,
+                    forceProfileOverwrite: forceProfileOverwrite,
                     profileUpserts: avatarUpserts,
                     scoreUpserts: [],
                     playRecordUpserts: []

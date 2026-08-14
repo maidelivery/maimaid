@@ -132,6 +132,18 @@ private struct BackendAvatarUploadUrlResponse: Decodable {
     let updatedAt: Date
 }
 
+private struct BackendProfileActivityPayload: Encodable {
+    let isActive: Bool
+}
+
+private struct BackendProfileDeleteResponse: Decodable {
+    let profileId: String
+}
+
+private struct BackendProfilePatchResponse: Decodable {
+    let profile: BackendRemoteProfile
+}
+
 struct BackendAvatarUploadResult {
     let avatarURL: String?
     let updatedAt: Date?
@@ -151,6 +163,11 @@ enum BackendCloudSyncService {
     static func backupToCloudUnlocked(context: ModelContext) async throws {
         guard BackendSessionManager.shared.isAuthenticated else {
             throw BackendAPIError.unauthorized
+        }
+
+        let localProfiles = try context.fetch(FetchDescriptor<UserProfile>())
+        guard !localProfiles.isEmpty else {
+            return
         }
 
         let activeProfileId = ScoreService.shared.currentActiveProfileId(context: context)
@@ -180,7 +197,11 @@ enum BackendCloudSyncService {
             }
         }
 
-        try await BackendIncrementalSyncService.pushAllLocalDataUnlocked(context: context)
+        try await removeRemoteProfilesAbsentLocally(localProfiles: localProfiles)
+        try await BackendIncrementalSyncService.pushAllLocalDataUnlocked(
+            context: context,
+            forceProfileOverwrite: true
+        )
         try await BackendIncrementalSyncService.pullUpdatesUnlocked(context: context, force: true)
 
         let config = ensureSyncConfig(context: context)
@@ -255,7 +276,12 @@ enum BackendCloudSyncService {
         for profile: UserProfile,
         clientUpdatedAt: Date?
     ) async throws -> BackendAvatarUploadResult {
-        guard profile.avatarUrl == nil, let avatarData = profile.avatarData, !avatarData.isEmpty else {
+        guard
+            !MaimaiIcon.isPresetAvatarURL(profile.avatarUrl),
+            profile.avatarUrl == nil,
+            let avatarData = profile.avatarData,
+            !avatarData.isEmpty
+        else {
             return BackendAvatarUploadResult(avatarURL: profile.avatarUrl, updatedAt: nil)
         }
 
@@ -295,6 +321,35 @@ enum BackendCloudSyncService {
         }
         profile.avatarUrl = avatarURL
         return BackendAvatarUploadResult(avatarURL: avatarURL, updatedAt: uploadResponse.updatedAt)
+    }
+
+    private static func removeRemoteProfilesAbsentLocally(localProfiles: [UserProfile]) async throws {
+        let localProfileIds = Set(localProfiles.map { $0.id.uuidString.lowercased() })
+        let response: BackendProfilesResponse = try await BackendAPIClient.request(
+            path: "v1/profiles",
+            method: "GET",
+            authentication: .required
+        )
+        let profilesToDelete = response.profiles.filter { !localProfileIds.contains($0.id.lowercased()) }
+
+        for profile in profilesToDelete where profile.isActive {
+            let escapedProfileId = profile.id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? profile.id
+            let _: BackendProfilePatchResponse = try await BackendAPIClient.request(
+                path: "v1/profiles/\(escapedProfileId)",
+                method: "PATCH",
+                body: BackendProfileActivityPayload(isActive: false),
+                authentication: .required
+            )
+        }
+
+        for profile in profilesToDelete {
+            let escapedProfileId = profile.id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? profile.id
+            let _: BackendProfileDeleteResponse = try await BackendAPIClient.request(
+                path: "v1/profiles/\(escapedProfileId)",
+                method: "DELETE",
+                authentication: .required
+            )
+        }
     }
 
     private static func optimizeAvatarForUpload(_ rawData: Data) -> (data: Data, contentType: String) {

@@ -115,6 +115,8 @@
     <string name="settings_diving_fish_description">任意のサーバープロフィールにスコアを取り込む</string>
     <string name="settings_lxns">LXNS</string>
     <string name="settings_lxns_description">任意のサーバープロフィールにスコアを取り込む</string>
+    <string name="settings_score_sync">スコアを同期</string>
+    <string name="settings_score_sync_description">新しいスコアを連携済みの Diving-Fish と LXNS に送信します</string>
     <string name="settings_appearance">外観</string>
     <string name="settings_theme">テーマ</string>
     <string name="settings_theme_description">システム、ライト、ダークの外観を選択</string>
@@ -325,6 +327,11 @@
     <string name="profile_df_token">Diving-Fish インポートトークン</string>
     <string name="profile_lxns_token">LXNS リフレッシュトークン</string>
     <string name="profile_change_avatar">アバターを変更</string>
+    <string name="profile_preset_avatar">プリセットアバター</string>
+    <string name="profile_preset_avatar_title">プリセットアバターを選択</string>
+    <string name="profile_preset_avatar_search">アバターを検索</string>
+    <string name="profile_preset_avatar_loading">アバターを読み込み中</string>
+    <string name="profile_preset_avatar_empty">プリセットアバターが見つかりません</string>
     <string name="profile_clear_avatar">削除</string>
     <string name="avatar_editor_title">アバターの調整</string>
     <string name="avatar_editor_hint">ドラッグして位置を決めたり、ピンチしてズームしたり、2 本の指で回転したりできます。</string>
