@@ -6,9 +6,9 @@ plugins {
 }
 
 val maimaidBackendUrl = providers.gradleProperty("MAIMAID_BACKEND_URL")
-    .orElse("https://api.shikoch.in")
+    .orElse("https://api.rhythmeta.org")
 val maimaidBackendAuthUrl = providers.gradleProperty("MAIMAID_BACKEND_AUTH_URL")
-    .orElse("https://dashboard.shikoch.in")
+    .orElse("https://maimaid.rhythmeta.org")
 val splitReleaseApks = providers.gradleProperty("MAIMAID_SPLIT_RELEASE_APKS")
     .map { it.toBoolean() }
     .orElse(false)
@@ -114,6 +114,7 @@ dependencies {
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
+    implementation(libs.androidx.browser)
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("androidx.palette:palette-ktx:1.0.0")
     ksp(libs.androidx.room.compiler)

@@ -49,6 +49,15 @@ data class BackendAccountConflict(
 
 class BackendProfileConflictException(val profileIds: List<String>) : Exception("Cloud profile is newer.")
 
+data class BackendCloudRestorePreview(
+    val localOnlyProfiles: List<UserProfileEntity>,
+)
+
+internal fun localProfilesAbsentFromCloud(
+    localProfiles: List<UserProfileEntity>,
+    cloudProfileIds: Set<String>,
+): List<UserProfileEntity> = localProfiles.filter { it.id !in cloudProfileIds }
+
 class BackendSyncCoordinator(
     private val database: MaimaidDatabase,
     private val profileRepository: ProfileRepository,
@@ -56,6 +65,7 @@ class BackendSyncCoordinator(
     private val apiClient: BackendApiClient,
     private val syncStateStore: BackendSyncStateStore,
     private val profileAvatarStore: ProfileAvatarStore,
+    private val profileCredentialStore: ProfileCredentialStore,
     private val json: Json,
 ) {
     private val syncMutex = Mutex()
@@ -248,7 +258,18 @@ class BackendSyncCoordinator(
         recordSyncedState(user.id)
     }
 
-    suspend fun restore() = syncMutex.withLock {
+    suspend fun previewRestore() = syncMutex.withLock {
+        sessionManager.state.value.user ?: error("Authentication required.")
+        val cloudProfileIds = fetchRemoteProfiles().mapTo(mutableSetOf(), BackendRemoteProfile::id)
+        BackendCloudRestorePreview(
+            localOnlyProfiles = localProfilesAbsentFromCloud(
+                localProfiles = database.profileDao().profiles(),
+                cloudProfileIds = cloudProfileIds,
+            ),
+        )
+    }
+
+    suspend fun restore(removeLocalProfilesAbsentFromCloud: Boolean = false) = syncMutex.withLock {
         val user = sessionManager.state.value.user ?: error("Authentication required.")
         val state = syncStateStore.load()
         state.ownerUserId?.takeIf { it != user.id && hasLocalData() }?.let {
@@ -256,7 +277,12 @@ class BackendSyncCoordinator(
         }
         if (state.lastRevision == "0") {
             val response = fetchFullSnapshot()
-            applySnapshot(response.snapshot, replace = false, preserveLocalProfileIds = emptySet())
+            applySnapshot(
+                snapshot = response.snapshot,
+                replace = false,
+                preserveLocalProfileIds = emptySet(),
+                removeLocalProfilesAbsentFromCloud = removeLocalProfilesAbsentFromCloud,
+            )
             syncStateStore.update { current ->
                 current.copy(
                     lastRevision = response.latestRevision,
@@ -266,7 +292,11 @@ class BackendSyncCoordinator(
                 )
             }
         } else {
-            pullAndApply(sinceRevision = "0", replace = false)
+            pullAndApply(
+                sinceRevision = "0",
+                replace = false,
+                removeLocalProfilesAbsentFromCloud = removeLocalProfilesAbsentFromCloud,
+            )
         }
         recordSyncedState(user.id)
     }
@@ -310,9 +340,10 @@ class BackendSyncCoordinator(
     }
 
     private suspend fun clearLocalUserData(createDefault: Boolean) {
-        val paths = database.profileDao().profiles().mapNotNull(UserProfileEntity::avatarPath)
+        val profiles = database.profileDao().profiles()
         database.withTransaction { database.profileDao().deleteAll() }
-        paths.forEach(profileAvatarStore::deleteStored)
+        profiles.mapNotNull(UserProfileEntity::avatarPath).forEach(profileAvatarStore::deleteStored)
+        profiles.forEach { profileCredentialStore.delete(it.id) }
         syncStateStore.clearSessionState(keepOwner = false)
         if (createDefault) profileRepository.ensureDefaultProfile()
     }
@@ -321,7 +352,11 @@ class BackendSyncCoordinator(
         if (clearLocalData) clearLocalUserData() else syncStateStore.clearSessionState(keepOwner = true)
     }
 
-    private suspend fun pullAndApply(sinceRevision: String, replace: Boolean) {
+    private suspend fun pullAndApply(
+        sinceRevision: String,
+        replace: Boolean,
+        removeLocalProfilesAbsentFromCloud: Boolean = false,
+    ) {
         val response = if (sinceRevision == "0") {
             fetchFullSnapshot()
         } else {
@@ -346,16 +381,27 @@ class BackendSyncCoordinator(
             remote.id.takeIf { localChanged }
         }
         if (profileConflicts.isNotEmpty()) throw BackendProfileConflictException(profileConflicts.toList())
-        applySnapshot(response.snapshot, replace, preserveLocalProfileIds)
-        val deletedProfileIds = response.events
-            .filter { it.entityType == "profile" && it.op == "delete" }
-            .mapTo(mutableSetOf()) { it.profileId ?: it.entityId }
-        if (deletedProfileIds.isNotEmpty()) {
-            database.withTransaction {
-                val profileDao = database.profileDao()
-                for (profile in profileDao.profiles()) {
-                    if (profile.id in deletedProfileIds) profileDao.delete(profile)
+        applySnapshot(
+            snapshot = response.snapshot,
+            replace = replace,
+            preserveLocalProfileIds = preserveLocalProfileIds,
+            removeLocalProfilesAbsentFromCloud = removeLocalProfilesAbsentFromCloud,
+        )
+        if (removeLocalProfilesAbsentFromCloud) {
+            val deletedProfileIds = response.events
+                .filter { it.entityType == "profile" && it.op == "delete" }
+                .mapTo(mutableSetOf()) { it.profileId ?: it.entityId }
+            val deletedProfiles = database.profileDao().profiles()
+                .filter { it.id in deletedProfileIds }
+            if (deletedProfiles.isNotEmpty()) {
+                database.withTransaction {
+                    val profileDao = database.profileDao()
+                    for (profile in deletedProfiles) {
+                        profileDao.delete(profile)
+                    }
                 }
+                deletedProfiles.mapNotNull(UserProfileEntity::avatarPath).forEach(profileAvatarStore::deleteStored)
+                deletedProfiles.forEach { profileCredentialStore.delete(it.id) }
             }
         }
         syncStateStore.update { current ->
@@ -389,13 +435,26 @@ class BackendSyncCoordinator(
         snapshot: BackendSyncSnapshot,
         replace: Boolean,
         preserveLocalProfileIds: Set<String>,
+        removeLocalProfilesAbsentFromCloud: Boolean = false,
     ) {
         val oldAvatarPaths = mutableListOf<String>()
+        val removedProfiles = mutableListOf<UserProfileEntity>()
         database.withTransaction {
             val profileDao = database.profileDao()
             val scoreDao = database.scoreDao()
             val localProfiles = profileDao.profiles().associateBy(UserProfileEntity::id)
             if (replace) profileDao.deleteAll()
+            if (removeLocalProfilesAbsentFromCloud) {
+                val cloudProfileIds = snapshot.profiles.mapTo(mutableSetOf(), BackendRemoteProfile::id)
+                val localOnlyProfiles = localProfilesAbsentFromCloud(
+                    localProfiles = localProfiles.values.toList(),
+                    cloudProfileIds = cloudProfileIds,
+                )
+                localOnlyProfiles.forEach { profile ->
+                    profileDao.delete(profile)
+                    removedProfiles += profile
+                }
+            }
 
             snapshot.profiles.forEach { remote ->
                 val existing = if (replace) null else localProfiles[remote.id]
@@ -461,7 +520,10 @@ class BackendSyncCoordinator(
                 if (!duplicate) scoreDao.upsertPlayRecord(incoming)
             }
         }
-        oldAvatarPaths.forEach(profileAvatarStore::deleteStored)
+        (oldAvatarPaths + removedProfiles.mapNotNull(UserProfileEntity::avatarPath))
+            .distinct()
+            .forEach(profileAvatarStore::deleteStored)
+        removedProfiles.forEach { profileCredentialStore.delete(it.id) }
     }
 
     private suspend fun applyImportSnapshot(

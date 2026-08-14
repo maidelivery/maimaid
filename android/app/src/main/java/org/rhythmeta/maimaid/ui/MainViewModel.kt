@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -13,6 +15,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.CatalogSortOption
+import org.rhythmeta.maimaid.core.data.CatalogSyncStatus
 import org.rhythmeta.maimaid.ui.theme.AppThemeColorSource
 import org.rhythmeta.maimaid.ui.theme.AppThemeMode
 import org.rhythmeta.maimaid.ui.theme.DefaultThemeCustomColorArgb
@@ -20,6 +23,9 @@ import org.rhythmeta.maimaid.ui.theme.DefaultThemeCustomColorArgb
 class MainViewModel(
     private val container: AppContainer,
 ) : ViewModel() {
+    private val mutableInitialCatalogState = MutableStateFlow(InitialCatalogState.Determining)
+    val initialCatalogState = mutableInitialCatalogState.asStateFlow()
+
     val themeMode = container.appPreferencesRepository.themeMode.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -136,7 +142,14 @@ class MainViewModel(
     init {
         viewModelScope.launch {
             container.profileRepository.ensureDefaultProfile()
-            container.catalogRepository.refresh()
+        }
+        viewModelScope.launch {
+            if (container.catalogRepository.hasCompletedInitialSync()) {
+                mutableInitialCatalogState.value = InitialCatalogState.Ready
+                container.catalogRepository.refresh()
+            } else {
+                mutableInitialCatalogState.value = InitialCatalogState.Required
+            }
         }
         viewModelScope.launch {
             container.backendSessionManager.state
@@ -149,6 +162,22 @@ class MainViewModel(
                         runCatching { container.communityAliasService.syncMyAliases() }
                     }
                 }
+        }
+    }
+
+    fun startInitialCatalogSync() {
+        if (mutableInitialCatalogState.value != InitialCatalogState.Required) return
+        mutableInitialCatalogState.value = InitialCatalogState.Synchronizing
+        viewModelScope.launch {
+            container.catalogRepository.refresh(force = true)
+            if (
+                container.catalogRepository.syncStatus.value is CatalogSyncStatus.Ready &&
+                container.catalogRepository.hasCompletedInitialSync()
+            ) {
+                mutableInitialCatalogState.value = InitialCatalogState.Ready
+            } else {
+                mutableInitialCatalogState.value = InitialCatalogState.Required
+            }
         }
     }
 

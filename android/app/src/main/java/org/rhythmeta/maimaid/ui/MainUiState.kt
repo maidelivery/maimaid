@@ -22,5 +22,5 @@ data class MainUiState(
     val scores: List<ScoreEntity> = emptyList(),
     val songCategories: List<SongCategoryEntity> = emptyList(),
     val gameVersions: List<GameVersionEntity> = emptyList(),
-    val catalogSyncStatus: CatalogSyncStatus = CatalogSyncStatus.Checking,
+    val catalogSyncStatus: CatalogSyncStatus = CatalogSyncStatus.Idle,
 )

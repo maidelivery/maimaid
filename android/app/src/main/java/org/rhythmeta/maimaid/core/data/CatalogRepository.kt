@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.rhythmeta.maimaid.core.database.CatalogDao
@@ -23,12 +24,13 @@ class CatalogRepository(
     private val client: StaticBundleClient,
     private val syncStateStore: CatalogSyncStateStore,
     private val coverImageStore: CoverImageStore,
+    private val presetAvatarRepository: PresetAvatarRepository,
     private val chartFitStore: ChartFitStore,
     private val danStore: DanStore,
 ) {
     private val catalogDao: CatalogDao = database.catalogDao()
     private val syncMutex = Mutex()
-    private val mutableSyncStatus = MutableStateFlow<CatalogSyncStatus>(CatalogSyncStatus.Checking)
+    private val mutableSyncStatus = MutableStateFlow<CatalogSyncStatus>(CatalogSyncStatus.Idle)
     private val mutableChartFit = MutableSharedFlow<StaticBundleResponse.ChartFitPayload>(replay = 1)
     private val mutableDanCategories = MutableSharedFlow<List<DanCategory>>(replay = 1)
 
@@ -58,6 +60,10 @@ class CatalogRepository(
 
     suspend fun currentStaticDataMd5(): String? = syncStateStore.currentMd5()
 
+    // Existing installations may predate the sync metadata store, while a populated catalog
+    // remains sufficient to enter the app and refresh in the background.
+    suspend fun hasCompletedInitialSync(): Boolean = catalogDao.songCount() > 0
+
     suspend fun setFavorite(songIdentifier: String, isFavorite: Boolean) {
         catalogDao.setFavorite(songIdentifier, isFavorite)
     }
@@ -65,7 +71,7 @@ class CatalogRepository(
     suspend fun refresh(force: Boolean = false) = syncMutex.withLock {
         val localSongCount = catalogDao.songCount()
         mutableSyncStatus.value = CatalogSyncStatus.Checking
-        runCatching {
+        try {
             val manifest = client.fetchManifest()
             val currentMd5 = syncStateStore.currentMd5()
             if (
@@ -75,18 +81,63 @@ class CatalogRepository(
                 danStore.hasCache() &&
                 !force
             ) {
-                downloadMissingCovers(catalogDao.imageNames())
+                downloadMissingCovers(
+                    imageNames = catalogDao.imageNames(),
+                    reporter = StageProgressReporter(
+                        version = manifest.version,
+                        stage = CatalogSyncStage.Covers,
+                        overallStart = 0f,
+                        overallEnd = 0.72f,
+                    ),
+                )
+                syncPresetAvatars(
+                    reporter = StageProgressReporter(
+                        version = manifest.version,
+                        stage = CatalogSyncStage.PresetAvatars,
+                        overallStart = 0.72f,
+                        overallEnd = 0.98f,
+                    ),
+                )
+                showSimpleStage(manifest.version, CatalogSyncStage.Finalizing, 0.99f)
                 mutableSyncStatus.value = CatalogSyncStatus.Ready(manifest.version, fromCache = true)
-                return@runCatching
+                return@withLock
             }
 
-            mutableSyncStatus.value = CatalogSyncStatus.Downloading(manifest.version)
-            val bundle = client.fetchBundle(manifest.version)
+            val bundleReporter = StageProgressReporter(
+                version = manifest.version,
+                stage = CatalogSyncStage.CatalogBundle,
+                overallStart = 0f,
+                overallEnd = 0.32f,
+                useByteProgress = true,
+            )
+            bundleReporter.start(totalItems = 1)
+            val bundle = client.fetchBundle(manifest.version, bundleReporter::onTransfer)
+            bundleReporter.complete()
+            showSimpleStage(bundle.version, CatalogSyncStage.ImportingCatalog, 0.4f)
             applyBundle(bundle)
-            downloadMissingCovers(bundle.payload.resources.catalog.songs.map { it.imageName.orEmpty() })
+            downloadMissingCovers(
+                imageNames = bundle.payload.resources.catalog.songs.map { it.imageName.orEmpty() },
+                reporter = StageProgressReporter(
+                    version = bundle.version,
+                    stage = CatalogSyncStage.Covers,
+                    overallStart = 0.44f,
+                    overallEnd = 0.78f,
+                ),
+            )
+            syncPresetAvatars(
+                reporter = StageProgressReporter(
+                    version = bundle.version,
+                    stage = CatalogSyncStage.PresetAvatars,
+                    overallStart = 0.78f,
+                    overallEnd = 0.98f,
+                ),
+            )
+            showSimpleStage(bundle.version, CatalogSyncStage.Finalizing, 0.99f)
             syncStateStore.save(bundle.version, bundle.md5)
             mutableSyncStatus.value = CatalogSyncStatus.Ready(bundle.version, fromCache = false)
-        }.onFailure { error ->
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
             mutableSyncStatus.value = CatalogSyncStatus.Failed(
                 message = error.message ?: error::class.java.simpleName,
                 hasLocalCatalog = localSongCount > 0,
@@ -94,10 +145,38 @@ class CatalogRepository(
         }
     }
 
-    private suspend fun downloadMissingCovers(imageNames: Iterable<String>) {
-        coverImageStore.downloadMissing(imageNames) { imageName, destination ->
-            client.downloadCover(imageName, destination)
+    private suspend fun downloadMissingCovers(
+        imageNames: Iterable<String>,
+        reporter: StageProgressReporter,
+    ) {
+        reporter.start()
+        coverImageStore.downloadMissing(imageNames, reporter::onItemsProgress) { imageName, destination ->
+            client.downloadCover(imageName, destination, reporter::onTransfer)
         }
+        reporter.complete()
+    }
+
+    private suspend fun syncPresetAvatars(reporter: StageProgressReporter) {
+        reporter.start()
+        val avatars = try {
+            presetAvatarRepository.refresh()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            reporter.complete()
+            return
+        }
+        presetAvatarRepository.downloadMissing(avatars, reporter::onItemsProgress) { id, destination ->
+            client.downloadPresetAvatar(id, destination, reporter::onTransfer)
+        }
+        reporter.complete()
+    }
+
+    private fun showSimpleStage(version: String, stage: CatalogSyncStage, fraction: Float) {
+        mutableSyncStatus.value = CatalogSyncStatus.Downloading(
+            version = version,
+            progress = CatalogSyncProgress(stage = stage, overallFraction = fraction),
+        )
     }
 
     private suspend fun applyBundle(bundle: StaticBundleResponse) {
@@ -217,6 +296,71 @@ class CatalogRepository(
         .trim()
         .lowercase()
         .replace(WhitespaceRegex, " ")
+
+    private inner class StageProgressReporter(
+        private val version: String,
+        private val stage: CatalogSyncStage,
+        private val overallStart: Float,
+        private val overallEnd: Float,
+        private val useByteProgress: Boolean = false,
+    ) {
+        private val speedTracker = DownloadSpeedTracker()
+        private var completedItems = 0
+        private var totalItems = 0
+        private var downloadedBytes = 0L
+        private var totalBytes = 0L
+        private var bytesPerSecond = 0L
+
+        @Synchronized
+        fun start(totalItems: Int = 0) {
+            this.totalItems = totalItems.coerceAtLeast(0)
+            publish()
+        }
+
+        @Synchronized
+        fun onItemsProgress(completedItems: Int, totalItems: Int) {
+            this.completedItems = completedItems.coerceAtLeast(0)
+            this.totalItems = totalItems.coerceAtLeast(0)
+            publish()
+        }
+
+        @Synchronized
+        fun onTransfer(byteCount: Long, expectedBytes: Long?) {
+            if (expectedBytes != null) totalBytes += expectedBytes.coerceAtLeast(0L)
+            val snapshot = speedTracker.addBytes(byteCount)
+            downloadedBytes = snapshot.downloadedBytes
+            bytesPerSecond = snapshot.bytesPerSecond
+            publish()
+        }
+
+        @Synchronized
+        fun complete() {
+            if (totalItems > 0) completedItems = totalItems
+            publish(stageFraction = 1f)
+        }
+
+        private fun publish(stageFraction: Float = calculatedStageFraction()) {
+            val overallFraction = overallStart + (overallEnd - overallStart) * stageFraction
+            mutableSyncStatus.value = CatalogSyncStatus.Downloading(
+                version = version,
+                progress = CatalogSyncProgress(
+                    stage = stage,
+                    overallFraction = overallFraction.coerceIn(0f, 1f),
+                    completedItems = completedItems,
+                    totalItems = totalItems,
+                    downloadedBytes = downloadedBytes,
+                    totalBytes = totalBytes.takeIf { it > 0L },
+                    bytesPerSecond = bytesPerSecond,
+                ),
+            )
+        }
+
+        private fun calculatedStageFraction(): Float = when {
+            useByteProgress && totalBytes > 0L -> downloadedBytes.toFloat() / totalBytes
+            totalItems > 0 -> completedItems.toFloat() / totalItems
+            else -> 0f
+        }.coerceIn(0f, 1f)
+    }
 
     companion object {
         private val WhitespaceRegex = Regex("\\s+")
