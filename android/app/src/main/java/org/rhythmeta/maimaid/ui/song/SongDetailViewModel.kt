@@ -72,12 +72,13 @@ class SongDetailViewModel(
         if (saveStatus.value == ScoreSaveStatus.Saving) return
         viewModelScope.launch {
             saveStatus.value = ScoreSaveStatus.Saving
-            saveStatus.value = runCatching {
+            val result = runCatching {
                 container.scoreRepository.saveScore(sheetKey, input)
-            }.fold(
-                onSuccess = { ScoreSaveStatus.Saved },
-                onFailure = { ScoreSaveStatus.Failed },
-            )
+            }
+            result.onSuccess { score ->
+                launch { container.scoreSyncService.syncAfterScoreSave(sheetKey, score) }
+            }
+            saveStatus.value = if (result.isSuccess) ScoreSaveStatus.Saved else ScoreSaveStatus.Failed
         }
     }
 

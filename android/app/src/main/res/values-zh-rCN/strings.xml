@@ -115,6 +115,8 @@
     <string name="settings_diving_fish_description">为任意服务器档案导入成绩</string>
     <string name="settings_lxns">落雪咖啡屋</string>
     <string name="settings_lxns_description">为任意服务器档案导入成绩</string>
+    <string name="settings_score_sync">同步成绩</string>
+    <string name="settings_score_sync_description">将新成绩上传至已绑定的水鱼查分器和落雪咖啡屋账户</string>
     <string name="settings_appearance">外观</string>
     <string name="settings_theme">主题</string>
     <string name="settings_theme_description">选择跟随系统、浅色或深色外观</string>
@@ -325,6 +327,11 @@
     <string name="profile_df_token">水鱼导入 Token</string>
     <string name="profile_lxns_token">落雪刷新 Token</string>
     <string name="profile_change_avatar">更换头像</string>
+    <string name="profile_preset_avatar">预设头像</string>
+    <string name="profile_preset_avatar_title">选择预设头像</string>
+    <string name="profile_preset_avatar_search">搜索头像</string>
+    <string name="profile_preset_avatar_loading">正在加载头像</string>
+    <string name="profile_preset_avatar_empty">没有找到预设头像</string>
     <string name="profile_clear_avatar">清除</string>
     <string name="avatar_editor_title">调整头像</string>
     <string name="avatar_editor_hint">拖动调整位置，双指缩放或旋转。</string>

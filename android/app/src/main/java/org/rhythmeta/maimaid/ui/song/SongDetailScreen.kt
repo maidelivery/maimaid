@@ -1388,6 +1388,12 @@ private fun SheetScoreCard(
                     )
                 }
             }
+            if (!expanded) {
+                chart.score?.let { score ->
+                    SheetScorePreview(score)
+                    Spacer(Modifier.width(8.dp))
+                }
+            }
             Text(
                 text = chart.sheet.internalLevelValue?.let(::formatPreciseLevel)
                     ?: chart.sheet.internalLevel
@@ -1445,6 +1451,62 @@ private fun SheetScoreCard(
             }
         }
     }
+}
+
+@Composable
+private fun SheetScorePreview(score: ScoreEntity) {
+    Column(horizontalAlignment = Alignment.End) {
+        Text(
+            text = "${formatAchievement(score.achievement)}%",
+            style = MiuixTheme.textStyles.body2,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = score.rank,
+                style = MiuixTheme.textStyles.footnote1,
+                fontWeight = FontWeight.Bold,
+                color = ScoreStatusColors.rank(score.rank)
+                    ?: MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            )
+            ScoreRules.displayFc(score.fc)?.let { combo ->
+                ScorePreviewBadge(
+                    text = combo,
+                    color = ScoreStatusColors.combo(score.fc)
+                        ?: MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                )
+            }
+            displaySyncStatus(score.fs)?.let { sync ->
+                ScorePreviewBadge(
+                    text = sync,
+                    color = ScoreStatusColors.sync(score.fs)
+                        ?: MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScorePreviewBadge(text: String, color: Color) {
+    Text(
+        text = text,
+        style = MiuixTheme.textStyles.footnote2,
+        fontWeight = FontWeight.Bold,
+        color = Color.White,
+        maxLines = 1,
+        modifier = Modifier
+            .squircleSurface(
+                color = color,
+                cornerRadius = 4.dp,
+                extension = SquircleExtension,
+            )
+            .padding(horizontal = 4.dp, vertical = 1.dp),
+    )
 }
 
 private data class NoteBreakdownItem(
@@ -1644,7 +1706,7 @@ private fun BestScoreRow(score: ScoreEntity?, sheet: SheetEntity, accentColor: C
                                 ?: MiuixTheme.colorScheme.onSurfaceContainerVariant,
                         )
                     }
-                    ScoreRules.displayFs(score.fs)?.let { sync ->
+                    displaySyncStatus(score.fs)?.let { sync ->
                         Text(
                             text = sync,
                             style = MiuixTheme.textStyles.footnote1,
@@ -2177,7 +2239,7 @@ private fun HistoryRow(
                         ?: MiuixTheme.colorScheme.onSurfaceContainerVariant,
                 )
             }
-            ScoreRules.displayFs(record.fs)?.let { sync ->
+            displaySyncStatus(record.fs)?.let { sync ->
                 Text(
                     text = sync,
                     style = MiuixTheme.textStyles.footnote2,
@@ -2705,6 +2767,10 @@ private fun String.displayChartType(): String = when (lowercase()) {
 private fun String.displayDifficulty(): String = when (lowercase()) {
     "remaster" -> "RE: MASTER"
     else -> uppercase()
+}
+
+private fun displaySyncStatus(value: String?): String? = ScoreRules.displayFs(value)?.let { display ->
+    if (display == "S") "SYNC" else display
 }
 
 private fun formatAchievement(value: Double): String = value

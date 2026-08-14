@@ -37,6 +37,10 @@ class AppPreferencesRepository(
         preferences[ShowScannerBoundingBoxesKey] ?: false
     }
 
+    val thirdPartyScoreSyncEnabled: Flow<Boolean> = context.appPreferencesDataStore.data.map { preferences ->
+        preferences[ThirdPartyScoreSyncEnabledKey] ?: false
+    }
+
     val catalogSortOption: Flow<CatalogSortOption> = context.appPreferencesDataStore.data.map { preferences ->
         preferences[CatalogSortOptionKey]
             ?.let { stored -> CatalogSortOption.entries.firstOrNull { it.name == stored } }
@@ -99,6 +103,12 @@ class AppPreferencesRepository(
         }
     }
 
+    suspend fun setThirdPartyScoreSyncEnabled(enabled: Boolean) {
+        context.appPreferencesDataStore.edit { preferences ->
+            preferences[ThirdPartyScoreSyncEnabledKey] = enabled
+        }
+    }
+
     suspend fun setCatalogSortOption(sortOption: CatalogSortOption) {
         context.appPreferencesDataStore.edit { preferences ->
             preferences[CatalogSortOptionKey] = sortOption.name
@@ -152,6 +162,7 @@ class AppPreferencesRepository(
         val ThemeColorSourceKey = stringPreferencesKey("theme_color_source")
         val ThemeCustomColorArgbKey = intPreferencesKey("theme_custom_color_argb")
         val ShowScannerBoundingBoxesKey = booleanPreferencesKey("show_scanner_bounding_boxes")
+        val ThirdPartyScoreSyncEnabledKey = booleanPreferencesKey("third_party_score_sync_enabled")
         val CatalogSortOptionKey = stringPreferencesKey("catalog_sort_option")
         val CatalogSortAscendingKey = booleanPreferencesKey("catalog_sort_ascending")
         val CatalogGridColumnsKey = intPreferencesKey("catalog_grid_columns")

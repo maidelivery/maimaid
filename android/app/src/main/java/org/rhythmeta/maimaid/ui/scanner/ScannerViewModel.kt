@@ -219,11 +219,11 @@ class ScannerViewModel(
         if (mutableState.value.scoreSaveStatus == ScoreSaveStatus.Saving) return
         viewModelScope.launch {
             mutableState.update { it.copy(scoreSaveStatus = ScoreSaveStatus.Saving) }
-            val status = runCatching { container.scoreRepository.saveScore(sheetKey, input) }
-                .fold(
-                    onSuccess = { ScoreSaveStatus.Saved },
-                    onFailure = { ScoreSaveStatus.Failed },
-                )
+            val result = runCatching { container.scoreRepository.saveScore(sheetKey, input) }
+            result.onSuccess { score ->
+                launch { container.scoreSyncService.syncAfterScoreSave(sheetKey, score) }
+            }
+            val status = if (result.isSuccess) ScoreSaveStatus.Saved else ScoreSaveStatus.Failed
             mutableState.update { it.copy(scoreSaveStatus = status) }
         }
     }

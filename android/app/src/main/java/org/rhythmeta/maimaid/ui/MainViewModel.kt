@@ -44,6 +44,12 @@ class MainViewModel(
         initialValue = false,
     )
 
+    val thirdPartyScoreSyncEnabled = container.appPreferencesRepository.thirdPartyScoreSyncEnabled.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = false,
+    )
+
     val catalogSortOption = container.appPreferencesRepository.catalogSortOption.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -167,6 +173,12 @@ class MainViewModel(
     fun setShowScannerBoundingBoxes(show: Boolean) {
         viewModelScope.launch {
             container.appPreferencesRepository.setShowScannerBoundingBoxes(show)
+        }
+    }
+
+    fun setThirdPartyScoreSyncEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            container.appPreferencesRepository.setThirdPartyScoreSyncEnabled(enabled)
         }
     }
 

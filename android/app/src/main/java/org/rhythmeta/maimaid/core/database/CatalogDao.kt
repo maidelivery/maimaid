@@ -37,6 +37,9 @@ interface CatalogDao {
     @Query("SELECT * FROM sheets WHERE sheetKey = :sheetKey LIMIT 1")
     suspend fun sheet(sheetKey: String): SheetEntity?
 
+    @Query("SELECT * FROM songs WHERE songIdentifier = :songIdentifier LIMIT 1")
+    suspend fun song(songIdentifier: String): SongEntity?
+
     @Query("SELECT * FROM sheets WHERE isRemoved = 0")
     suspend fun sheets(): List<SheetEntity>
 

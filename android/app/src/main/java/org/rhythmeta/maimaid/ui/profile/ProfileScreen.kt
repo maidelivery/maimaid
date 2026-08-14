@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.EmojiEmotions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -327,8 +328,10 @@ internal fun ProfileEditorSheet(
     var b15Text by remember { mutableStateOf("15") }
     var avatarPath by remember { mutableStateOf<String?>(null) }
     var stagedAvatarPath by remember { mutableStateOf<String?>(null) }
+    var avatarUrl by remember { mutableStateOf<String?>(null) }
     var clearAvatar by remember { mutableStateOf(false) }
     var avatarEditorBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var showPresetAvatarPicker by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val photoLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
@@ -367,9 +370,11 @@ internal fun ProfileEditorSheet(
         b35Text = (profile?.b35Count ?: 35).toString()
         b15Text = (profile?.b15Count ?: 15).toString()
         avatarPath = profile?.avatarPath
+        avatarUrl = profile?.avatarUrl
         stagedAvatarPath = null
         clearAvatar = false
         avatarEditorBitmap = null
+        showPresetAvatarPicker = false
     }
 
     val dismiss = {
@@ -389,6 +394,7 @@ internal fun ProfileEditorSheet(
             val committedAvatar = stagedAvatarPath?.let {
                 container.profileAvatarStore.commit(it, targetProfile.id)
             }
+            val replacesStoredAvatar = clearAvatar || committedAvatar != null || avatarPath != targetProfile.avatarPath
             container.profileRepository.save(
                 targetProfile.copy(
                     name = name,
@@ -398,17 +404,17 @@ internal fun ProfileEditorSheet(
                     avatarPath = when {
                         clearAvatar -> null
                         committedAvatar != null -> committedAvatar
-                        else -> targetProfile.avatarPath
+                        else -> avatarPath
                     },
                     avatarUrl = when {
                         clearAvatar || committedAvatar != null -> null
-                        else -> targetProfile.avatarUrl
+                        else -> avatarUrl
                     },
                     b35Count = b35Text.toIntOrNull()?.coerceAtLeast(1) ?: targetProfile.b35Count,
                     b15Count = b15Text.toIntOrNull()?.coerceAtLeast(1) ?: targetProfile.b15Count,
                 ),
             )
-            if (clearAvatar || committedAvatar != null) {
+            if (replacesStoredAvatar) {
                 container.profileAvatarStore.deleteStored(targetProfile.avatarPath)
             }
             container.profileCredentialStore.save(
@@ -467,7 +473,7 @@ internal fun ProfileEditorSheet(
             item {
                 ProfileAvatarEditor(
                     avatarPath = avatarPath,
-                    avatarUrl = profile?.avatarUrl?.takeUnless { clearAvatar },
+                    avatarUrl = avatarUrl?.takeUnless { clearAvatar },
                     onSelect = {
                         photoLauncher.launch(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
@@ -479,6 +485,7 @@ internal fun ProfileEditorSheet(
                         avatarPath = null
                         clearAvatar = true
                     },
+                    onChoosePreset = { showPresetAvatarPicker = true },
                 )
             }
             item {
@@ -585,6 +592,7 @@ internal fun ProfileEditorSheet(
                         container.profileAvatarStore.discard(stagedAvatarPath)
                         stagedAvatarPath = staged
                         avatarPath = staged
+                        avatarUrl = null
                         clearAvatar = false
                     }
                     avatarEditorBitmap = null
@@ -592,6 +600,20 @@ internal fun ProfileEditorSheet(
             },
         )
     }
+
+    PresetAvatarPickerDialog(
+        show = showPresetAvatarPicker,
+        repository = container.presetAvatarRepository,
+        onDismiss = { showPresetAvatarPicker = false },
+        onSelect = { presetAvatar ->
+            container.profileAvatarStore.discard(stagedAvatarPath)
+            stagedAvatarPath = null
+            avatarPath = null
+            avatarUrl = presetAvatar.imageUrl
+            clearAvatar = false
+            showPresetAvatarPicker = false
+        },
+    )
 }
 
 @Composable
@@ -600,6 +622,7 @@ private fun ProfileAvatarEditor(
     avatarUrl: String?,
     onSelect: () -> Unit,
     onClear: () -> Unit,
+    onChoosePreset: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -623,6 +646,11 @@ private fun ProfileAvatarEditor(
                 Icon(Icons.Rounded.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(7.dp))
                 Text(stringResource(R.string.profile_change_avatar))
+            }
+            Button(onClick = onChoosePreset) {
+                Icon(Icons.Rounded.EmojiEmotions, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(7.dp))
+                Text(stringResource(R.string.profile_preset_avatar))
             }
             if (avatarPath != null || avatarUrl != null) {
                 Button(onClick = onClear) {

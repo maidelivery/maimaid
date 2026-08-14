@@ -72,6 +72,44 @@ class BackendSyncCoordinator(
         )
     }
 
+    /** Mirrors iOS's score-save push without rewriting profile metadata. */
+    suspend fun pushScoreUpdate(sheetKey: String, score: ScoreEntity) = syncMutex.withLock {
+        if (!sessionManager.state.value.isAuthenticated) return@withLock
+        val sheet = database.catalogDao().sheet(sheetKey) ?: return@withLock
+        val scoreEntry = score.toEntry(sheet)
+        val payload = BackendSyncPushPayload(
+            idempotencyKey = UUID.randomUUID().toString(),
+            profileUpserts = emptyList(),
+            scoreUpserts = listOf(BackendScoreSet(score.profileId, listOf(scoreEntry))),
+            playRecordUpserts = listOf(
+                BackendRecordSet(
+                    profileId = score.profileId,
+                    records = listOf(
+                        BackendPlayRecordEntry(
+                            songIdentifier = scoreEntry.songIdentifier,
+                            songId = scoreEntry.songId,
+                            type = scoreEntry.type,
+                            difficulty = scoreEntry.difficulty,
+                            achievements = scoreEntry.achievements,
+                            rank = scoreEntry.rank,
+                            dxScore = scoreEntry.dxScore,
+                            fc = scoreEntry.fc,
+                            fs = scoreEntry.fs,
+                            playTime = formatTime(System.currentTimeMillis()),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val responseElement = sessionManager.authorizedRequest(
+            path = "v1/sync:push",
+            method = "POST",
+            body = json.encodeToJsonElement(BackendSyncPushPayload.serializer(), payload),
+        )
+        val response = json.decodeFromJsonElement(BackendSyncPushResponse.serializer(), responseElement)
+        syncStateStore.update { current -> current.copy(lastRevision = response.latestRevision) }
+    }
+
     suspend fun previewImportConflicts(profileId: String): ImportSyncConflictPreview = syncMutex.withLock {
         sessionManager.state.value.user ?: error("Authentication required.")
         val state = syncStateStore.load()
@@ -201,9 +239,12 @@ class BackendSyncCoordinator(
         state.ownerUserId?.takeIf { it != user.id && hasLocalData() }?.let {
             error("Account data conflict requires resolution.")
         }
+        val localProfiles = database.profileDao().profiles()
+        if (localProfiles.isEmpty()) return@withLock
+        removeRemoteProfilesAbsentLocally(localProfiles.mapTo(mutableSetOf()) { it.id })
+        syncStateStore.update { current -> current.copy(pendingMutation = null) }
+        pushAll(forceProfiles = true, overwriteProfileMetadata = true)
         pullAndApply(sinceRevision = "0", replace = false)
-        pushAll(forceProfiles = false)
-        pullAndApply(sinceRevision = syncStateStore.load().lastRevision, replace = false)
         recordSyncedState(user.id)
     }
 
@@ -631,6 +672,7 @@ class BackendSyncCoordinator(
         var uploadedAny = false
         profileDao.profiles().forEach { profile ->
             val file = profile.avatarPath?.let(::File)?.takeIf(File::isFile) ?: return@forEach
+            if (PresetAvatarUrl.isPreset(profile.avatarUrl)) return@forEach
             if (profile.avatarUrl != null) return@forEach
             val contentType = if (file.extension.equals("png", true)) "image/png" else "image/jpeg"
             val expectedVersion = syncStateStore.load().remoteUpdatedAtByProfile[profile.id]
@@ -668,6 +710,20 @@ class BackendSyncCoordinator(
             )
         }
         profiles.forEach { profile ->
+            sessionManager.authorizedRequest(path = "v1/profiles/${profile.id}", method = "DELETE")
+        }
+    }
+
+    private suspend fun removeRemoteProfilesAbsentLocally(localProfileIds: Set<String>) {
+        val profilesToDelete = fetchRemoteProfiles().filter { it.id !in localProfileIds }
+        profilesToDelete.filter(BackendRemoteProfile::isActive).forEach { profile ->
+            sessionManager.authorizedRequest(
+                path = "v1/profiles/${profile.id}",
+                method = "PATCH",
+                body = kotlinx.serialization.json.buildJsonObject { put("isActive", false) },
+            )
+        }
+        profilesToDelete.forEach { profile ->
             sessionManager.authorizedRequest(path = "v1/profiles/${profile.id}", method = "DELETE")
         }
     }
