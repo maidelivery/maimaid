@@ -42,6 +42,7 @@ import {
 	parseBundleSongs,
 	parseCatalogVersionItems,
 	parseSongIdItems,
+	resolveProfileAvatarUrl,
 	songSnapshotMatchesSearch,
 } from "@/lib/app-helpers";
 import type {
@@ -360,15 +361,8 @@ function App() {
 		[activeProfileId, profiles],
 	);
 	const activeProfileAvatarUrl = useMemo(() => {
-		// iOS uploads populate `avatarObjectKey` only, so fall back to the backend's
-		// avatar endpoint whenever an explicit `avatarUrl` was never set.
 		const profile = selectedProfile ?? enabledProfile;
-		if (!profile) return null;
-		if (profile.avatarUrl) return profile.avatarUrl;
-		if (profile.avatarObjectKey && BACKEND_URL) {
-			return `${BACKEND_URL}/v1/profiles/${encodeURIComponent(profile.id)}/avatar`;
-		}
-		return null;
+		return profile ? resolveProfileAvatarUrl(profile) : null;
 	}, [enabledProfile, selectedProfile]);
 	const {
 		songTitleByIdentifier,
@@ -1510,7 +1504,6 @@ function App() {
 			tab={tab}
 			isAdmin={isAdmin}
 			sessionUser={session.user}
-			enabledProfile={enabledProfile}
 			selectedProfile={selectedProfile}
 			activeProfileAvatarUrl={activeProfileAvatarUrl}
 			mfaStatus={mfaStatus}

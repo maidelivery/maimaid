@@ -18,7 +18,7 @@ const backendOrigin = resolveBackendOrigin();
 const connectSources = ["'self'"];
 // Profile avatars are streamed from the backend (`GET /v1/profiles/:id/avatar`),
 // so the backend origin has to be an allowed image source too.
-const imageSources = ["'self'", "data:", "https://dp4p6x0xfi5o9.cloudfront.net"];
+const imageSources = ["'self'", "data:", "https://dp4p6x0xfi5o9.cloudfront.net", "https://assets2.lxns.net"];
 if (backendOrigin) {
 	connectSources.push(backendOrigin);
 	imageSources.push(backendOrigin);

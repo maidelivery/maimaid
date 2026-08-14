@@ -1,5 +1,5 @@
 import type { Alias, Sheet as SongSheet, Song, SongFilterSettings } from "@/components/songs/types";
-import type { CatalogVersionItem, SongFilterSnapshot, SongIdItem } from "@/lib/app-types";
+import type { CatalogVersionItem, Profile, SongFilterSnapshot, SongIdItem } from "@/lib/app-types";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
 const PASSWORD_COMPLEXITY_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,}$/u;
@@ -30,6 +30,32 @@ export const DEFAULT_SONG_FILTERS: SongFilterSettings = {
 	showFavoritesOnly: false,
 	hideDeletedSongs: false,
 };
+
+export function resolveProfileAvatarUrl(
+	profile: Pick<Profile, "id" | "avatarUrl" | "avatarObjectKey">,
+	backendUrl = BACKEND_URL,
+): string | null {
+	const storedUrl = profile.avatarUrl?.trim() ?? "";
+	const normalizedBackendUrl = backendUrl.trim().replace(/\/+$/u, "");
+	if (profile.avatarObjectKey && normalizedBackendUrl) {
+		const avatarPath = `/v1/profiles/${encodeURIComponent(profile.id)}/avatar`;
+		const currentUrl = `${normalizedBackendUrl}${avatarPath}`;
+		if (!storedUrl) {
+			return currentUrl;
+		}
+
+		try {
+			const parsedStoredUrl = new URL(storedUrl);
+			if (parsedStoredUrl.pathname === avatarPath) {
+				return `${currentUrl}${parsedStoredUrl.search}`;
+			}
+		} catch {
+			// Preserve non-URL values for the existing fallback behavior.
+		}
+	}
+
+	return storedUrl || null;
+}
 
 export function getLocalStorageItem(key: string): string | null {
 	if (typeof window === "undefined") {
