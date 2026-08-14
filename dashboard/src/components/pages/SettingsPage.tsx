@@ -38,7 +38,6 @@ type ProfileSummary = {
 	id: string;
 	name: string;
 	avatarUrl?: string | null;
-	isActive: boolean;
 };
 
 type PasskeyCredential = {
@@ -59,7 +58,6 @@ type SessionUser = {
 
 type SettingsPageProps = {
 	sessionUser: SessionUser;
-	enabledProfile: ProfileSummary | null;
 	selectedProfile: ProfileSummary | null;
 	profiles: ProfileSummary[];
 	activeProfileId: string;
@@ -121,7 +119,6 @@ function sanitizeBackupCode(value: string) {
 
 export function SettingsPage({
 	sessionUser,
-	enabledProfile,
 	selectedProfile,
 	profiles,
 	activeProfileId,
@@ -346,7 +343,7 @@ export function SettingsPage({
 										<SelectGroup>
 											{profiles.map((profile) => (
 												<SelectItem key={profile.id} value={profile.id}>
-													{profile.name} {profile.isActive ? ` ${t("iosActiveLabel")}` : ""}
+													{profile.name}
 												</SelectItem>
 											))}
 										</SelectGroup>
@@ -362,10 +359,6 @@ export function SettingsPage({
 									<p className="truncate font-mono text-xs text-muted-foreground">
 										{selectedProfile?.id ?? t("pleaseSelectViewProfile")}
 									</p>
-								</InfoField>
-								<InfoField label={t("iosEnabledProfile")}>
-									<p className="truncate text-sm font-medium">{enabledProfile?.name ?? t("noEnabledProfile")}</p>
-									<p className="truncate font-mono text-xs text-muted-foreground">{enabledProfile?.id ?? t("manageOnIos")}</p>
 								</InfoField>
 							</div>
 

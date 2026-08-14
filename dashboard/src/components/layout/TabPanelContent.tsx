@@ -32,7 +32,6 @@ type TabPanelContentProps = {
 	tab: string;
 	isAdmin: boolean;
 	sessionUser: Session["user"];
-	enabledProfile: Profile | null;
 	selectedProfile: Profile | null;
 	activeProfileAvatarUrl: string | null;
 	mfaStatus: MfaStatus | null;
@@ -153,7 +152,6 @@ export function TabPanelContent(props: TabPanelContentProps) {
 		tab,
 		isAdmin,
 		sessionUser,
-		enabledProfile,
 		selectedProfile,
 		activeProfileAvatarUrl,
 		mfaStatus,
@@ -388,7 +386,6 @@ export function TabPanelContent(props: TabPanelContentProps) {
 		return (
 			<SettingsPage
 				sessionUser={sessionUser}
-				enabledProfile={enabledProfile}
 				selectedProfile={selectedProfile}
 				profiles={profiles}
 				activeProfileId={activeProfileId}

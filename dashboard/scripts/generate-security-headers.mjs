@@ -29,7 +29,7 @@ if (backendOrigin) {
 // Profile avatars are streamed by the backend from R2 via
 // GET /v1/profiles/:profileId/avatar, so the backend origin must be an
 // allowed image source too, not just a connect-src.
-const imageSources = ["'self'", "data:", "https://dp4p6x0xfi5o9.cloudfront.net"];
+const imageSources = ["'self'", "data:", "https://dp4p6x0xfi5o9.cloudfront.net", "https://assets2.lxns.net"];
 if (backendOrigin) {
 	imageSources.push(backendOrigin);
 }
