@@ -94,86 +94,91 @@ internal fun CommunityAliasScreen(
         }
     }
 
-    PullToRefresh(
-        isRefreshing = state.isLoading,
-        onRefresh = viewModel::refresh,
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 16.dp,
-                    top = contentTopPadding + 12.dp,
-                    end = 16.dp,
-                    bottom = 36.dp,
-                ),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                when {
-                    !state.isConfigured -> item("unconfigured") {
-                        CommunityAliasMessageCard(
-                            title = stringResource(R.string.community_alias_unconfigured_title),
-                            message = stringResource(R.string.community_alias_unconfigured_message),
-                        )
-                    }
-                    !state.isAuthenticated -> item("login") {
-                        CommunityAliasMessageCard(
-                            title = stringResource(R.string.community_alias_login_title),
-                            message = stringResource(R.string.community_alias_login_message),
-                            action = stringResource(R.string.community_alias_refresh_session),
-                            onAction = viewModel::checkSession,
-                        )
-                    }
-                    state.isLoading -> item("loading") {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 72.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
-                    state.items.isEmpty() -> item("empty") {
-                        CommunityAliasMessageCard(
-                            title = stringResource(R.string.community_alias_empty_title),
-                            message = stringResource(R.string.community_alias_empty_message),
-                        )
-                    }
-                    else -> groups.forEach { (songIdentifier, candidates) ->
-                        val song = songsById[songIdentifier]
-                        item(key = "header-$songIdentifier") {
-                            CommunityAliasSongHeader(
-                                song = song,
-                                fallbackTitle = songIdentifier,
-                                count = candidates.size,
-                                container = container,
+    Box(modifier = Modifier.fillMaxSize()) {
+        PullToRefresh(
+            isRefreshing = state.isLoading,
+            onRefresh = viewModel::refresh,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = contentTopPadding),
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        top = contentTopPadding + 12.dp,
+                        end = 16.dp,
+                        bottom = 36.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    when {
+                        !state.isConfigured -> item("unconfigured") {
+                            CommunityAliasMessageCard(
+                                title = stringResource(R.string.community_alias_unconfigured_title),
+                                message = stringResource(R.string.community_alias_unconfigured_message),
                             )
                         }
-                        items(
-                            items = candidates,
-                            key = CommunityAliasVotingBoardItem::candidateId,
-                        ) { item ->
-                            CommunityAliasCandidateCard(
-                                item = item,
-                                isVoting = state.inFlightCandidateId == item.candidateId,
-                                onVote = { support -> viewModel.vote(item.candidateId, support) },
+                        !state.isAuthenticated -> item("login") {
+                            CommunityAliasMessageCard(
+                                title = stringResource(R.string.community_alias_login_title),
+                                message = stringResource(R.string.community_alias_login_message),
+                                action = stringResource(R.string.community_alias_refresh_session),
+                                onAction = viewModel::checkSession,
                             )
+                        }
+                        state.isLoading -> item("loading") {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 72.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                        state.items.isEmpty() -> item("empty") {
+                            CommunityAliasMessageCard(
+                                title = stringResource(R.string.community_alias_empty_title),
+                                message = stringResource(R.string.community_alias_empty_message),
+                            )
+                        }
+                        else -> groups.forEach { (songIdentifier, candidates) ->
+                            val song = songsById[songIdentifier]
+                            item(key = "header-$songIdentifier") {
+                                CommunityAliasSongHeader(
+                                    song = song,
+                                    fallbackTitle = songIdentifier,
+                                    count = candidates.size,
+                                    container = container,
+                                )
+                            }
+                            items(
+                                items = candidates,
+                                key = CommunityAliasVotingBoardItem::candidateId,
+                            ) { item ->
+                                CommunityAliasCandidateCard(
+                                    item = item,
+                                    isVoting = state.inFlightCandidateId == item.candidateId,
+                                    onVote = { support -> viewModel.vote(item.candidateId, support) },
+                                )
+                            }
                         }
                     }
                 }
+                SongListScrollBar(
+                    state = listState,
+                    trackPadding = PaddingValues(top = contentTopPadding + 12.dp, bottom = 36.dp),
+                )
             }
-            SongListScrollBar(
-                state = listState,
-                trackPadding = PaddingValues(top = contentTopPadding + 12.dp, bottom = 36.dp),
-            )
-            SnackbarHost(
-                state = snackbarHostState,
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
         }
+        SnackbarHost(
+            state = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+        )
     }
 }
 
