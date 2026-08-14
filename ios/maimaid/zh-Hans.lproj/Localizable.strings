@@ -465,6 +465,10 @@
 "settings.cloud.section.autoBackup" = "自动备份";
 "settings.cloud.backup" = "备份到云端";
 "settings.cloud.restore" = "从云端恢复";
+"settings.cloud.restore.localProfiles.title" = "发现本地档案";
+"settings.cloud.restore.localProfiles.message" = "部分本地档案未储存在云端。本次恢复可以保留它们，也可以连同本地成绩和游玩记录一起删除。";
+"settings.cloud.restore.localProfiles.keep" = "保留本地档案";
+"settings.cloud.restore.localProfiles.remove" = "删除本地档案";
 "settings.cloud.syncing" = "正在同步...";
 "settings.cloud.logout" = "退出登录";
 "settings.cloud.login.title" = "登录云端";

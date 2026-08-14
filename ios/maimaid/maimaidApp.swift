@@ -35,9 +35,6 @@ struct maimaidApp: App {
                 .onOpenURL { url in
                     BackendSessionManager.shared.handleAuthRedirect(url)
                 }
-                .task {
-                    await BackendLaunchBackup.backupOnce(container: sharedModelContainer)
-                }
         }
         .modelContainer(sharedModelContainer)
         .onChange(of: scenePhase) { _, newPhase in
@@ -65,42 +62,6 @@ struct maimaidApp: App {
                     container: sharedModelContainer
                 )
             }
-        }
-    }
-}
-
-@MainActor
-enum BackendLaunchBackup {
-    private static var hasStartedBackup = false
-
-    static func backupOnce(container: ModelContainer) async {
-        guard !hasStartedBackup,
-              !Task.isCancelled,
-              BackendSessionManager.shared.isConfigured else {
-            return
-        }
-
-        await BackendSessionManager.shared.checkSession()
-        guard !Task.isCancelled,
-              BackendSessionManager.shared.isAuthenticated,
-              let userId = BackendSessionManager.shared.currentUser?.id else {
-            return
-        }
-
-        let context = ModelContext(container)
-        guard !AccountDataResolutionCoordinator.shared.hasPendingResolution(
-            context: context,
-            currentUserId: userId
-        ) else {
-            return
-        }
-
-        hasStartedBackup = true
-
-        do {
-            try await BackendCloudSyncService.backupToCloud(context: context)
-        } catch {
-            print("BackendLaunchBackup: backup failed: \(error)")
         }
     }
 }

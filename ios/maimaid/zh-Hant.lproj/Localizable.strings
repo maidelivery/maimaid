@@ -464,6 +464,10 @@
 "settings.cloud.section.autoBackup" = "自動備份";
 "settings.cloud.backup" = "備份到雲端";
 "settings.cloud.restore" = "從雲端恢復";
+"settings.cloud.restore.localProfiles.title" = "發現本機檔案";
+"settings.cloud.restore.localProfiles.message" = "部分本機檔案未儲存在雲端。可在本次恢復中保留，或連同本機成績與遊玩紀錄一起移除。";
+"settings.cloud.restore.localProfiles.keep" = "保留本機檔案";
+"settings.cloud.restore.localProfiles.remove" = "移除本機檔案";
 "settings.cloud.syncing" = "正在同步...";
 "settings.cloud.logout" = "退出登入";
 "settings.cloud.login.title" = "登入雲端";

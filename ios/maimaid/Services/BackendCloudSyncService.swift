@@ -56,6 +56,12 @@ struct CloudSnapshotPlayRecord {
     let sheet: CloudSnapshotSheet?
 }
 
+struct CloudRestoreLocalProfile: Identifiable {
+    let id: UUID
+    let name: String
+    let server: String
+}
+
 private struct BackendProfilesResponse: Decodable {
     let profiles: [BackendRemoteProfile]
 }
@@ -436,8 +442,34 @@ enum BackendCloudSyncService {
         }
     }
 
-    static func restoreFromCloud(context: ModelContext) async throws {
-        try await BackendIncrementalSyncService.pullUpdates(context: context, force: true)
+    static func previewLocalProfilesAbsentFromCloud(
+        context: ModelContext
+    ) async throws -> [CloudRestoreLocalProfile] {
+        guard BackendSessionManager.shared.isAuthenticated else {
+            throw BackendAPIError.unauthorized
+        }
+
+        let response: BackendProfilesResponse = try await BackendAPIClient.request(
+            path: "v1/profiles",
+            method: "GET",
+            authentication: .required
+        )
+        let cloudProfileIds = Set(response.profiles.compactMap { UUID(uuidString: $0.id) })
+
+        return try context.fetch(FetchDescriptor<UserProfile>())
+            .filter { !cloudProfileIds.contains($0.id) }
+            .map { CloudRestoreLocalProfile(id: $0.id, name: $0.name, server: $0.server) }
+    }
+
+    static func restoreFromCloud(
+        context: ModelContext,
+        removeLocalProfilesAbsentFromCloud: Bool = false
+    ) async throws {
+        try await BackendIncrementalSyncService.pullUpdates(
+            context: context,
+            force: true,
+            removeLocalProfilesAbsentFromSnapshot: removeLocalProfilesAbsentFromCloud
+        )
     }
 
     private static func ensureSyncConfig(context: ModelContext) -> SyncConfig {

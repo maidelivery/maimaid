@@ -24,7 +24,9 @@ struct BackendAuthView: View {
     @State private var isSyncing = false
     @State private var isResolvingAccountConflict = false
     @State private var showingLogoutOptions = false
+    @State private var showingRestoreProfileOptions = false
     @State private var conflictState: AccountConflictState?
+    @State private var localProfilesAbsentFromCloud: [CloudRestoreLocalProfile] = []
 
     @State private var toastMessage: String?
     @State private var isErrorToast = false
@@ -170,7 +172,21 @@ struct BackendAuthView: View {
                     icon: "icloud.and.arrow.down.fill",
                     tint: .green
                 ) {
-                    Task { await performRestore() }
+                    Task { await prepareRestore() }
+                }
+                .confirmationDialog(
+                    "settings.cloud.restore.localProfiles.title",
+                    isPresented: $showingRestoreProfileOptions
+                ) {
+                    Button("settings.cloud.restore.localProfiles.keep") {
+                        Task { await performRestore(removeLocalProfilesAbsentFromCloud: false) }
+                    }
+                    Button("settings.cloud.restore.localProfiles.remove", role: .destructive) {
+                        Task { await performRestore(removeLocalProfilesAbsentFromCloud: true) }
+                    }
+                    Button("userProfile.cancel", role: .cancel) {}
+                } message: {
+                    Text("settings.cloud.restore.localProfiles.message")
                 }
 
                 if isSyncing {
@@ -527,14 +543,40 @@ struct BackendAuthView: View {
     }
 
     @MainActor
-    private func performRestore() async {
+    private func prepareRestore() async {
+        guard !isBusy else { return }
+
+        isSyncing = true
+        do {
+            localProfilesAbsentFromCloud = try await BackendCloudSyncService.previewLocalProfilesAbsentFromCloud(
+                context: modelContext
+            )
+            isSyncing = false
+            if localProfilesAbsentFromCloud.isEmpty {
+                await performRestore(removeLocalProfilesAbsentFromCloud: false)
+            } else {
+                showingRestoreProfileOptions = true
+            }
+        } catch {
+            isSyncing = false
+            let detail = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            showToast(message: String(localized: "settings.cloud.message.restoreFailed") + ": " + detail, error: true)
+        }
+    }
+
+    @MainActor
+    private func performRestore(removeLocalProfilesAbsentFromCloud: Bool) async {
         guard !isBusy else { return }
 
         isSyncing = true
         defer { isSyncing = false }
 
         do {
-            try await BackendCloudSyncService.restoreFromCloud(context: modelContext)
+            try await BackendCloudSyncService.restoreFromCloud(
+                context: modelContext,
+                removeLocalProfilesAbsentFromCloud: removeLocalProfilesAbsentFromCloud
+            )
+            localProfilesAbsentFromCloud = []
             showToast(message: "settings.cloud.message.restoreSuccess")
         } catch {
             let detail = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription

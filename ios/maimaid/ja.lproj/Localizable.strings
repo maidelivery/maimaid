@@ -464,6 +464,10 @@
 "settings.cloud.section.autoBackup" = "自動バックアップ";
 "settings.cloud.backup" = "クラウドへのバックアップ";
 "settings.cloud.restore" = "クラウドから復元";
+"settings.cloud.restore.localProfiles.title" = "ローカルプロフィールがあります";
+"settings.cloud.restore.localProfiles.message" = "クラウドにないローカルプロフィールがあります。今回の復元で保持するか、ローカルのスコアとプレイ履歴を含めて削除できます。";
+"settings.cloud.restore.localProfiles.keep" = "ローカルプロフィールを保持";
+"settings.cloud.restore.localProfiles.remove" = "ローカルプロフィールを削除";
 "settings.cloud.syncing" = "同期中...";
 "settings.cloud.logout" = "ログアウト";
 "settings.cloud.login.title" = "クラウドログイン";
