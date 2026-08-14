@@ -41,6 +41,11 @@ fun CatalogSyncBanner(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 when (status) {
+                    CatalogSyncStatus.Idle -> Icon(
+                        imageVector = Icons.Rounded.Info,
+                        contentDescription = null,
+                        tint = MiuixTheme.colorScheme.primary,
+                    )
                     CatalogSyncStatus.Checking,
                     is CatalogSyncStatus.Downloading,
                     -> CircularProgressIndicator(size = 20.dp, strokeWidth = 3.dp)
@@ -76,8 +81,9 @@ fun CatalogSyncBanner(
 
 @Composable
 private fun syncStatusText(status: CatalogSyncStatus): String = when (status) {
+    CatalogSyncStatus.Idle -> stringResource(R.string.catalog_sync_idle)
     CatalogSyncStatus.Checking -> stringResource(R.string.catalog_sync_checking)
-    is CatalogSyncStatus.Downloading -> stringResource(R.string.catalog_sync_downloading, status.version)
+    is CatalogSyncStatus.Downloading -> catalogSyncStageText(status.progress.stage)
     is CatalogSyncStatus.Ready -> stringResource(R.string.catalog_sync_ready, status.version)
     is CatalogSyncStatus.Failed -> stringResource(R.string.catalog_sync_failed)
 }

@@ -23,6 +23,7 @@ import org.rhythmeta.maimaid.core.data.DanRepository
 import org.rhythmeta.maimaid.core.data.DanStore
 import org.rhythmeta.maimaid.core.data.PlateProgressRepository
 import org.rhythmeta.maimaid.core.data.PresetAvatarRepository
+import org.rhythmeta.maimaid.core.data.PresetAvatarImageStore
 import org.rhythmeta.maimaid.core.data.ProfileAvatarStore
 import org.rhythmeta.maimaid.core.data.ProfileCredentialStore
 import org.rhythmeta.maimaid.core.data.ProfileRepository
@@ -47,12 +48,14 @@ class AppContainer(context: Context) {
         applicationContext,
         MaimaidDatabase::class.java,
         "maimaid.db",
-    ).setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+    ).addMigrations(MaimaidDatabase.Migration1To2)
+        .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
         .build()
 
     val appPreferencesRepository = AppPreferencesRepository(applicationContext)
     val onnxSessionFactory = OnnxSessionFactory(applicationContext)
     val coverImageStore = CoverImageStore(applicationContext)
+    val presetAvatarImageStore = PresetAvatarImageStore(applicationContext)
     val profileAvatarStore = ProfileAvatarStore(applicationContext)
     val profileCredentialStore = ProfileCredentialStore(applicationContext)
     private val backendApiClient = BackendApiClient(BuildConfig.BACKEND_URL, json)
@@ -81,6 +84,9 @@ class AppContainer(context: Context) {
     val presetAvatarRepository = PresetAvatarRepository(
         apiClient = backendApiClient,
         json = json,
+        database = database,
+        avatarDao = database.presetAvatarDao(),
+        imageStore = presetAvatarImageStore,
     )
 
     val scoreRepository = ScoreRepository(
@@ -98,6 +104,7 @@ class AppContainer(context: Context) {
         client = StaticBundleClient(BuildConfig.BACKEND_URL, json),
         syncStateStore = CatalogSyncStateStore(applicationContext),
         coverImageStore = coverImageStore,
+        presetAvatarRepository = presetAvatarRepository,
         chartFitStore = ChartFitStore(applicationContext, json),
         danStore = DanStore(applicationContext, json),
     )
@@ -137,6 +144,7 @@ class AppContainer(context: Context) {
         apiClient = backendApiClient,
         syncStateStore = backendSyncStateStore,
         profileAvatarStore = profileAvatarStore,
+        profileCredentialStore = profileCredentialStore,
         json = json,
     )
 

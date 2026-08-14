@@ -91,6 +91,7 @@ import org.rhythmeta.maimaid.ui.dan.DanPageSwitcher
 import org.rhythmeta.maimaid.ui.dan.DanRegularPage
 import org.rhythmeta.maimaid.ui.navigation.AppDetail
 import org.rhythmeta.maimaid.ui.navigation.RootDestination
+import org.rhythmeta.maimaid.ui.onboarding.InitialCatalogGate
 import org.rhythmeta.maimaid.ui.profile.ProfileEditorSheet
 import org.rhythmeta.maimaid.ui.random.RandomSongSessionState
 import org.rhythmeta.maimaid.ui.recommendation.RecommendationNewPage
@@ -126,12 +127,21 @@ fun MaimaidApp(
     onThemeCustomColorChange: (Int) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val initialCatalogState by viewModel.initialCatalogState.collectAsStateWithLifecycle()
     val showScannerBoundingBoxes by viewModel.showScannerBoundingBoxes.collectAsStateWithLifecycle()
     val thirdPartyScoreSyncEnabled by viewModel.thirdPartyScoreSyncEnabled.collectAsStateWithLifecycle()
     val catalogSortOption by viewModel.catalogSortOption.collectAsStateWithLifecycle()
     val catalogSortAscending by viewModel.catalogSortAscending.collectAsStateWithLifecycle()
     val catalogGridColumns by viewModel.catalogGridColumns.collectAsStateWithLifecycle()
     val catalogHideUnavailableSongs by viewModel.catalogHideUnavailableSongs.collectAsStateWithLifecycle()
+    if (initialCatalogState != InitialCatalogState.Ready) {
+        InitialCatalogGate(
+            state = initialCatalogState,
+            syncStatus = uiState.catalogSyncStatus,
+            onStartDownload = viewModel::startInitialCatalogSync,
+        )
+        return
+    }
     var destination by rememberSaveable { mutableStateOf(RootDestination.Home) }
     var displayedNonHomeDestination by rememberSaveable {
         mutableStateOf(destination.takeUnless { it == RootDestination.Home })

@@ -1,9 +1,6 @@
 package org.rhythmeta.maimaid.ui.settings
 
-import android.content.ActivityNotFoundException
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,9 +49,11 @@ import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.BackendAccountConflict
 import org.rhythmeta.maimaid.core.data.BackendAccountResolution
 import org.rhythmeta.maimaid.core.data.BackendAuthUser
+import org.rhythmeta.maimaid.core.data.BackendCloudRestorePreview
 import org.rhythmeta.maimaid.core.data.BackendProfileConflictException
 import org.rhythmeta.maimaid.core.data.BackendSessionNotice
 import org.rhythmeta.maimaid.core.data.BackendWebAuthMode
+import org.rhythmeta.maimaid.ui.common.openInAppBrowser
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -86,11 +85,48 @@ fun BackendAuthScreen(container: AppContainer) {
     var operation by remember { mutableStateOf<CloudOperation?>(null) }
     var accountConflict by remember { mutableStateOf<BackendAccountConflict?>(null) }
     var profileConflict by remember { mutableStateOf<BackendProfileConflictException?>(null) }
+    var restorePreview by remember { mutableStateOf<BackendCloudRestorePreview?>(null) }
     var showLogoutOptions by remember { mutableStateOf(false) }
 
     fun showMessage(message: String) {
         scope.launch {
             snackbar.showSnackbar(message, duration = SnackbarDuration.Custom(3_000))
+        }
+    }
+
+    val restoreSucceeded = stringResource(R.string.cloud_message_restore_success)
+
+    fun performRestore(removeLocalProfilesAbsentFromCloud: Boolean) {
+        scope.launch {
+            operation = CloudOperation.Restore
+            runCatching {
+                container.backendSyncCoordinator.restore(removeLocalProfilesAbsentFromCloud)
+            }
+                .onSuccess { showMessage(restoreSucceeded) }
+                .onFailure { error ->
+                    if (error is BackendProfileConflictException) profileConflict = error
+                    else showMessage(error.localizedMessage ?: error.javaClass.simpleName)
+                }
+            operation = null
+        }
+    }
+
+    fun prepareRestore() {
+        scope.launch {
+            operation = CloudOperation.Restore
+            runCatching { container.backendSyncCoordinator.previewRestore() }
+                .onSuccess { preview ->
+                    operation = null
+                    if (preview.localOnlyProfiles.isEmpty()) {
+                        performRestore(removeLocalProfilesAbsentFromCloud = false)
+                    } else {
+                        restorePreview = preview
+                    }
+                }
+                .onFailure { error ->
+                    operation = null
+                    showMessage(error.localizedMessage ?: error.javaClass.simpleName)
+                }
         }
     }
 
@@ -165,7 +201,6 @@ fun BackendAuthScreen(container: AppContainer) {
                 }
                 item {
                     val backupSucceeded = stringResource(R.string.cloud_message_backup_success)
-                    val restoreSucceeded = stringResource(R.string.cloud_message_restore_success)
                     CloudSection(stringResource(R.string.cloud_sync_section)) {
                         CloudActionRow(
                             icon = Icons.Rounded.CloudUpload,
@@ -188,18 +223,7 @@ fun BackendAuthScreen(container: AppContainer) {
                             icon = Icons.Rounded.CloudDownload,
                             title = stringResource(R.string.cloud_restore),
                             enabled = operation == null && accountConflict == null,
-                            onClick = {
-                                scope.launch {
-                                    operation = CloudOperation.Restore
-                                    runCatching { container.backendSyncCoordinator.restore() }
-                                        .onSuccess { showMessage(restoreSucceeded) }
-                                        .onFailure { error ->
-                                            if (error is BackendProfileConflictException) profileConflict = error
-                                            else showMessage(error.localizedMessage ?: error.javaClass.simpleName)
-                                        }
-                                    operation = null
-                                }
-                            },
+                            onClick = ::prepareRestore,
                         )
                         if (operation == CloudOperation.Backup || operation == CloudOperation.Restore) {
                             Column(
@@ -278,6 +302,22 @@ fun BackendAuthScreen(container: AppContainer) {
                         .onFailure { showMessage(it.localizedMessage ?: it.javaClass.simpleName) }
                     operation = null
                 }
+            },
+        )
+    }
+    restorePreview?.let { preview ->
+        RestoreLocalProfilesDialog(
+            show = true,
+            profileCount = preview.localOnlyProfiles.size,
+            isApplying = operation == CloudOperation.Restore,
+            onDismiss = { restorePreview = null },
+            onKeep = {
+                restorePreview = null
+                performRestore(removeLocalProfilesAbsentFromCloud = false)
+            },
+            onRemove = {
+                restorePreview = null
+                performRestore(removeLocalProfilesAbsentFromCloud = true)
             },
         )
     }
@@ -446,6 +486,46 @@ private fun ProfileConflictDialog(
 }
 
 @Composable
+private fun RestoreLocalProfilesDialog(
+    show: Boolean,
+    profileCount: Int,
+    isApplying: Boolean,
+    onDismiss: () -> Unit,
+    onKeep: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    WindowDialog(
+        show = show,
+        title = stringResource(R.string.cloud_restore_local_profiles_title),
+        summary = stringResource(R.string.cloud_restore_local_profiles_summary, profileCount),
+        onDismissRequest = onDismiss,
+        outsideMargin = DpSize(24.dp, 24.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = onKeep,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isApplying,
+            ) {
+                Text(stringResource(R.string.cloud_restore_keep_local_profiles))
+            }
+            Button(
+                onClick = onRemove,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isApplying,
+                colors = ButtonDefaults.buttonColors(
+                    color = MiuixTheme.colorScheme.errorContainer,
+                    contentColor = MiuixTheme.colorScheme.onErrorContainer,
+                ),
+            ) {
+                Text(stringResource(R.string.cloud_restore_remove_local_profiles))
+            }
+            if (isApplying) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+    }
+}
+
+@Composable
 private fun ConflictIdentityRow(title: String, value: String) {
     Row(
         modifier = Modifier
@@ -526,9 +606,7 @@ private fun openWebAuth(
         onError(context.getString(R.string.cloud_unconfigured))
         return
     }
-    try {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-    } catch (_: ActivityNotFoundException) {
+    if (!context.openInAppBrowser(url)) {
         onError(context.getString(R.string.cloud_browser_unavailable))
     }
 }

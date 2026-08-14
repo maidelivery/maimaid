@@ -61,6 +61,7 @@ import kotlinx.coroutines.withContext
 import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.ProfileCredentials
+import org.rhythmeta.maimaid.core.data.PresetAvatarRepository
 import org.rhythmeta.maimaid.core.data.RatingUtils
 import org.rhythmeta.maimaid.core.database.GameVersionEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
@@ -125,6 +126,7 @@ fun ProfileScreen(
                     versions = versions,
                     songs = songs,
                     sheets = sheets,
+                    presetAvatarRepository = container.presetAvatarRepository,
                     onActivate = {
                         if (!profile.isActive) {
                             scope.launch { container.profileRepository.activate(profile) }
@@ -226,6 +228,7 @@ private fun ProfileListCard(
     versions: List<GameVersionEntity>,
     songs: List<SongEntity>,
     sheets: List<SheetEntity>,
+    presetAvatarRepository: PresetAvatarRepository,
     onActivate: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -248,7 +251,11 @@ private fun ProfileListCard(
         onClick = onActivate,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            ProfileAvatar(profile = profile, size = 50)
+            ProfileAvatar(
+                profile = profile,
+                size = 50,
+                presetAvatarRepository = presetAvatarRepository,
+            )
             Spacer(Modifier.width(14.dp))
             Column(
                 modifier = Modifier.weight(1f),
@@ -474,6 +481,7 @@ internal fun ProfileEditorSheet(
                 ProfileAvatarEditor(
                     avatarPath = avatarPath,
                     avatarUrl = avatarUrl?.takeUnless { clearAvatar },
+                    presetAvatarRepository = container.presetAvatarRepository,
                     onSelect = {
                         photoLauncher.launch(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
@@ -620,6 +628,7 @@ internal fun ProfileEditorSheet(
 private fun ProfileAvatarEditor(
     avatarPath: String?,
     avatarUrl: String?,
+    presetAvatarRepository: PresetAvatarRepository,
     onSelect: () -> Unit,
     onClear: () -> Unit,
     onChoosePreset: () -> Unit,
@@ -640,6 +649,7 @@ private fun ProfileAvatarEditor(
                 createdAt = 0,
             ),
             size = 84,
+            presetAvatarRepository = presetAvatarRepository,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(onClick = onSelect) {
@@ -664,11 +674,16 @@ private fun ProfileAvatarEditor(
 }
 
 @Composable
-private fun ProfileAvatar(profile: UserProfileEntity, size: Int) {
-    val model = remember(profile.avatarPath, profile.avatarUrl) {
+private fun ProfileAvatar(
+    profile: UserProfileEntity,
+    size: Int,
+    presetAvatarRepository: PresetAvatarRepository,
+) {
+    val model = remember(profile.avatarPath, profile.avatarUrl, presetAvatarRepository) {
         profile.avatarPath
             ?.let(::File)
             ?.takeIf(File::isFile)
+            ?: presetAvatarRepository.imageFileFor(profile.avatarUrl)
             ?: profile.avatarUrl?.takeIf(String::isNotBlank)
     }
     Box(

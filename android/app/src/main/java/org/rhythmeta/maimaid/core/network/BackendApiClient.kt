@@ -27,11 +27,25 @@ class BackendApiClient(
         method: String = "GET",
         body: JsonElement? = null,
         accessToken: String? = null,
-    ): JsonElement = withContext(Dispatchers.IO) {
+    ): JsonElement {
         if (normalizedBaseUrl.isEmpty()) {
             throw BackendApiException(null, "unconfigured", "Cloud service is not configured.")
         }
-        val connection = URL("$normalizedBaseUrl/${path.trimStart('/')}")
+        return requestAbsolute(
+            url = "$normalizedBaseUrl/${path.trimStart('/')}",
+            method = method,
+            body = body,
+            accessToken = accessToken,
+        )
+    }
+
+    suspend fun requestAbsolute(
+        url: String,
+        method: String = "GET",
+        body: JsonElement? = null,
+        accessToken: String? = null,
+    ): JsonElement = withContext(Dispatchers.IO) {
+        val connection = URL(url)
             .openConnection() as HttpURLConnection
         try {
             connection.requestMethod = method
