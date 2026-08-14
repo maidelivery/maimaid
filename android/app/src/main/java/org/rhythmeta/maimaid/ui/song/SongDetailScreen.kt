@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -83,7 +84,6 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -120,6 +120,7 @@ import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.SongEntity
 import org.rhythmeta.maimaid.ui.catalog.ScoreEntrySongCard
+import org.rhythmeta.maimaid.ui.common.openExternalApp
 import org.rhythmeta.maimaid.ui.components.ExpandableBottomSheet
 import org.rhythmeta.maimaid.ui.components.SquircleExtension
 import org.rhythmeta.maimaid.ui.components.appTextFieldColors
@@ -1085,7 +1086,7 @@ private fun RegionFlag(flag: String, label: String, available: Boolean, accentCo
 
 @Composable
 private fun ExternalSearch(title: String, surfaceColor: Color, accentColor: Color) {
-    val uriHandler = LocalUriHandler.current
+    val context = LocalContext.current
     val encodedTitle = android.net.Uri.encode(title)
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
     val brandColors = SongVisualUtils.externalSearchColors(darkTheme)
@@ -1104,7 +1105,13 @@ private fun ExternalSearch(title: String, surfaceColor: Color, accentColor: Colo
             SongDetailTextButton(
                 text = stringResource(R.string.song_external_youtube),
                 onClick = {
-                    uriHandler.openUri("https://www.youtube.com/results?search_query=maimai+$encodedTitle")
+                    val opened = context.openExternalApp(
+                        url = "https://www.youtube.com/results?search_query=maimai+$encodedTitle",
+                        packageNames = listOf("com.google.android.youtube"),
+                    )
+                    if (!opened) {
+                        Toast.makeText(context, R.string.external_app_unavailable, Toast.LENGTH_SHORT).show()
+                    }
                 },
                 modifier = Modifier.weight(1f),
                 surfaceColor = brandColors.youtubeSurface,
@@ -1115,7 +1122,13 @@ private fun ExternalSearch(title: String, surfaceColor: Color, accentColor: Colo
             SongDetailTextButton(
                 text = stringResource(R.string.song_external_bilibili),
                 onClick = {
-                    uriHandler.openUri("https://search.bilibili.com/all?keyword=maimai+$encodedTitle")
+                    val opened = context.openExternalApp(
+                        url = "bilibili://search?keyword=maimai+$encodedTitle",
+                        packageNames = listOf("tv.danmaku.bili", "tv.danmaku.bilibilihd"),
+                    )
+                    if (!opened) {
+                        Toast.makeText(context, R.string.external_app_unavailable, Toast.LENGTH_SHORT).show()
+                    }
                 },
                 modifier = Modifier.weight(1f),
                 surfaceColor = brandColors.bilibiliSurface,
