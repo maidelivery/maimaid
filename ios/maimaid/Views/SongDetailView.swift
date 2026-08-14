@@ -1035,6 +1035,11 @@ struct SheetCardView: View {
     private var diffColor: Color {
         ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type, colorScheme)
     }
+
+    private var supportsRatingTable: Bool {
+        let type = sheet.type.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return type == "dx" || type == "std" || type == "standard"
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -1236,7 +1241,7 @@ struct SheetCardView: View {
             detailedInfoTable
             
             // Achievement -> Rating table
-            if !sheet.type.localizedCaseInsensitiveContains("utage"),
+            if supportsRatingTable,
                let level = sheet.internalLevelValue ?? sheet.levelValue,
                level > 0 {
                 ratingTable(level: level)

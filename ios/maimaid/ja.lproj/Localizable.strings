@@ -347,7 +347,7 @@
 "data.sync.stage.downloadingImages" = "カバーをダウンロード中...";
 "data.sync.stage.downloadingIcons" = "アイコンをダウンロード中...";
 "data.sync.stage.fetchingChartStats" = "チャート統計を取得しています...";
-"data.sync.stage.fetchingUtageChartStats" = "宴譜ノーツ合計を取得しています...";
+"data.sync.stage.fetchingUtageChartStats" = "宴譜面のノーツ統計を取得しています...";
 "data.sync.stage.saving" = "データベースを保存しています...";
 "data.sync.stage.completed" = "同期が完了しました";
 "data.sync.stage.failed" = "同期に失敗しました";
@@ -516,6 +516,9 @@
 "common.error" = "エラー";
 "dan.detail.noRecord" = "記録なし";
 "dan.detail.missing" = "未達";
+"dan.detail.page.selection" = "段位ページ";
+"dan.detail.page.regular" = "通常段位";
+"dan.detail.page.true" = "真段位";
 "dan.list.sections %lld" = "%lld セクション";
 "avatar.editor.title" = "アバターの調整";
 "avatar.editor.hint" = "ドラッグして位置を決めたり、ピンチしてズームしたり、2 本の指で回転したりできます。";
@@ -582,9 +585,9 @@
 // MARK: - Data Sync (Additional)
 "data.sync.status.fetchingChartStats" = "譜面フィット情報を取得中…";
 "data.sync.log.chartStatsUpdated" = "譜面フィット情報を更新してローカルへ保存しました";
-"data.sync.status.fetchingUtageChartStats" = "宴譜面のノーツ総数を取得中…";
-"data.sync.log.fetchedUtageChartStats %lld" = "宴譜面ノーツ総数を取得: %lld 件";
-"data.sync.log.mergedUtageChartStats %lld" = "宴譜面ノーツ総数を統合: %lld 譜面を更新";
+"data.sync.status.fetchingUtageChartStats" = "宴譜面のノーツ統計を取得中…";
+"data.sync.log.fetchedUtageChartStats %lld" = "宴譜面ノーツ統計を取得: %lld 件";
+"data.sync.log.mergedUtageChartStats %lld" = "宴譜面ノーツ統計を統合: %lld 譜面を更新";
 "data.sync.status.noUpdate" = "静的データはすでに最新です。";
 "data.sync.log.danUnavailable" = "静的データバンドルに段位データがないため、ローカルキャッシュを使用します。";
 "data.sync.log.chartFitUnavailable" = "静的データバンドルに譜面定数データがないため、ローカルキャッシュを使用します。";

@@ -1,0 +1,1538 @@
+[
+  {
+    "id": 100017,
+    "title": "[星]Future",
+    "notes": 260,
+    "noteTypes": {
+      "tap": 0,
+      "hold": 4,
+      "slide": 256,
+      "touch": 0,
+      "break": 0
+    }
+  },
+  {
+    "id": 100018,
+    "title": "[協]Love You",
+    "notes": 300,
+    "noteTypes": {
+      "tap": 238,
+      "hold": 44,
+      "slide": 15,
+      "touch": 0,
+      "break": 3
+    }
+  },
+  {
+    "id": 100042,
+    "title": "[宴]jelly",
+    "notes": 325,
+    "noteTypes": {
+      "tap": 284,
+      "hold": 17,
+      "slide": 21,
+      "touch": 0,
+      "break": 3
+    }
+  },
+  {
+    "id": 100056,
+    "title": "[耐]ウッーウッーウマウマ(ﾟ∀ﾟ)",
+    "notes": 710,
+    "noteTypes": {
+      "tap": 702,
+      "hold": 0,
+      "slide": 2,
+      "touch": 0,
+      "break": 6
+    }
+  },
+  {
+    "id": 100070,
+    "title": "[即]ジングルベル",
+    "notes": 611,
+    "noteTypes": {
+      "tap": 527,
+      "hold": 27,
+      "slide": 37,
+      "touch": 0,
+      "break": 20
+    }
+  },
+  {
+    "id": 100082,
+    "title": "[光]Reach For The Stars",
+    "notes": 499,
+    "noteTypes": {
+      "tap": 0,
+      "hold": 29,
+      "slide": 50,
+      "touch": 0,
+      "break": 420
+    }
+  },
+  {
+    "id": 100101,
+    "title": "[逆]おちゃめ機能",
+    "notes": 330,
+    "noteTypes": {
+      "tap": 229,
+      "hold": 0,
+      "slide": 97,
+      "touch": 0,
+      "break": 4
+    }
+  },
+  {
+    "id": 100118,
+    "title": "[逆]犬日和。",
+    "notes": 281,
+    "noteTypes": {
+      "tap": 136,
+      "hold": 6,
+      "slide": 121,
+      "touch": 0,
+      "break": 18
+    }
+  },
+  {
+    "id": 100121,
+    "title": "[撫]スイートマジック",
+    "notes": 297,
+    "noteTypes": {
+      "tap": 0,
+      "hold": 0,
+      "slide": 292,
+      "touch": 0,
+      "break": 5
+    }
+  },
+  {
+    "id": 100132,
+    "title": "[蛸]Turn around",
+    "notes": 389,
+    "noteTypes": {
+      "tap": 303,
+      "hold": 74,
+      "slide": 8,
+      "touch": 0,
+      "break": 4
+    }
+  },
+  {
+    "id": 100138,
+    "title": "[蔵]Lionheart",
+    "notes": 440,
+    "noteTypes": {
+      "tap": 359,
+      "hold": 4,
+      "slide": 61,
+      "touch": 0,
+      "break": 16
+    }
+  },
+  {
+    "id": 100145,
+    "title": "[宴]Starlight Disco",
+    "notes": 260,
+    "noteTypes": {
+      "tap": 60,
+      "hold": 0,
+      "slide": 200,
+      "touch": 0,
+      "break": 0
+    }
+  },
+  {
+    "id": 100191,
+    "title": "[蔵]脳漿炸裂ガール",
+    "notes": 654,
+    "noteTypes": {
+      "tap": 559,
+      "hold": 25,
+      "slide": 53,
+      "touch": 0,
+      "break": 17
+    }
+  },
+  {
+    "id": 100199,
+    "title": "[蛸]チルノのパーフェクトさんすう教室",
+    "notes": 291,
+    "noteTypes": {
+      "tap": 40,
+      "hold": 217,
+      "slide": 27,
+      "touch": 0,
+      "break": 7
+    }
+  },
+  {
+    "id": 100201,
+    "title": "[宴]魔理沙は大変なものを盗んでいきました",
+    "notes": 434,
+    "noteTypes": {
+      "tap": 221,
+      "hold": 12,
+      "slide": 200,
+      "touch": 0,
+      "break": 1
+    }
+  },
+  {
+    "id": 100206,
+    "title": "[星]しゅわスパ大作戦☆",
+    "notes": 378,
+    "noteTypes": {
+      "tap": 324,
+      "hold": 54,
+      "slide": 0,
+      "touch": 0,
+      "break": 0
+    }
+  },
+  {
+    "id": 100207,
+    "title": "[蛸]時空を超えて久しぶり！",
+    "notes": 625,
+    "noteTypes": {
+      "tap": 460,
+      "hold": 118,
+      "slide": 18,
+      "touch": 21,
+      "break": 8
+    }
+  },
+  {
+    "id": 100220,
+    "title": "[宴]セガサターン起動音[H.][Remix]",
+    "notes": 948,
+    "noteTypes": {
+      "tap": 903,
+      "hold": 0,
+      "slide": 2,
+      "touch": 0,
+      "break": 43
+    }
+  },
+  {
+    "id": 100224,
+    "title": "[傾]ウサテイ",
+    "notes": 581,
+    "noteTypes": {
+      "tap": 484,
+      "hold": 16,
+      "slide": 65,
+      "touch": 0,
+      "break": 16
+    }
+  },
+  {
+    "id": 100227,
+    "title": "[は]Garakuta Doll Play",
+    "notes": 739,
+    "noteTypes": {
+      "tap": 465,
+      "hold": 52,
+      "slide": 202,
+      "touch": 0,
+      "break": 20
+    }
+  },
+  {
+    "id": 100230,
+    "title": "[宴]CYCLES",
+    "notes": 421,
+    "noteTypes": {
+      "tap": 10,
+      "hold": 0,
+      "slide": 361,
+      "touch": 0,
+      "break": 50
+    }
+  },
+  {
+    "id": 100282,
+    "title": "[撫]からくりピエロ",
+    "notes": 162,
+    "noteTypes": {
+      "tap": 0,
+      "hold": 0,
+      "slide": 162,
+      "touch": 0,
+      "break": 0
+    }
+  },
+  {
+    "id": 100305,
+    "title": "[星]POP STAR",
+    "notes": 379,
+    "noteTypes": {
+      "tap": 281,
+      "hold": 38,
+      "slide": 60,
+      "touch": 0,
+      "break": 0
+    }
+  },
+  {
+    "id": 100308,
+    "title": "[傾]Back 2 Back",
+    "notes": 192,
+    "noteTypes": {
+      "tap": 1,
+      "hold": 0,
+      "slide": 189,
+      "touch": 0,
+      "break": 2
+    }
+  },
+  {
+    "id": 100319,
+    "title": "[藏]幻想のサテライト",
+    "notes": 684,
+    "noteTypes": {
+      "tap": 446,
+      "hold": 41,
+      "slide": 178,
+      "touch": 0,
+      "break": 19
+    }
+  },
+  {
+    "id": 100320,
+    "title": "[即]最速最高シャッターガール",
+    "notes": 181,
+    "noteTypes": {
+      "tap": 0,
+      "hold": 0,
+      "slide": 179,
+      "touch": 0,
+      "break": 2
+    }
+  },
+  {
+    "id": 100322,
+    "title": "[蔵]林檎華憐歌",
+    "notes": 691,
+    "noteTypes": {
+      "tap": 612,
+      "hold": 27,
+      "slide": 46,
+      "touch": 0,
+      "break": 6
+    }
+  },
+  {
+    "id": 100326,
+    "title": "[宴]コトバ・カラフル",
+    "notes": 338,
+    "noteTypes": {
+      "tap": 227,
+      "hold": 63,
+      "slide": 33,
+      "touch": 0,
+      "break": 15
+    }
+  },
+  {
+    "id": 100327,
+    "title": "[狂]タカハせ！名人マン",
+    "notes": 1249,
+    "noteTypes": {
+      "tap": 680,
+      "hold": 564,
+      "slide": 3,
+      "touch": 0,
+      "break": 2
+    }
+  },
+  {
+    "id": 100339,
+    "title": "[宴]DRAGONLADY",
+    "notes": 624,
+    "noteTypes": {
+      "tap": 591,
+      "hold": 0,
+      "slide": 19,
+      "touch": 0,
+      "break": 14
+    }
+  },
+  {
+    "id": 100363,
+    "title": "[宴]Oshama Scramble!",
+    "notes": 215,
+    "noteTypes": {
+      "tap": 16,
+      "hold": 36,
+      "slide": 132,
+      "touch": 0,
+      "break": 31
+    }
+  },
+  {
+    "id": 100364,
+    "title": "[覚]D✪N’T  ST✪P  R✪CKIN’",
+    "notes": 172,
+    "noteTypes": {
+      "tap": 0,
+      "hold": 0,
+      "slide": 170,
+      "touch": 0,
+      "break": 2
+    }
+  },
+  {
+    "id": 100380,
+    "title": "[蔵]どうしてこうなった",
+    "notes": 1051,
+    "noteTypes": {
+      "tap": 899,
+      "hold": 59,
+      "slide": 60,
+      "touch": 0,
+      "break": 33
+    }
+  },
+  {
+    "id": 100385,
+    "title": "[蔵]Ignis Danse",
+    "notes": 914,
+    "noteTypes": {
+      "tap": 732,
+      "hold": 28,
+      "slide": 145,
+      "touch": 0,
+      "break": 9
+    }
+  },
+  {
+    "id": 100413,
+    "title": "[覚]キャプテン・ムラサのケツアンカー",
+    "notes": 266,
+    "noteTypes": {
+      "tap": 60,
+      "hold": 26,
+      "slide": 164,
+      "touch": 0,
+      "break": 16
+    }
+  },
+  {
+    "id": 100422,
+    "title": "[覚]LANCE",
+    "notes": 545,
+    "noteTypes": {
+      "tap": 319,
+      "hold": 0,
+      "slide": 172,
+      "touch": 0,
+      "break": 54
+    }
+  },
+  {
+    "id": 100429,
+    "title": "[宴]Wonderland Wars オープニング",
+    "notes": 46,
+    "noteTypes": {
+      "tap": 2,
+      "hold": 40,
+      "slide": 4,
+      "touch": 0,
+      "break": 0
+    }
+  },
+  {
+    "id": 100446,
+    "title": "[宴]GEMINI -M-",
+    "notes": 1004,
+    "noteTypes": {
+      "tap": 799,
+      "hold": 105,
+      "slide": 64,
+      "touch": 0,
+      "break": 36
+    }
+  },
+  {
+    "id": 100456,
+    "title": "[蔵]Glorious Crown",
+    "notes": 1227,
+    "noteTypes": {
+      "tap": 1137,
+      "hold": 15,
+      "slide": 56,
+      "touch": 0,
+      "break": 19
+    }
+  },
+  {
+    "id": 100496,
+    "title": "[藏]AMAZING MIGHTYYYY!!!!",
+    "notes": 1109,
+    "noteTypes": {
+      "tap": 882,
+      "hold": 58,
+      "slide": 136,
+      "touch": 0,
+      "break": 33
+    }
+  },
+  {
+    "id": 100508,
+    "title": "[協]恋愛裁判",
+    "notes": 757,
+    "noteTypes": {
+      "tap": 555,
+      "hold": 160,
+      "slide": 27,
+      "touch": 0,
+      "break": 15
+    }
+  },
+  {
+    "id": 100513,
+    "title": "[耐]だんだん早くなる",
+    "notes": 431,
+    "noteTypes": {
+      "tap": 197,
+      "hold": 233,
+      "slide": 1,
+      "touch": 0,
+      "break": 0
+    }
+  },
+  {
+    "id": 100516,
+    "title": "[狂]ココロ",
+    "notes": 58,
+    "noteTypes": {
+      "tap": 41,
+      "hold": 8,
+      "slide": 8,
+      "touch": 0,
+      "break": 1
+    }
+  },
+  {
+    "id": 100517,
+    "title": "[覚]東京リアルワールド",
+    "notes": 256,
+    "noteTypes": {
+      "tap": 56,
+      "hold": 46,
+      "slide": 154,
+      "touch": 0,
+      "break": 0
+    }
+  },
+  {
+    "id": 100524,
+    "title": "[協]Hand in Hand",
+    "notes": 1143,
+    "noteTypes": {
+      "tap": 839,
+      "hold": 165,
+      "slide": 84,
+      "touch": 0,
+      "break": 55
+    }
+  },
+  {
+    "id": 100548,
+    "title": "[疑]DETARAME ROCK&ROLL THEORY",
+    "notes": 513,
+    "noteTypes": {
+      "tap": 347,
+      "hold": 16,
+      "slide": 150,
+      "touch": 0,
+      "break": 0
+    }
+  },
+  {
+    "id": 100571,
+    "title": "[即]Our Wrenally",
+    "notes": 900,
+    "noteTypes": {
+      "tap": 769,
+      "hold": 23,
+      "slide": 99,
+      "touch": 0,
+      "break": 9
+    }
+  },
+  {
+    "id": 100573,
+    "title": "[宴]四月の雨",
+    "notes": 473,
+    "noteTypes": {
+      "tap": 271,
+      "hold": 32,
+      "slide": 166,
+      "touch": 0,
+      "break": 4
+    }
+  },
+  {
+    "id": 100598,
+    "title": "[蛸]すーぱーぬこになりたい",
+    "notes": 302,
+    "noteTypes": {
+      "tap": 73,
+      "hold": 165,
+      "slide": 54,
+      "touch": 0,
+      "break": 10
+    }
+  },
+  {
+    "id": 100603,
+    "title": "[星]その群青が愛しかったようだった",
+    "notes": 639,
+    "noteTypes": {
+      "tap": 524,
+      "hold": 0,
+      "slide": 115,
+      "touch": 0,
+      "break": 0
+    }
+  },
+  {
+    "id": 100614,
+    "title": "[宴]夢花火",
+    "notes": 639,
+    "noteTypes": {
+      "tap": 297,
+      "hold": 0,
+      "slide": 302,
+      "touch": 0,
+      "break": 40
+    }
+  },
+  {
+    "id": 100617,
+    "title": "[協]オトヒメモリー☆ウタゲーション",
+    "notes": 615,
+    "noteTypes": {
+      "tap": 445,
+      "hold": 63,
+      "slide": 82,
+      "touch": 0,
+      "break": 25
+    }
+  },
+  {
+    "id": 100689,
+    "title": "[蔵]Credits",
+    "notes": 773,
+    "noteTypes": {
+      "tap": 654,
+      "hold": 86,
+      "slide": 32,
+      "touch": 0,
+      "break": 1
+    }
+  },
+  {
+    "id": 100700,
+    "title": "[協]疾走あんさんぶる",
+    "notes": 1363,
+    "noteTypes": {
+      "tap": 1090,
+      "hold": 220,
+      "slide": 2,
+      "touch": 0,
+      "break": 51
+    }
+  },
+  {
+    "id": 100712,
+    "title": "[蛸]ミラクル・ショッピング",
+    "notes": 1188,
+    "noteTypes": {
+      "tap": 1026,
+      "hold": 124,
+      "slide": 2,
+      "touch": 0,
+      "break": 36
+    }
+  },
+  {
+    "id": 100749,
+    "title": "[蔵]Ievan Polkka",
+    "notes": 295,
+    "noteTypes": {
+      "tap": 77,
+      "hold": 216,
+      "slide": 1,
+      "touch": 0,
+      "break": 1
+    }
+  },
+  {
+    "id": 100772,
+    "title": "[狂]FREEDOM DiVE (tpz Overcute Remix",
+    "notes": 1318,
+    "noteTypes": {
+      "tap": 1080,
+      "hold": 37,
+      "slide": 120,
+      "touch": 0,
+      "break": 81
+    }
+  },
+  {
+    "id": 100775,
+    "title": "[宴]ジンギスカン",
+    "notes": 464,
+    "noteTypes": {
+      "tap": 308,
+      "hold": 4,
+      "slide": 141,
+      "touch": 0,
+      "break": 11
+    }
+  },
+  {
+    "id": 100845,
+    "title": "[宴]怒槌～光吉猛修一部謎～",
+    "notes": 272,
+    "noteTypes": {
+      "tap": 135,
+      "hold": 75,
+      "slide": 17,
+      "touch": 0,
+      "break": 45
+    }
+  },
+  {
+    "id": 100851,
+    "title": "[幸]犬日和。(はっぴー歌唱Ver)",
+    "notes": 411,
+    "noteTypes": {
+      "tap": 0,
+      "hold": 402,
+      "slide": 1,
+      "touch": 0,
+      "break": 8
+    }
+  },
+  {
+    "id": 100998,
+    "title": "[宴]Oshama Scramble! (Cranky Remix)",
+    "notes": 1073,
+    "noteTypes": {
+      "tap": 727,
+      "hold": 66,
+      "slide": 210,
+      "touch": 0,
+      "break": 70
+    }
+  },
+  {
+    "id": 110082,
+    "title": "[藏]Reach For The Stars",
+    "notes": 559,
+    "noteTypes": {
+      "tap": 466,
+      "hold": 29,
+      "slide": 50,
+      "touch": 0,
+      "break": 14
+    }
+  },
+  {
+    "id": 110114,
+    "title": "[耐]Space Harrier Main Theme [Reborn]",
+    "notes": 1483,
+    "noteTypes": {
+      "tap": 1469,
+      "hold": 0,
+      "slide": 7,
+      "touch": 0,
+      "break": 7
+    }
+  },
+  {
+    "id": 110121,
+    "title": "[甘]スイートマジック",
+    "notes": 393,
+    "noteTypes": {
+      "tap": 264,
+      "hold": 43,
+      "slide": 39,
+      "touch": 18,
+      "break": 29
+    }
+  },
+  {
+    "id": 110227,
+    "title": "[J]Garakuta Doll Play",
+    "notes": 745,
+    "noteTypes": {
+      "tap": 586,
+      "hold": 6,
+      "slide": 134,
+      "touch": 0,
+      "break": 19
+    }
+  },
+  {
+    "id": 110281,
+    "title": "[回]ダブルラリアット",
+    "notes": 598,
+    "noteTypes": {
+      "tap": 502,
+      "hold": 20,
+      "slide": 55,
+      "touch": 0,
+      "break": 21
+    }
+  },
+  {
+    "id": 110351,
+    "title": "[鏡]MIRROR of MAGIC",
+    "notes": 656,
+    "noteTypes": {
+      "tap": 572,
+      "hold": 40,
+      "slide": 28,
+      "touch": 0,
+      "break": 16
+    }
+  },
+  {
+    "id": 110417,
+    "title": "[習]ウミユリ海底譚",
+    "notes": 557,
+    "noteTypes": {
+      "tap": 440,
+      "hold": 8,
+      "slide": 109,
+      "touch": 0,
+      "break": 0
+    }
+  },
+  {
+    "id": 110532,
+    "title": "[奏]洗脳",
+    "notes": 572,
+    "noteTypes": {
+      "tap": 444,
+      "hold": 47,
+      "slide": 72,
+      "touch": 0,
+      "break": 9
+    }
+  },
+  {
+    "id": 110553,
+    "title": "[奏]チュルリラ・チュルリラ・ダッダッダ！",
+    "notes": 622,
+    "noteTypes": {
+      "tap": 364,
+      "hold": 44,
+      "slide": 156,
+      "touch": 40,
+      "break": 18
+    }
+  },
+  {
+    "id": 110647,
+    "title": "[協]エイリアンエイリアン",
+    "notes": 686,
+    "noteTypes": {
+      "tap": 324,
+      "hold": 221,
+      "slide": 56,
+      "touch": 55,
+      "break": 30
+    }
+  },
+  {
+    "id": 110684,
+    "title": "[一]もうみんなしねばいいのに",
+    "notes": 1030,
+    "noteTypes": {
+      "tap": 397,
+      "hold": 66,
+      "slide": 125,
+      "touch": 290,
+      "break": 152
+    }
+  },
+  {
+    "id": 110766,
+    "title": "[邪]アマノジャクリバース feat. ｙｔｒ",
+    "notes": 130,
+    "noteTypes": {
+      "tap": 0,
+      "hold": 0,
+      "slide": 128,
+      "touch": 1,
+      "break": 1
+    }
+  },
+  {
+    "id": 110781,
+    "title": "[協]Seyana. ～何でも言うことを聞いてくれるアカネチャン～",
+    "notes": 742,
+    "noteTypes": {
+      "tap": 603,
+      "hold": 45,
+      "slide": 41,
+      "touch": 7,
+      "break": 46
+    }
+  },
+  {
+    "id": 110793,
+    "title": "[疑]ロキ",
+    "notes": 519,
+    "noteTypes": {
+      "tap": 349,
+      "hold": 20,
+      "slide": 150,
+      "touch": 0,
+      "break": 0
+    }
+  },
+  {
+    "id": 110997,
+    "title": "[破]テレパシ",
+    "notes": 953,
+    "noteTypes": {
+      "tap": 620,
+      "hold": 60,
+      "slide": 114,
+      "touch": 79,
+      "break": 80
+    }
+  },
+  {
+    "id": 111069,
+    "title": "[協]太陽系デスコ",
+    "notes": 273,
+    "noteTypes": {
+      "tap": 177,
+      "hold": 27,
+      "slide": 36,
+      "touch": 20,
+      "break": 13
+    }
+  },
+  {
+    "id": 111113,
+    "title": "[回]ハム太郎とっとこうた",
+    "notes": 592,
+    "noteTypes": {
+      "tap": 347,
+      "hold": 80,
+      "slide": 82,
+      "touch": 37,
+      "break": 46
+    }
+  },
+  {
+    "id": 111156,
+    "title": "[奏]マイオドレ！舞舞タイム",
+    "notes": 619,
+    "noteTypes": {
+      "tap": 363,
+      "hold": 47,
+      "slide": 144,
+      "touch": 37,
+      "break": 28
+    }
+  },
+  {
+    "id": 111188,
+    "title": "[藍]絶え間なく藍色",
+    "notes": 494,
+    "noteTypes": {
+      "tap": 348,
+      "hold": 0,
+      "slide": 109,
+      "touch": 37,
+      "break": 0
+    }
+  },
+  {
+    "id": 111199,
+    "title": "[奏]悪戯センセーション",
+    "notes": 595,
+    "noteTypes": {
+      "tap": 372,
+      "hold": 32,
+      "slide": 107,
+      "touch": 45,
+      "break": 39
+    }
+  },
+  {
+    "id": 111222,
+    "title": "[光]BREaK! BREaK! BREaK!",
+    "notes": 986,
+    "noteTypes": {
+      "tap": 0,
+      "hold": 71,
+      "slide": 121,
+      "touch": 65,
+      "break": 729
+    }
+  },
+  {
+    "id": 111234,
+    "title": "[星]ほしぞらスペクタクル",
+    "notes": 1113,
+    "noteTypes": {
+      "tap": 1044,
+      "hold": 0,
+      "slide": 69,
+      "touch": 0,
+      "break": 0
+    }
+  },
+  {
+    "id": 111325,
+    "title": "[奏]テレキャスタービーボーイ",
+    "notes": 577,
+    "noteTypes": {
+      "tap": 417,
+      "hold": 61,
+      "slide": 61,
+      "touch": 28,
+      "break": 10
+    }
+  },
+  {
+    "id": 111355,
+    "title": "[協]ラグトレイン",
+    "notes": 495,
+    "noteTypes": {
+      "tap": 131,
+      "hold": 77,
+      "slide": 24,
+      "touch": 164,
+      "break": 99
+    }
+  },
+  {
+    "id": 111359,
+    "title": "[奏]アカツキアライヴァル",
+    "notes": 758,
+    "noteTypes": {
+      "tap": 569,
+      "hold": 56,
+      "slide": 51,
+      "touch": 74,
+      "break": 8
+    }
+  },
+  {
+    "id": 111363,
+    "title": "[片]神々が恋した幻想郷",
+    "notes": 1046,
+    "noteTypes": {
+      "tap": 912,
+      "hold": 58,
+      "slide": 45,
+      "touch": 1,
+      "break": 30
+    }
+  },
+  {
+    "id": 111365,
+    "title": "[奏]アンビバレンス",
+    "notes": 683,
+    "noteTypes": {
+      "tap": 357,
+      "hold": 52,
+      "slide": 206,
+      "touch": 51,
+      "break": 17
+    }
+  },
+  {
+    "id": 111388,
+    "title": "[即]チューリングの跡",
+    "notes": 273,
+    "noteTypes": {
+      "tap": 67,
+      "hold": 0,
+      "slide": 202,
+      "touch": 0,
+      "break": 4
+    }
+  },
+  {
+    "id": 111429,
+    "title": "[爆]Love's Theme of BADASS ～バッド・アス 愛のテーマ～",
+    "notes": 1168,
+    "noteTypes": {
+      "tap": 271,
+      "hold": 147,
+      "slide": 180,
+      "touch": 398,
+      "break": 172
+    }
+  },
+  {
+    "id": 111433,
+    "title": "[奏]ヒトガタ",
+    "notes": 693,
+    "noteTypes": {
+      "tap": 441,
+      "hold": 84,
+      "slide": 119,
+      "touch": 19,
+      "break": 30
+    }
+  },
+  {
+    "id": 111437,
+    "title": "[協]三妖精SAY YA!!!",
+    "notes": 1213,
+    "noteTypes": {
+      "tap": 696,
+      "hold": 273,
+      "slide": 74,
+      "touch": 25,
+      "break": 145
+    }
+  },
+  {
+    "id": 111479,
+    "title": "[覚]Hainuwele",
+    "notes": 272,
+    "noteTypes": {
+      "tap": 64,
+      "hold": 24,
+      "slide": 182,
+      "touch": 0,
+      "break": 2
+    }
+  },
+  {
+    "id": 111488,
+    "title": "[覚]スカーレット警察のゲットーパトロール24時",
+    "notes": 216,
+    "noteTypes": {
+      "tap": 81,
+      "hold": 8,
+      "slide": 34,
+      "touch": 80,
+      "break": 13
+    }
+  },
+  {
+    "id": 111513,
+    "title": "[回]回る空うさぎ",
+    "notes": 253,
+    "noteTypes": {
+      "tap": 0,
+      "hold": 0,
+      "slide": 32,
+      "touch": 221,
+      "break": 0
+    }
+  },
+  {
+    "id": 111516,
+    "title": "[蔵]Aegleseeker",
+    "notes": 1199,
+    "noteTypes": {
+      "tap": 923,
+      "hold": 105,
+      "slide": 73,
+      "touch": 62,
+      "break": 36
+    }
+  },
+  {
+    "id": 111545,
+    "title": "[餡]隠密あんみつDX",
+    "notes": 732,
+    "noteTypes": {
+      "tap": 444,
+      "hold": 12,
+      "slide": 8,
+      "touch": 0,
+      "break": 268
+    }
+  },
+  {
+    "id": 111557,
+    "title": "[蛸]不機嫌なスリーカード",
+    "notes": 677,
+    "noteTypes": {
+      "tap": 451,
+      "hold": 141,
+      "slide": 16,
+      "touch": 21,
+      "break": 48
+    }
+  },
+  {
+    "id": 111577,
+    "title": "[両]はんぶんこ",
+    "notes": 449,
+    "noteTypes": {
+      "tap": 302,
+      "hold": 46,
+      "slide": 64,
+      "touch": 37,
+      "break": 0
+    }
+  },
+  {
+    "id": 111597,
+    "title": "[息]ノンブレス・オブリージュ",
+    "notes": 909,
+    "noteTypes": {
+      "tap": 787,
+      "hold": 90,
+      "slide": 16,
+      "touch": 1,
+      "break": 15
+    }
+  },
+  {
+    "id": 111628,
+    "title": "[逆]WE'RE BACK!!",
+    "notes": 641,
+    "noteTypes": {
+      "tap": 482,
+      "hold": 46,
+      "slide": 58,
+      "touch": 27,
+      "break": 28
+    }
+  },
+  {
+    "id": 111634,
+    "title": "[協]青春コンプレックス",
+    "notes": 1635,
+    "noteTypes": {
+      "tap": 1424,
+      "hold": 111,
+      "slide": 1,
+      "touch": 77,
+      "break": 22
+    }
+  },
+  {
+    "id": 111636,
+    "title": "[奏]さくゆいたいそう",
+    "notes": 642,
+    "noteTypes": {
+      "tap": 326,
+      "hold": 140,
+      "slide": 67,
+      "touch": 50,
+      "break": 59
+    }
+  },
+  {
+    "id": 111638,
+    "title": "[耐]星界ちゃんと可不ちゃんのおつかい合騒曲",
+    "notes": 1015,
+    "noteTypes": {
+      "tap": 593,
+      "hold": 21,
+      "slide": 283,
+      "touch": 84,
+      "break": 34
+    }
+  },
+  {
+    "id": 111670,
+    "title": "[奏]のじゃロリック",
+    "notes": 755,
+    "noteTypes": {
+      "tap": 495,
+      "hold": 68,
+      "slide": 90,
+      "touch": 18,
+      "break": 84
+    }
+  },
+  {
+    "id": 111697,
+    "title": "[音]ラビットホール",
+    "notes": 1077,
+    "noteTypes": {
+      "tap": 840,
+      "hold": 19,
+      "slide": 120,
+      "touch": 32,
+      "break": 66
+    }
+  },
+  {
+    "id": 111714,
+    "title": "[匿]匿名M",
+    "notes": 429,
+    "noteTypes": {
+      "tap": 307,
+      "hold": 61,
+      "slide": 49,
+      "touch": 7,
+      "break": 5
+    }
+  },
+  {
+    "id": 111715,
+    "title": "[嘘]ライアーダンサー",
+    "notes": 340,
+    "noteTypes": {
+      "tap": 157,
+      "hold": 0,
+      "slide": 183,
+      "touch": 0,
+      "break": 0
+    }
+  },
+  {
+    "id": 111720,
+    "title": "[招]Re:Unknown X",
+    "notes": 1500,
+    "noteTypes": {
+      "tap": 1229,
+      "hold": 165,
+      "slide": 0,
+      "touch": 13,
+      "break": 93
+    }
+  },
+  {
+    "id": 111770,
+    "title": "[協]Ultimate taste",
+    "notes": 893,
+    "noteTypes": {
+      "tap": 468,
+      "hold": 166,
+      "slide": 73,
+      "touch": 164,
+      "break": 22
+    }
+  },
+  {
+    "id": 111772,
+    "title": "[X]人マニア",
+    "notes": 716,
+    "noteTypes": {
+      "tap": 289,
+      "hold": 57,
+      "slide": 92,
+      "touch": 232,
+      "break": 46
+    }
+  },
+  {
+    "id": 111783,
+    "title": "[音]snooze",
+    "notes": 986,
+    "noteTypes": {
+      "tap": 769,
+      "hold": 70,
+      "slide": 69,
+      "touch": 32,
+      "break": 46
+    }
+  },
+  {
+    "id": 111838,
+    "title": "[助]メズマライザー",
+    "notes": 925,
+    "noteTypes": {
+      "tap": 507,
+      "hold": 122,
+      "slide": 151,
+      "touch": 135,
+      "break": 10
+    }
+  },
+  {
+    "id": 111852,
+    "title": "[好]好きな惣菜発表ドラゴン",
+    "notes": 806,
+    "noteTypes": {
+      "tap": 571,
+      "hold": 61,
+      "slide": 125,
+      "touch": 28,
+      "break": 21
+    }
+  },
+  {
+    "id": 111859,
+    "title": "[騒]ありきたりな恋の歌",
+    "notes": 672,
+    "noteTypes": {
+      "tap": 469,
+      "hold": 89,
+      "slide": 77,
+      "touch": 14,
+      "break": 23
+    }
+  },
+  {
+    "id": 111908,
+    "title": "[耐]死ぬな！",
+    "notes": 607,
+    "noteTypes": {
+      "tap": 392,
+      "hold": 44,
+      "slide": 66,
+      "touch": 65,
+      "break": 40
+    }
+  },
+  {
+    "id": 111914,
+    "title": "[音]テトリス",
+    "notes": 902,
+    "noteTypes": {
+      "tap": 697,
+      "hold": 77,
+      "slide": 58,
+      "touch": 22,
+      "break": 48
+    }
+  },
+  {
+    "id": 111919,
+    "title": "[充]エンジェル ドリーム",
+    "notes": 498,
+    "noteTypes": {
+      "tap": 357,
+      "hold": 44,
+      "slide": 51,
+      "touch": 21,
+      "break": 25
+    }
+  },
+  {
+    "id": 112002,
+    "title": "[覚]3rd Avenue",
+    "notes": 299,
+    "noteTypes": {
+      "tap": 52,
+      "hold": 20,
+      "slide": 18,
+      "touch": 193,
+      "break": 16
+    }
+  },
+  {
+    "id": 120227,
+    "title": "[r]Garakuta Doll Play",
+    "notes": 824,
+    "noteTypes": {
+      "tap": 594,
+      "hold": 34,
+      "slide": 177,
+      "touch": 0,
+      "break": 19
+    }
+  },
+  {
+    "id": 121634,
+    "title": "[協]青春コンプレックス",
+    "notes": 1334,
+    "noteTypes": {
+      "tap": 1193,
+      "hold": 105,
+      "slide": 1,
+      "touch": 13,
+      "break": 22
+    }
+  },
+  {
+    "id": 121852,
+    "title": "[譜]好きな惣菜発表ドラゴン",
+    "notes": 713,
+    "noteTypes": {
+      "tap": 461,
+      "hold": 52,
+      "slide": 122,
+      "touch": 32,
+      "break": 46
+    }
+  },
+  {
+    "id": 130227,
+    "title": "[玉]Garakuta Doll Play",
+    "notes": 950,
+    "noteTypes": {
+      "tap": 559,
+      "hold": 31,
+      "slide": 126,
+      "touch": 0,
+      "break": 234
+    }
+  },
+  {
+    "id": 131852,
+    "title": "[面]好きな惣菜発表ドラゴン",
+    "notes": 740,
+    "noteTypes": {
+      "tap": 430,
+      "hold": 69,
+      "slide": 121,
+      "touch": 74,
+      "break": 46
+    }
+  },
+  {
+    "id": 140227,
+    "title": "[某]Garakuta Doll Play",
+    "notes": 1084,
+    "noteTypes": {
+      "tap": 619,
+      "hold": 44,
+      "slide": 120,
+      "touch": 0,
+      "break": 301
+    }
+  },
+  {
+    "id": 141852,
+    "title": "[発]好きな惣菜発表ドラゴン",
+    "notes": 582,
+    "noteTypes": {
+      "tap": 352,
+      "hold": 52,
+      "slide": 156,
+      "touch": 5,
+      "break": 17
+    }
+  },
+  {
+    "id": 151852,
+    "title": "[表]好きな惣菜発表ドラゴン",
+    "notes": 584,
+    "noteTypes": {
+      "tap": 306,
+      "hold": 77,
+      "slide": 102,
+      "touch": 79,
+      "break": 20
+    }
+  },
+  {
+    "id": 161852,
+    "title": "[龍]好きな惣菜発表ドラゴン",
+    "notes": 630,
+    "noteTypes": {
+      "tap": 472,
+      "hold": 62,
+      "slide": 80,
+      "touch": 5,
+      "break": 11
+    }
+  }
+]

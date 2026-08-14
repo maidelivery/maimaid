@@ -348,7 +348,7 @@
 "data.sync.stage.downloadingImages" = "Downloading covers...";
 "data.sync.stage.downloadingIcons" = "Downloading icons...";
 "data.sync.stage.fetchingChartStats" = "Fetching chart stats...";
-"data.sync.stage.fetchingUtageChartStats" = "Fetching utage note totals...";
+"data.sync.stage.fetchingUtageChartStats" = "Fetching utage note statistics...";
 "data.sync.stage.saving" = "Saving database...";
 "data.sync.stage.completed" = "Sync Completed";
 "data.sync.stage.failed" = "Sync Failed";
@@ -517,6 +517,9 @@
 "common.error" = "Error";
 "dan.detail.noRecord" = "No Record";
 "dan.detail.missing" = "Missing";
+"dan.detail.page.selection" = "Dan page";
+"dan.detail.page.regular" = "Regular Dan";
+"dan.detail.page.true" = "True Dan";
 "dan.list.sections %lld" = "%lld Sections";
 "avatar.editor.title" = "Adjust Avatar";
 "avatar.editor.hint" = "Drag to position, pinch to zoom, or rotate with two fingers.";
@@ -582,9 +585,9 @@
 // MARK: - Data Sync (Additional)
 "data.sync.status.fetchingChartStats" = "Fetching chart fit stats...";
 "data.sync.log.chartStatsUpdated" = "Chart fit stats updated and cached locally";
-"data.sync.status.fetchingUtageChartStats" = "Fetching utage note totals...";
-"data.sync.log.fetchedUtageChartStats %lld" = "Fetched utage note totals: %lld entries";
-"data.sync.log.mergedUtageChartStats %lld" = "Merged utage note totals: updated %lld charts";
+"data.sync.status.fetchingUtageChartStats" = "Fetching utage note statistics...";
+"data.sync.log.fetchedUtageChartStats %lld" = "Fetched utage note statistics: %lld entries";
+"data.sync.log.mergedUtageChartStats %lld" = "Merged utage note statistics: updated %lld charts";
 "data.sync.status.noUpdate" = "Static data is already up to date.";
 "data.sync.log.danUnavailable" = "Dan data is unavailable in the static bundle; keeping the local cache.";
 "data.sync.log.chartFitUnavailable" = "Chart fit data is unavailable in the static bundle; keeping the local cache.";
