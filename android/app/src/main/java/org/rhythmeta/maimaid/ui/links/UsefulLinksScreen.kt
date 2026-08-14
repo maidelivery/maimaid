@@ -1,8 +1,5 @@
 package org.rhythmeta.maimaid.ui.links
 
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.rhythmeta.maimaid.R
+import org.rhythmeta.maimaid.ui.common.openInAppBrowser
 import org.rhythmeta.maimaid.ui.components.SongListScrollBar
 import org.rhythmeta.maimaid.ui.components.SquircleExtension
 import top.yukonga.miuix.kmp.basic.Card
@@ -73,9 +71,7 @@ internal fun UsefulLinksScreen(contentTopPadding: Dp) {
         ) {
             items(links, key = UsefulLink::url) { link ->
                 UsefulLinkRow(link) {
-                    try {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link.url)))
-                    } catch (_: ActivityNotFoundException) {
+                    if (!context.openInAppBrowser(link.url)) {
                         Toast.makeText(context, R.string.cloud_browser_unavailable, Toast.LENGTH_SHORT).show()
                     }
                 }

@@ -1,8 +1,6 @@
 package org.rhythmeta.maimaid.ui.settings
 
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +44,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.ImportSyncResolution
+import org.rhythmeta.maimaid.ui.common.openInAppBrowser
 import org.rhythmeta.maimaid.ui.components.appTextFieldColors
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -176,10 +175,8 @@ fun LxnsImportScreen(
                     Button(
                         onClick = {
                             val url = viewModel.createLxnsAuthorizationUrl()
-                            try {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                            } catch (_: ActivityNotFoundException) {
-                                // The status remains available for a later browser retry.
+                            if (!context.openInAppBrowser(url)) {
+                                Toast.makeText(context, R.string.cloud_browser_unavailable, Toast.LENGTH_SHORT).show()
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
