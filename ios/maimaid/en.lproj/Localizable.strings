@@ -465,6 +465,10 @@
 "settings.cloud.section.autoBackup" = "Auto Backup";
 "settings.cloud.backup" = "Backup to Cloud";
 "settings.cloud.restore" = "Restore from Cloud";
+"settings.cloud.restore.localProfiles.title" = "Local profiles found";
+"settings.cloud.restore.localProfiles.message" = "Some local profiles are absent from the cloud. Keep them during this restore, or remove them with their local scores and play history.";
+"settings.cloud.restore.localProfiles.keep" = "Keep local profiles";
+"settings.cloud.restore.localProfiles.remove" = "Remove local profiles";
 "settings.cloud.syncing" = "Syncing...";
 "settings.cloud.logout" = "Logout";
 "settings.cloud.login.title" = "Cloud Login";

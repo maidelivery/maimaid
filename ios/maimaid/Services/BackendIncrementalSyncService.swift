@@ -503,13 +503,28 @@ enum BackendIncrementalSyncService {
         )
     }
 
-    static func pullUpdates(context: ModelContext, profileId: UUID? = nil, force: Bool = false) async throws {
+    static func pullUpdates(
+        context: ModelContext,
+        profileId: UUID? = nil,
+        force: Bool = false,
+        removeLocalProfilesAbsentFromSnapshot: Bool = false
+    ) async throws {
         try await BackendSyncOperationGate.shared.withLock {
-            try await pullUpdatesUnlocked(context: context, profileId: profileId, force: force)
+            try await pullUpdatesUnlocked(
+                context: context,
+                profileId: profileId,
+                force: force,
+                removeLocalProfilesAbsentFromSnapshot: removeLocalProfilesAbsentFromSnapshot
+            )
         }
     }
 
-    static func pullUpdatesUnlocked(context: ModelContext, profileId: UUID? = nil, force: Bool = false) async throws {
+    static func pullUpdatesUnlocked(
+        context: ModelContext,
+        profileId: UUID? = nil,
+        force: Bool = false,
+        removeLocalProfilesAbsentFromSnapshot: Bool = false
+    ) async throws {
         guard BackendSessionManager.shared.isAuthenticated else {
             throw BackendAPIError.unauthorized
         }
@@ -520,8 +535,15 @@ enum BackendIncrementalSyncService {
             profileId: profileId
         )
 
-        try applyProfileDeleteEvents(response.events, context: context)
-        try await applySnapshot(response.snapshot, context: context)
+        let shouldRemoveLocalProfiles = removeLocalProfilesAbsentFromSnapshot && profileId == nil
+        if shouldRemoveLocalProfiles {
+            try applyProfileDeleteEvents(response.events, context: context)
+        }
+        try await applySnapshot(
+            response.snapshot,
+            context: context,
+            removeLocalProfilesAbsentFromSnapshot: shouldRemoveLocalProfiles
+        )
         ScoreService.shared.repairDetachedRecordsIfNeeded(context: context, force: true)
         config.lastSyncRevision = response.latestRevision
         config.setRemoteProfileVersions(
@@ -711,43 +733,31 @@ enum BackendIncrementalSyncService {
             return
         }
 
-        for profileId in deletedProfileIds {
-            let scoreDescriptor = FetchDescriptor<Score>(predicate: #Predicate { $0.userProfileId == profileId })
-            let recordDescriptor = FetchDescriptor<PlayRecord>(predicate: #Predicate { $0.userProfileId == profileId })
-            let profileDescriptor = FetchDescriptor<UserProfile>(predicate: #Predicate { $0.id == profileId })
-
-            if let scores = try? context.fetch(scoreDescriptor) {
-                for score in scores {
-                    context.delete(score)
-                }
-            }
-            if let records = try? context.fetch(recordDescriptor) {
-                for record in records {
-                    context.delete(record)
-                }
-            }
-            if let profile = (try? context.fetch(profileDescriptor))?.first {
-                context.delete(profile)
-            }
-        }
+        try removeLocalProfiles(with: deletedProfileIds, context: context)
     }
 
-    private static func applySnapshot(_ snapshot: BackendSyncSnapshot, context: ModelContext) async throws {
-        guard !snapshot.profiles.isEmpty else {
-            return
-        }
-
+    private static func applySnapshot(
+        _ snapshot: BackendSyncSnapshot,
+        context: ModelContext,
+        removeLocalProfilesAbsentFromSnapshot: Bool = false
+    ) async throws {
         let profilePairs: [(UUID, BackendSyncRemoteProfile)] = snapshot.profiles.compactMap {
             guard let uuid = UUID(uuidString: $0.id) else { return nil }
             return (uuid, $0)
         }
         let profileMap = Dictionary(uniqueKeysWithValues: profilePairs)
         let profileIds = Set(profileMap.keys)
-        if profileIds.isEmpty {
+
+        let existingProfiles = try context.fetch(FetchDescriptor<UserProfile>())
+        if removeLocalProfilesAbsentFromSnapshot {
+            let localOnlyProfileIds = Set(existingProfiles.map(\.id)).subtracting(profileIds)
+            try removeLocalProfiles(with: localOnlyProfileIds, context: context)
+        }
+
+        guard !profileIds.isEmpty else {
             return
         }
 
-        let existingProfiles = try context.fetch(FetchDescriptor<UserProfile>())
         let existingById = Dictionary(uniqueKeysWithValues: existingProfiles.map { ($0.id, $0) })
 
         for (profileId, remote) in profileMap {
@@ -903,6 +913,25 @@ enum BackendIncrementalSyncService {
             score.sheet = sheet
             context.insert(score)
             sheet.scores.append(score)
+        }
+    }
+
+    private static func removeLocalProfiles(with profileIds: Set<UUID>, context: ModelContext) throws {
+        for profileId in profileIds {
+            let scoreDescriptor = FetchDescriptor<Score>(predicate: #Predicate { $0.userProfileId == profileId })
+            let recordDescriptor = FetchDescriptor<PlayRecord>(predicate: #Predicate { $0.userProfileId == profileId })
+            let profileDescriptor = FetchDescriptor<UserProfile>(predicate: #Predicate { $0.id == profileId })
+
+            for score in try context.fetch(scoreDescriptor) {
+                context.delete(score)
+            }
+            for record in try context.fetch(recordDescriptor) {
+                context.delete(record)
+            }
+            if let profile = try context.fetch(profileDescriptor).first {
+                context.delete(profile)
+            }
+            ProfileCredentialStore.shared.clearCredentials(for: profileId)
         }
     }
 
