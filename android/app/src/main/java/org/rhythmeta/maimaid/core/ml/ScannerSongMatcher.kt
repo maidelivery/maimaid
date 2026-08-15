@@ -66,6 +66,43 @@ object ScannerSongMatcher {
                     hasAvailableStandardSheets(it, catalog)
             }
         }
+        // The detector can confuse the standard chart badge with the DX badge.
+        // Keep the numeric constraints, but let a reliable title recover a song
+        // that was removed solely by that chart-type classification.
+        if (
+            !isUtage &&
+            !recognition.chartType.isNullOrBlank() &&
+            candidates.any { it.isNotBlank() } &&
+            filteredSongs.none { song ->
+                !isBlankTitleSong(song, catalog) &&
+                    hasTitleEvidence(candidates, song, catalog.aliasesBySong[song.songIdentifier].orEmpty())
+            }
+        ) {
+            val relaxedRecognition = recognition.copy(chartType = null)
+            val relaxedSongs = catalog.songs.filter { song ->
+                if (chooseScan && isBlankTitleSong(song, catalog)) return@filter false
+                hasAvailableStandardSheets(song, catalog) && sheetsFor(song, catalog).any { sheet ->
+                    sheetMatches(
+                        sheet = sheet,
+                        song = song,
+                        recognition = relaxedRecognition,
+                        isUtage = false,
+                        explicitTitleKanji = null,
+                        derivedTotalNotes = derivedTotalNotes,
+                        validatedLevel = validatedLevel,
+                        validatedDxScore = validatedDxScore,
+                        validatedMaxDxScore = validatedMaxDxScore,
+                        validatedKanji = validatedKanji,
+                    )
+                }
+            }
+            if (relaxedSongs.any { song ->
+                    !isBlankTitleSong(song, catalog) &&
+                        hasTitleEvidence(candidates, song, catalog.aliasesBySong[song.songIdentifier].orEmpty())
+                }) {
+                filteredSongs = relaxedSongs
+            }
+        }
         if (filteredSongs.size == 1 && validatedMaxDxScore != null) {
             val song = filteredSongs.single()
             return listOf(ScannerMatch(song, resolveSheet(song, recognition, catalog), recognition))
@@ -119,7 +156,8 @@ object ScannerSongMatcher {
                         it.total?.times(3) == validatedMaxDxScore
                     }
                 ) 20 else 0
-                if (score + constraintBonus > 0) {
+                val hasTitleCandidate = candidates.any(String::isNotBlank)
+                if (score > 0 || (!hasTitleCandidate && constraintBonus > 0)) {
                     val totalScore = score + constraintBonus
                     val previous = scored[song.songIdentifier]
                     if (previous == null || totalScore > previous.second) {
@@ -169,13 +207,48 @@ object ScannerSongMatcher {
             if (chooseScan && isBlankTitleSong(song, catalog)) return@filter false
             catalog.sheetsBySong[song.songIdentifier].orEmpty().any { validSheet(it, song) }
         }
+        var effectiveEligibleSongs = eligibleSongs
+        if (
+            !isUtage &&
+            !recognition.chartType.isNullOrBlank() &&
+            candidates.any { it.isNotBlank() } &&
+            eligibleSongs.none { song ->
+                !isBlankTitleSong(song, catalog) &&
+                    hasTitleEvidence(candidates, song, catalog.aliasesBySong[song.songIdentifier].orEmpty())
+            }
+        ) {
+            val relaxedRecognition = recognition.copy(chartType = null)
+            val relaxedSongs = catalog.songs.filter { song ->
+                if (chooseScan && isBlankTitleSong(song, catalog)) return@filter false
+                sheetsFor(song, catalog).any { sheet ->
+                    sheetMatches(
+                        sheet = sheet,
+                        song = song,
+                        recognition = relaxedRecognition,
+                        isUtage = false,
+                        explicitTitleKanji = null,
+                        derivedTotalNotes = derivedTotalNotes,
+                        validatedLevel = recognition.level?.takeIf { it in 1.0..15.0 },
+                        validatedDxScore = recognition.dxScore?.takeIf { it > 0 },
+                        validatedMaxDxScore = recognition.maxDxScore?.takeIf { it > 0 },
+                        validatedKanji = recognition.kanji?.takeIf(String::isNotEmpty),
+                    )
+                }
+            }
+            if (relaxedSongs.any { song ->
+                    !isBlankTitleSong(song, catalog) &&
+                        hasTitleEvidence(candidates, song, catalog.aliasesBySong[song.songIdentifier].orEmpty())
+                }) {
+                effectiveEligibleSongs = relaxedSongs
+            }
+        }
         val exact = mutableListOf<SongEntity>()
         val partial = mutableListOf<SongEntity>()
             candidates.forEach { candidate ->
             val cleaned = candidate.trim()
             if (cleaned.length < 2) return@forEach
             val normalized = normalizeMatchTitle(cleaned)
-                eligibleSongs.forEach { song ->
+                effectiveEligibleSongs.forEach { song ->
                     val normalizedTitle = normalizeMatchTitle(song.title)
                     if (normalizedTitle.isEmpty()) return@forEach
                     when {
@@ -186,7 +259,7 @@ object ScannerSongMatcher {
             }
             if (exact.isNotEmpty() || partial.isNotEmpty()) return@forEach
             if (cleaned.length > 4) {
-                eligibleSongs.forEach { song ->
+                effectiveEligibleSongs.forEach { song ->
                     if (fuzzyMatch(cleaned, song.title)) partial += song
                 }
             }
@@ -194,8 +267,8 @@ object ScannerSongMatcher {
         val selected = (exact + partial).distinctBy(SongEntity::songIdentifier).take(4)
         val fallback = if (selected.isEmpty() && recognition.maxDxScore?.let { it > 0 } == true) {
             val maxDxScore = requireNotNull(recognition.maxDxScore)
-            val nonBlankSongs = eligibleSongs.filterNot { isBlankTitleSong(it, catalog) }
-            val exactBlankSongs = eligibleSongs.filter { song ->
+            val nonBlankSongs = effectiveEligibleSongs.filterNot { isBlankTitleSong(it, catalog) }
+            val exactBlankSongs = effectiveEligibleSongs.filter { song ->
                 isBlankTitleSong(song, catalog) && sheetsFor(song, catalog).any {
                     it.total?.times(3) == maxDxScore
                 }
@@ -218,10 +291,29 @@ object ScannerSongMatcher {
         if (recognition.chartType.equals("utage", ignoreCase = true)) {
             return matchUtageSheet(sheets, recognition.kanji, recognition.maxDxScore, recognition.dxScore)
         }
-        val candidates = sheets.filter { sheet ->
-            !sheet.type.equals("utage", ignoreCase = true) &&
+        val strictCandidates = sheets.filter { sheet ->
+            ScannerNoteCountValidator.isCompatible(recognition.maxDxScore, sheet.total) &&
+                !sheet.type.equals("utage", ignoreCase = true) &&
                 (recognition.chartType.isNullOrBlank() || sheet.type.equals(recognition.chartType, ignoreCase = true)) &&
                 (recognition.difficulty.isNullOrBlank() || sheet.difficulty.equals(recognition.difficulty, ignoreCase = true))
+        }
+        val titleCandidates = listOfNotNull(recognition.title) + recognition.titleCandidates
+        val canIgnoreChartType = recognition.chartType.isNullOrBlank() ||
+            hasTitleEvidence(
+                candidates = titleCandidates,
+                song = song,
+                aliases = catalog.aliasesBySong[song.songIdentifier].orEmpty(),
+            )
+        val candidates = if (strictCandidates.isNotEmpty() || !canIgnoreChartType) {
+            strictCandidates
+        } else {
+            // A detector type error must not discard the chart after the song
+            // title has already identified it.
+            sheets.filter { sheet ->
+                ScannerNoteCountValidator.isCompatible(recognition.maxDxScore, sheet.total) &&
+                    !sheet.type.equals("utage", ignoreCase = true) &&
+                    (recognition.difficulty.isNullOrBlank() || sheet.difficulty.equals(recognition.difficulty, ignoreCase = true))
+            }
         }
         if (candidates.size <= 1) return candidates.firstOrNull()
         recognition.maxDxScore?.takeIf { it > 0 }?.let { maxDx ->
@@ -248,6 +340,7 @@ object ScannerSongMatcher {
         validatedMaxDxScore: Int?,
         validatedKanji: String?,
     ): Boolean {
+        if (!ScannerNoteCountValidator.isCompatible(validatedMaxDxScore, sheet.total)) return false
         if (isUtage) {
             if (!sheet.type.equals("utage", ignoreCase = true)) return false
             if (validatedKanji != null && validatedKanji !in sheet.difficulty) return false
@@ -276,7 +369,10 @@ object ScannerSongMatcher {
         maxDxScore: Int?,
         dxScore: Int?,
     ): SheetEntity? {
-        val utageSheets = sheets.filter { it.type.equals("utage", ignoreCase = true) }
+        val utageSheets = sheets.filter {
+            it.type.equals("utage", ignoreCase = true) &&
+                ScannerNoteCountValidator.isCompatible(maxDxScore, it.total)
+        }
         if (utageSheets.isEmpty()) return null
         if (!kanji.isNullOrEmpty()) {
             val kanjiMatches = utageSheets.filter { kanji in it.difficulty }
@@ -333,6 +429,40 @@ object ScannerSongMatcher {
         .replace(Regex("\\s+"), " ")
         .trim()
         .lowercase(Locale.ROOT)
+
+    private fun hasTitleEvidence(
+        candidates: List<String>,
+        song: SongEntity,
+        aliases: List<String>,
+    ): Boolean {
+        if (song.title.isBlank()) return false
+        val normalizedSongTitle = normalizeMatchTitle(song.title)
+        return candidates.any { candidate ->
+            val cleaned = candidate.trim()
+            if (cleaned.isEmpty()) {
+                false
+            } else {
+                generateOcrVariants(cleaned, 6).any { searchCandidate ->
+                    val normalizedSearch = normalizeMatchTitle(searchCandidate)
+                    val exact = normalizedSongTitle == normalizedSearch ||
+                        song.title.equals(searchCandidate, ignoreCase = true) ||
+                        aliases.any { it.equals(searchCandidate, ignoreCase = true) }
+                    val partial = cleaned.length >= 2 && (
+                        normalizedSongTitle.startsWith(normalizedSearch) ||
+                            normalizedSearch.startsWith(normalizedSongTitle) ||
+                            song.title.contains(searchCandidate, ignoreCase = true) ||
+                            searchCandidate.contains(song.title, ignoreCase = true) ||
+                            aliases.any { it.contains(searchCandidate, ignoreCase = true) }
+                        )
+                    val fuzzy = cleaned.length > 4 && (
+                        fuzzyMatch(cleaned, song.title) ||
+                            aliases.any { fuzzyMatch(cleaned, it) }
+                        )
+                    exact || partial || fuzzy
+                }
+            }
+        }
+    }
 
     private fun generateOcrVariants(text: String, maxVariants: Int): List<String> {
         val variants = mutableListOf(text)
