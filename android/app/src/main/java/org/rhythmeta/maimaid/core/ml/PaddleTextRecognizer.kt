@@ -34,17 +34,16 @@ internal class PaddleTextRecognizer(
     fun recognize(
         bitmap: Bitmap,
         bounds: NormalizedRect,
-        useRgbInput: Boolean = false,
     ): OcrText? {
         val crop = bitmap.crop(bounds) ?: return null
         return try {
-            recognizeCrop(crop, useRgbInput)
+            recognizeCrop(crop)
         } finally {
             crop.recycle()
         }
     }
 
-    private fun recognizeCrop(bitmap: Bitmap, useRgbInput: Boolean): OcrText? {
+    private fun recognizeCrop(bitmap: Bitmap): OcrText? {
         val targetWidth = min(
             ModelWidth,
             max(MinimumWidth, ceil(ModelHeight * bitmap.width.toFloat() / bitmap.height).toInt()),
@@ -69,17 +68,9 @@ internal class PaddleTextRecognizer(
         val planeSize = targetWidth * ModelHeight
         val input = FloatArray(planeSize * 3)
         pixels.forEachIndexed { index, pixel ->
-            input[index] = if (useRgbInput) {
-                Color.red(pixel) / 127.5f - 1f
-            } else {
-                Color.blue(pixel) / 127.5f - 1f
-            }
+            input[index] = Color.blue(pixel) / 127.5f - 1f
             input[planeSize + index] = Color.green(pixel) / 127.5f - 1f
-            input[planeSize * 2 + index] = if (useRgbInput) {
-                Color.blue(pixel) / 127.5f - 1f
-            } else {
-                Color.red(pixel) / 127.5f - 1f
-            }
+            input[planeSize * 2 + index] = Color.red(pixel) / 127.5f - 1f
         }
         val environment = OrtEnvironment.getEnvironment()
         OnnxTensor.createTensor(

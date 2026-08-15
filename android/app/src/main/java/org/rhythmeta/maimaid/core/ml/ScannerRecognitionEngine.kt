@@ -15,9 +15,7 @@ class ScannerRecognitionEngine(
     private var scoreSession: OrtSession? = null
     private var chooseSession: OrtSession? = null
     private var textSession: OrtSession? = null
-    private var japaneseTextSession: OrtSession? = null
     private var textRecognizer: PaddleTextRecognizer? = null
-    private var japaneseTextRecognizer: PaddleTextRecognizer? = null
 
     suspend fun recognize(bitmap: Bitmap): ScannerRawResult {
         ensureClassifierSession()
@@ -61,16 +59,6 @@ class ScannerRecognitionEngine(
                 applicationContext,
                 requireNotNull(textSession),
                 MultilingualCharacterAssetPath,
-            )
-        }
-        if (japaneseTextSession == null) {
-            japaneseTextSession = sessionFactory.create(VisionModel.JapaneseTextRecognizer)
-        }
-        if (japaneseTextRecognizer == null) {
-            japaneseTextRecognizer = PaddleTextRecognizer(
-                applicationContext,
-                requireNotNull(japaneseTextSession),
-                JapaneseCharacterAssetPath,
             )
         }
     }
@@ -192,25 +180,16 @@ class ScannerRecognitionEngine(
         scoreSession?.close()
         chooseSession?.close()
         textSession?.close()
-        japaneseTextSession?.close()
         classifierSession = null
         scoreSession = null
         chooseSession = null
         textSession = null
-        japaneseTextSession = null
         textRecognizer = null
-        japaneseTextRecognizer = null
     }
 
     private fun recognizeTitleCandidates(bitmap: Bitmap, bounds: NormalizedRect?): List<String> {
         if (bounds == null) return emptyList()
-        return listOfNotNull(
-            textRecognizer?.recognize(bitmap, bounds),
-            japaneseTextRecognizer?.recognize(bitmap, bounds),
-            japaneseTextRecognizer?.recognize(bitmap, bounds, useRgbInput = true),
-        ).sortedByDescending(OcrText::confidence)
-            .map(OcrText::text)
-            .distinct()
+        return textRecognizer?.recognize(bitmap, bounds)?.text?.let(::listOf) ?: emptyList()
     }
 
     private fun List<RecognizedRegion>.best(label: String): RecognizedRegion? =
@@ -230,7 +209,6 @@ class ScannerRecognitionEngine(
 
     private companion object {
         const val MultilingualCharacterAssetPath = "models/ocr/ppocr-v6-small-chars.json"
-        const val JapaneseCharacterAssetPath = "models/ocr/japan-ppocr-v3-mobile-chars.json"
         val ChooseLabels = listOf("title")
         val ScoreLabels = listOf(
             "achievement", "ap", "app", "difficulty", "dx", "dxscore", "fc", "fcp",

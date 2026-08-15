@@ -5,5 +5,4 @@ enum class VisionModel(val assetPath: String) {
     RegionDetector("models/vision/maimaidetector-v12n.onnx"),
     ScreenClassifier("models/vision/maimaidistinguish-v12n.onnx"),
     TextRecognizer("models/ocr/ppocr-v6-small-rec.onnx"),
-    JapaneseTextRecognizer("models/ocr/japan-ppocr-v3-mobile-rec.onnx"),
 }
