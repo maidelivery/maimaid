@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.1.7
+
+### Added
+
+- Added Simplified Chinese, Traditional Chinese, Japanese variant-character, and compatibility-character matching to song search on iOS and Android.
+- Added Utage chart-fit details, including note counts and fitted maximum DX scores, to difficulty details on iOS and Android.
+- Added paged Dan chart sections on iOS.
+
+### Changed
+
+- Upgraded Android OCR recognition to the PP-OCRv6 small multilingual model.
+- Synchronized Utage chart-stat resolution and score-detail presentation across iOS and Android.
+
+### Fixed
+
+- Fixed Android Utage recognition when multiple charts share the same maximum DX score.
+- Fixed Android Utage recognition against stale chart statistics by validating recognized note counts and exact chart data.
+- Fixed Android score validation and persistence to honor the recognized Utage maximum DX score.
+
 ## 1.1.4
 
 ### Added
