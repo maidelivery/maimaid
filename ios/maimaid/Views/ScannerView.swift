@@ -209,7 +209,10 @@ extension ScannerView {
     }
     
     private func matchUtageSheet(for song: Song, kanji: String?, maxDxScore: Int?, dxScore: Int?) -> Sheet? {
-        let utageSheets = song.sheets.filter { $0.type.lowercased() == "utage" }
+        let utageSheets = song.sheets.filter {
+            $0.type.lowercased() == "utage" &&
+                ScannerNoteCountValidator.isCompatible(maxDxScore: maxDxScore, sheetTotal: $0.total)
+        }
         
         guard !utageSheets.isEmpty else { return nil }
         
@@ -593,7 +596,10 @@ struct ScannerView: View {
 
         func matchesUtage(_ song: Song) -> Bool {
             if isUtage {
-                let utageSheets = song.sheets.filter { $0.type.lowercased() == "utage" }
+                let utageSheets = song.sheets.filter {
+                    $0.type.lowercased() == "utage" &&
+                        ScannerNoteCountValidator.isCompatible(maxDxScore: maxDxScore, sheetTotal: $0.total)
+                }
                 if utageSheets.isEmpty { return false }
                 if hasExplicitUtagePrefix && !songHasExplicitUtagePrefix(song, kanji: explicitTitleKanji) { return false }
                 if let validatedKanji,
@@ -632,6 +638,9 @@ struct ScannerView: View {
 
         func matchesStandard(_ song: Song) -> Bool {
             song.sheets.contains { sheet in
+                if !ScannerNoteCountValidator.isCompatible(maxDxScore: maxDxScore, sheetTotal: sheet.total) {
+                    return false
+                }
                 if sheet.type.lowercased() == "utage" {
                     return false
                 }
@@ -777,10 +786,18 @@ struct ScannerView: View {
         let explicitTitleKanji = rawCandidates.compactMap { extractUtagePrefixKanji(from: $0) }.first
         let hasExplicitUtagePrefix = explicitTitleKanji != nil
         let derivedTotalNotes: Int? = { if let maxDx = maxDxScore, maxDx > 0 { return maxDx / 3 }; return maxCombo }()
-        let hasMaxDxScore = maxDxScore != nil && maxDxScore! > 0
-        let hasAnyValidation = (difficulty != nil && !isUtage) || (level != nil && level! >= 1 && level! <= 15) || (derivedTotalNotes != nil && derivedTotalNotes! > 0) || (dxScore != nil && dxScore! > 0) || hasMaxDxScore || (kanji != nil && !(kanji!.isEmpty))
+        let hasMaxDxScore = (maxDxScore ?? 0) > 0
+        let hasAnyValidation = (difficulty != nil && !isUtage) ||
+            level.map { $0 >= 1 && $0 <= 15 } == true ||
+            (derivedTotalNotes ?? 0) > 0 ||
+            (dxScore ?? 0) > 0 ||
+            hasMaxDxScore ||
+            kanji?.isEmpty == false
         
         func sheetOK(_ sheet: Sheet) -> Bool {
+            if !ScannerNoteCountValidator.isCompatible(maxDxScore: maxDxScore, sheetTotal: sheet.total) {
+                return false
+            }
             if isUtage {
                 if sheet.type.lowercased() != "utage" { return false }
                 if let k = kanji, !k.isEmpty, !sheet.difficulty.contains(k) { return false }
@@ -1091,14 +1108,16 @@ struct ScannerView: View {
     }
     
     private func canPresentScoreResult(for song: Song, difficulty: String?, type: String?, kanji: String?, maxDxScore: Int?, dxScore: Int?) -> Bool {
-        guard let difficulty = difficulty?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !difficulty.isEmpty else {
+        let normalizedDifficulty = difficulty?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasDifficulty = normalizedDifficulty?.isEmpty == false
+        let hasMaxDxScore = (maxDxScore ?? 0) > 0
+        guard hasDifficulty || hasMaxDxScore else {
             return true
         }
         
         return resolvedScoreSheet(
             for: song,
-            difficulty: difficulty,
+            difficulty: normalizedDifficulty,
             type: type,
             kanji: kanji,
             maxDxScore: maxDxScore,
@@ -1115,6 +1134,9 @@ struct ScannerView: View {
         }
         
         let filteredCandidates = song.sheets.filter { sheet in
+            if !ScannerNoteCountValidator.isCompatible(maxDxScore: maxDxScore, sheetTotal: sheet.total) {
+                return false
+            }
             let sheetType = sheet.type.lowercased()
             if sheetType == "utage" { return false }
             if let normalizedType, !normalizedType.isEmpty, sheetType != normalizedType { return false }

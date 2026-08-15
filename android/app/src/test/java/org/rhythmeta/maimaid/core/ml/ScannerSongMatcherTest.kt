@@ -1,6 +1,7 @@
 package org.rhythmeta.maimaid.core.ml
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.SongEntity
@@ -131,6 +132,85 @@ class ScannerSongMatcherTest {
         val result = ScannerSongMatcher.match(raw, catalog)
 
         assertEquals(listOf("song"), result.map { it.song.songIdentifier })
+    }
+
+    @Test
+    fun maxDxNotesAboveUtageTotalCannotResolveLoveYou() {
+        val loveYou = song("[協]Love You", "[協]Love You")
+        val utageSheet = sheet("utage", "utage", "【協】", loveYou.songIdentifier, 500)
+        val catalog = ScannerCatalog(listOf(loveYou), listOf(utageSheet), emptyMap())
+        val raw = ScannerRawResult(
+            screenType = MaimaiScreenType.Score,
+            title = "[協]Love You",
+            chartType = "utage",
+            kanji = "協",
+            maxDxScore = 1_503,
+        )
+
+        val result = ScannerSongMatcher.resolveSheet(loveYou, raw, catalog)
+
+        assertNull(result)
+    }
+
+    @Test
+    fun maxDxNotesAtOrBelowCandidateTotalRemainCompatible() {
+        assertEquals(true, ScannerNoteCountValidator.isCompatible(maxDxScore = 1_500, sheetTotal = 500))
+        assertEquals(true, ScannerNoteCountValidator.isCompatible(maxDxScore = 1_497, sheetTotal = 500))
+        assertEquals(false, ScannerNoteCountValidator.isCompatible(maxDxScore = 1_503, sheetTotal = 500))
+    }
+
+    @Test
+    fun titleWinsWhenDetectorConfusesStandardWithDx() {
+        val axeria = song("Axeria", "Axeria")
+        val huatian = song("華天月兎", "華天月兎")
+        val sheets = listOf(
+            sheet("axeria-master", "std", "master", axeria.songIdentifier, 888)
+                .copy(level = "14", levelValue = 14.0, internalLevel = "14", internalLevelValue = 14.0),
+            sheet("huatian-master", "dx", "master", huatian.songIdentifier, 888)
+                .copy(level = "14", levelValue = 14.0, internalLevel = "14", internalLevelValue = 14.0),
+        )
+        val catalog = ScannerCatalog(listOf(axeria, huatian), sheets, emptyMap())
+        val raw = ScannerRawResult(
+            screenType = MaimaiScreenType.Score,
+            title = "Axera",
+            titleCandidates = listOf("Axera"),
+            chartType = "dx",
+            difficulty = "master",
+            level = 14.0,
+            maxDxScore = 2_664,
+        )
+
+        val result = ScannerSongMatcher.match(raw, catalog).single()
+
+        assertEquals("Axeria", result.song.songIdentifier)
+        assertEquals("std", result.sheet?.type)
+    }
+
+    @Test
+    fun fastTitleMatchAlsoRecoversStandardChartAfterTypeMisclassification() {
+        val axeria = song("Axeria", "Axeria")
+        val huatian = song("華天月兎", "華天月兎")
+        val sheets = listOf(
+            sheet("axeria-master", "std", "master", axeria.songIdentifier, 888)
+                .copy(level = "14", levelValue = 14.0, internalLevel = "14", internalLevelValue = 14.0),
+            sheet("huatian-master", "dx", "master", huatian.songIdentifier, 888)
+                .copy(level = "14", levelValue = 14.0, internalLevel = "14", internalLevelValue = 14.0),
+        )
+        val catalog = ScannerCatalog(listOf(axeria, huatian), sheets, emptyMap())
+        val raw = ScannerRawResult(
+            screenType = MaimaiScreenType.Score,
+            title = "Axera",
+            titleCandidates = listOf("Axera"),
+            chartType = "dx",
+            difficulty = "master",
+            level = 14.0,
+            maxDxScore = 2_664,
+        )
+
+        val result = ScannerSongMatcher.matchFast(raw, catalog).first()
+
+        assertEquals("Axeria", result.song.songIdentifier)
+        assertEquals("std", result.sheet?.type)
     }
 
     private fun song(id: String, title: String) = SongEntity(
