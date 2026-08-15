@@ -117,6 +117,102 @@ class ScannerSongMatcherTest {
     }
 
     @Test
+    fun fastMatchDoesNotFallbackToTheFirstUnknownTotalUtageSong() {
+        val loveYou = song("(宴) Love You", "Love You")
+        val unknown = song("unknown", "完全不存在的宴谱")
+        val catalog = ScannerCatalog(
+            songs = listOf(loveYou, unknown),
+            sheets = listOf(
+                sheet("love", "utage", "【協】", loveYou.songIdentifier, null),
+                sheet("unknown", "utage", "【宴】", unknown.songIdentifier, null),
+            ),
+            aliasesBySong = emptyMap(),
+        )
+        val raw = ScannerRawResult(
+            screenType = MaimaiScreenType.Score,
+            title = "无法匹配的标题",
+            maxDxScore = 1_086,
+            chartType = "utage",
+            difficulty = "utage",
+        )
+
+        val result = ScannerSongMatcher.matchFast(raw, catalog)
+        val photoResult = ScannerSongMatcher.match(raw.copy(title = null), catalog)
+
+        assertEquals(emptyList<String>(), result.map { it.song.songIdentifier })
+        assertEquals(emptyList<String>(), photoResult.map { it.song.songIdentifier })
+    }
+
+    @Test
+    fun staleUtageStatsYieldToReliableTitleEvidence() {
+        val loveYou = song("(宴) Love You", "Love You")
+        val target = song("[耐]星界", "[耐]星界ちゃんと可不ちゃんのおつかい合騒曲")
+        val distractor = song("[耐]CYCLES", "[耐]CYCLES")
+        val catalog = ScannerCatalog(
+            songs = listOf(loveYou, distractor, target),
+            sheets = listOf(
+                sheet("love", "utage", "【協】", loveYou.songIdentifier, null),
+                sheet("cycles", "utage", "【耐】", distractor.songIdentifier, null),
+                sheet("target", "utage", "【耐】", target.songIdentifier, 1_015),
+            ),
+            aliasesBySong = emptyMap(),
+        )
+        val raw = ScannerRawResult(
+            screenType = MaimaiScreenType.Score,
+            title = "動星界ちゃんと可不ちゃんのおつかい合融曲",
+            titleCandidates = listOf(
+                "動星界ちゃんと可不ちゃんのおつかい合融曲",
+                "耐星界ちゃんと可不ちゃんのおつかい合騒曲",
+            ),
+            maxDxScore = 3_891,
+            dxScore = 3_515,
+            chartType = "utage",
+            difficulty = "utage",
+            kanji = "耐",
+        )
+
+        val fastResult = ScannerSongMatcher.matchFast(raw, catalog).single()
+        val photoResult = ScannerSongMatcher.match(raw, catalog).single()
+
+        assertEquals(target.songIdentifier, fastResult.song.songIdentifier)
+        assertEquals(target.songIdentifier, photoResult.song.songIdentifier)
+        assertEquals("target", fastResult.sheet?.sheetKey)
+        assertEquals("target", photoResult.sheet?.sheetKey)
+    }
+
+    @Test
+    fun noisyUniqueUtageKanjiOverridesStaleNoteCount() {
+        val loveYou = song("(宴) Love You", "Love You")
+        val target = song("[嘘]ライアーダンサー", "[嘘]ライアーダンサー")
+        val catalog = ScannerCatalog(
+            songs = listOf(loveYou, target),
+            sheets = listOf(
+                sheet("love", "utage", "【協】", loveYou.songIdentifier, null),
+                sheet("target", "utage", "【嘘】", target.songIdentifier, 340),
+            ),
+            aliasesBySong = emptyMap(),
+        )
+        val raw = ScannerRawResult(
+            screenType = MaimaiScreenType.Score,
+            title = "の「面ライアーダンサーム",
+            titleCandidates = listOf("の「面ライアーダンサーム"),
+            maxDxScore = 1_086,
+            dxScore = 1_030,
+            chartType = "utage",
+            difficulty = "utage",
+            kanji = "C嘘",
+        )
+
+        val fastResult = ScannerSongMatcher.matchFast(raw, catalog).single()
+        val photoResult = ScannerSongMatcher.match(raw, catalog).single()
+
+        assertEquals(target.songIdentifier, fastResult.song.songIdentifier)
+        assertEquals(target.songIdentifier, photoResult.song.songIdentifier)
+        assertEquals("target", fastResult.sheet?.sheetKey)
+        assertEquals("target", photoResult.sheet?.sheetKey)
+    }
+
+    @Test
     fun laterExactOcrCandidateReplacesAnEarlierFuzzyScore() {
         val realSong = song("song", "きゅうくらりん")
         val realSheet = sheet("real", "dx", "master", realSong.songIdentifier, 100)
@@ -228,7 +324,7 @@ class ScannerSongMatcherTest {
         comment = null,
     )
 
-    private fun sheet(key: String, type: String, difficulty: String, songId: String, total: Int) = SheetEntity(
+    private fun sheet(key: String, type: String, difficulty: String, songId: String, total: Int?) = SheetEntity(
         sheetKey = key,
         songIdentifier = songId,
         type = type,
