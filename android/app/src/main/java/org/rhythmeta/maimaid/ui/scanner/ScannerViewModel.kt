@@ -214,12 +214,14 @@ class ScannerViewModel(
         }
     }
 
-    fun saveScore(input: ScoreInput) {
+    fun saveScore(input: ScoreInput, maxDxScoreOverride: Int? = null) {
         val sheetKey = mutableState.value.match?.sheet?.sheetKey ?: return
         if (mutableState.value.scoreSaveStatus == ScoreSaveStatus.Saving) return
         viewModelScope.launch {
             mutableState.update { it.copy(scoreSaveStatus = ScoreSaveStatus.Saving) }
-            val result = runCatching { container.scoreRepository.saveScore(sheetKey, input) }
+            val result = runCatching {
+                container.scoreRepository.saveScore(sheetKey, input, maxDxScoreOverride)
+            }
             result.onSuccess { score ->
                 launch { container.scoreSyncService.syncAfterScoreSave(sheetKey, score) }
             }

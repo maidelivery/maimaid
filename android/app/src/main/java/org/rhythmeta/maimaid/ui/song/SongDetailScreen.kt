@@ -2360,6 +2360,7 @@ internal fun ScoreEntrySheet(
     saveStatus: ScoreSaveStatus,
     initialAchievement: Double? = null,
     initialDxScore: Int? = null,
+    maxDxScoreOverride: Int? = null,
     initialFc: String? = null,
     initialFs: String? = null,
     onInputChanged: () -> Unit,
@@ -2390,7 +2391,7 @@ internal fun ScoreEntrySheet(
         ?.takeIf { it.isFinite() && it in 0.0..101.0 }
         ?.let(ScoreRules::calculateRank)
     val parsedDxScore = if (dxScoreText.isBlank()) 0 else dxScoreText.trim().toIntOrNull()
-    val maxDxScore = (chart.sheet.total ?: 0) * 3
+    val maxDxScore = ScoreRules.effectiveMaxDxScore(chart.sheet.total, maxDxScoreOverride)
     val input = if (parsedAchievement != null && parsedDxScore != null) {
         ScoreInput(parsedAchievement, parsedDxScore, selectedFc, selectedFs)
     } else {

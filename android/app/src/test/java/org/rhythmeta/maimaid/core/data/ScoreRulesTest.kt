@@ -41,6 +41,12 @@ class ScoreRulesTest {
     }
 
     @Test
+    fun recognizedUtageMaximumOverridesStaleSheetTotal() {
+        assertEquals(3_891, ScoreRules.effectiveMaxDxScore(sheetTotal = 1_015, override = 3_891))
+        assertEquals(3_045, ScoreRules.effectiveMaxDxScore(sheetTotal = 1_015))
+    }
+
+    @Test
     fun mergesAchievementDxAndStatusUsingTheirIndependentBestValues() {
         val existing = ScoreEntity(
             profileId = "profile",

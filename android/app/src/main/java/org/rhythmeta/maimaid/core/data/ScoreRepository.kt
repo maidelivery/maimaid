@@ -57,10 +57,14 @@ class ScoreRepository(
             }
         }
 
-    suspend fun saveScore(sheetKey: String, input: ScoreInput): ScoreEntity = database.withTransaction {
+    suspend fun saveScore(
+        sheetKey: String,
+        input: ScoreInput,
+        maxDxScoreOverride: Int? = null,
+    ): ScoreEntity = database.withTransaction {
         val profile = profileRepository.ensureActiveProfile()
         val sheet = requireNotNull(catalogDao.sheet(sheetKey)) { "Unknown sheet: $sheetKey" }
-        val maxDxScore = (sheet.total ?: 0) * 3
+        val maxDxScore = ScoreRules.effectiveMaxDxScore(sheet.total, maxDxScoreOverride)
         val validationError = ScoreRules.validate(input, maxDxScore)
         require(validationError == null) { "Invalid score: $validationError" }
 
