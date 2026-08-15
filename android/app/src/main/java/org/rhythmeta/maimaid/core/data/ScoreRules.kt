@@ -17,6 +17,9 @@ enum class ScoreValidationError {
 }
 
 object ScoreRules {
+    fun effectiveMaxDxScore(sheetTotal: Int?, override: Int? = null): Int =
+        override?.takeIf { it > 0 } ?: (sheetTotal ?: 0) * 3
+
     fun validate(input: ScoreInput, maxDxScore: Int): ScoreValidationError? = when {
         !input.achievement.isFinite() || input.achievement !in 0.0..101.0 ->
             ScoreValidationError.AchievementOutOfRange

@@ -259,6 +259,9 @@ fun ScannerScreen(
 
     state.match?.takeIf { it.sheet != null }?.let { match ->
         val sheet = requireNotNull(match.sheet)
+        val maxDxScoreOverride = match.recognition.maxDxScore?.takeIf {
+            it > 0 && sheet.type.equals("utage", ignoreCase = true)
+        }
         ScoreEntrySheet(
             visible = state.scoreEntryVisible,
             song = match.song,
@@ -270,10 +273,11 @@ fun ScannerScreen(
             saveStatus = state.scoreSaveStatus,
             initialAchievement = match.recognition.achievement,
             initialDxScore = match.recognition.dxScore,
+            maxDxScoreOverride = maxDxScoreOverride,
             initialFc = match.recognition.comboStatus,
             initialFs = match.recognition.syncStatus,
             onInputChanged = viewModel::markScoreEntryChanged,
-            onSave = viewModel::saveScore,
+            onSave = { input -> viewModel.saveScore(input, maxDxScoreOverride) },
             onDismiss = viewModel::dismissScoreEntry,
         )
     }
