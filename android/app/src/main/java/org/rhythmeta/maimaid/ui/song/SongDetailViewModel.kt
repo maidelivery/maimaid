@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.ScoreInput
+import org.rhythmeta.maimaid.core.data.StaticBundleResponse
+import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
 
 class SongDetailViewModel(
@@ -22,9 +24,10 @@ class SongDetailViewModel(
     val uiState = combine(
         container.catalogRepository.observeSheetsForSong(songIdentifier),
         container.scoreRepository.observeSongScoreData(songIdentifier),
+        container.catalogRepository.chartFit,
         entrySheetKey,
         saveStatus,
-    ) { sheets, scoreData, selectedSheetKey, status ->
+    ) { sheets, scoreData, chartFit, selectedSheetKey, status ->
         val scoresBySheet = scoreData.scores.associateBy { it.sheetKey }
         val historyBySheet = scoreData.playRecords.groupBy { it.sheetKey }
         SongDetailUiState(
@@ -40,6 +43,7 @@ class SongDetailViewModel(
                         sheet = sheet,
                         score = scoresBySheet[sheet.sheetKey],
                         history = historyBySheet[sheet.sheetKey].orEmpty(),
+                        chartFit = chartFit.findFor(sheet),
                     )
                 },
             entrySheetKey = selectedSheetKey,
@@ -100,6 +104,24 @@ class SongDetailViewModel(
     }
 
     private companion object {
+        fun StaticBundleResponse.ChartFitPayload.findFor(
+            sheet: SheetEntity,
+        ): StaticBundleResponse.ChartFitStat? {
+            val providerSongId = sheet.providerSongId.takeIf { it > 0 } ?: return null
+            val candidateIds = buildList {
+                if (sheet.type.equals("dx", ignoreCase = true) && providerSongId < 10_000) {
+                    add(providerSongId + 10_000)
+                }
+                add(providerSongId)
+                if (sheet.type.equals("dx", ignoreCase = true) && providerSongId >= 10_000) {
+                    add(providerSongId - 10_000)
+                }
+            }.distinct()
+            return candidateIds.firstNotNullOfOrNull { id ->
+                charts[id.toString()]?.firstOrNull { it.diff == sheet.level }
+            }
+        }
+
         fun chartTypeOrder(type: String): Int = when (type.lowercase()) {
             "dx" -> 3
             "std", "standard" -> 2

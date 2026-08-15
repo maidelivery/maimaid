@@ -98,6 +98,8 @@
 "song.detail.stats.fitDiff" = "拟合难度";
 "song.detail.stats.avgRate" = "平均达成率";
 "song.detail.stats.sampleCount" = "样本人数";
+"song.detail.noScores" = "暂无成绩记录";
+"song.detail.currentBest" = "当前最佳";
 "song.detail.copy.image" = "图片已复制";
 "song.detail.save.image" = "图片已保存至相册";
 "song.detail.chartType" = "谱面类型";

@@ -270,6 +270,10 @@
     <string name="detail_catalog_required">楽曲データの同期が必要です</string>
     <string name="detail_foundation_ready">機能の基盤を利用できます</string>
     <string name="detail_no_scores">スコア記録がありません</string>
+    <string name="song_chart_fit_difficulty">擬合難度</string>
+    <string name="song_chart_fit_average">平均レート</string>
+    <string name="song_chart_fit_samples">サンプル</string>
+    <string name="song_chart_fit_not_available">N/A</string>
     <string name="best50_total">合計レーティング</string>
     <string name="best50_capacity">B35 %1$d · B15 %2$d</string>
     <string name="best50_new">新曲 · B15 %1$d</string>

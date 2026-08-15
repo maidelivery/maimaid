@@ -98,6 +98,8 @@
 "song.detail.stats.fitDiff" = "擬合難度";
 "song.detail.stats.avgRate" = "平均達成率";
 "song.detail.stats.sampleCount" = "樣本人數";
+"song.detail.noScores" = "暫無成績記錄";
+"song.detail.currentBest" = "目前最佳";
 "song.detail.copy.image" = "圖片已複製";
 "song.detail.save.image" = "圖片已儲存至相簿";
 "song.detail.metadata.bpm" = "BPM";

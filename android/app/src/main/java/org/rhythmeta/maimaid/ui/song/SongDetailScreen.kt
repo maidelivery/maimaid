@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -115,6 +116,7 @@ import org.rhythmeta.maimaid.core.data.ScoreToleranceCalculator
 import org.rhythmeta.maimaid.core.data.ScoreValidationError
 import org.rhythmeta.maimaid.core.data.CommunityAliasDailyQuota
 import org.rhythmeta.maimaid.core.data.CommunityAliasMyCandidate
+import org.rhythmeta.maimaid.core.data.StaticBundleResponse
 import org.rhythmeta.maimaid.core.database.PlayRecordEntity
 import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
@@ -1429,6 +1431,7 @@ private fun SheetScoreCard(
         AnimatedVisibility(visible = expanded) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Spacer(Modifier.height(12.dp))
+                ChartFitStatsSection(chart.chartFit, accent)
                 BestScoreRow(chart.score, chart.sheet, accentColor)
 
                 NoteStatisticsSection(chart.sheet)
@@ -1466,6 +1469,77 @@ private fun SheetScoreCard(
             }
         }
     }
+}
+
+@Composable
+private fun ChartFitStatsSection(
+    stat: StaticBundleResponse.ChartFitStat?,
+    accentColor: Color,
+) {
+    if (stat == null) return
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .squircleSurface(
+                color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.04f),
+                cornerRadius = 14.dp,
+                extension = SquircleExtension,
+            )
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ChartFitStatItem(
+            title = stringResource(R.string.song_chart_fit_difficulty),
+            value = stat.fitDifficulty?.let(::formatFitDifficulty)
+                ?: stringResource(R.string.song_chart_fit_not_available),
+        )
+        ChartFitStatDivider(accentColor)
+        ChartFitStatItem(
+            title = stringResource(R.string.song_chart_fit_average),
+            value = stat.avg?.let(::formatAverageRate)
+                ?: stringResource(R.string.song_chart_fit_not_available),
+        )
+        ChartFitStatDivider(accentColor)
+        ChartFitStatItem(
+            title = stringResource(R.string.song_chart_fit_samples),
+            value = stat.cnt?.toInt()?.toString() ?: "0",
+        )
+    }
+}
+
+@Composable
+private fun RowScope.ChartFitStatItem(title: String, value: String) {
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = title,
+            style = MiuixTheme.textStyles.footnote2.copy(fontSize = 10.sp),
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = value,
+            style = MiuixTheme.textStyles.body2.copy(fontSize = 15.sp),
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun ChartFitStatDivider(accentColor: Color) {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(28.dp)
+            .background(accentColor.copy(alpha = 0.10f)),
+    )
 }
 
 @Composable
@@ -2791,6 +2865,13 @@ private fun displaySyncStatus(value: String?): String? = ScoreRules.displayFs(va
 private fun formatAchievement(value: Double): String = value
     .toBigDecimal()
     .setScale(4, RoundingMode.HALF_UP)
+    .toPlainString()
+
+private fun formatAverageRate(value: Double): String = "${formatAchievement(value)}%"
+
+private fun formatFitDifficulty(value: Double): String = value
+    .toBigDecimal()
+    .setScale(2, RoundingMode.HALF_UP)
     .toPlainString()
 
 private fun formatPreciseLevel(value: Double): String {

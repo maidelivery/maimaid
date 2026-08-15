@@ -34,6 +34,8 @@ data class StaticBundleResponse(
     data class ChartFitStat(
         val diff: String? = null,
         @SerialName("fit_diff") val fitDifficulty: Double? = null,
+        val avg: Double? = null,
+        val cnt: Double? = null,
     )
 
     @Serializable

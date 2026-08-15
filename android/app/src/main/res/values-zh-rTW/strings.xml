@@ -270,6 +270,10 @@
     <string name="detail_catalog_required">需要先完成曲庫同步</string>
     <string name="detail_foundation_ready">功能基礎結構已就緒</string>
     <string name="detail_no_scores">暫無成績記錄</string>
+    <string name="song_chart_fit_difficulty">擬合難度</string>
+    <string name="song_chart_fit_average">平均達成率</string>
+    <string name="song_chart_fit_samples">樣本人數</string>
+    <string name="song_chart_fit_not_available">暫無</string>
     <string name="best50_total">總 Rating</string>
     <string name="best50_capacity">B35 %1$d · B15 %2$d</string>
     <string name="best50_new">新曲 · B15 %1$d</string>

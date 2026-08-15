@@ -270,6 +270,10 @@
     <string name="detail_catalog_required">Catalog data is required</string>
     <string name="detail_foundation_ready">Feature foundation is ready</string>
     <string name="detail_no_scores">No scores recorded</string>
+    <string name="song_chart_fit_difficulty">Fitted Diff</string>
+    <string name="song_chart_fit_average">Avg. Rate</string>
+    <string name="song_chart_fit_samples">Samples</string>
+    <string name="song_chart_fit_not_available">N/A</string>
     <string name="best50_total">Total rating</string>
     <string name="best50_capacity">B35 %1$d · B15 %2$d</string>
     <string name="best50_new">New songs · B15 %1$d</string>
