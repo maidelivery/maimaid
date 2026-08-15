@@ -229,7 +229,7 @@ class ScannerRecognitionEngine(
     }
 
     private companion object {
-        const val MultilingualCharacterAssetPath = "models/ocr/ppocr-v6-tiny-chars.json"
+        const val MultilingualCharacterAssetPath = "models/ocr/ppocr-v6-small-chars.json"
         const val JapaneseCharacterAssetPath = "models/ocr/japan-ppocr-v3-mobile-chars.json"
         val ChooseLabels = listOf("title")
         val ScoreLabels = listOf(
