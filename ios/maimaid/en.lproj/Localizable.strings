@@ -98,6 +98,8 @@
 "song.detail.stats.fitDiff" = "Fitted Diff";
 "song.detail.stats.avgRate" = "Avg. Rate";
 "song.detail.stats.sampleCount" = "Samples";
+"song.detail.noScores" = "No scores recorded";
+"song.detail.currentBest" = "Current best";
 "song.detail.copy.image" = "Image copied";
 "song.detail.save.image" = "Image saved to album";
 "song.detail.chartType" = "Chart Type";

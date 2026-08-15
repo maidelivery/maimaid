@@ -98,6 +98,8 @@
 "song.detail.stats.fitDiff" = "擬合難度";
 "song.detail.stats.avgRate" = "平均レート";
 "song.detail.stats.sampleCount" = "サンプル";
+"song.detail.noScores" = "スコア記録がありません";
+"song.detail.currentBest" = "現在の最高記録";
 "song.detail.copy.image" = "画像をコピーしました";
 "song.detail.save.image" = "画像をアルバムに保存";
 "song.detail.metadata.bpm" = "BPM";

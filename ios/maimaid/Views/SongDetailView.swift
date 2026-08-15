@@ -1040,6 +1040,10 @@ struct SheetCardView: View {
         let type = sheet.type.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return type == "dx" || type == "std" || type == "standard"
     }
+
+    private var currentScore: Score? {
+        ScoreService.shared.score(for: sheet, context: modelContext)
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -1076,7 +1080,7 @@ struct SheetCardView: View {
                     Spacer()
                     
                     // Score badge (if exists)
-                    if let score = ScoreService.shared.score(for: sheet, context: modelContext) {
+                    if !isExpanded, let score = currentScore {
                         VStack(alignment: .trailing, spacing: 1) {
                             Text("\(score.rate, format: .number.precision(.fractionLength(4)))%")
                                 .font(.system(size: 12, weight: .bold, design: .monospaced))
@@ -1233,6 +1237,9 @@ struct SheetCardView: View {
                 .fill(diffColor.opacity(0.12))
                 .frame(height: 1)
                 .padding(.horizontal, 16)
+
+            // Current best score
+            bestScoreRow
             
             // Chart Stats
             chartStatsGrid
@@ -1281,6 +1288,59 @@ struct SheetCardView: View {
             .padding(.horizontal, 16)
         }
         .padding(.bottom, 14)
+    }
+
+    @ViewBuilder
+    private var bestScoreRow: some View {
+        if let score = currentScore {
+            let maxDxScore = (sheet.total ?? 0) * 3
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("song.detail.currentBest")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 8) {
+                        Text("\(score.rate, format: .number.precision(.fractionLength(4)))%")
+                            .font(.system(size: 19, weight: .bold, design: .rounded))
+                        Text(score.rank)
+                            .font(.system(size: 19, weight: .bold, design: .rounded))
+                            .foregroundStyle(RatingUtils.colorForRank(score.rank))
+                    }
+                }
+
+                Spacer(minLength: 12)
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    if score.dxScore > 0 {
+                        Text(maxDxScore > 0 ? "\(score.dxScore) / \(maxDxScore)" : "\(score.dxScore)")
+                            .font(.system(size: 14, weight: .regular, design: .rounded))
+                    }
+
+                    if score.fc != nil || score.fs != nil {
+                        HStack(spacing: 8) {
+                            if let fc = score.fc, !fc.isEmpty {
+                                Text(ThemeUtils.normalizeFC(fc))
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(ThemeUtils.fcColor(fc))
+                            }
+                            if let fs = score.fs, !fs.isEmpty {
+                                Text(ThemeUtils.normalizeFS(fs))
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(ThemeUtils.fsColor(fs))
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+        } else {
+            Text("song.detail.noScores")
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+        }
     }
     
     private var detailedInfoTable: some View {
