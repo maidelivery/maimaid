@@ -344,8 +344,7 @@ object ScannerSongMatcher {
             }
             val relaxedSheet = relaxed.singleOrNull() ?: return null
             return relaxedSheet.takeIf {
-                (hasTitleEvidence && !hasExactTitleEvidence(titleCandidates, song, aliases)) ||
-                    hasNoisyUtageKanjiEvidence(recognition.kanji, it.difficulty)
+                hasTitleEvidence || hasNoisyUtageKanjiEvidence(recognition.kanji, it.difficulty)
             }
         }
         val strictCandidates = sheets.filter { sheet ->
@@ -497,7 +496,7 @@ object ScannerSongMatcher {
         val relaxedSongs = songsMatchingUtageTextConstraints(recognition, explicitTitleKanji, catalog)
         val titleMatches = relaxedSongs.filter { song ->
             val aliases = catalog.aliasesBySong[song.songIdentifier].orEmpty()
-            hasTitleEvidence(candidates, song, aliases) && !hasExactTitleEvidence(candidates, song, aliases)
+            hasTitleEvidence(candidates, song, aliases)
         }
         if (titleMatches.isNotEmpty()) return titleMatches
         val noisyKanjiMatches = relaxedSongs.filter { song ->
@@ -538,20 +537,6 @@ object ScannerSongMatcher {
 
     private fun normalizeUtageKanji(value: String): String = Normalizer.normalize(value, Normalizer.Form.NFKC)
         .replace(Regex("[\\s【】\\[\\]［］]+"), "")
-
-    private fun hasExactTitleEvidence(
-        candidates: List<String>,
-        song: SongEntity,
-        aliases: List<String> = emptyList(),
-    ): Boolean {
-        val normalizedTitle = normalizeMatchTitle(song.title)
-        return candidates.any { candidate ->
-            val normalizedCandidate = normalizeMatchTitle(candidate)
-            normalizedCandidate == normalizedTitle || aliases.any {
-                normalizeMatchTitle(it) == normalizedCandidate
-            }
-        }
-    }
 
     private fun normalizeMatchTitle(title: String): String = Normalizer.normalize(
         stripUtagePrefix(title).replace('\u3000', ' '),
