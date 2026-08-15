@@ -20,9 +20,10 @@ class ScannerStabilizer(
             val next = recognitionVotes.getValue(identifier) - 1
             if (next <= 0) recognitionVotes.remove(identifier) else recognitionVotes[identifier] = next
         }
-        matches.forEach { match ->
+        matches.forEachIndexed { index, match ->
+            val voteWeight = CandidateVoteWeights.getOrElse(index) { 1 }
             recognitionVotes[match.song.songIdentifier] =
-                (recognitionVotes[match.song.songIdentifier] ?: 0).plus(6).coerceAtMost(18)
+                (recognitionVotes[match.song.songIdentifier] ?: 0).plus(voteWeight).coerceAtMost(18)
         }
         val topCandidate = recognitionVotes.maxByOrNull(Map.Entry<String, Int>::value)
         if (topCandidate != null && topCandidate.value > 15) {
@@ -99,5 +100,6 @@ class ScannerStabilizer(
         const val StabilizationThreshold = 3
         const val DisappearanceTimeoutMillis = 4_000L
         const val LockThreshold = 18
+        val CandidateVoteWeights = listOf(6, 3, 2, 1)
     }
 }

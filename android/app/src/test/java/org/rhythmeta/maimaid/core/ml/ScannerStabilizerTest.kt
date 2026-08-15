@@ -67,4 +67,32 @@ class ScannerStabilizerTest {
         now = 10_001L
         assertNull(stabilizer.update(emptyList(), ScannerRawResult()).match)
     }
+
+    @Test
+    fun candidateRankingDoesNotCreateTiedVotes() {
+        val stabilizer = ScannerStabilizer { 0L }
+        val first = ScannerMatch(song("first"), null, ScannerRawResult())
+        val second = ScannerMatch(song("second"), null, ScannerRawResult())
+
+        assertNull(stabilizer.update(listOf(first, second), ScannerRawResult()).match)
+        assertNull(stabilizer.update(listOf(first, second), ScannerRawResult()).match)
+        val result = stabilizer.update(listOf(first, second), ScannerRawResult()).match
+
+        assertEquals("first", result?.song?.songIdentifier)
+    }
+
+    private fun song(identifier: String) = SongEntity(
+        songIdentifier = identifier,
+        category = "",
+        title = identifier,
+        artist = "Artist",
+        imageName = "",
+        version = null,
+        releaseDate = null,
+        sortOrder = 0,
+        bpm = null,
+        isNew = false,
+        isLocked = false,
+        comment = null,
+    )
 }
