@@ -213,7 +213,13 @@ class CatalogRepository(
             remote.sheets.map { sheet ->
                 val providerSongId = selectProviderId(ids, sheet.type)
                 val utageStat = if (sheet.type.equals("utage", ignoreCase = true)) {
-                    utageStats.resolve(providerSongId, remote.title.orEmpty())
+                    utageStats.resolve(
+                        providerSongId = providerSongId,
+                        songTitle = remote.title.orEmpty(),
+                        songIdentifier = remote.songId,
+                        sheetDifficulty = sheet.difficulty,
+                        sheetLevel = sheet.level,
+                    )
                 } else {
                     null
                 }
