@@ -135,6 +135,33 @@ class CatalogQueryTest {
     }
 
     @Test
+    fun `search matches simplified traditional and variant Chinese title forms`() {
+        val matching = song("matching").copy(title = "華天月兎")
+        val other = song("other")
+
+        listOf("华天月兔", "華天月兔", "華天月兎").forEach { queryText ->
+            val result = query(
+                songs = listOf(matching, other),
+                searchText = queryText,
+            )
+
+            assertEquals(listOf("matching"), result.map(SongEntity::songIdentifier))
+        }
+    }
+
+    @Test
+    fun `search matches simplified query against Japanese traditional title`() {
+        val matching = song("matching").copy(title = "宿星審判")
+        val other = song("other")
+
+        assertEquals(
+            listOf("matching"),
+            query(listOf(matching, other), searchText = "审判")
+                .map(SongEntity::songIdentifier),
+        )
+    }
+
+    @Test
     fun `search matches note designer and exact provider song id`() {
         val matching = song("matching")
         val other = song("other")

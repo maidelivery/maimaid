@@ -631,6 +631,8 @@ struct ScoreQueryView: View {
     private func applyFiltersAndSort() {
 //        let searchLower = searchText.lowercased()
         let hasSearch = !searchText.isEmpty
+        let normalizedSearch = SearchTextNormalizer.normalized(searchText)
+        let compactSearch = SearchTextNormalizer.compact(searchText)
         let diffFilter = filterSettings.selectedDifficulties
         let rankFilter = filterSettings.selectedRanks
         let fcFilter = filterSettings.selectedFC
@@ -643,9 +645,23 @@ struct ScoreQueryView: View {
         for entry in allEntries {
             // Search filter
             if hasSearch {
-                let matches = entry.songTitle.localizedStandardContains(searchText) ||
-                              entry.aliases.contains(where: { $0.localizedStandardContains(searchText) }) ||
-                              (entry.searchKeywords?.localizedStandardContains(searchText) ?? false)
+                let matches = SearchTextNormalizer.matches(
+                    entry.songTitle,
+                    normalizedQuery: normalizedSearch,
+                    compactQuery: compactSearch,
+                ) || entry.aliases.contains(where: {
+                    SearchTextNormalizer.matches(
+                        $0,
+                        normalizedQuery: normalizedSearch,
+                        compactQuery: compactSearch,
+                    )
+                }) || (entry.searchKeywords.map {
+                    SearchTextNormalizer.matches(
+                        $0,
+                        normalizedQuery: normalizedSearch,
+                        compactQuery: compactSearch,
+                    )
+                } ?? false)
                 if !matches { continue }
             }
             

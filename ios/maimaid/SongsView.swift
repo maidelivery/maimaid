@@ -229,7 +229,8 @@ struct SongsView: View {
         sortOption: SortOption,
         sortAscending: Bool
     ) -> [String] {
-        let normalizedSearch = searchText.replacing(" ", with: "")
+        let normalizedSearch = SearchTextNormalizer.normalized(searchText)
+        let compactSearch = SearchTextNormalizer.compact(searchText)
         let searchedSongId = Int(searchText.trimmingCharacters(in: .whitespacesAndNewlines))
         let hasSearch = !searchText.isEmpty
         let hasCategories = !settings.selectedCategories.isEmpty
@@ -239,19 +240,37 @@ struct SongsView: View {
         
         let filtered = snapshots.filter { song in
             if hasSearch {
-                let titleMatch = song.title.localizedStandardContains(searchText)
-                    || song.title.replacing(" ", with: "").localizedStandardContains(normalizedSearch)
-                let artistMatch = song.artist.localizedStandardContains(searchText)
-                    || song.artist.replacing(" ", with: "").localizedStandardContains(normalizedSearch)
-                let keywordMatch = (song.searchKeywords?.localizedStandardContains(searchText) ?? false)
-                    || (song.searchKeywords?.replacing(" ", with: "").localizedStandardContains(normalizedSearch) ?? false)
+                let titleMatch = SearchTextNormalizer.matches(
+                    song.title,
+                    normalizedQuery: normalizedSearch,
+                    compactQuery: compactSearch,
+                )
+                let artistMatch = SearchTextNormalizer.matches(
+                    song.artist,
+                    normalizedQuery: normalizedSearch,
+                    compactQuery: compactSearch,
+                )
+                let keywordMatch = song.searchKeywords.map {
+                    SearchTextNormalizer.matches(
+                        $0,
+                        normalizedQuery: normalizedSearch,
+                        compactQuery: compactSearch,
+                    )
+                } ?? false
                 let aliasMatch = song.aliases.contains {
-                    $0.localizedStandardContains(searchText)
-                        || $0.replacing(" ", with: "").localizedStandardContains(normalizedSearch)
+                    SearchTextNormalizer.matches(
+                        $0,
+                        normalizedQuery: normalizedSearch,
+                        compactQuery: compactSearch,
+                    )
                 }
                 let designerMatch = song.sheets.contains {
-                    ($0.noteDesigner?.localizedStandardContains(searchText) ?? false)
-                        || ($0.noteDesigner?.replacing(" ", with: "").localizedStandardContains(normalizedSearch) ?? false)
+                    guard let noteDesigner = $0.noteDesigner else { return false }
+                    return SearchTextNormalizer.matches(
+                        noteDesigner,
+                        normalizedQuery: normalizedSearch,
+                        compactQuery: compactSearch,
+                    )
                 }
                 let idMatch = searchedSongId.map { songId in
                     songId > 0 && (song.songId == songId || song.providerSongIds.contains(songId))

@@ -1,6 +1,5 @@
 package org.rhythmeta.maimaid.core.data
 
-import java.text.Normalizer
 import java.util.Locale
 import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
@@ -185,7 +184,5 @@ object ScoreQueryCalculator {
         *aliases.toTypedArray(),
     ).any { it.normalizedSearchText().contains(query) }
 
-    private fun String.normalizedSearchText(): String = Normalizer.normalize(this, Normalizer.Form.NFKC)
-        .lowercase(Locale.ROOT)
-        .trim()
+    private fun String.normalizedSearchText(): String = SearchTextNormalizer.normalize(this).trim()
 }

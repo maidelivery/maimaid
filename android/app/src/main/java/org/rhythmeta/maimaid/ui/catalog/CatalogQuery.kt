@@ -1,8 +1,7 @@
 package org.rhythmeta.maimaid.ui.catalog
 
-import java.text.Normalizer
-import java.util.Locale
 import org.rhythmeta.maimaid.core.data.CatalogSortOption
+import org.rhythmeta.maimaid.core.data.SearchTextNormalizer
 import org.rhythmeta.maimaid.core.database.GameVersionEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.SongEntity
@@ -144,7 +143,7 @@ internal object CatalogQuery {
     }
 
     private fun String.normalizedForSearch(): String =
-        Normalizer.normalize(this, Normalizer.Form.NFKC).lowercase(Locale.getDefault())
+        SearchTextNormalizer.normalize(this)
 
     private fun String.withoutSpaces(): String = filterNot(Char::isWhitespace)
 
