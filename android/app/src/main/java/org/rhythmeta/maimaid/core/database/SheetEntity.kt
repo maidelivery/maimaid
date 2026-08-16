@@ -50,4 +50,5 @@ data class SheetEntity(
     val cnLevelValue: Double? = null,
     val cnInternalLevel: String? = null,
     val cnInternalLevelValue: Double? = null,
+    val multiverInternalLevelValue: Map<String, Double>? = null,
 )

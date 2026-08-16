@@ -54,6 +54,7 @@ internal fun SongCard(
     versions: List<GameVersionEntity>,
     coverImageStore: CoverImageStore,
     onClick: () -> Unit,
+    chartType: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
@@ -64,7 +65,9 @@ internal fun SongCard(
     val accentColor = highestSheet?.let {
         SongVisualUtils.difficultyColor(it.difficulty, it.type, darkTheme)
     } ?: SongVisualUtils.utageColor(darkTheme)
-    val versionBadgeColor = SongVisualUtils.versionBadgeColor(song, sheets, darkTheme)
+    val versionBadgeChartTypes = remember(song.category, sheets, chartType) {
+        SongVisualUtils.versionBadgeChartTypes(song, sheets, chartType)
+    }
     val versionText = remember(song.version, versions) {
         song.version
             ?.takeIf(String::isNotBlank)
@@ -160,21 +163,10 @@ internal fun SongCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 versionText?.let { version ->
-                    Text(
+                    ChartTypeVersionBadge(
                         text = version,
-                        style = MiuixTheme.textStyles.footnote2.copy(
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                        ),
-                        color = Color.White,
-                        maxLines = 1,
-                        modifier = Modifier
-                            .squircleSurface(
-                                color = versionBadgeColor,
-                                cornerRadius = 4.dp,
-                                extension = SquircleExtension,
-                            )
-                            .padding(horizontal = 5.dp, vertical = 2.dp),
+                        chartTypes = versionBadgeChartTypes,
+                        darkTheme = darkTheme,
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {

@@ -38,6 +38,7 @@ data class CatalogPayload(
         val noteCounts: NoteCounts? = null,
         val regions: Map<String, Boolean>? = null,
         val regionOverrides: Map<String, SheetOverride>? = null,
+        val multiverInternalLevelValue: Map<String, Double>? = null,
     )
 
     @Serializable

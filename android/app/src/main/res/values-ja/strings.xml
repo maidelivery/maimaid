@@ -291,6 +291,9 @@
     <string name="best50_capacity_old">旧曲</string>
     <string name="best50_capacity_new">新曲</string>
     <string name="best50_capacity_total">合計</string>
+    <string name="best50_constant_section">計算定数</string>
+    <string name="best50_use_fitted_constant">フィッティング定数を使う</string>
+    <string name="best50_use_version_constant">バージョン定数を使う</string>
     <string name="best50_new_section">新しい B%1$d</string>
     <string name="best50_old_section">古い B%1$d</string>
     <string name="best50_empty">データなし</string>
@@ -426,6 +429,8 @@
     <string name="song_jacket_action_failed">ジャケットを処理できませんでした</string>
     <string name="song_jacket_share_chooser">ジャケットを共有</string>
     <string name="song_notes_title">ノーツ情報</string>
+    <string name="song_chart_added_version">追加バージョン</string>
+    <string name="song_constant_history">定数変更履歴</string>
     <string name="song_add_favorite">お気に入りに追加</string>
     <string name="song_remove_favorite">お気に入りから削除</string>
     <string name="common_none">なし</string>

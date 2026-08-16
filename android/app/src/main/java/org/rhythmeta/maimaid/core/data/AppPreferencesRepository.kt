@@ -83,6 +83,12 @@ class AppPreferencesRepository(
         preferences[ScoreQuerySortAscendingKey] ?: false
     }
 
+    val best50ConstantMode: Flow<Best50ConstantMode> = context.appPreferencesDataStore.data.map { preferences ->
+        preferences[Best50ConstantModeKey]
+            ?.let { stored -> Best50ConstantMode.entries.firstOrNull { it.name == stored } }
+            ?: Best50ConstantMode.Server
+    }
+
     suspend fun setThemeMode(themeMode: AppThemeMode) {
         context.appPreferencesDataStore.edit { preferences ->
             preferences[ThemeModeKey] = themeMode.name
@@ -167,6 +173,12 @@ class AppPreferencesRepository(
         }
     }
 
+    suspend fun setBest50ConstantMode(mode: Best50ConstantMode) {
+        context.appPreferencesDataStore.edit { preferences ->
+            preferences[Best50ConstantModeKey] = mode.name
+        }
+    }
+
     private companion object {
         val ThemeModeKey = stringPreferencesKey("theme_mode")
         val ThemeColorSourceKey = stringPreferencesKey("theme_color_source")
@@ -182,5 +194,6 @@ class AppPreferencesRepository(
         val ScoreQueryGridColumnsKey = intPreferencesKey("score_query_grid_columns")
         val ScoreQuerySortModeKey = stringPreferencesKey("score_query_sort_mode")
         val ScoreQuerySortAscendingKey = booleanPreferencesKey("score_query_sort_ascending")
+        val Best50ConstantModeKey = stringPreferencesKey("best50_constant_mode")
     }
 }

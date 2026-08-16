@@ -47,6 +47,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronLeft
@@ -123,6 +125,7 @@ import org.rhythmeta.maimaid.core.database.PlayRecordEntity
 import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.SongEntity
+import org.rhythmeta.maimaid.core.database.GameVersionEntity
 import org.rhythmeta.maimaid.ui.catalog.ScoreEntrySongCard
 import org.rhythmeta.maimaid.ui.common.openExternalApp
 import org.rhythmeta.maimaid.ui.components.ExpandableBottomSheet
@@ -169,6 +172,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import kotlin.math.abs
 
 private data class MetadataItem(
     val value: String,
@@ -293,19 +297,26 @@ fun SongDetailScreen(
     val accentColor = detailColors?.accent ?: MiuixTheme.colorScheme.primary
     val cachedCover = remember(song.imageName) { container.coverImageStore.fileFor(song.imageName) }
     val chartTypes = state.charts.map { it.sheet.type.displayChartType() }.distinct()
-    val chartTypeVersionLabels = remember(state.charts, gameVersions) {
-        state.charts
-            .groupBy { it.sheet.type.displayChartType() }
-            .mapNotNull { (type, charts) ->
-                charts.firstNotNullOfOrNull { chart ->
-                    chart.resolvedMetadata?.version
-                        ?.trim()
-                        ?.takeIf(String::isNotEmpty)
-                }?.let { version ->
-                    type to SongVisualUtils.versionAbbreviation(version, gameVersions)
-                }
-            }
-            .toMap()
+    val chartTypeMainVersions = remember(state.charts, chartTypes, song.version, gameVersions) {
+        chartTypes.associateWith { type ->
+            ChartVersionHistory.mainVersion(
+                candidates = state.charts
+                    .filter { it.sheet.type.displayChartType() == type }
+                    .map { chart ->
+                        ChartVersionCandidate(
+                            difficulty = chart.sheet.difficulty,
+                            version = chart.resolvedMetadata?.version ?: chart.sheet.version,
+                        )
+                    },
+                versions = gameVersions,
+                fallback = song.version,
+            )
+        }
+    }
+    val chartTypeVersionLabels = remember(chartTypeMainVersions, gameVersions) {
+        chartTypeMainVersions.mapNotNull { (type, version) ->
+            version?.let { type to SongVisualUtils.versionAbbreviation(it, gameVersions) }
+        }.toMap()
     }
     var selectedType by rememberSaveable(song.songIdentifier) { mutableStateOf<String?>(null) }
     LaunchedEffect(chartTypes) {
@@ -318,11 +329,9 @@ fun SongDetailScreen(
     val visibleCharts = state.charts.filter { chart ->
         selectedType == null || chart.sheet.type.displayChartType() == selectedType
     }
-    val selectedChartVersion = visibleCharts.firstNotNullOfOrNull { chart ->
-        (chart.resolvedMetadata?.version ?: chart.sheet.version)
-            ?.trim()
-            ?.takeIf(String::isNotEmpty)
-    } ?: song.version?.trim()?.takeIf(String::isNotEmpty)
+    val selectedChartVersion = selectedType
+        ?.let(chartTypeMainVersions::get)
+        ?: song.version?.trim()?.takeIf(String::isNotEmpty)
     val selectedProviderSongId = visibleCharts
         .firstOrNull { it.sheet.providerSongId > 0 }
         ?.sheet
@@ -407,6 +416,8 @@ fun SongDetailScreen(
                     val chart = visibleCharts[index]
                     SheetScoreCard(
                         chart = chart,
+                        mainChartVersion = chartTypeMainVersions[chart.sheet.type.displayChartType()],
+                        gameVersions = gameVersions,
                         surfaceColor = surfaceColor,
                         actionSurfaceColor = selectedSurfaceColor,
                         accentColor = accentColor,
@@ -1364,6 +1375,8 @@ private fun SongDetailButton(
 @Composable
 private fun SheetScoreCard(
     chart: SheetScoreUiState,
+    mainChartVersion: String?,
+    gameVersions: List<GameVersionEntity>,
     surfaceColor: Color,
     actionSurfaceColor: Color,
     accentColor: Color,
@@ -1373,6 +1386,15 @@ private fun SheetScoreCard(
     var expanded by rememberSaveable(chart.sheet.sheetKey) { mutableStateOf(false) }
     val isUtage = chart.sheet.type.contains("utage", ignoreCase = true)
     val metadata = chart.resolvedMetadata ?: ServerChartPolicy.metadata(chart.sheet, "jp")
+    val additionVersion = remember(mainChartVersion, metadata.version) {
+        ChartVersionHistory.additionVersion(mainChartVersion, metadata.version)
+    }
+    val constantChanges = remember(chart.sheet.multiverInternalLevelValue, gameVersions) {
+        ChartVersionHistory.constantChanges(
+            values = chart.sheet.multiverInternalLevelValue,
+            versions = gameVersions,
+        )
+    }
     val expandInteractionSource = remember { MutableInteractionSource() }
     val chevronRotation by animateFloatAsState(
         targetValue = if (expanded) 90f else 0f,
@@ -1455,6 +1477,12 @@ private fun SheetScoreCard(
         AnimatedVisibility(visible = expanded) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Spacer(Modifier.height(12.dp))
+                ChartVersionDetails(
+                    additionVersion = additionVersion,
+                    constantChanges = constantChanges,
+                    gameVersions = gameVersions,
+                    accentColor = accent,
+                )
                 ChartFitStatsSection(chart.chartFit, accent)
                 BestScoreRow(chart.score, chart.sheet, accentColor)
 
@@ -1489,6 +1517,110 @@ private fun SheetScoreCard(
                     Icon(Icons.Rounded.Edit, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.score_record_action))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChartVersionDetails(
+    additionVersion: String?,
+    constantChanges: List<ChartConstantHistoryEntry>,
+    gameVersions: List<GameVersionEntity>,
+    accentColor: Color,
+) {
+    additionVersion?.let { version ->
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.song_chart_added_version),
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = SongVisualUtils.versionAbbreviation(version, gameVersions),
+                style = MiuixTheme.textStyles.body2,
+                fontWeight = FontWeight.Bold,
+                color = accentColor,
+            )
+        }
+    }
+    if (constantChanges.isNotEmpty()) {
+        ConstantHistorySection(
+            changes = constantChanges,
+            gameVersions = gameVersions,
+            accentColor = accentColor,
+        )
+    }
+}
+
+@Composable
+private fun ConstantHistorySection(
+    changes: List<ChartConstantHistoryEntry>,
+    gameVersions: List<GameVersionEntity>,
+    accentColor: Color,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    CollapsibleDetailSection(
+        title = stringResource(R.string.song_constant_history),
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        Column {
+            changes.forEachIndexed { index, entry ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            if (index % 2 == 0) {
+                                MiuixTheme.colorScheme.onSurface.copy(alpha = 0.02f)
+                            } else {
+                                Color.Transparent
+                            },
+                        )
+                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = SongVisualUtils.versionAbbreviation(entry.version, gameVersions),
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    entry.change?.let { change ->
+                        val increased = change > 0.0
+                        val changeColor = if (increased) ConstantIncreaseColor else ConstantDecreaseColor
+                        Text(
+                            text = formatSignedConstantChange(change),
+                            style = MiuixTheme.textStyles.footnote1,
+                            fontWeight = FontWeight.Bold,
+                            color = changeColor,
+                        )
+                        Spacer(Modifier.width(2.dp))
+                        Icon(
+                            imageVector = if (increased) {
+                                Icons.Rounded.ArrowUpward
+                            } else {
+                                Icons.Rounded.ArrowDownward
+                            },
+                            contentDescription = null,
+                            tint = changeColor,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                    }
+                    Text(
+                        text = formatPreciseLevel(entry.constant),
+                        style = MiuixTheme.textStyles.body2,
+                        fontWeight = FontWeight.Bold,
+                        color = accentColor,
+                    )
                 }
             }
         }
@@ -2905,6 +3037,13 @@ private fun formatPreciseLevel(value: Double): String {
     return if (normalized.scale() < 1) normalized.setScale(1).toPlainString() else normalized.toPlainString()
 }
 
+private fun formatSignedConstantChange(value: Double): String {
+    val sign = if (value > 0.0) "+" else "-"
+    return sign + formatPreciseLevel(abs(value))
+}
+
 private val AchievementInputPattern = Regex("^[0-9]{0,3}(?:\\.[0-9]{0,4})?$")
 private const val MaximumAchievement = 101.0
 private const val HistoryPageSize = 5
+private val ConstantIncreaseColor = Color(0xFFD65C5C)
+private val ConstantDecreaseColor = Color(0xFF36A65C)

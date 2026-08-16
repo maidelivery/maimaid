@@ -43,6 +43,7 @@ struct MainTabView: View {
             ProfileCredentialStore.shared.migrateLegacyCredentialsIfNeeded(context: modelContext)
             ensureActiveProfileAndRepairScopedData()
             ScoreService.shared.repairDetachedRecordsIfNeeded(context: modelContext)
+            await importVersionConstantsIfNeeded()
             
             // Reconnect orphaned scores due to Model relationship changes
             fixOrphanedScores()
@@ -54,6 +55,29 @@ struct MainTabView: View {
     }
     
     // MARK: - Migration
+
+    private func importVersionConstantsIfNeeded() async {
+        guard UserDefaults.app.didPerformInitialSync,
+              !UserDefaults.app.didImportVersionConstants,
+              BackendSessionManager.shared.isConfigured else {
+            return
+        }
+
+        let options = MaimaiDataFetcher.SyncOptions(
+            updateRemoteData: true,
+            updateAliases: true,
+            updateCovers: false,
+            updateIcons: false,
+            updateDanData: false,
+            updateChartStats: false,
+            updateUtageChartStats: false
+        )
+        try? await MaimaiDataFetcher.shared.fetchSongs(
+            modelContext: modelContext,
+            options: options,
+            forceBundleApply: true
+        )
+    }
     
     private func migrateToUserProfileIfNeeded() {
         guard let config = configs.first, !config.didMigrateToUserProfile else { return }

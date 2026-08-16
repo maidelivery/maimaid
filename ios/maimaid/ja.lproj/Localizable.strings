@@ -105,6 +105,8 @@
 "song.detail.metadata.bpm" = "BPM";
 "song.detail.metadata.category" = "カテゴリ";
 "song.detail.metadata.version" = "バージョン";
+"song.detail.chart.addedVersion" = "追加バージョン";
+"song.detail.constantHistory" = "定数変更履歴";
 "song.detail.metadata.releaseDate" = "リリース";
 "song.detail.region.jp" = "日本";
 "song.detail.region.intl" = "国際";
@@ -312,6 +314,10 @@
 "bestTable.export.fitDiff" = "擬合難度を使用";
 "bestTable.export.fitDiff.rating" = "擬合 Rating";
 "bestTable.settings.useFitDiff" = "擬合難度を使う";
+"bestTable.settings.constants" = "計算定数";
+"bestTable.settings.useVersionConstant" = "バージョン定数を使う";
+"bestTable.export.versionConstant" = "バージョン定数を使用";
+"bestTable.export.versionConstant.rating" = "バージョン定数 Rating";
 "bestTable.action.export" = "B50画像のエクスポート";
 
 // English Localizable.strings entries for Version Override Feature

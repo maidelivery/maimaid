@@ -315,8 +315,7 @@ enum RatingUtils {
         let difficulty: String
         let version: String?
         let total: Int?
-        let internalLevelValue: Double?
-        let fitDiffValue: Double?
+        let calculationLevel: Double?
         let isPlayable: Bool
     }
     
@@ -362,7 +361,7 @@ enum RatingUtils {
                 let sheetId = "\(sheetData.songIdentifier)_\(sheetData.type)_\(sheetData.difficulty)"
                 guard let scoreData = input.scoreMap[sheetId] else { continue }
                 
-                let internalLevel = sheetData.fitDiffValue ?? sheetData.internalLevelValue ?? 0
+                let internalLevel = sheetData.calculationLevel ?? 0
                 guard internalLevel > 0 else { continue }
                 
                 let rating = calculateRating(
@@ -421,8 +420,7 @@ extension Array where Element == Song {
         let difficulty: String
         let version: String?
         let total: Int?
-        let internalLevelValue: Double?
-        let fitDiffValue: Double?
+        let calculationLevel: Double?
         let isPlayable: Bool
     }
 
@@ -439,7 +437,11 @@ extension Array where Element == Song {
     }
 
     @MainActor
-    private func extractCalculationData(server: GameServer?, useFitDiff: Bool) -> [SongExtractionData] {
+    private func extractCalculationData(
+        server: GameServer?,
+        constantMode: Best50ConstantMode,
+        selectedVersion: String?
+    ) -> [SongExtractionData] {
         var extractedSongs: [SongExtractionData] = []
         extractedSongs.reserveCapacity(count)
 
@@ -448,8 +450,15 @@ extension Array where Element == Song {
             extractedSheets.reserveCapacity(song.sheets.count)
 
             for sheet in song.sheets {
-                let fitDiffValue = useFitDiff ? ChartStatsService.shared.getStat(for: sheet)?.fit_diff : nil
                 let metadata = server.map { ServerChartPolicy.metadata(for: sheet, on: $0) }
+                let modeConstant: Double? = switch constantMode {
+                case .server:
+                    nil
+                case .fitted:
+                    ChartStatsService.shared.getStat(for: sheet)?.fit_diff
+                case .version:
+                    sheet.versionInternalLevelValue(for: selectedVersion)
+                }
 
                 extractedSheets.append(
                     SheetExtractionData(
@@ -458,8 +467,7 @@ extension Array where Element == Song {
                         difficulty: sheet.difficulty,
                         version: metadata?.version ?? sheet.version,
                         total: sheet.total,
-                        internalLevelValue: metadata?.ratingLevel,
-                        fitDiffValue: fitDiffValue,
+                        calculationLevel: modeConstant ?? metadata?.ratingLevel,
                         isPlayable: server.map { ServerChartPolicy.isPlayable(sheet, on: $0) } ?? false
                     )
                 )
@@ -492,8 +500,7 @@ extension Array where Element == Song {
                     difficulty: sheet.difficulty,
                     version: sheet.version,
                     total: sheet.total,
-                    internalLevelValue: sheet.internalLevelValue,
-                    fitDiffValue: sheet.fitDiffValue,
+                    calculationLevel: sheet.calculationLevel,
                     isPlayable: sheet.isPlayable
                 )
             }
@@ -517,9 +524,14 @@ extension Array where Element == Song {
         userProfileId: UUID?,
         server: GameServer?,
         preloadedScores: [String: Score],
-        useFitDiff: Bool = false
+        constantMode: Best50ConstantMode = .server,
+        selectedVersion: String? = nil
     ) async -> RatingUtils.CalculationInput {
-        let extractedSongs = extractCalculationData(server: server, useFitDiff: useFitDiff)
+        let extractedSongs = extractCalculationData(
+            server: server,
+            constantMode: constantMode,
+            selectedVersion: selectedVersion
+        )
 
         var scoresData: [String: RatingUtils.ScoreCalculationData] = [:]
         scoresData.reserveCapacity(preloadedScores.count)

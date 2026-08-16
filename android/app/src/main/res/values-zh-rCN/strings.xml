@@ -291,6 +291,9 @@
     <string name="best50_capacity_old">旧曲</string>
     <string name="best50_capacity_new">新曲</string>
     <string name="best50_capacity_total">当前总计</string>
+    <string name="best50_constant_section">计算定数</string>
+    <string name="best50_use_fitted_constant">使用拟合定数</string>
+    <string name="best50_use_version_constant">使用版本定数</string>
     <string name="best50_new_section">新曲 B%1$d</string>
     <string name="best50_old_section">旧曲 B%1$d</string>
     <string name="best50_empty">暂无数据</string>
@@ -426,6 +429,8 @@
     <string name="song_jacket_action_failed">曲绘处理失败</string>
     <string name="song_jacket_share_chooser">分享曲绘</string>
     <string name="song_notes_title">音符统计</string>
+    <string name="song_chart_added_version">追加版本</string>
+    <string name="song_constant_history">定数变化历史</string>
     <string name="song_add_favorite">加入收藏</string>
     <string name="song_remove_favorite">取消收藏</string>
     <string name="common_none">无</string>

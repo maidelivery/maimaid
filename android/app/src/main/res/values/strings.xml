@@ -291,6 +291,9 @@
     <string name="best50_capacity_old">Old</string>
     <string name="best50_capacity_new">New</string>
     <string name="best50_capacity_total">Total</string>
+    <string name="best50_constant_section">Calculation constants</string>
+    <string name="best50_use_fitted_constant">Use fitted constants</string>
+    <string name="best50_use_version_constant">Use version constants</string>
     <string name="best50_new_section">New B%1$d</string>
     <string name="best50_old_section">Old B%1$d</string>
     <string name="best50_empty">No data</string>
@@ -426,6 +429,8 @@
     <string name="song_jacket_action_failed">Unable to process cover</string>
     <string name="song_jacket_share_chooser">Share cover</string>
     <string name="song_notes_title">Notes</string>
+    <string name="song_chart_added_version">Added in</string>
+    <string name="song_constant_history">Constant history</string>
     <string name="song_add_favorite">Add to favorites</string>
     <string name="song_remove_favorite">Remove from favorites</string>
     <string name="common_none">None</string>

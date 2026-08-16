@@ -2,6 +2,7 @@ import SwiftUI
 
 enum AppStorageKeys {
     static let useFitDiff = "useFitDiff"
+    static let best50ConstantMode = "best50.constantMode"
     static let showScannerBoundingBox = "showScannerBoundingBox"
     static let scoreQueryDisplayMode = "scoreQuery.displayMode"
     static let scoreQueryGridColumns = "scoreQuery.gridColumns"
@@ -30,6 +31,7 @@ enum UserDefaultsKeys {
     static let showOnlyPlayableSongs = "filter.showOnlyPlayableSongs"
     static let didFixOrphanedScoresMigration = "migration.fixOrphanedScoresRelationships"
     static let didForceRegionSyncMigration = "migration.forceRegionBackfillSync"
+    static let didImportVersionConstants = "migration.importVersionConstants"
     static let didShowOnboarding = "onboarding.didShowOnboarding"
     static let communityAliasApprovedSyncAt = "communityAlias.approvedSyncAt"
     static let communityAliasLastPollAt = "communityAlias.lastPollAt"
@@ -138,6 +140,11 @@ extension UserDefaults {
         set { set(newValue, forKey: UserDefaultsKeys.didForceRegionSyncMigration) }
     }
 
+    var didImportVersionConstants: Bool {
+        get { bool(forKey: UserDefaultsKeys.didImportVersionConstants) }
+        set { set(newValue, forKey: UserDefaultsKeys.didImportVersionConstants) }
+    }
+
     var didShowOnboarding: Bool {
         get { bool(forKey: UserDefaultsKeys.didShowOnboarding) }
         set { set(newValue, forKey: UserDefaultsKeys.didShowOnboarding) }
@@ -220,6 +227,32 @@ struct ThemeUtils {
         }
 
         return .blue
+    }
+
+    static func versionBadgeChartTypes(
+        sheetTypes: [String],
+        explicitType: String? = nil
+    ) -> [String] {
+        if let explicitType = explicitType?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !explicitType.isEmpty {
+            return [canonicalChartType(explicitType)]
+        }
+
+        let types = Set(sheetTypes.map(canonicalChartType))
+        if types.contains("std"), types.contains("dx") {
+            return ["std", "dx"]
+        }
+        if let utage = types.first(where: { $0.contains("utage") }) {
+            return [utage]
+        }
+        return types.contains("dx") ? ["dx"] : ["std"]
+    }
+
+    private static func canonicalChartType(_ type: String) -> String {
+        switch type.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "standard": "std"
+        default: type.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
     }
     
     struct AppVersion: Decodable {

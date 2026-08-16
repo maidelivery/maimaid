@@ -106,6 +106,8 @@
 "song.detail.metadata.bpm" = "BPM";
 "song.detail.metadata.category" = "Category";
 "song.detail.metadata.version" = "Version";
+"song.detail.chart.addedVersion" = "Added in";
+"song.detail.constantHistory" = "Constant history";
 "song.detail.metadata.releaseDate" = "Release";
 "song.detail.region.jp" = "Japan";
 "song.detail.region.intl" = "Intl";
@@ -313,6 +315,10 @@
 "bestTable.export.fitDiff" = "FitDiff Enabled";
 "bestTable.export.fitDiff.rating" = "FitDiff Rating";
 "bestTable.settings.useFitDiff" = "Use Fitting Diff";
+"bestTable.settings.constants" = "Calculation Constants";
+"bestTable.settings.useVersionConstant" = "Use Version Constants";
+"bestTable.export.versionConstant" = "Version Constants Enabled";
+"bestTable.export.versionConstant.rating" = "Version Constant Rating";
 "bestTable.action.export" = "Export B50 Image";
 
 // English Localizable.strings entries for Version Override Feature

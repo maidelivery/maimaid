@@ -130,6 +130,7 @@ struct RemoteSheet: Decodable {
     let levelValue: Double?
     let internalLevel: String?
     let internalLevelValue: Double?
+    let multiverInternalLevelValue: [String: Double]?
     let noteDesigner: String?
     let noteCounts: RemoteNoteCounts?
     let regions: [String: Bool]?
@@ -608,6 +609,7 @@ class MaimaiDataFetcher {
                                     levelValue: sh.levelValue,
                                     internalLevel: sh.internalLevel,
                                     internalLevelValue: sh.internalLevelValue,
+                                    multiverInternalLevelValue: sh.multiverInternalLevelValue,
                                     noteDesigner: sh.noteDesigner,
                                     noteCounts: RemoteNoteCounts(
                                         tap: sh.tap,
@@ -800,6 +802,7 @@ class MaimaiDataFetcher {
                             sheet.levelValue = remoteSheet.levelValue ?? 0
                             sheet.internalLevel = remoteSheet.internalLevel
                             sheet.internalLevelValue = remoteSheet.internalLevelValue
+                            sheet.multiverInternalLevelValue = remoteSheet.multiverInternalLevelValue
                             sheet.noteDesigner = remoteSheet.noteDesigner
 
                             let intlOverride = remoteSheet.regionOverrides?["intl"]
@@ -1020,6 +1023,7 @@ class MaimaiDataFetcher {
             await forceSyncApprovedCommunityAliases(modelContext: modelContext)
 
             if options.updateRemoteData {
+                UserDefaults.app.didImportVersionConstants = true
                 B50CacheService.shared.invalidate()
                 NotificationCenter.default.post(name: .maimaiCatalogDidChange, object: nil)
             }

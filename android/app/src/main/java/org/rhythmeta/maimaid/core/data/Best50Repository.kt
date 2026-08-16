@@ -23,11 +23,13 @@ data class Best50State(
 class Best50Repository(
     private val database: MaimaidDatabase,
     private val profileRepository: ProfileRepository,
+    private val catalogRepository: CatalogRepository,
 ) {
     fun observeBest50(
         versionOverride: String? = null,
         b35CountOverride: Int? = null,
         b15CountOverride: Int? = null,
+        constantMode: Best50ConstantMode = Best50ConstantMode.Server,
     ): Flow<Best50State> =
         profileRepository.activeProfile.flatMapLatest { profile ->
             if (profile == null) {
@@ -35,10 +37,11 @@ class Best50Repository(
             } else {
                 combine(
                     database.scoreDao().observeBest50Rows(profile.id),
-                    database.catalogDao().observeVersions(),
-                    database.catalogDao().observeSongs(),
-                    database.catalogDao().observeSheets(),
-                ) { rows, versions, songs, sheets ->
+                    catalogRepository.versions,
+                    catalogRepository.songs,
+                    catalogRepository.sheets,
+                    catalogRepository.chartFit,
+                ) { rows, versions, songs, sheets, chartFit ->
                     calculateBest50(
                         rows = rows,
                         versions = versions,
@@ -48,6 +51,8 @@ class Best50Repository(
                         b35Count = b35CountOverride ?: profile.b35Count,
                         b15Count = b15CountOverride ?: profile.b15Count,
                         versionOverride = versionOverride,
+                        constantMode = constantMode,
+                        chartFit = chartFit,
                     )
                 }
             }
@@ -63,6 +68,8 @@ internal fun calculateBest50(
     b35Count: Int,
     b15Count: Int,
     versionOverride: String?,
+    constantMode: Best50ConstantMode = Best50ConstantMode.Server,
+    chartFit: StaticBundleResponse.ChartFitPayload = StaticBundleResponse.ChartFitPayload(),
 ): Best50State {
     val versionNames = versions.sortedBy { it.sortOrder }.map { it.name }
     val latest = versionOverride?.takeIf { candidate ->
@@ -84,7 +91,13 @@ internal fun calculateBest50(
             true,
             versionNames,
         ) ?: return@forEach
-        val level = metadata.ratingLevel ?: return@forEach
+        val level = Best50ConstantResolver.resolve(
+            sheet = sheet,
+            serverConstant = metadata.ratingLevel,
+            selectedVersion = latest,
+            mode = constantMode,
+            chartFit = chartFit,
+        ) ?: return@forEach
         val rating = RatingUtils.calculate(level, row.achievement, row.fc, afterCircle)
         if (rating <= 0) return@forEach
         (if (isNew) b15 else b35).add(
