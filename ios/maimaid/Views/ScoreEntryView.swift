@@ -6,6 +6,7 @@ struct ScoreEntryView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
+    @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     
     let sheet: Sheet
     
@@ -72,7 +73,11 @@ struct ScoreEntryView: View {
     }
     
     private var levelLabel: String {
-        "Lv.\(sheet.internalLevel ?? sheet.level)"
+        "Lv.\(ServerChartPolicy.metadata(for: sheet, on: activeServer).displayLevel)"
+    }
+
+    private var activeServer: GameServer {
+        activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
     }
     
     private var displayedRank: String {

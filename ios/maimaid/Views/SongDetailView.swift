@@ -1044,6 +1044,14 @@ struct SheetCardView: View {
     private var currentScore: Score? {
         ScoreService.shared.score(for: sheet, context: modelContext)
     }
+
+    private var activeServer: GameServer {
+        activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
+    }
+
+    private var resolvedMetadata: ResolvedSheetMetadata {
+        ServerChartPolicy.metadata(for: sheet, on: activeServer)
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -1113,7 +1121,7 @@ struct SheetCardView: View {
                     }
                     
                     // Level
-                    Text(sheet.internalLevel ?? sheet.level)
+                    Text(resolvedMetadata.displayLevel)
                         .font(.system(size: 28, weight: .black, design: .rounded))
                         .foregroundStyle(diffColor.opacity(0.85))
                         .frame(minWidth: 44)
@@ -1249,7 +1257,7 @@ struct SheetCardView: View {
             
             // Achievement -> Rating table
             if supportsRatingTable,
-               let level = sheet.internalLevelValue ?? sheet.levelValue,
+               let level = resolvedMetadata.ratingLevel,
                level > 0 {
                 ratingTable(level: level)
             }

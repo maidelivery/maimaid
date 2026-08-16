@@ -36,6 +36,15 @@ struct FilterView: View {
                             Toggle("", isOn: $settings.hideDeletedSongs)
                                 .labelsHidden()
                         }
+
+                        HStack {
+                            Label("filter.playableOnly", systemImage: settings.showOnlyPlayableSongs ? "play.circle.fill" : "play.circle")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Toggle("", isOn: $settings.showOnlyPlayableSongs)
+                                .labelsHidden()
+                        }
                     }
 
                     // Difficulty & Range Section (Grouped)
@@ -145,6 +154,9 @@ struct FilterView: View {
             }
             .onChange(of: settings.hideDeletedSongs) { _, newValue in
                 UserDefaults.app.hideDeletedSongs = newValue
+            }
+            .onChange(of: settings.showOnlyPlayableSongs) { _, newValue in
+                UserDefaults.app.showOnlyPlayableSongs = newValue
             }
         }
     }

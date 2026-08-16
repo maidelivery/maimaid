@@ -72,6 +72,10 @@ struct SongsView: View {
     
     /// Task for background score cache refresh
     @State private var scoreCacheTask: Task<Void, Never>?
+
+    private var activeServer: GameServer {
+        activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
+    }
     
     private let minColumns: CGFloat = 3
     private let maxColumns: CGFloat = 9
@@ -81,11 +85,9 @@ struct SongsView: View {
             let type: String
             let difficulty: String
             let noteDesigner: String?
-            let internalLevelValue: Double?
-            let levelValue: Double?
-            let regionJp: Bool
-            let regionIntl: Bool
-            let regionCn: Bool
+            let ratingLevel: Double?
+            let isPlayable: Bool
+            let isPlayableOnActiveServer: Bool
         }
         
         let songIdentifier: String
@@ -109,11 +111,9 @@ struct SongsView: View {
             let type: String
             let difficulty: String
             let noteDesigner: String?
-            let internalLevelValue: Double?
-            let levelValue: Double?
-            let regionJp: Bool
-            let regionIntl: Bool
-            let regionCn: Bool
+            let ratingLevel: Double?
+            let isPlayable: Bool
+            let isPlayableOnActiveServer: Bool
         }
 
         let songIdentifier: String
@@ -154,16 +154,15 @@ struct SongsView: View {
         sheets.reserveCapacity(song.sheets.count)
 
         for sheet in song.sheets {
+            let metadata = ServerChartPolicy.metadata(for: sheet, on: activeServer)
             sheets.append(
                 SongSnapshotExtraction.SheetExtraction(
                     type: sheet.type,
                     difficulty: sheet.difficulty,
                     noteDesigner: sheet.noteDesigner,
-                    internalLevelValue: sheet.internalLevelValue,
-                    levelValue: sheet.levelValue,
-                    regionJp: sheet.regionJp,
-                    regionIntl: sheet.regionIntl,
-                    regionCn: sheet.regionCn
+                    ratingLevel: metadata.ratingLevel,
+                    isPlayable: sheet.regionJp || sheet.regionIntl || sheet.regionCn,
+                    isPlayableOnActiveServer: ServerChartPolicy.isPlayable(sheet, on: activeServer)
                 )
             )
         }
@@ -194,15 +193,13 @@ struct SongsView: View {
                 type: sheet.type.lowercased(),
                 difficulty: sheet.difficulty.lowercased(),
                 noteDesigner: sheet.noteDesigner,
-                internalLevelValue: sheet.internalLevelValue,
-                levelValue: sheet.levelValue,
-                regionJp: sheet.regionJp,
-                regionIntl: sheet.regionIntl,
-                regionCn: sheet.regionCn
+                ratingLevel: sheet.ratingLevel,
+                isPlayable: sheet.isPlayable,
+                isPlayableOnActiveServer: sheet.isPlayableOnActiveServer
             )
         }
 
-        let maxDifficulty = sheetSnapshots.compactMap { $0.internalLevelValue ?? $0.levelValue }.max() ?? 0.0
+        let maxDifficulty = sheetSnapshots.filter(\.isPlayable).compactMap(\.ratingLevel).max() ?? 0.0
 
         return SongFilterSnapshot(
             songIdentifier: extraction.songIdentifier,
@@ -295,10 +292,11 @@ struct SongsView: View {
                 }
             }
             
-            if hasTypes || hasDifficulties || settings.hideDeletedSongs {
+            if hasTypes || hasDifficulties || settings.hideDeletedSongs || settings.showOnlyPlayableSongs {
                 var hasMatchingType = !hasTypes
                 var hasMatchingDifficulty = !hasDifficulties
                 var isPlayable = !settings.hideDeletedSongs
+                var hasPlayableOnActiveServer = !settings.showOnlyPlayableSongs
                 
                 for sheet in song.sheets {
                     if hasTypes && settings.selectedTypes.contains(sheet.type) {
@@ -306,18 +304,22 @@ struct SongsView: View {
                     }
                     
                     if hasDifficulties && settings.selectedDifficulties.contains(sheet.difficulty) {
-                        let level = sheet.internalLevelValue ?? sheet.levelValue ?? 0.0
+                        let level = sheet.ratingLevel ?? 0.0
                         if level >= settings.minLevel && level <= settings.maxLevel {
                             hasMatchingDifficulty = true
                         }
                     }
                     
-                    if settings.hideDeletedSongs && (sheet.regionJp || sheet.regionIntl || sheet.regionCn) {
+                    if settings.hideDeletedSongs && sheet.isPlayable {
                         isPlayable = true
+                    }
+
+                    if settings.showOnlyPlayableSongs && sheet.isPlayableOnActiveServer {
+                        hasPlayableOnActiveServer = true
                     }
                 }
                 
-                if !hasMatchingType || !hasMatchingDifficulty || !isPlayable {
+                if !hasMatchingType || !hasMatchingDifficulty || !isPlayable || !hasPlayableOnActiveServer {
                     return false
                 }
             }
@@ -633,6 +635,9 @@ struct SongsView: View {
         // Use single onChange for profile changes
         .onChange(of: activeProfiles.first?.id) { _, _ in
             refreshScoreCache()
+        }
+        .onChange(of: activeProfiles.first?.server) { _, _ in
+            updateDisplayedSongs(refreshSnapshots: true)
         }
         .onReceive(NotificationCenter.default.publisher(for: .maimaiScoresDidChange)) { notification in
             if let changedProfileID = notification.object as? UUID,

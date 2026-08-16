@@ -139,6 +139,7 @@
 "filter.title" = "Filter Options";
 "filter.quick" = "Quick Filters";
 "filter.hideDeleted" = "Hide Deleted Songs";
+"filter.playableOnly" = "Playable Songs Only";
 "filter.favorites" = "Favorites Only";
 "filter.difficulty" = "Difficulty";
 "filter.levelRange" = "Level Range";

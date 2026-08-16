@@ -39,6 +39,10 @@ struct ScoreQueryView: View {
     
     // Stats
     @State private var stats = PlayerStats()
+
+    private var activeServer: GameServer {
+        activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
+    }
     
     // MARK: - Types
     
@@ -296,7 +300,7 @@ struct ScoreQueryView: View {
             }
             Task { await loadData() }
         }
-        .task {
+        .task(id: activeProfiles.first?.server) {
             await loadData()
         }
     }
@@ -537,9 +541,10 @@ struct ScoreQueryView: View {
             
             for sheet in song.sheets {
                 if sheet.type.lowercased().contains("utage") { continue }
-                
-                let level = sheet.internalLevelValue ?? sheet.levelValue ?? 0
-                guard level > 0 else { continue }
+
+                guard ServerChartPolicy.isPlayable(sheet, on: activeServer) else { continue }
+                let metadata = ServerChartPolicy.metadata(for: sheet, on: activeServer)
+                guard let level = metadata.ratingLevel else { continue }
                 
                 let score = scoreForSheet(sheet, in: map)
                 

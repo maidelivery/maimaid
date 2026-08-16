@@ -4,6 +4,7 @@ import SwiftData
 struct DanDetailView: View {
     let category: DanCategory
     @Query private var allSongs: [Song]
+    @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     @Environment(\.modelContext) private var modelContext
     
     @State private var scoreCache: [String: Score] = [:]
@@ -36,6 +37,10 @@ struct DanDetailView: View {
     private var hasTruePage: Bool {
         !trueSections.isEmpty
     }
+
+    private var activeServer: GameServer {
+        activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -55,6 +60,7 @@ struct DanDetailView: View {
                     sections: regularSections,
                     songMap: songMap,
                     scoreCache: scoreCache,
+                    server: activeServer,
                     scrollPosition: $regularScrollPosition
                 )
             } else {
@@ -63,6 +69,7 @@ struct DanDetailView: View {
                     sections: trueSections,
                     songMap: songMap,
                     scoreCache: scoreCache,
+                    server: activeServer,
                     scrollPosition: $trueScrollPosition
                 )
             }
@@ -97,6 +104,7 @@ struct DanSectionCard: View {
     let section: DanSection
     let songMap: [String: Song]
     let scoreCache: [String: Score]
+    let server: GameServer
     
     private var refs: [DanSheetRef] {
         section.sheets.map { DanSheetRef(raw: $0) }
@@ -172,7 +180,8 @@ struct DanSectionCard: View {
                             song: song,
                             ref: ref,
                             description: section.sheetDescriptions?[safe: index],
-                            scoreCache: scoreCache
+                            scoreCache: scoreCache,
+                            server: server
                         )
                     } else {
                         DanSongPlaceholder(
@@ -327,11 +336,13 @@ struct DanSongRowEnhanced: View {
     let ref: DanSheetRef
     let description: String?
     let scoreCache: [String: Score]
+    let server: GameServer
     @Environment(\.colorScheme) private var colorScheme
 
     private var matchingSheet: Sheet? {
         song.sheets.first {
             !$0.type.lowercased().contains("utage") &&
+            ServerChartPolicy.isPlayable($0, on: server) &&
             $0.type.lowercased() == ref.type.lowercased() &&
             $0.difficulty.lowercased() == ref.difficulty.lowercased()
         }
@@ -383,7 +394,7 @@ struct DanSongRowEnhanced: View {
                             .foregroundStyle(diffColor)
                         
                         if let sheet = matchingSheet {
-                            Text("Lv.\(sheet.internalLevel ?? sheet.level)")
+                            Text("Lv.\(ServerChartPolicy.metadata(for: sheet, on: server).displayLevel)")
                                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.secondary)
                         }

@@ -139,6 +139,7 @@
 "filter.title" = "筛选选项";
 "filter.quick" = "快速筛选";
 "filter.hideDeleted" = "隐藏删除曲";
+"filter.playableOnly" = "仅显示可玩歌曲";
 "filter.favorites" = "仅显示收藏";
 "filter.difficulty" = "难度等级";
 "filter.levelRange" = "定数区间";

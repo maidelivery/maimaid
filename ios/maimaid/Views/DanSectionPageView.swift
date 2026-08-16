@@ -6,6 +6,7 @@ struct DanSectionPageView: View {
     let sections: [DanSection]
     let songMap: [String: Song]
     let scoreCache: [String: Score]
+    let server: GameServer
     @Binding var scrollPosition: ScrollPosition
 
     var body: some View {
@@ -16,7 +17,8 @@ struct DanSectionPageView: View {
                         categoryTitle: categoryTitle,
                         section: section,
                         songMap: songMap,
-                        scoreCache: scoreCache
+                        scoreCache: scoreCache,
+                        server: server
                     )
                 }
             }

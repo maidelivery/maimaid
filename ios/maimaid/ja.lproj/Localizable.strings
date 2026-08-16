@@ -138,6 +138,7 @@
 "filter.title" = "フィルターオプション";
 "filter.quick" = "クイックフィルター";
 "filter.hideDeleted" = "削除した曲を非表示にする";
+"filter.playableOnly" = "プレイ可能な楽曲のみ";
 "filter.favorites" = "お気に入りのみ";
 "filter.difficulty" = "難易度";
 "filter.levelRange" = "レベル範囲";

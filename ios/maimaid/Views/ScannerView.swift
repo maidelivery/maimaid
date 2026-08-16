@@ -211,6 +211,7 @@ extension ScannerView {
     private func matchUtageSheet(for song: Song, kanji: String?, maxDxScore: Int?, dxScore: Int?) -> Sheet? {
         let utageSheets = song.sheets.filter {
             $0.type.lowercased() == "utage" &&
+                ServerChartPolicy.isPlayable($0, on: activeServer) &&
                 ScannerNoteCountValidator.isCompatible(maxDxScore: maxDxScore, sheetTotal: $0.total)
         }
         
@@ -277,6 +278,7 @@ struct ScannerView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var configs: [SyncConfig]
     @Query private var songs: [Song]
+    @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     
     @State private var isShowingDetail = false
     @State private var isShowingScoreEntry = false
@@ -307,6 +309,10 @@ struct ScannerView: View {
     @State private var dxScoreBuffer: [Int] = []
     @State private var maxDxScoreBuffer: [Int] = []
     private let stabilizationThreshold = 3
+
+    private var activeServer: GameServer {
+        activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
+    }
     
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var isProcessingPhoto = false
@@ -590,14 +596,14 @@ struct ScannerView: View {
 
         func hasAvailableStandardSheets(_ song: Song) -> Bool {
             let standardSheets = song.sheets.filter { $0.type.lowercased() != "utage" }
-            let isDeleted = standardSheets.isEmpty || standardSheets.allSatisfy { !$0.regionJp && !$0.regionIntl && !$0.regionCn }
-            return !isDeleted
+            return standardSheets.contains { ServerChartPolicy.isPlayable($0, on: activeServer) }
         }
 
         func matchesUtage(_ song: Song) -> Bool {
             if isUtage {
                 let utageSheets = song.sheets.filter {
                     $0.type.lowercased() == "utage" &&
+                        ServerChartPolicy.isPlayable($0, on: activeServer) &&
                         ScannerNoteCountValidator.isCompatible(maxDxScore: maxDxScore, sheetTotal: $0.total)
                 }
                 if utageSheets.isEmpty { return false }
@@ -638,6 +644,9 @@ struct ScannerView: View {
 
         func matchesStandard(_ song: Song) -> Bool {
             song.sheets.contains { sheet in
+                if !ServerChartPolicy.isPlayable(sheet, on: activeServer) {
+                    return false
+                }
                 if !ScannerNoteCountValidator.isCompatible(maxDxScore: maxDxScore, sheetTotal: sheet.total) {
                     return false
                 }
@@ -651,10 +660,11 @@ struct ScannerView: View {
                     return false
                 }
                 if let validatedLevel {
-                    let sheetLevel = sheet.internalLevelValue ?? sheet.levelValue ?? 0
+                    let metadata = ServerChartPolicy.metadata(for: sheet, on: activeServer)
+                    let sheetLevel = metadata.ratingLevel ?? 0
                     if sheetLevel > 0 {
                         if Int(sheetLevel) != Int(validatedLevel) { return false }
-                    } else if Int(sheet.level) != Int(validatedLevel) {
+                    } else if Int(metadata.level) != Int(validatedLevel) {
                         return false
                     }
                 }
@@ -795,6 +805,7 @@ struct ScannerView: View {
             kanji?.isEmpty == false
         
         func sheetOK(_ sheet: Sheet) -> Bool {
+            if !ServerChartPolicy.isPlayable(sheet, on: activeServer) { return false }
             if !ScannerNoteCountValidator.isCompatible(maxDxScore: maxDxScore, sheetTotal: sheet.total) {
                 return false
             }
@@ -810,8 +821,9 @@ struct ScannerView: View {
             if let t = type, t.lowercased() != "utage" { if sheet.type.lowercased() != t.lowercased() { return false } }
             if let diff = difficulty { if sheet.difficulty.lowercased() != diff.lowercased() { return false } }
             if let lv = level, lv >= 1, lv <= 15 {
-                let sl = sheet.internalLevelValue ?? sheet.levelValue ?? 0
-                if sl > 0 { if Int(sl) != Int(lv) { return false } } else { if Int(sheet.level) != Int(lv) { return false } }
+                let metadata = ServerChartPolicy.metadata(for: sheet, on: activeServer)
+                let sl = metadata.ratingLevel ?? 0
+                if sl > 0 { if Int(sl) != Int(lv) { return false } } else { if Int(metadata.level) != Int(lv) { return false } }
             }
             if let tn = derivedTotalNotes, tn > 0 { if let st = sheet.total, st != tn { return false } }
             if let dx = dxScore, dx > 0 { if let total = sheet.total, total * 3 < dx { return false } }
@@ -954,7 +966,9 @@ struct ScannerView: View {
         if let t = title { tags.append(t) }
         if let song = recognizedSong, let diff = recognizedDifficulty {
             let type = recognizedType ?? "dx"
-            if let sheet = matchedSheet(for: song, diff: diff, type: type) { tags.append("LV\(sheet.level)") }
+            if let sheet = matchedSheet(for: song, diff: diff, type: type) {
+                tags.append("LV\(ServerChartPolicy.metadata(for: sheet, on: activeServer).displayLevel)")
+            }
             tags.append(diff.uppercased()); tags.append(type.uppercased())
         }
         if let rate = recognizedRate { tags.append(RatingUtils.calculateRank(achievement: rate)) }
@@ -978,7 +992,7 @@ struct ScannerView: View {
     private func resultView() -> some View {
         if let song = recognizedSong {
             if recognizedClass != .score || canPresentCurrentScoreResult {
-                ScannerResultCardView(song: song, recognizedClass: recognizedClass, recognizedType: recognizedType, recognizedDifficulty: recognizedDifficulty, recognizedRate: recognizedRate, resolvedSheet: recognizedClass == .score ? resolvedCurrentScoreSheet : nil, onScoreEntryTap: { isShowingScoreEntry = true }, onResetTap: { resetScanner() })
+                ScannerResultCardView(song: song, recognizedClass: recognizedClass, recognizedType: recognizedType, recognizedDifficulty: recognizedDifficulty, recognizedRate: recognizedRate, resolvedSheet: recognizedClass == .score ? resolvedCurrentScoreSheet : nil, server: activeServer, onScoreEntryTap: { isShowingScoreEntry = true }, onResetTap: { resetScanner() })
                     .equatable()
             }
         }
@@ -1134,6 +1148,7 @@ struct ScannerView: View {
         }
         
         let filteredCandidates = song.sheets.filter { sheet in
+            if !ServerChartPolicy.isPlayable(sheet, on: activeServer) { return false }
             if !ScannerNoteCountValidator.isCompatible(maxDxScore: maxDxScore, sheetTotal: sheet.total) {
                 return false
             }
