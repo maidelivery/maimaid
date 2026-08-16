@@ -66,6 +66,7 @@
     <string name="catalog_filter_quick">快速筛选</string>
     <string name="catalog_filter_favorites">仅显示收藏</string>
     <string name="catalog_filter_hide_unavailable">隐藏删除曲</string>
+    <string name="catalog_filter_playable_only">仅显示可玩歌曲</string>
     <string name="catalog_filter_difficulty">难度等级</string>
     <string name="catalog_filter_level_range">定数区间</string>
     <string name="catalog_filter_level_range_hint">必须选择至少一个参考难度。系统将筛选出包含该难度、且该难度定数在下方区间内的歌曲。</string>

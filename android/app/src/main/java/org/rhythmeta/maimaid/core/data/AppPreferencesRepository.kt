@@ -59,6 +59,10 @@ class AppPreferencesRepository(
         preferences[CatalogHideUnavailableSongsKey] ?: false
     }
 
+    val catalogShowPlayableSongsOnly: Flow<Boolean> = context.appPreferencesDataStore.data.map { preferences ->
+        preferences[CatalogShowPlayableSongsOnlyKey] ?: false
+    }
+
     val scoreQueryDisplayMode: Flow<ScoreQueryDisplayMode> = context.appPreferencesDataStore.data.map { preferences ->
         preferences[ScoreQueryDisplayModeKey]
             ?.let { stored -> ScoreQueryDisplayMode.entries.firstOrNull { it.name == stored } }
@@ -133,6 +137,12 @@ class AppPreferencesRepository(
         }
     }
 
+    suspend fun setCatalogShowPlayableSongsOnly(show: Boolean) {
+        context.appPreferencesDataStore.edit { preferences ->
+            preferences[CatalogShowPlayableSongsOnlyKey] = show
+        }
+    }
+
     suspend fun setScoreQueryDisplayMode(displayMode: ScoreQueryDisplayMode) {
         context.appPreferencesDataStore.edit { preferences ->
             preferences[ScoreQueryDisplayModeKey] = displayMode.name
@@ -167,6 +177,7 @@ class AppPreferencesRepository(
         val CatalogSortAscendingKey = booleanPreferencesKey("catalog_sort_ascending")
         val CatalogGridColumnsKey = intPreferencesKey("catalog_grid_columns")
         val CatalogHideUnavailableSongsKey = booleanPreferencesKey("catalog_hide_unavailable_songs")
+        val CatalogShowPlayableSongsOnlyKey = booleanPreferencesKey("catalog_show_playable_songs_only")
         val ScoreQueryDisplayModeKey = stringPreferencesKey("score_query_display_mode")
         val ScoreQueryGridColumnsKey = intPreferencesKey("score_query_grid_columns")
         val ScoreQuerySortModeKey = stringPreferencesKey("score_query_sort_mode")

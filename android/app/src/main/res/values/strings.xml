@@ -66,6 +66,7 @@
     <string name="catalog_filter_quick">Quick Filters</string>
     <string name="catalog_filter_favorites">Favorites only</string>
     <string name="catalog_filter_hide_unavailable">Hide Deleted Songs</string>
+    <string name="catalog_filter_playable_only">Playable Songs Only</string>
     <string name="catalog_filter_difficulty">Difficulty</string>
     <string name="catalog_filter_level_range">Level Range</string>
     <string name="catalog_filter_level_range_hint">Select at least one difficulty.</string>

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.foundation.lazy.LazyColumn
@@ -127,6 +128,14 @@ internal fun CatalogFilterDialog(
                         checked = settings.hideUnavailableSongs,
                         onCheckedChange = {
                             onSettingsChange(settings.copy(hideUnavailableSongs = it))
+                        },
+                    )
+                    CatalogFilterToggleRow(
+                        icon = Icons.Rounded.PlayCircle,
+                        title = stringResource(R.string.catalog_filter_playable_only),
+                        checked = settings.showPlayableSongsOnly,
+                        onCheckedChange = {
+                            onSettingsChange(settings.copy(showPlayableSongsOnly = it))
                         },
                     )
                 }

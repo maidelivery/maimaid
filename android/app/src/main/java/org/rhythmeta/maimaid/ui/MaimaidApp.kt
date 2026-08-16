@@ -134,6 +134,7 @@ fun MaimaidApp(
     val catalogSortAscending by viewModel.catalogSortAscending.collectAsStateWithLifecycle()
     val catalogGridColumns by viewModel.catalogGridColumns.collectAsStateWithLifecycle()
     val catalogHideUnavailableSongs by viewModel.catalogHideUnavailableSongs.collectAsStateWithLifecycle()
+    val catalogShowPlayableSongsOnly by viewModel.catalogShowPlayableSongsOnly.collectAsStateWithLifecycle()
     if (initialCatalogState != InitialCatalogState.Ready) {
         InitialCatalogGate(
             state = initialCatalogState,
@@ -378,6 +379,13 @@ fun MaimaidApp(
             )
         }
     }
+    LaunchedEffect(catalogShowPlayableSongsOnly) {
+        if (catalogFilterSettings.showPlayableSongsOnly != catalogShowPlayableSongsOnly) {
+            catalogFilterSettings = catalogFilterSettings.copy(
+                showPlayableSongsOnly = catalogShowPlayableSongsOnly,
+            )
+        }
+    }
 
     LaunchedEffect(destination, detail, restoreCatalogSearchFocus) {
         if (
@@ -550,6 +558,7 @@ fun MaimaidApp(
                 sheets = uiState.sheets,
                 aliases = uiState.songAliases,
                 scores = uiState.scores,
+                server = uiState.activeProfile?.server ?: "jp",
                 showBoundingBoxes = showScannerBoundingBoxes,
                 contentTopPadding = contentTopPadding,
                 enabled = destination == RootDestination.Scanner && detail == null,
@@ -569,11 +578,15 @@ fun MaimaidApp(
                 query = catalogQuery,
                 gridColumns = catalogGridColumns,
                 songAliases = uiState.songAliases,
+                server = uiState.activeProfile?.server ?: "jp",
                 contentTopPadding = contentTopPadding,
                 showFilterDialog = showCatalogFilter,
                 onFilterSettingsChange = { settings ->
                     if (settings.hideUnavailableSongs != catalogFilterSettings.hideUnavailableSongs) {
                         viewModel.setCatalogHideUnavailableSongs(settings.hideUnavailableSongs)
+                    }
+                    if (settings.showPlayableSongsOnly != catalogFilterSettings.showPlayableSongsOnly) {
+                        viewModel.setCatalogShowPlayableSongsOnly(settings.showPlayableSongsOnly)
                     }
                     catalogFilterSettings = settings
                 },
@@ -1096,6 +1109,7 @@ fun MaimaidApp(
                             container = container,
                             contentTopPadding = contentTopPadding,
                             selectedPage = danSelectedPage,
+                            server = uiState.activeProfile?.server ?: "jp",
                             onTrueDanAvailabilityChanged = { hasTruePage ->
                                 danHasTruePage = hasTruePage
                                 if (!hasTruePage) danSelectedPage = DanRegularPage

@@ -125,6 +125,7 @@ internal fun DetailScreen(
             categories = state.songCategories,
             versions = state.gameVersions,
             coverImageStore = container.coverImageStore,
+            server = state.activeProfile?.server ?: "jp",
             sessionState = randomSongSessionState,
             filterRequested = randomSongFilterRequested,
             onFilterRequestHandled = onRandomSongFilterRequestHandled,
@@ -179,6 +180,7 @@ internal fun DetailScreen(
                 container = container,
                 contentTopPadding = songContentTopPadding,
                 selectedPage = danSelectedPage,
+                server = state.activeProfile?.server ?: "jp",
                 onOpenSong = onOpenSong,
             )
         }

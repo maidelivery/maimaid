@@ -14,6 +14,7 @@ internal object RandomSongQuery {
         sheetsBySong: Map<String, List<SheetEntity>>,
         versions: List<GameVersionEntity>,
         settings: CatalogFilterSettings,
+        server: String = "jp",
     ): List<SongEntity> = CatalogQuery.filterAndSort(
         songs = songs,
         sheetsBySong = sheetsBySong,
@@ -23,6 +24,7 @@ internal object RandomSongQuery {
         searchText = "",
         sortOption = CatalogSortOption.DefaultOrder,
         sortAscending = true,
+        server = server,
     )
 
     fun draw(

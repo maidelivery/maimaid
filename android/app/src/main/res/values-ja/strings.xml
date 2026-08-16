@@ -66,6 +66,7 @@
     <string name="catalog_filter_quick">クイックフィルター</string>
     <string name="catalog_filter_favorites">お気に入りのみ</string>
     <string name="catalog_filter_hide_unavailable">削除した曲を非表示にする</string>
+    <string name="catalog_filter_playable_only">プレイ可能な楽曲のみ</string>
     <string name="catalog_filter_difficulty">難易度</string>
     <string name="catalog_filter_level_range">レベル範囲</string>
     <string name="catalog_filter_level_range_hint">少なくとも 1 つの難易度を選択してください。</string>

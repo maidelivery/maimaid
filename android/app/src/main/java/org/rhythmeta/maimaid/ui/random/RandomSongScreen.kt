@@ -87,6 +87,7 @@ internal fun RandomSongScreen(
     categories: List<SongCategoryEntity>,
     versions: List<GameVersionEntity>,
     coverImageStore: CoverImageStore,
+    server: String,
     sessionState: RandomSongSessionState,
     filterRequested: Boolean,
     onFilterRequestHandled: () -> Unit,
@@ -98,8 +99,8 @@ internal fun RandomSongScreen(
     val hapticFeedback = LocalHapticFeedback.current
     val sheetsBySong = remember(sheets) { sheets.groupBy(SheetEntity::songIdentifier) }
     val scoresBySheetKey = remember(scores) { scores.associateBy(ScoreEntity::sheetKey) }
-    val filteredSongs = remember(songs, sheetsBySong, versions, sessionState.filterSettings) {
-        RandomSongQuery.filter(songs, sheetsBySong, versions, sessionState.filterSettings)
+    val filteredSongs = remember(songs, sheetsBySong, versions, sessionState.filterSettings, server) {
+        RandomSongQuery.filter(songs, sheetsBySong, versions, sessionState.filterSettings, server)
     }
     val results = remember(songs, sessionState.resultIds) {
         val songsById = songs.associateBy(SongEntity::songIdentifier)

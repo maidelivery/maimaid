@@ -46,6 +46,7 @@ import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.DanChartEntry
 import org.rhythmeta.maimaid.core.data.DanSectionDetail
+import org.rhythmeta.maimaid.core.data.ServerChartPolicy
 import org.rhythmeta.maimaid.ui.catalog.SongJacket
 import org.rhythmeta.maimaid.ui.components.SongListScrollBar
 import org.rhythmeta.maimaid.ui.components.SquircleExtension
@@ -66,6 +67,7 @@ internal fun DanDetailScreen(
     container: AppContainer,
     contentTopPadding: Dp,
     selectedPage: Int,
+    server: String,
     onTrueDanAvailabilityChanged: (Boolean) -> Unit = {},
     onOpenSong: (String) -> Unit,
 ) {
@@ -119,6 +121,7 @@ internal fun DanDetailScreen(
                             categoryTitle = state.detail!!.category.title,
                             section = section,
                             container = container,
+                            server = server,
                             onOpenSong = onOpenSong,
                         )
                     }
@@ -164,6 +167,7 @@ private fun DanSectionCard(
     categoryTitle: String,
     section: DanSectionDetail,
     container: AppContainer,
+    server: String,
     onOpenSong: (String) -> Unit,
 ) {
     val themeTitle = section.title ?: categoryTitle
@@ -199,7 +203,7 @@ private fun DanSectionCard(
             section.description?.takeIf(String::isNotBlank)?.let { DanRequirements(it) }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 section.charts.forEach { entry ->
-                    DanSongRow(entry, container, onOpenSong)
+                    DanSongRow(entry, container, server, onOpenSong)
                 }
             }
         }
@@ -257,6 +261,7 @@ private fun RequirementBadge(text: String, tint: Color) {
 private fun DanSongRow(
     entry: DanChartEntry,
     container: AppContainer,
+    server: String,
     onOpenSong: (String) -> Unit,
 ) {
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
@@ -380,7 +385,7 @@ private fun DanSongRow(
                 )
                 entry.sheet?.let { sheet ->
                     Text(
-                        text = "Lv.${sheet.internalLevel?.takeIf(String::isNotBlank) ?: sheet.level}",
+                        text = "Lv.${ServerChartPolicy.metadata(sheet, server).displayLevel}",
                         style = MiuixTheme.textStyles.footnote1,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         maxLines = 1,

@@ -3,6 +3,7 @@ package org.rhythmeta.maimaid.core.ml
 import java.text.Normalizer
 import java.util.Locale
 import kotlin.math.abs
+import org.rhythmeta.maimaid.core.data.ServerChartPolicy
 import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.SongEntity
 
@@ -57,6 +58,7 @@ object ScannerSongMatcher {
                     validatedDxScore = validatedDxScore,
                     validatedMaxDxScore = validatedMaxDxScore,
                     validatedKanji = validatedKanji,
+                    server = catalog.server,
                 )
             }
         }
@@ -100,6 +102,7 @@ object ScannerSongMatcher {
                         validatedDxScore = validatedDxScore,
                         validatedMaxDxScore = validatedMaxDxScore,
                         validatedKanji = validatedKanji,
+                        server = catalog.server,
                     )
                 }
             }
@@ -187,6 +190,7 @@ object ScannerSongMatcher {
                         validatedDxScore = validatedDxScore,
                         validatedMaxDxScore = validatedMaxDxScore,
                         validatedKanji = validatedKanji,
+                        server = catalog.server,
                     )
                 }
             }
@@ -220,6 +224,7 @@ object ScannerSongMatcher {
             validatedDxScore = recognition.dxScore?.takeIf { it > 0 },
             validatedMaxDxScore = recognition.maxDxScore?.takeIf { it > 0 },
             validatedKanji = recognition.kanji?.takeIf(String::isNotEmpty),
+            server = catalog.server,
         )
         val eligibleSongs = catalog.songs.filter { song ->
             if (chooseScan && isBlankTitleSong(song, catalog)) return@filter false
@@ -256,6 +261,7 @@ object ScannerSongMatcher {
                         validatedDxScore = recognition.dxScore?.takeIf { it > 0 },
                         validatedMaxDxScore = recognition.maxDxScore?.takeIf { it > 0 },
                         validatedKanji = recognition.kanji?.takeIf(String::isNotEmpty),
+                        server = catalog.server,
                     )
                 }
             }
@@ -326,7 +332,9 @@ object ScannerSongMatcher {
         recognition: ScannerRawResult,
         catalog: ScannerCatalog,
     ): SheetEntity? {
-        val sheets = sheetsFor(song, catalog)
+        val sheets = sheetsFor(song, catalog).filter {
+            ServerChartPolicy.isPlayable(it, catalog.server)
+        }
         if (recognition.chartType.equals("utage", ignoreCase = true)) {
             val strict = matchUtageSheet(sheets, recognition.kanji, recognition.maxDxScore, recognition.dxScore)
             if (strict != null) return strict
@@ -395,7 +403,9 @@ object ScannerSongMatcher {
         validatedDxScore: Int?,
         validatedMaxDxScore: Int?,
         validatedKanji: String?,
+        server: String,
     ): Boolean {
+        if (!ServerChartPolicy.isPlayable(sheet, server)) return false
         if (!ScannerNoteCountValidator.isCompatible(validatedMaxDxScore, sheet.total)) return false
         if (isUtage) {
             if (!sheet.type.equals("utage", ignoreCase = true)) return false
@@ -409,9 +419,10 @@ object ScannerSongMatcher {
         if (!recognition.chartType.isNullOrBlank() && !sheet.type.equals(recognition.chartType, ignoreCase = true)) return false
         if (recognition.difficulty != null && !sheet.difficulty.equals(recognition.difficulty, ignoreCase = true)) return false
         if (validatedLevel != null) {
-            val sheetLevel = sheet.internalLevelValue ?: sheet.levelValue
+            val metadata = ServerChartPolicy.metadata(sheet, server)
+            val sheetLevel = metadata.ratingLevel
             if (sheetLevel != null && sheetLevel > 0 && sheetLevel.toInt() != validatedLevel.toInt()) return false
-            if (sheetLevel == null && sheet.level.toDoubleOrNull()?.toInt() != validatedLevel.toInt()) return false
+            if (sheetLevel == null && metadata.level.toDoubleOrNull()?.toInt() != validatedLevel.toInt()) return false
         }
         if (derivedTotalNotes != null && sheet.total != null && sheet.total != derivedTotalNotes) return false
         if (validatedDxScore != null && sheet.total != null && sheet.total * 3 < validatedDxScore) return false
@@ -456,7 +467,7 @@ object ScannerSongMatcher {
 
     private fun hasAvailableStandardSheets(song: SongEntity, catalog: ScannerCatalog): Boolean {
         val standard = sheetsFor(song, catalog).filterNot { it.type.equals("utage", ignoreCase = true) }
-        return standard.isNotEmpty() && standard.any { it.regionJp || it.regionIntl || it.regionCn }
+        return standard.any { ServerChartPolicy.isPlayable(it, catalog.server) }
     }
 
     private fun sheetsFor(song: SongEntity, catalog: ScannerCatalog): List<SheetEntity> =
@@ -516,7 +527,8 @@ object ScannerSongMatcher {
             return@filter false
         }
         sheetsFor(song, catalog).any { sheet ->
-            sheet.type.equals("utage", ignoreCase = true) &&
+            ServerChartPolicy.isPlayable(sheet, catalog.server) &&
+                sheet.type.equals("utage", ignoreCase = true) &&
                 utageKanjiMatches(recognition.kanji, sheet.difficulty)
         }
     }

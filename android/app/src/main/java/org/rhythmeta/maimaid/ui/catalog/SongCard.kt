@@ -32,6 +32,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.data.CoverImageStore
+import org.rhythmeta.maimaid.core.data.ResolvedSheetMetadata
+import org.rhythmeta.maimaid.core.data.ServerChartPolicy
 import org.rhythmeta.maimaid.core.database.GameVersionEntity
 import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
@@ -195,6 +197,7 @@ internal fun SongCard(
 internal fun ScoreEntrySongCard(
     song: SongEntity,
     sheet: SheetEntity,
+    metadata: ResolvedSheetMetadata? = null,
     modifier: Modifier = Modifier,
 ) {
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
@@ -212,10 +215,7 @@ internal fun ScoreEntrySongCard(
     )
     val cardColor = SongVisualUtils.detailColors(difficultyColor, darkTheme).surface
     val artist = song.artist.ifBlank { stringResource(R.string.song_artist_unknown) }
-    val constant = sheet.internalLevel
-        ?.takeIf(String::isNotBlank)
-        ?: sheet.internalLevelValue?.toString()
-        ?: sheet.level
+    val constant = (metadata ?: ServerChartPolicy.metadata(sheet, "jp")).displayLevel
 
     Row(
         modifier = modifier

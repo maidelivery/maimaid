@@ -3,6 +3,7 @@ package org.rhythmeta.maimaid.ui.song
 import org.rhythmeta.maimaid.core.database.PlayRecordEntity
 import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
+import org.rhythmeta.maimaid.core.data.ResolvedSheetMetadata
 import org.rhythmeta.maimaid.core.data.StaticBundleResponse
 
 data class SheetScoreUiState(
@@ -10,6 +11,7 @@ data class SheetScoreUiState(
     val score: ScoreEntity?,
     val history: List<PlayRecordEntity>,
     val chartFit: StaticBundleResponse.ChartFitStat? = null,
+    val resolvedMetadata: ResolvedSheetMetadata? = null,
 )
 
 enum class ScoreSaveStatus {

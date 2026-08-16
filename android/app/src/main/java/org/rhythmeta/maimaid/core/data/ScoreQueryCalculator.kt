@@ -69,6 +69,7 @@ object ScoreQueryCalculator {
         sheets: List<SheetEntity>,
         scores: List<ScoreEntity>,
         aliases: List<SongAliasEntity>,
+        server: String = "jp",
     ): ScoreQueryResponse {
         val songsById = songs
             .asSequence()
@@ -77,8 +78,8 @@ object ScoreQueryCalculator {
             .associateBy(SongEntity::songIdentifier)
         val sheetsByKey = sheets
             .asSequence()
-            .filterNot(SheetEntity::isRemoved)
             .filterNot { it.type.contains("utage", ignoreCase = true) }
+            .filter { ServerChartPolicy.isPlayable(it, server) }
             .associateBy(SheetEntity::sheetKey)
         val aliasesBySong = aliases.groupBy(SongAliasEntity::songIdentifier)
             .mapValues { (_, values) -> values.map(SongAliasEntity::alias) }
@@ -87,8 +88,7 @@ object ScoreQueryCalculator {
             if (score.achievement <= 0.0) return@mapNotNull null
             val sheet = sheetsByKey[score.sheetKey] ?: return@mapNotNull null
             val song = songsById[sheet.songIdentifier] ?: return@mapNotNull null
-            val level = sheet.internalLevelValue ?: sheet.levelValue ?: return@mapNotNull null
-            if (level <= 0.0) return@mapNotNull null
+            val level = ServerChartPolicy.metadata(sheet, server).ratingLevel ?: return@mapNotNull null
 
             ScoreQueryEntry(
                 sheetKey = sheet.sheetKey,

@@ -16,6 +16,12 @@ class ConstantTableRepository(
         scoreRepository.observeActiveScores(),
         profileRepository.activeProfile,
     ) { songs, sheets, scores, profile ->
-        ConstantTableCalculator.build(songs, sheets, scores, profile?.name)
+        ConstantTableCalculator.build(
+            songs = songs,
+            sheets = sheets,
+            scores = scores,
+            userName = profile?.name,
+            server = profile?.server ?: "jp",
+        )
     }.flowOn(Dispatchers.Default)
 }
