@@ -27,19 +27,10 @@ struct AvatarImageView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill)
         } else if let remoteURL {
-            AsyncImage(url: remoteURL) { phase in
-                switch phase {
-                case .empty:
-                    placeholderView(showsProgress: true)
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                case .failure:
-                    placeholderView(showsProgress: false)
-                @unknown default:
-                    placeholderView(showsProgress: false)
-                }
+            RemoteImage(url: remoteURL) {
+                placeholderView(showsProgress: true)
+            } failure: {
+                placeholderView(showsProgress: false)
             }
         } else {
             placeholderView(showsProgress: false)

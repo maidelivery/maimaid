@@ -20,10 +20,10 @@ describe("StorageService static assets", () => {
 		expect(storage.staticAssetObjectKey({ kind: "presetAvatar", name: "123.png" })).toBe("static-assets/lxns-icons/123.png");
 		expect(storage.staticAssetConfiguration()).toEqual({
 			coverBaseUrl:
-				"https://static.example.com/cdn-cgi/image/format=avif,quality=80,width=512,fit=scale-down/static-assets/covers/",
+				"https://static.example.com/cdn-cgi/image/format=avif,quality=95,fit=scale-down/static-assets/covers/",
 			coverFallbackBaseUrl: "https://static.example.com/static-assets/covers/",
 			presetAvatarBaseUrl:
-				"https://static.example.com/cdn-cgi/image/format=avif,quality=80,width=256,fit=scale-down/static-assets/lxns-icons/",
+				"https://static.example.com/cdn-cgi/image/format=avif,quality=95,fit=scale-down/static-assets/lxns-icons/",
 			presetAvatarFallbackBaseUrl: "https://static.example.com/static-assets/lxns-icons/",
 		});
 	});

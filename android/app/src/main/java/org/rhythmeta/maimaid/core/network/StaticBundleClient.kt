@@ -103,7 +103,7 @@ class StaticBundleClient(
             connection.requestMethod = "GET"
             connection.connectTimeout = CONNECT_TIMEOUT_MILLIS
             connection.readTimeout = READ_TIMEOUT_MILLIS
-            connection.setRequestProperty("Accept", "image/*")
+            connection.setRequestProperty("Accept", ImageRequestHeaders.ACCEPT)
             connection.setRequestProperty("User-Agent", "maimaid-android")
             check(connection.responseCode in 200..299) { "HTTP ${connection.responseCode}" }
             onTransfer(0L, connection.contentLengthLong.takeIf { it > 0L })
