@@ -9,6 +9,19 @@ val maimaidBackendUrl = providers.gradleProperty("MAIMAID_BACKEND_URL")
     .orElse("https://api.rhythmeta.org")
 val maimaidBackendAuthUrl = providers.gradleProperty("MAIMAID_BACKEND_AUTH_URL")
     .orElse("https://maimaid.rhythmeta.org")
+val maimaidBuildNumber = providers.environmentVariable("MAIMAID_BUILD_NUMBER")
+    .orElse(
+        providers.exec {
+            commandLine(
+                "sh",
+                rootProject.file("../scripts/build-number.sh").absolutePath,
+            )
+        }.standardOutput.asText.map(String::trim),
+    )
+    .map { value ->
+        value.toIntOrNull()?.takeIf { it > 0 }
+            ?: error("Invalid MAIMAID_BUILD_NUMBER: $value")
+    }
 val splitReleaseApks = providers.gradleProperty("MAIMAID_SPLIT_RELEASE_APKS")
     .map { it.toBoolean() }
     .orElse(false)
@@ -31,8 +44,8 @@ android {
         applicationId = "org.rhythmeta.maimaid"
         minSdk = 28
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.1.7"
+        versionCode = maimaidBuildNumber.get()
+        versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "BACKEND_URL", "\"${maimaidBackendUrl.get()}\"")
