@@ -291,9 +291,11 @@ export const normalizeDxDataCatalog = (payload: unknown): Record<string, unknown
 				Number.isFinite(existingLevelValue) && existingLevelValue > 0
 					? existingLevelValue
 					: levelValueForDisplayLevel(sheet.level);
+			const chartType = normalizeChartType(typeof sheet.type === "string" ? sheet.type : undefined);
 			return applyDxDataRegionConstants(
 				{
 					...sheet,
+					...(chartType === "utage" ? { type: "utage" } : {}),
 					...(version ? { version } : {}),
 					...(levelValue !== null ? { levelValue } : {}),
 				},
@@ -301,10 +303,11 @@ export const normalizeDxDataCatalog = (payload: unknown): Record<string, unknown
 			);
 		});
 
-		const songCharts = normalizedSheets
-			.map(toRecord)
-			.filter((sheet): sheet is Record<string, unknown> => sheet !== null)
-			.filter((sheet) => typeof sheet.type !== "string" || !sheet.type.toLocaleLowerCase().includes("utage"));
+		const allSongCharts = normalizedSheets.map(toRecord).filter((sheet): sheet is Record<string, unknown> => sheet !== null);
+		const standardSongCharts = allSongCharts.filter(
+			(sheet) => typeof sheet.type !== "string" || !sheet.type.toLocaleLowerCase().includes("utage"),
+		);
+		const songCharts = standardSongCharts.length > 0 ? standardSongCharts : allSongCharts;
 		const firstReleasedChart = songCharts
 			.map((sheet) => ({
 				releaseDate: sheet.releaseDate,
@@ -490,8 +493,20 @@ const normalizeCatalogIdentity = (value: unknown) =>
 
 const lxnsChartKey = (chartType: string, difficulty: string) => `${chartType}|${difficulty}`;
 
+const normalizeUtageMarker = (value: unknown) => {
+	const normalized = normalizeCatalogIdentity(value);
+	const bracketed = normalized.match(/^(?:\[|【)(.+?)(?:\]|】)$/u);
+	return bracketed?.[1]?.trim() ?? normalized;
+};
+
+const utageMarkerFromTitle = (value: unknown) => {
+	const normalized = normalizeCatalogIdentity(value);
+	const prefixed = normalized.match(/^(?:\[|【)(.+?)(?:\]|】)/u);
+	return prefixed?.[1]?.trim() ?? "";
+};
+
 /**
- * Treats the LXNS CN song list as authoritative for ordinary chart availability.
+ * Treats the LXNS CN song list as authoritative for chart availability.
  * Constants always come from dxdata's version history during normalization.
  */
 export const mergeLxnsCnRegions = (
@@ -511,6 +526,7 @@ export const mergeLxnsCnRegions = (
 	}
 
 	const playableByTitle = new Map<string, LxnsPlayableSong[]>();
+	const playableUtageByInternalId = new Map<number, Set<string>>();
 	let lxnsChartCount = 0;
 
 	for (const rawSong of lxnsSongs) {
@@ -542,6 +558,26 @@ export const mergeLxnsCnRegions = (
 					continue;
 				}
 				charts.add(lxnsChartKey(chartType, difficulty));
+			}
+		}
+
+		const rawUtageCharts = difficulties?.utage;
+		if (Array.isArray(rawUtageCharts)) {
+			for (const rawChart of rawUtageCharts) {
+				const chart = toRecord(rawChart);
+				if (!chart) {
+					continue;
+				}
+				const marker = normalizeUtageMarker(chart.kanji) || utageMarkerFromTitle(song.title);
+				if (marker) {
+					charts.add(lxnsChartKey("utage", marker));
+					const internalId = Number(song.id);
+					if (Number.isSafeInteger(internalId) && internalId > 0) {
+						const markers = playableUtageByInternalId.get(internalId) ?? new Set<string>();
+						markers.add(marker);
+						playableUtageByInternalId.set(internalId, markers);
+					}
+				}
 			}
 		}
 
@@ -582,14 +618,22 @@ export const mergeLxnsCnRegions = (
 			}
 
 			const chartType = normalizeChartType(typeof sheet.type === "string" ? sheet.type : undefined);
-			if (chartType !== "standard" && chartType !== "dx") {
+			if (chartType !== "standard" && chartType !== "dx" && chartType !== "utage") {
 				return rawSheet;
 			}
 
 			catalogChartCount += 1;
-			const difficulty = normalizeCatalogIdentity(sheet.difficulty);
+			const difficulty =
+				chartType === "utage"
+					? normalizeUtageMarker(sheet.difficulty) || utageMarkerFromTitle(song.title)
+					: normalizeCatalogIdentity(sheet.difficulty);
 			const key = lxnsChartKey(chartType, difficulty);
-			const isPlayableInCn = candidates.some((candidate) => candidate.charts.has(key));
+			const internalId = Number(sheet.internalId);
+			const matchesUtageId =
+				chartType === "utage" &&
+				Number.isSafeInteger(internalId) &&
+				(playableUtageByInternalId.get(internalId)?.has(difficulty) ?? false);
+			const isPlayableInCn = matchesUtageId || candidates.some((candidate) => candidate.charts.has(key));
 			if (isPlayableInCn) {
 				matchedChartCount += 1;
 			}

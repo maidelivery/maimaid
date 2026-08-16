@@ -184,6 +184,74 @@ describe("mergeLxnsCnRegions", () => {
 		expect(songs[0]?.sheets[0]?.regions.cn).toBe(true);
 	});
 
+	it("matches dxdata utage variants to LXNS kanji markers", () => {
+		const result = mergeLxnsCnRegions(
+			{
+				songs: [
+					{
+						title: "[協]Ultimate taste",
+						artist: "Ultimate taste",
+						sheets: [sheet("utage2p", "【協】", false)],
+					},
+				],
+			},
+			{
+				songs: [
+					{
+						title: "[協]Ultimate taste",
+						artist: "Ultimate taste",
+						difficulties: {
+							standard: [],
+							dx: [],
+							utage: [{ kanji: "協" }],
+						},
+					},
+				],
+			},
+		);
+
+		const songs = result.dataJson.songs as Array<{ sheets: Array<{ regions: Record<string, boolean> }> }>;
+		expect(songs[0]?.sheets[0]?.regions.cn).toBe(true);
+		expect(result.stats).toEqual({
+			lxnsSongCount: 1,
+			lxnsChartCount: 1,
+			catalogChartCount: 1,
+			matchedChartCount: 1,
+		});
+	});
+
+	it("matches renamed utage songs by their stable internal id", () => {
+		const result = mergeLxnsCnRegions(
+			{
+				songs: [
+					{
+						title: "[X]人マニア",
+						artist: "原口沙輔 feat.重音テト",
+						sheets: [{ ...sheet("utage", "【X】", false), internalId: 111772 }],
+					},
+				],
+			},
+			{
+				songs: [
+					{
+						id: 111772,
+						title: "[宴]人マニア",
+						artist: "原口沙輔 feat.重音テト",
+						difficulties: {
+							standard: [],
+							dx: [],
+							utage: [{ kanji: "X" }],
+						},
+					},
+				],
+			},
+		);
+
+		const songs = result.dataJson.songs as Array<{ sheets: Array<{ regions: Record<string, boolean> }> }>;
+		expect(songs[0]?.sheets[0]?.regions.cn).toBe(true);
+		expect(result.stats.matchedChartCount).toBe(1);
+	});
+
 	it("rejects an empty LXNS response before clearing CN availability", () => {
 		expect(() => mergeLxnsCnRegions({ songs: [] }, { songs: [] })).toThrow("LXNS song list is missing songs");
 	});
@@ -323,6 +391,34 @@ describe("normalizeDxDataCatalog", () => {
 		const song = normalized.songs[0] as { version: string; sheets: Array<{ version: string }> };
 		expect(song.version).toBe("maimaiでらっくす");
 		expect(song.sheets[0]?.version).toBe("maimaiでらっくす");
+	});
+
+	it("normalizes pure utage songs into the client chart and version contract", () => {
+		const normalized = normalizeDxDataCatalog({
+			versions: [{ version: "PRiSM PLUS", releaseDate: "2025-03-13" }],
+			songs: [
+				{
+					title: "[協]Ultimate taste",
+					sheets: [
+						{
+							type: "utage2p",
+							difficulty: "【協】",
+							version: "PRiSM PLUS",
+							releaseDate: "2025-05-21",
+						},
+					],
+				},
+			],
+		});
+
+		const song = normalized.songs[0] as {
+			version: string;
+			releaseDate: string;
+			sheets: Array<{ type: string; version: string }>;
+		};
+		expect(song.version).toBe("PRiSM PLUS");
+		expect(song.releaseDate).toBe("2025-05-21");
+		expect(song.sheets[0]).toMatchObject({ type: "utage", version: "PRiSM PLUS" });
 	});
 
 	it("fills the client level value from dxdata's display level", () => {
