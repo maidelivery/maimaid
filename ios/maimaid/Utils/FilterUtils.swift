@@ -12,12 +12,18 @@ struct FilterSettings: Equatable, Sendable {
     
     // Initialized from UserDefaults, persisted in FilterView
     var hideDeletedSongs: Bool = UserDefaults.app.hideDeletedSongs
+    var showOnlyPlayableSongs: Bool = UserDefaults.app.showOnlyPlayableSongs
 }
 
 @MainActor
 class FilterUtils {
     /// Original filter method - kept for compatibility
-    static func filterSongs(_ songs: [Song], settings: FilterSettings, searchText: String = "") -> [Song] {
+    static func filterSongs(
+        _ songs: [Song],
+        settings: FilterSettings,
+        searchText: String = "",
+        server: GameServer = .jp
+    ) -> [Song] {
         songs.filter { song in
             // 1. Search Text
             if !searchText.isEmpty {
@@ -85,7 +91,7 @@ class FilterUtils {
                     let difficultyMatches = settings.selectedDifficulties.contains(sheet.difficulty.lowercased())
                     if !difficultyMatches { return false }
                     
-                    let level = sheet.internalLevelValue ?? sheet.levelValue ?? 0.0
+                    let level = ServerChartPolicy.metadata(for: sheet, on: server).ratingLevel ?? 0.0
                     return level >= settings.minLevel && level <= settings.maxLevel
                 }
                 if !hasMatchingDifficultyInRange { return false }
@@ -93,7 +99,6 @@ class FilterUtils {
             
             // 7. Hide Deleted Songs
             if settings.hideDeletedSongs {
-                // Determine if any sheet has any active region
                 let isPlayable = song.sheets.contains { sheet in
                     sheet.regionJp || sheet.regionIntl || sheet.regionCn
                 }
@@ -102,13 +107,23 @@ class FilterUtils {
                     return false
                 }
             }
+
+            if settings.showOnlyPlayableSongs,
+               !song.sheets.contains(where: { ServerChartPolicy.isPlayable($0, on: server) }) {
+                return false
+            }
             
             return true
         }
     }
     
     /// Optimized single-pass filter - reduces array iterations
-    static func filterSongsOptimized(_ songs: [Song], settings: FilterSettings, searchText: String = "") -> [Song] {
+    static func filterSongsOptimized(
+        _ songs: [Song],
+        settings: FilterSettings,
+        searchText: String = "",
+        server: GameServer = .jp
+    ) -> [Song] {
         // Pre-process search text
         let searchNormalized = SearchTextNormalizer.normalized(searchText)
         let compactSearch = SearchTextNormalizer.compact(searchText)
@@ -178,32 +193,39 @@ class FilterUtils {
             }
             
             // 5-7: Single-pass sheet checks
-            if hasTypes || hasDifficulties || settings.hideDeletedSongs {
+            if hasTypes || hasDifficulties || settings.hideDeletedSongs || settings.showOnlyPlayableSongs {
                 var hasMatchingType = !hasTypes
                 var hasMatchingDifficulty = !hasDifficulties
                 var isPlayable = !settings.hideDeletedSongs
+                var hasPlayableOnActiveServer = !settings.showOnlyPlayableSongs
                 
                 for sheet in song.sheets {
                     // Type check
+                    let isSheetPlayable = sheet.regionJp || sheet.regionIntl || sheet.regionCn
+
                     if hasTypes && settings.selectedTypes.contains(sheet.type.lowercased()) {
                         hasMatchingType = true
                     }
                     
                     // Difficulty check
                     if hasDifficulties && settings.selectedDifficulties.contains(sheet.difficulty.lowercased()) {
-                        let level = sheet.internalLevelValue ?? sheet.levelValue ?? 0.0
+                        let level = ServerChartPolicy.metadata(for: sheet, on: server).ratingLevel ?? 0.0
                         if level >= settings.minLevel && level <= settings.maxLevel {
                             hasMatchingDifficulty = true
                         }
                     }
                     
                     // Region check
-                    if settings.hideDeletedSongs && (sheet.regionJp || sheet.regionIntl || sheet.regionCn) {
+                    if settings.hideDeletedSongs && isSheetPlayable {
                         isPlayable = true
+                    }
+
+                    if settings.showOnlyPlayableSongs && ServerChartPolicy.isPlayable(sheet, on: server) {
+                        hasPlayableOnActiveServer = true
                     }
                 }
                 
-                if !hasMatchingType || !hasMatchingDifficulty || !isPlayable {
+                if !hasMatchingType || !hasMatchingDifficulty || !isPlayable || !hasPlayableOnActiveServer {
                     return false
                 }
             }

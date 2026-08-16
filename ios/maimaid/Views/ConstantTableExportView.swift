@@ -51,6 +51,9 @@ struct ConstantTableExportView: View {
     @State private var sharePayload: SharePayload?
 
     private var activeProfile: UserProfile? { activeProfiles.first }
+    private var activeServer: GameServer {
+        activeProfile.flatMap { GameServer(rawValue: $0.server) } ?? .jp
+    }
     private var mode: Mode { includesScores ? .withScores : .constantsOnly }
 
     private var availableBaseLevels: [Int] {
@@ -148,7 +151,7 @@ struct ConstantTableExportView: View {
         .sheet(item: $sharePayload) { payload in
             ShareSheetView(items: [payload.image])
         }
-        .task {
+        .task(id: activeProfile?.server) {
             await loadData()
         }
         .onReceive(NotificationCenter.default.publisher(for: .maimaiScoresDidChange)) { notification in
@@ -178,8 +181,9 @@ struct ConstantTableExportView: View {
                     continue
                 }
 
-                let level = sheet.internalLevelValue ?? sheet.levelValue ?? 0
-                guard level > 0 else { continue }
+                guard ServerChartPolicy.isPlayable(sheet, on: activeServer) else { continue }
+                let metadata = ServerChartPolicy.metadata(for: sheet, on: activeServer)
+                guard let level = metadata.ratingLevel else { continue }
                 let score = scoreForSheet(sheet, in: scoreMap)
 
                 entries.append(

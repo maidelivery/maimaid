@@ -7,6 +7,7 @@ struct ScannerResultCardView: View, Equatable {
     let recognizedDifficulty: String?
     let recognizedRate: Double?
     let resolvedSheet: Sheet?
+    let server: GameServer
     let onScoreEntryTap: () -> Void
     let onResetTap: () -> Void
     @Environment(\.colorScheme) private var colorScheme
@@ -17,9 +18,11 @@ struct ScannerResultCardView: View, Equatable {
         lhs.recognizedType == rhs.recognizedType &&
         lhs.recognizedDifficulty == rhs.recognizedDifficulty &&
         lhs.recognizedRate == rhs.recognizedRate &&
+        lhs.server == rhs.server &&
         lhs.resolvedSheet?.difficulty == rhs.resolvedSheet?.difficulty &&
         lhs.resolvedSheet?.type == rhs.resolvedSheet?.type &&
-        (lhs.resolvedSheet?.internalLevel ?? lhs.resolvedSheet?.level) == (rhs.resolvedSheet?.internalLevel ?? rhs.resolvedSheet?.level)
+        lhs.resolvedSheet.map { ServerChartPolicy.metadata(for: $0, on: lhs.server).displayLevel } ==
+            rhs.resolvedSheet.map { ServerChartPolicy.metadata(for: $0, on: rhs.server).displayLevel }
     }
     
     var body: some View {
@@ -86,7 +89,7 @@ struct ScannerResultCardView: View, Equatable {
                                     Text(RatingUtils.calculateRank(achievement: rate)).font(.system(size: 10, weight: .black, design: .rounded)).foregroundStyle(diffColor)
                                 }
                             }
-                            if let levelStr = sheet?.internalLevel ?? sheet?.level {
+                            if let levelStr = sheet.map({ ServerChartPolicy.metadata(for: $0, on: server).displayLevel }) {
                                 Text(levelStr).font(.system(size: 28, weight: .black, design: .rounded)).foregroundStyle(diffColor.opacity(0.85)).frame(minWidth: 44)
                             }
                             Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold)).foregroundStyle(.secondary.opacity(0.4))

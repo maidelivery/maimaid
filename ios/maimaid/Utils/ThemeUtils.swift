@@ -27,6 +27,7 @@ enum UserDefaultsKeys {
     static let maimaiChartStatsData = "MaimaiChartStatsData"
     static let didPerformInitialSync = "didPerformInitialSync"
     static let hideDeletedSongs = "filter.hideDeletedSongs"
+    static let showOnlyPlayableSongs = "filter.showOnlyPlayableSongs"
     static let didFixOrphanedScoresMigration = "migration.fixOrphanedScoresRelationships"
     static let didForceRegionSyncMigration = "migration.forceRegionBackfillSync"
     static let didShowOnboarding = "onboarding.didShowOnboarding"
@@ -120,6 +121,11 @@ extension UserDefaults {
     var hideDeletedSongs: Bool {
         get { bool(forKey: UserDefaultsKeys.hideDeletedSongs) }
         set { set(newValue, forKey: UserDefaultsKeys.hideDeletedSongs) }
+    }
+
+    var showOnlyPlayableSongs: Bool {
+        get { bool(forKey: UserDefaultsKeys.showOnlyPlayableSongs) }
+        set { set(newValue, forKey: UserDefaultsKeys.showOnlyPlayableSongs) }
     }
 
     var didFixOrphanedScoresMigration: Bool {

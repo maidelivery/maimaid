@@ -3,6 +3,7 @@ import SwiftData
 
 struct RandomSongView: View {
     @Query private var allSongs: [Song]
+    @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     @State private var songCount: Int = 3
     @State private var isSpinning = false
     @State private var results: [Song] = []
@@ -27,6 +28,10 @@ struct RandomSongView: View {
     }
     private let visibleItems: Int = 1
     private let spinDuration: Double = 3.0
+
+    private var activeServer: GameServer {
+        activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -139,7 +144,11 @@ struct RandomSongView: View {
     
     private func spin() {
         // 1. Apply Filters
-        let filteredSongs = FilterUtils.filterSongs(allSongs, settings: filterSettings)
+        let filteredSongs = FilterUtils.filterSongs(
+            allSongs,
+            settings: filterSettings,
+            server: activeServer
+        )
         
         guard !filteredSongs.isEmpty else { return }
         
