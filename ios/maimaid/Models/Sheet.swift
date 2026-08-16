@@ -12,6 +12,18 @@ final class Sheet {
     var internalLevel: String?
     var internalLevelValue: Double?
     var noteDesigner: String?
+
+    // Server-specific metadata. JP is represented by the base fields above.
+    var intlVersion: String?
+    var intlLevel: String?
+    var intlLevelValue: Double?
+    var intlInternalLevel: String?
+    var intlInternalLevelValue: Double?
+    var cnVersion: String?
+    var cnLevel: String?
+    var cnLevelValue: Double?
+    var cnInternalLevel: String?
+    var cnInternalLevelValue: Double?
     
     // Note Counts
     var tap: Int?

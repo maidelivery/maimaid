@@ -3,6 +3,10 @@ import OSLog
 import SwiftData
 import UIKit
 
+extension Notification.Name {
+    static let maimaiCatalogDidChange = Notification.Name("MaimaiCatalogDidChange")
+}
+
 struct AliasListResponse: Decodable {
     let aliases: [AliasItem]
 }
@@ -120,7 +124,16 @@ struct RemoteSheet: Decodable {
     let noteDesigner: String?
     let noteCounts: RemoteNoteCounts?
     let regions: [String: Bool]?
+    let regionOverrides: [String: RemoteSheetOverride]?
     let isSpecial: Bool?
+}
+
+struct RemoteSheetOverride: Decodable {
+    let version: String?
+    let level: String?
+    let levelValue: Double?
+    let internalLevel: String?
+    let internalLevelValue: Double?
 }
 
 struct RemoteNoteCounts: Decodable {
@@ -566,6 +579,22 @@ class MaimaiDataFetcher {
                                         "usa": sh.regionUsa,
                                         "cn": sh.regionCn
                                     ],
+                                    regionOverrides: [
+                                        "intl": RemoteSheetOverride(
+                                            version: sh.intlVersion,
+                                            level: sh.intlLevel,
+                                            levelValue: sh.intlLevelValue,
+                                            internalLevel: sh.intlInternalLevel,
+                                            internalLevelValue: sh.intlInternalLevelValue
+                                        ),
+                                        "cn": RemoteSheetOverride(
+                                            version: sh.cnVersion,
+                                            level: sh.cnLevel,
+                                            levelValue: sh.cnLevelValue,
+                                            internalLevel: sh.cnInternalLevel,
+                                            internalLevelValue: sh.cnInternalLevelValue
+                                        )
+                                    ],
                                     isSpecial: nil
                                 )
                             }
@@ -728,6 +757,20 @@ class MaimaiDataFetcher {
                             sheet.internalLevel = remoteSheet.internalLevel
                             sheet.internalLevelValue = remoteSheet.internalLevelValue
                             sheet.noteDesigner = remoteSheet.noteDesigner
+
+                            let intlOverride = remoteSheet.regionOverrides?["intl"]
+                            sheet.intlVersion = intlOverride?.version
+                            sheet.intlLevel = intlOverride?.level
+                            sheet.intlLevelValue = intlOverride?.levelValue
+                            sheet.intlInternalLevel = intlOverride?.internalLevel
+                            sheet.intlInternalLevelValue = intlOverride?.internalLevelValue
+
+                            let cnOverride = remoteSheet.regionOverrides?["cn"]
+                            sheet.cnVersion = cnOverride?.version
+                            sheet.cnLevel = cnOverride?.level
+                            sheet.cnLevelValue = cnOverride?.levelValue
+                            sheet.cnInternalLevel = cnOverride?.internalLevel
+                            sheet.cnInternalLevelValue = cnOverride?.internalLevelValue
                             
                             if let nc = remoteSheet.noteCounts {
                                 sheet.tap = nc.tap
@@ -931,6 +974,11 @@ class MaimaiDataFetcher {
 
             // Pull newly approved community aliases after static data refresh so merged aliases remain visible.
             await forceSyncApprovedCommunityAliases(modelContext: modelContext)
+
+            if options.updateRemoteData {
+                B50CacheService.shared.invalidate()
+                NotificationCenter.default.post(name: .maimaiCatalogDidChange, object: nil)
+            }
             
             UserDefaults.app.didPerformInitialSync = true
             updateStage(.completed, base: 1.0, message: String(localized: "data.sync.status.completed"))

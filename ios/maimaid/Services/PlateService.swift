@@ -186,15 +186,15 @@ class PlateService {
         return group.versions.contains(songVersion)
     }
 
-    func isSheetIncluded(_ sheet: Sheet, song: Song, in group: VersionPlateGroup) -> Bool {
-        guard isSongIncluded(song, in: group) else { return false }
-
-        // Charts added in later versions should not count toward older plates.
-        if let sheetVersion = sheet.version, !sheetVersion.isEmpty {
-            return group.versions.contains(sheetVersion)
-        }
-
-        // Legacy fallback for local data that predates per-chart version support.
-        return true
+    func isSheetIncluded(
+        _ sheet: Sheet,
+        song: Song,
+        in group: VersionPlateGroup,
+        server: GameServer
+    ) -> Bool {
+        let metadata = ServerChartPolicy.metadata(for: sheet, on: server)
+        let version = metadata.version ?? song.version
+        guard let version, !version.isEmpty else { return false }
+        return group.versions.contains(version)
     }
 }

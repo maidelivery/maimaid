@@ -6,6 +6,7 @@ struct PlateProgressView: View {
     @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query private var songs: [Song]
+    @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     
     // Filters
     @State private var selectedGroup: VersionPlateGroup?
@@ -24,6 +25,10 @@ struct PlateProgressView: View {
     @State private var recomputeTask: Task<Void, Never>?
     
     private let difficulties = ["basic", "advanced", "expert", "master", "remaster"]
+
+    private var activeServer: GameServer {
+        activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
+    }
     
     private var totalSheetCount: Int {
         cachedSections.reduce(0) { $0 + $1.sheets.count }
@@ -97,8 +102,14 @@ struct PlateProgressView: View {
                 recomputeAchievements()
             }
         }
+        .onChange(of: activeServer) { _, _ in
+            scheduleRecompute()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .maimaiScoresDidChange)) { _ in
             recomputeAchievements()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .maimaiCatalogDidChange)) { _ in
+            scheduleRecompute()
         }
         .onDisappear {
             recomputeTask?.cancel()
@@ -147,12 +158,16 @@ struct PlateProgressView: View {
         
         var sheets: [Sheet] = []
         for song in songs {
-            guard PlateService.shared.isSongIncluded(song, in: group) else { continue }
             if isUtageCategory(song.category) { continue }
             for sheet in song.sheets {
                 if isUtageType(sheet.type) { continue }
-                if !sheet.regionJp { continue }
-                if !PlateService.shared.isSheetIncluded(sheet, song: song, in: group) { continue }
+                if !ServerChartPolicy.isPlayable(sheet, on: activeServer) { continue }
+                if !PlateService.shared.isSheetIncluded(
+                    sheet,
+                    song: song,
+                    in: group,
+                    server: activeServer
+                ) { continue }
                 if sheet.difficulty.lowercased() == targetDifficulty {
                     sheets.append(sheet)
                 }
@@ -160,10 +175,7 @@ struct PlateProgressView: View {
         }
         
         let grouped = Dictionary(grouping: sheets) { sheet in
-            if let val = sheet.internalLevelValue {
-                return sheet.internalLevel ?? String(format: "%.1f", val)
-            }
-            return sheet.level
+            ServerChartPolicy.metadata(for: sheet, on: activeServer).displayLevel
         }
         
         cachedSections = grouped.map { (level: $0.key, sheets: $0.value) }

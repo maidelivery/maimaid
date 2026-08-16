@@ -316,9 +316,7 @@ enum RatingUtils {
         let version: String?
         let internalLevelValue: Double?
         let fitDiffValue: Double?
-        let regionJp: Bool
-        let regionIntl: Bool
-        let regionCn: Bool
+        let isPlayable: Bool
     }
     
     struct ScoreCalculationData: Sendable {
@@ -351,25 +349,11 @@ enum RatingUtils {
                 // Skip utage sheets
                 if sheetData.type.lowercased().contains("utage") { continue }
 
-                let isRegionActive: Bool
-                if let server = input.server {
-                    switch server {
-                    case .jp:
-                        isRegionActive = sheetData.regionJp
-                    case .intl:
-                        isRegionActive = sheetData.regionIntl
-                    case .cn:
-                        isRegionActive = sheetData.regionCn
-                    }
-                } else {
-                    isRegionActive = false
-                }
-
                 let category = determineSongCategory(
                     songVersion: sheetData.version ?? songData.version,
                     latestServerVersion: latestVersion,
                     server: input.server,
-                    isRegionActive: isRegionActive
+                    isRegionActive: sheetData.isPlayable
                 )
 
                 guard category != .excluded else { continue }
@@ -436,9 +420,7 @@ extension Array where Element == Song {
         let version: String?
         let internalLevelValue: Double?
         let fitDiffValue: Double?
-        let regionJp: Bool
-        let regionIntl: Bool
-        let regionCn: Bool
+        let isPlayable: Bool
     }
 
     private struct SongExtractionData: Sendable {
@@ -454,7 +436,7 @@ extension Array where Element == Song {
     }
 
     @MainActor
-    private func extractCalculationData(useFitDiff: Bool) -> [SongExtractionData] {
+    private func extractCalculationData(server: GameServer?, useFitDiff: Bool) -> [SongExtractionData] {
         var extractedSongs: [SongExtractionData] = []
         extractedSongs.reserveCapacity(count)
 
@@ -464,18 +446,17 @@ extension Array where Element == Song {
 
             for sheet in song.sheets {
                 let fitDiffValue = useFitDiff ? ChartStatsService.shared.getStat(for: sheet)?.fit_diff : nil
+                let metadata = server.map { ServerChartPolicy.metadata(for: sheet, on: $0) }
 
                 extractedSheets.append(
                     SheetExtractionData(
                         songIdentifier: sheet.songIdentifier,
                         type: sheet.type,
                         difficulty: sheet.difficulty,
-                        version: sheet.version,
-                        internalLevelValue: sheet.internalLevelValue ?? sheet.levelValue,
+                        version: metadata?.version ?? sheet.version,
+                        internalLevelValue: metadata?.ratingLevel,
                         fitDiffValue: fitDiffValue,
-                        regionJp: sheet.regionJp,
-                        regionIntl: sheet.regionIntl,
-                        regionCn: sheet.regionCn
+                        isPlayable: server.map { ServerChartPolicy.isPlayable(sheet, on: $0) } ?? false
                     )
                 )
             }
@@ -508,9 +489,7 @@ extension Array where Element == Song {
                     version: sheet.version,
                     internalLevelValue: sheet.internalLevelValue,
                     fitDiffValue: sheet.fitDiffValue,
-                    regionJp: sheet.regionJp,
-                    regionIntl: sheet.regionIntl,
-                    regionCn: sheet.regionCn
+                    isPlayable: sheet.isPlayable
                 )
             }
 
@@ -535,7 +514,7 @@ extension Array where Element == Song {
         preloadedScores: [String: Score],
         useFitDiff: Bool = false
     ) async -> RatingUtils.CalculationInput {
-        let extractedSongs = extractCalculationData(useFitDiff: useFitDiff)
+        let extractedSongs = extractCalculationData(server: server, useFitDiff: useFitDiff)
 
         var scoresData: [String: RatingUtils.ScoreCalculationData] = [:]
         scoresData.reserveCapacity(preloadedScores.count)
