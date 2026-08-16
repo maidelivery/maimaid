@@ -8,7 +8,12 @@ const sheet = (type: string, difficulty: string, cn: boolean) => ({
 	regions: { jp: true, intl: true, cn },
 });
 
-const lxnsChart = (type: string, difficulty: number) => ({ type, difficulty });
+const lxnsChart = (type: string, difficulty: number, level?: string, levelValue?: number) => ({
+	type,
+	difficulty,
+	level,
+	level_value: levelValue,
+});
 
 describe("mergeLxnsCnRegions", () => {
 	afterEach(() => {
@@ -48,6 +53,53 @@ describe("mergeLxnsCnRegions", () => {
 			lxnsChartCount: 2,
 			catalogChartCount: 3,
 			matchedChartCount: 2,
+		});
+	});
+
+	it("stores LXNS chart constants as CN region overrides", () => {
+		const result = mergeLxnsCnRegions(
+			{
+				songs: [
+					{
+						title: "Server Constant Song",
+						artist: "Artist",
+						sheets: [
+							{
+								...sheet("dx", "master", false),
+								level: "13+",
+								levelValue: 13.6,
+								internalLevel: "13.9",
+								internalLevelValue: 13.9,
+								regionOverrides: { intl: { version: "CiRCLE PLUS" } },
+							},
+						],
+					},
+				],
+			},
+			{
+				songs: [
+					{
+						title: "Server Constant Song",
+						artist: "Artist",
+						difficulties: { standard: [], dx: [lxnsChart("dx", 3, "13+", 13.8)] },
+					},
+				],
+			},
+		);
+
+		const songs = result.dataJson.songs as Array<{
+			sheets: Array<{
+				regionOverrides: Record<string, Record<string, unknown>>;
+			}>;
+		}>;
+		expect(songs[0]?.sheets[0]?.regionOverrides).toEqual({
+			intl: { version: "CiRCLE PLUS" },
+			cn: {
+				level: "13+",
+				levelValue: 13.8,
+				internalLevel: "13.8",
+				internalLevelValue: 13.8,
+			},
 		});
 	});
 

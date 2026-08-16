@@ -149,7 +149,12 @@ export const normalizeLxnsAliasesPayload = (lxnsPayload: unknown, songIdPayload:
 
 type LxnsPlayableSong = {
 	artist: string;
-	charts: Set<string>;
+	charts: Map<string, LxnsChartOverride>;
+};
+
+type LxnsChartOverride = {
+	level?: string;
+	levelValue?: number;
 };
 
 export type LxnsCnRegionMergeStats = {
@@ -195,7 +200,7 @@ export const mergeLxnsCnRegions = (
 		}
 
 		const difficulties = toRecord(song.difficulties);
-		const charts = new Set<string>();
+		const charts = new Map<string, LxnsChartOverride>();
 		for (const chartType of ["standard", "dx"] as const) {
 			const rawCharts = difficulties?.[chartType];
 			if (!Array.isArray(rawCharts)) {
@@ -204,7 +209,10 @@ export const mergeLxnsCnRegions = (
 
 			for (const rawChart of rawCharts) {
 				const chart = toRecord(rawChart);
-				const difficultyIndex = Number(chart?.difficulty);
+				if (!chart) {
+					continue;
+				}
+				const difficultyIndex = Number(chart.difficulty);
 				if (!Number.isInteger(difficultyIndex)) {
 					continue;
 				}
@@ -212,7 +220,12 @@ export const mergeLxnsCnRegions = (
 				if (!difficulty) {
 					continue;
 				}
-				charts.add(lxnsChartKey(chartType, difficulty));
+				const level = typeof chart.level === "string" ? chart.level.trim() : "";
+				const levelValue = Number(chart.level_value);
+				charts.set(lxnsChartKey(chartType, difficulty), {
+					...(level ? { level } : {}),
+					...(Number.isFinite(levelValue) && levelValue > 0 ? { levelValue } : {}),
+				});
 			}
 		}
 
@@ -260,18 +273,46 @@ export const mergeLxnsCnRegions = (
 			catalogChartCount += 1;
 			const difficulty = normalizeCatalogIdentity(sheet.difficulty);
 			const key = lxnsChartKey(chartType, difficulty);
-			const isPlayableInCn = candidates.some((candidate) => candidate.charts.has(key));
+			const cnChart = candidates
+				.map((candidate) => candidate.charts.get(key))
+				.find((chart): chart is LxnsChartOverride => chart !== undefined);
+			const isPlayableInCn = cnChart !== undefined;
 			if (isPlayableInCn) {
 				matchedChartCount += 1;
 			}
 
-			return {
+			const regionOverrides = {
+				...(toRecord(sheet.regionOverrides) ?? {}),
+			};
+			if (cnChart) {
+				regionOverrides.cn = {
+					...(toRecord(regionOverrides.cn) ?? {}),
+					...(cnChart.level ? { level: cnChart.level } : {}),
+					...(cnChart.levelValue !== undefined
+						? {
+								levelValue: cnChart.levelValue,
+								internalLevel: cnChart.levelValue.toFixed(1),
+								internalLevelValue: cnChart.levelValue,
+							}
+						: {}),
+				};
+			} else {
+				delete regionOverrides.cn;
+			}
+
+			const mergedSheet: Record<string, unknown> = {
 				...sheet,
 				regions: {
 					...(toRecord(sheet.regions) ?? {}),
 					cn: isPlayableInCn,
 				},
 			};
+			if (Object.keys(regionOverrides).length > 0) {
+				mergedSheet.regionOverrides = regionOverrides;
+			} else {
+				delete mergedSheet.regionOverrides;
+			}
+			return mergedSheet;
 		});
 
 		return {
