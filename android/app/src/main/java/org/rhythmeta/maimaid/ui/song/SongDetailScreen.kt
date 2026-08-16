@@ -108,6 +108,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.R
+import org.rhythmeta.maimaid.core.data.StaticAssetUrls
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.ScoreInput
 import org.rhythmeta.maimaid.core.data.ServerChartPolicy
@@ -494,7 +495,7 @@ private fun SongHeader(
     }
     val jacketModel = remember(cachedCover, song.imageName) {
         ImageRequest.Builder(context)
-            .data(cachedCover ?: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/${song.imageName}")
+            .data(cachedCover ?: StaticAssetUrls.coverUrl(song.imageName))
             .allowHardware(false)
             .build()
     }

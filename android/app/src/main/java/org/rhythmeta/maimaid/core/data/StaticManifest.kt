@@ -8,4 +8,5 @@ data class StaticManifest(
     val md5: String,
     val createdAt: String? = null,
     val downloadUrl: String? = null,
+    val assets: StaticAssetConfiguration? = null,
 )

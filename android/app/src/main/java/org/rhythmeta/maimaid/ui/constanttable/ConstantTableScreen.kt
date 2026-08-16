@@ -44,6 +44,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.R
+import org.rhythmeta.maimaid.core.data.StaticAssetUrls
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.ConstantTableEntry
 import org.rhythmeta.maimaid.core.data.ConstantTableSection
@@ -325,7 +326,7 @@ private fun ConstantTableJacket(
     val cachedCover = remember(entry.imageName) { container.coverImageStore.fileFor(entry.imageName) }
     val coverModel = remember(context, cachedCover, entry.imageName) {
         ImageRequest.Builder(context)
-            .data(cachedCover ?: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/${entry.imageName}")
+            .data(cachedCover ?: StaticAssetUrls.coverUrl(entry.imageName))
             .build()
     }
     Box(

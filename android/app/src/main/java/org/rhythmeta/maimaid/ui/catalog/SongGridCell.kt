@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import org.rhythmeta.maimaid.core.data.CoverImageStore
+import org.rhythmeta.maimaid.core.data.StaticAssetUrls
 import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.SongEntity
@@ -55,7 +56,7 @@ internal fun SongGridCell(
     val cachedCover = remember(song.imageName) { coverImageStore.fileFor(song.imageName) }
     val imageModel = remember(context, cachedCover, song.imageName) {
         ImageRequest.Builder(context)
-            .data(cachedCover ?: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/${song.imageName}")
+            .data(cachedCover ?: StaticAssetUrls.coverUrl(song.imageName))
             .build()
     }
     val prioritizedSheets = remember(sheets) { CatalogQuery.prioritizedSheets(sheets) }

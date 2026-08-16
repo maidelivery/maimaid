@@ -58,6 +58,7 @@ import java.io.File
 import java.util.Locale
 import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.R
+import org.rhythmeta.maimaid.core.data.StaticAssetUrls
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.Best50State
 import org.rhythmeta.maimaid.core.data.CoverImageStore
@@ -547,7 +548,7 @@ private fun BestEntryRow(
 private fun BestJacket(imageName: String, coverImageStore: CoverImageStore) {
     val model = remember(imageName) {
         coverImageStore.fileFor(imageName)
-            ?: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/$imageName"
+            ?: StaticAssetUrls.coverUrl(imageName)
     }
     Box(
         modifier = Modifier

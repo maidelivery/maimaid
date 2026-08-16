@@ -17,6 +17,7 @@ import {
 	type StaticSourceTarget,
 } from "./static-bundle.utils.js";
 import { StorageService } from "./storage.service.js";
+import type { StaticAssetReference } from "./storage.service.js";
 
 const STATIC_SOURCE_DEFAULTS: Array<{ category: string; activeUrl: string; fallbackUrls: string[] }> = [
 	{
@@ -42,6 +43,11 @@ const STATIC_SOURCE_DEFAULTS: Array<{ category: string; activeUrl: string; fallb
 	{
 		category: "lxns_song_list",
 		activeUrl: "https://maimai.lxns.net/api/v0/maimai/song/list",
+		fallbackUrls: [],
+	},
+	{
+		category: "lxns_icon_list",
+		activeUrl: "https://maimai.lxns.net/api/v0/maimai/icon/list",
 		fallbackUrls: [],
 	},
 	{
@@ -324,6 +330,18 @@ export class StaticBundleService {
 		return this.createUploadPreparation(this.createBundleVersion(createdAt), md5, createdAt);
 	}
 
+	staticAssetConfiguration() {
+		return this.storageService.staticAssetConfiguration();
+	}
+
+	async prepareStaticAssetUploads(assets: StaticAssetReference[]) {
+		const uploads = await this.storageService.prepareStaticAssetUploads(assets);
+		return {
+			uploads,
+			existingCount: assets.length - uploads.length,
+		};
+	}
+
 	async publishUploadedBundle(input: { version: string; md5: string; objectKey: string; force?: boolean }) {
 		assertStaticBundleVersion(input.version);
 		assertStaticBundleMd5(input.md5);
@@ -577,6 +595,7 @@ export class StaticBundleService {
 			md5: bundle.md5,
 			createdAt: bundle.createdAt,
 			downloadUrl: bundle.objectKey ? this.storageService.staticBundlePublicUrl(bundle.objectKey) : null,
+			assets: this.storageService.staticAssetConfiguration(),
 		};
 	}
 

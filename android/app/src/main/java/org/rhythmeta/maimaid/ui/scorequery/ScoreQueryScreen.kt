@@ -53,6 +53,7 @@ import coil.request.ImageRequest
 import java.util.Locale
 import kotlin.math.roundToInt
 import org.rhythmeta.maimaid.R
+import org.rhythmeta.maimaid.core.data.StaticAssetUrls
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.ScoreQueryDisplayMode
 import org.rhythmeta.maimaid.core.data.ScoreQueryEntry
@@ -305,7 +306,7 @@ private fun ScoreQueryGridCell(
     val cachedCover = remember(entry.imageName) { container.coverImageStore.fileFor(entry.imageName) }
     val model = remember(context, cachedCover, entry.imageName) {
         ImageRequest.Builder(context)
-            .data(cachedCover ?: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/${entry.imageName}")
+            .data(cachedCover ?: StaticAssetUrls.coverUrl(entry.imageName))
             .build()
     }
     val cornerRadius = scoreGridCornerRadius(columns)

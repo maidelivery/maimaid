@@ -48,20 +48,15 @@ struct AvatarImageView: View {
 
     private var remoteURL: URL? {
         guard cachedIconImage == nil, let avatarURL else { return nil }
+        if let iconID = StaticAssetURL.presetAvatarID(from: avatarURL) {
+            return StaticAssetURL.presetAvatarURL(for: iconID)
+        }
         return URL(string: avatarURL)
     }
 
     private var cachedIconImage: UIImage? {
-        guard let avatarURL, let iconID = iconID(from: avatarURL) else { return nil }
+        guard let iconID = StaticAssetURL.presetAvatarID(from: avatarURL) else { return nil }
         return ImageDownloader.shared.loadImage(iconId: iconID)
-    }
-
-    private func iconID(from avatarURL: String) -> Int? {
-        let fileName = avatarURL.components(separatedBy: "/").last?
-            .replacingOccurrences(of: ".png", with: "")
-
-        guard let fileName else { return nil }
-        return Int(fileName)
     }
 
     @ViewBuilder

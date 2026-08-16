@@ -20,9 +20,15 @@ data class StaticBundleResponse(
         @SerialName("songid_json") val songIds: List<SongIdItem> = emptyList(),
         @SerialName("utage_note_json") val utageStats: List<UtageChartStatsItem> = emptyList(),
         @SerialName("lxns_aliases") val aliases: AliasPayload? = null,
+        @SerialName("lxns_icon_list") val presetAvatars: PresetAvatarPayload? = null,
         @SerialName("chart_fit") val chartFit: ChartFitPayload? = null,
         @SerialName("df_chart_fit") val legacyChartFit: ChartFitPayload? = null,
         @SerialName("dan_info") val danInfo: List<DanCategory> = emptyList(),
+    )
+
+    @Serializable
+    data class PresetAvatarPayload(
+        val icons: List<PresetAvatar> = emptyList(),
     )
 
     @Serializable
