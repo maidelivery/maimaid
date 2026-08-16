@@ -125,7 +125,7 @@ See `backend/.env.docker.example`:
   - For Podman local testing, keep `S3_ENDPOINT=http://minio:9000` and set `S3_PUBLIC_ENDPOINT=http://localhost:9000` so pre-signed upload URLs are reachable from iOS/macOS host.
   - In local compose, keep `S3_ACCESS_KEY_ID/S3_SECRET_ACCESS_KEY` aligned with `MINIO_ROOT_USER/MINIO_ROOT_PASSWORD`.
   - Keep `S3_BUCKET` private for profile avatars. `S3_STATIC_BUNDLE_BUCKET` stores immutable bundles plus mirrored song covers and LXNS preset avatars.
-  - Connect a custom domain to the public bucket, enable Cloudflare Image Transformations, and set `S3_STATIC_BUNDLE_PUBLIC_BASE_URL` to that origin. Clients request covers as 512 px AVIF and preset avatars as 256 px AVIF, with the original R2 PNG as fallback.
+  - Connect a custom domain to the public bucket, enable Cloudflare Image Transformations, and set `S3_STATIC_BUNDLE_PUBLIC_BASE_URL` to that origin. Clients request AVIF assets at quality 95 without a fixed width, with the original R2 PNG as fallback.
   - The Actions builder uses the existing API URL and internal-job token. It asks the API for short-lived upload URLs, so R2 access keys stay on the backend host. The first run uploads all missing images; later runs only upload newly discovered object keys.
 
 ## API surfaces
