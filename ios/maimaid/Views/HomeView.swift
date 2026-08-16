@@ -64,86 +64,67 @@ struct HomeView: View {
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    // Profile Section
-                    profileHeader
-                    
-                    // Main "Best Table" Button
-                    bestTableButton
-                    
-                    // Function Grid
-                    functionGrid
+            HomeDashboardLifecycleView(
+                songsCount: songs.count,
+                didPerformInitialSync: didPerformInitialSync,
+                scoreCount: allScores.count,
+                activeB15Count: activeProfile?.b15Count,
+                activeB35Count: activeProfile?.b35Count,
+                configuredB15Count: config?.b15Count,
+                configuredB35Count: config?.b35Count,
+                activeProfileID: activeProfile?.id,
+                activeServer: activeProfile?.server,
+                onAppear: evaluateOnboardingGate,
+                onSongsCountChanged: {
+                    evaluateOnboardingGate()
+                    scheduleB50Update()
+                },
+                onInitialSyncChanged: evaluateOnboardingGate,
+                onTask: {
+                    refreshScoreFingerprintCache()
+                    await updateB50IfNeeded()
+                },
+                onScoresCountChanged: {
+                    refreshScoreFingerprintCache()
+                    scheduleB50Update()
+                },
+                onScoresChanged: { notification in
+                    if let changedProfileID = notification.object as? UUID,
+                       changedProfileID != activeProfile?.id {
+                        return
+                    }
+                    refreshScoreFingerprintCache()
+                    scheduleB50Update()
+                },
+                onCatalogChanged: {
+                    hasComputedB50 = false
+                    scheduleB50Update()
+                },
+                onB50ConfigurationChanged: scheduleB50Update,
+                onActiveProfileChanged: {
+                    refreshScoreFingerprintCache()
+                    scheduleB50Update()
+                },
+                onDisappear: {
+                    b50UpdateTask?.cancel()
                 }
-                .padding(16)
-            }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("home.title")
-            .sheet(item: $profileEditMode) { mode in
-                NavigationStack {
-                    UserProfileEditView(mode: mode)
+            ) {
+                HomeDashboardView(
+                    profileEditMode: $profileEditMode,
+                    showingOnboarding: $showingOnboarding,
+                    didShowOnboarding: $didShowOnboarding
+                ) {
+                    VStack(spacing: 16) {
+                        // Profile Section
+                        profileHeader
+
+                        // Main "Best Table" Button
+                        bestTableButton
+
+                        // Function Grid
+                        functionGrid
+                    }
                 }
-            }
-            .sheet(isPresented: $showingOnboarding) {
-                FirstLaunchView(onCompleted: {
-                    didShowOnboarding = true
-                    showingOnboarding = false
-                })
-                .presentationDetents([.large])
-                .presentationDragIndicator(.hidden)
-                .interactiveDismissDisabled(true)
-            }
-            .onAppear {
-                evaluateOnboardingGate()
-            }
-            .onChange(of: songs.count) { _, _ in
-                evaluateOnboardingGate()
-                scheduleB50Update()
-            }
-            .onChange(of: didPerformInitialSync) { _, _ in
-                evaluateOnboardingGate()
-            }
-            .task {
-                refreshScoreFingerprintCache()
-                await updateB50IfNeeded()
-            }
-            .onChange(of: allScores.count) { _, _ in
-                refreshScoreFingerprintCache()
-                scheduleB50Update()
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .maimaiScoresDidChange)) { notification in
-                if let changedProfileID = notification.object as? UUID,
-                   changedProfileID != activeProfile?.id {
-                    return
-                }
-                refreshScoreFingerprintCache()
-                scheduleB50Update()
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .maimaiCatalogDidChange)) { _ in
-                hasComputedB50 = false
-                scheduleB50Update()
-            }
-            .onChange(of: activeProfile?.b15Count) { _, _ in
-                scheduleB50Update()
-            }
-            .onChange(of: activeProfile?.b35Count) { _, _ in
-                scheduleB50Update()
-            }
-            .onChange(of: config?.b15Count) { _, _ in
-                scheduleB50Update()
-            }
-            .onChange(of: config?.b35Count) { _, _ in
-                scheduleB50Update()
-            }
-            .onChange(of: activeProfile?.id) { _, _ in
-                refreshScoreFingerprintCache()
-                scheduleB50Update()
-            }
-            .onChange(of: activeProfile?.server) { _, _ in
-                scheduleB50Update()
-            }
-            .onDisappear {
-                b50UpdateTask?.cancel()
             }
         }
     }
