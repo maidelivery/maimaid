@@ -1,5 +1,49 @@
 # Changelog
 
+## 1.2.0
+
+### 中文
+
+#### 新增
+
+- iOS 与 Android 的 Best 50 新增互斥的拟合定数和版本定数模式，导出图片使用当前计算模式对应的定数。
+- iOS 与 Android 的歌曲难度卡片新增定数变化历史，按版本从新到旧排列，并通过变化量、方向箭头和颜色标记升降。
+- 歌曲新增分谱面类型的加入版本信息；同时包含标准谱面和 DX 谱面的歌曲使用双色版本徽标。
+
+#### 变更
+
+- iOS 与 Android 的 Best 50、推荐、成绩查询、定数表、随机选曲、扫描、段位和牌子进度统一按当前档案所属服务器应用谱面规则和定数。
+- 歌曲详情显示当前谱面类型的主难度加入版本；追加难度的加入版本显示在展开后的难度卡片中。
+- 静态数据包、歌曲封面和 LXNS 预设头像迁移至 R2，图片优先请求 AVIF，并保留原图回退。
+- iOS 与 Android 版本升级至 1.2.0，构建号统一取 Git 仓库提交数。
+
+#### 修复
+
+- 修复谱面定数可能使用非当前档案服务器数据的问题。
+- 修复生成静态数据包时宴谱歌曲匹配不准确的问题。
+- 修复 Android 歌曲版本徽标超出预期范围的问题。
+
+### English
+
+#### Added
+
+- Added mutually exclusive fitted-constant and version-constant modes to Best 50 on iOS and Android, with image exports using the selected calculation constants.
+- Added per-chart constant history to expanded song difficulty cards, ordered from newest to oldest with colored change amounts and direction indicators.
+- Added chart-specific release-version details and split-color version badges for songs containing both standard and deluxe charts.
+
+#### Changed
+
+- Applied profile-aware server chart rules and constants across Best 50, recommendations, score queries, constant tables, random song selection, scanning, Dan, and plate progress on iOS and Android.
+- Updated song details to show the main release version for the selected chart type and the release version of an appended difficulty inside its expanded card.
+- Moved static bundles, song jackets, and LXNS preset avatars to R2-backed delivery with AVIF image requests and original-image fallback.
+- Updated iOS and Android to version 1.2.0 and derived their build numbers from the repository commit count.
+
+#### Fixed
+
+- Fixed chart constants being resolved against a server other than the active profile's server.
+- Fixed Utage song matching while building static bundles.
+- Fixed Android song-version badges stretching beyond their intended bounds.
+
 ## 1.1.7
 
 ### Added
