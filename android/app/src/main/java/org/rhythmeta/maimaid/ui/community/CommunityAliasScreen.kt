@@ -128,16 +128,7 @@ internal fun CommunityAliasScreen(
                                 onAction = viewModel::checkSession,
                             )
                         }
-                        state.isLoading -> item("loading") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 72.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator()
-                            }
-                        }
+                        state.isLoading && state.items.isEmpty() -> Unit
                         state.items.isEmpty() -> item("empty") {
                             CommunityAliasMessageCard(
                                 title = stringResource(R.string.community_alias_empty_title),

@@ -37,10 +37,7 @@ struct MaimaiIconPicker: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary.opacity(0.1), lineWidth: 1))
                             } else {
-                                AsyncImage(url: URL(string: icon.iconUrl)) { image in
-                                    image.resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                } placeholder: {
+                                RemoteImage(url: URL(string: icon.iconUrl)) {
                                     ProgressView()
                                 }
                                 .frame(width: 70, height: 70)

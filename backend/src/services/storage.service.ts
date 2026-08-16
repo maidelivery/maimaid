@@ -115,8 +115,8 @@ export class StorageService {
 		}
 		const coverFallbackBaseUrl = this.staticAssetPublicBaseUrl("covers");
 		const presetAvatarFallbackBaseUrl = this.staticAssetPublicBaseUrl("lxns-icons");
-		const coverBaseUrl = this.transformedStaticAssetBaseUrl("covers", 512);
-		const presetAvatarBaseUrl = this.transformedStaticAssetBaseUrl("lxns-icons", 256);
+		const coverBaseUrl = this.transformedStaticAssetBaseUrl("covers");
+		const presetAvatarBaseUrl = this.transformedStaticAssetBaseUrl("lxns-icons");
 		if (!coverBaseUrl || !coverFallbackBaseUrl || !presetAvatarBaseUrl || !presetAvatarFallbackBaseUrl) {
 			return null;
 		}
@@ -227,7 +227,7 @@ export class StorageService {
 		return this.staticBundlePublicUrl(`static-assets/${directory}/`);
 	}
 
-	private transformedStaticAssetBaseUrl(directory: "covers" | "lxns-icons", width: number) {
+	private transformedStaticAssetBaseUrl(directory: "covers" | "lxns-icons") {
 		const publicBaseUrl = this.env.S3_STATIC_BUNDLE_PUBLIC_BASE_URL;
 		if (!publicBaseUrl) {
 			return null;
@@ -235,7 +235,7 @@ export class StorageService {
 		const publicBase = new URL(publicBaseUrl.endsWith("/") ? publicBaseUrl : `${publicBaseUrl}/`);
 		const sourcePrefix = `${publicBase.pathname.replace(/^\/+|\/+$/gu, "")}/static-assets/${directory}/`.replace(/^\//u, "");
 		return new URL(
-			`cdn-cgi/image/format=avif,quality=80,width=${width},fit=scale-down/${sourcePrefix}`,
+			`cdn-cgi/image/format=avif,quality=95,fit=scale-down/${sourcePrefix}`,
 			publicBase.origin,
 		).toString();
 	}

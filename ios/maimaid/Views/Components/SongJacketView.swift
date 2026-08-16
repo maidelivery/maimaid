@@ -112,11 +112,7 @@ struct SongJacketView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } else if let url = StaticAssetURL.coverURL(for: imageName) {
-                AsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
+                RemoteImage(url: url) {
                     ZStack {
                         Color.primary.opacity(0.05)
                         if !useThumbnail {

@@ -80,30 +80,34 @@ class ImageDownloader {
     }
 
     private func downloadAndSave(from url: URL, to destinationUrl: URL) async throws -> URL {
+        let (data, _) = try await fetchImageData(from: url)
+
+        try data.write(to: destinationUrl)
+
+        return destinationUrl
+    }
+
+    func fetchImage(from url: URL) async throws -> UIImage {
+        let (_, image) = try await fetchImageData(from: url)
+        return image
+    }
+
+    private func fetchImageData(from url: URL) async throws -> (Data, UIImage) {
         var request = URLRequest(url: url)
+        request.setValue("image/avif,image/*", forHTTPHeaderField: "Accept")
         request.setValue(AppKeys.userAgent, forHTTPHeaderField: "User-Agent")
-        
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        // Basic validation: ensure we didn't get an HTML error page
+
         if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
             throw URLError(.badServerResponse)
         }
-        
-        // Check if data is actually an image (rough check)
-        // Wrap in autoreleasepool to release the UIImage instance immediately
-        let isValidImage = autoreleasepool {
-            return UIImage(data: data) != nil
-        }
-        
-        guard isValidImage else {
+
+        guard let image = UIImage(data: data) else {
             throw URLError(.cannotDecodeContentData)
         }
-        
-        // Save to disk
-        try data.write(to: destinationUrl)
-        
-        return destinationUrl
+
+        return (data, image)
     }
     
     // Utility to get image synchronously if it exists, useful for SwiftUI or UIImage(contentsOfFile:)
