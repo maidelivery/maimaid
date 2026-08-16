@@ -4,6 +4,7 @@ name: Build maimaid APK
   push:
     paths:
       - android/**
+      - scripts/build-number.sh
 
 permissions:
   contents: read
@@ -15,6 +16,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve build number
+        run: echo "MAIMAID_BUILD_NUMBER=$(scripts/build-number.sh)" >> "$GITHUB_ENV"
 
       - name: Setup Java
         uses: actions/setup-java@v4
