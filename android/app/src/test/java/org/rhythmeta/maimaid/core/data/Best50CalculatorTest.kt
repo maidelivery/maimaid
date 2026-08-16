@@ -20,7 +20,54 @@ class Best50CalculatorTest {
         assertTrue(unavailableCn.isEmpty)
     }
 
-    private fun calculate(server: String, sheet: SheetEntity): Best50State = calculateBest50(
+    @Test
+    fun `fitted mode uses chart fit constant and stores it in the entry`() {
+        val result = calculate(
+            server = "jp",
+            sheet = sheet(),
+            constantMode = Best50ConstantMode.Fitted,
+            chartFit = chartFit(14.2),
+        )
+
+        assertEquals(14.2, result.b15.single().level, 0.0001)
+        assertEquals(RatingUtils.calculate(14.2, 100.0), result.b15.single().rating)
+    }
+
+    @Test
+    fun `version mode uses the selected version constant`() {
+        val result = calculate(
+            server = "jp",
+            sheet = sheet().copy(multiverInternalLevelValue = mapOf("CiRCLE" to 13.7)),
+            constantMode = Best50ConstantMode.Version,
+        )
+
+        assertEquals(13.7, result.b15.single().level, 0.0001)
+        assertEquals(RatingUtils.calculate(13.7, 100.0), result.b15.single().rating)
+    }
+
+    @Test
+    fun `selected mode falls back to the server constant when data is unavailable`() {
+        val fitted = calculate(
+            server = "cn",
+            sheet = sheet(),
+            constantMode = Best50ConstantMode.Fitted,
+        )
+        val version = calculate(
+            server = "cn",
+            sheet = sheet(),
+            constantMode = Best50ConstantMode.Version,
+        )
+
+        assertEquals(13.8, fitted.b15.single().level, 0.0001)
+        assertEquals(13.8, version.b15.single().level, 0.0001)
+    }
+
+    private fun calculate(
+        server: String,
+        sheet: SheetEntity,
+        constantMode: Best50ConstantMode = Best50ConstantMode.Server,
+        chartFit: StaticBundleResponse.ChartFitPayload = StaticBundleResponse.ChartFitPayload(),
+    ): Best50State = calculateBest50(
         rows = listOf(row()),
         versions = listOf(GameVersionEntity("CiRCLE", "CiRCLE", null, 0)),
         songs = listOf(song()),
@@ -29,6 +76,16 @@ class Best50CalculatorTest {
         b35Count = 35,
         b15Count = 15,
         versionOverride = "CiRCLE",
+        constantMode = constantMode,
+        chartFit = chartFit,
+    )
+
+    private fun chartFit(constant: Double) = StaticBundleResponse.ChartFitPayload(
+        charts = mapOf(
+            "10001" to listOf(
+                StaticBundleResponse.ChartFitStat(diff = "13+", fitDifficulty = constant),
+            ),
+        ),
     )
 
     private fun song() = SongEntity(
@@ -69,6 +126,7 @@ class Best50CalculatorTest {
         regionCn = true,
         cnInternalLevel = "13.8",
         cnInternalLevelValue = 13.8,
+        providerSongId = 10_001,
     )
 
     private fun row() = Best50Row(

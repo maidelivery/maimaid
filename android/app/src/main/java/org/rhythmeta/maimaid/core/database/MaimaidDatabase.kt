@@ -2,6 +2,7 @@ package org.rhythmeta.maimaid.core.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
@@ -17,9 +18,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SongAliasEntity::class,
         PresetAvatarEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
+@TypeConverters(DatabaseConverters::class)
 abstract class MaimaidDatabase : RoomDatabase() {
     abstract fun catalogDao(): CatalogDao
     abstract fun presetAvatarDao(): PresetAvatarDao
@@ -51,6 +53,12 @@ abstract class MaimaidDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE `sheets` ADD COLUMN `cnLevelValue` REAL")
                 db.execSQL("ALTER TABLE `sheets` ADD COLUMN `cnInternalLevel` TEXT")
                 db.execSQL("ALTER TABLE `sheets` ADD COLUMN `cnInternalLevelValue` REAL")
+            }
+        }
+
+        val Migration3To4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `sheets` ADD COLUMN `multiverInternalLevelValue` TEXT")
             }
         }
     }

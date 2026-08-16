@@ -77,6 +77,7 @@ class CatalogRepository(
             if (
                 localSongCount > 0 &&
                 currentMd5 == manifest.md5 &&
+                syncStateStore.isCurrentSchema() &&
                 chartFitStore.hasCache() &&
                 danStore.hasCache() &&
                 !force
@@ -260,6 +261,7 @@ class CatalogRepository(
                     cnLevelValue = cnOverride?.levelValue,
                     cnInternalLevel = cnOverride?.internalLevel,
                     cnInternalLevelValue = cnOverride?.internalLevelValue,
+                    multiverInternalLevelValue = sheet.multiverInternalLevelValue,
                     tap = utageNoteTypes?.tap ?: sheet.noteCounts?.tap,
                     hold = utageNoteTypes?.hold ?: sheet.noteCounts?.hold,
                     slide = utageNoteTypes?.slide ?: sheet.noteCounts?.slide,

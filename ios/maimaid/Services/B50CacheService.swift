@@ -90,7 +90,7 @@ final class B50CacheService {
         activeProfile: UserProfile?,
         configs: [SyncConfig],
         overriddenVersion: String?,
-        useFitDiff: Bool = false,
+        constantMode: Best50ConstantMode = .server,
         force: Bool = false
     ) async -> Bool {
         let profileId = activeProfile?.id
@@ -111,7 +111,7 @@ final class B50CacheService {
             "\(b35Limit)",
             "\(b15Limit)",
             version,
-            "fitDiff:\(useFitDiff)",
+            "constantMode:\(constantMode.rawValue)",
             "scores:\(snapshot.fingerprint)"
         ].joined(separator: "|")
         
@@ -138,7 +138,8 @@ final class B50CacheService {
             userProfileId: profileId,
             server: server,
             preloadedScores: snapshot.scoreMap,
-            useFitDiff: useFitDiff
+            constantMode: constantMode,
+            selectedVersion: latestVersion
         )
         
         let task = Task<(total: Int, b35: [RatingUtils.RatingEntry], b15: [RatingUtils.RatingEntry]), Never> {

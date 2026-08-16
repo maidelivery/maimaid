@@ -4,8 +4,20 @@ import androidx.compose.ui.graphics.Color
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.rhythmeta.maimaid.core.database.GameVersionEntity
+import org.rhythmeta.maimaid.core.database.SheetEntity
+import org.rhythmeta.maimaid.core.database.SongEntity
 
 class SongVisualUtilsTest {
+    @Test
+    fun versionBadgeSplitsStdAndDxUnlessTypeIsExplicit() {
+        val song = song()
+        val sheets = listOf(sheet("std"), sheet("dx"))
+
+        assertEquals(listOf("std", "dx"), SongVisualUtils.versionBadgeChartTypes(song, sheets))
+        assertEquals(listOf("std"), SongVisualUtils.versionBadgeChartTypes(song, sheets, "standard"))
+        assertEquals(listOf("dx"), SongVisualUtils.versionBadgeChartTypes(song, sheets, "DX"))
+    }
+
     @Test
     fun utageChartTypeUsesUtageBadgeColor() {
         val fallback = Color.Black
@@ -67,4 +79,42 @@ class SongVisualUtilsTest {
 
         assertEquals(1, SongVisualUtils.versionSortOrder("maimai でらっくす PLUS", versions))
     }
+
+    private fun song() = SongEntity(
+        songIdentifier = "song",
+        category = "maimai",
+        title = "Song",
+        artist = "Artist",
+        imageName = "cover.png",
+        version = "ORANGE",
+        releaseDate = null,
+        sortOrder = 0,
+        bpm = null,
+        isNew = false,
+        isLocked = false,
+        comment = null,
+    )
+
+    private fun sheet(type: String) = SheetEntity(
+        sheetKey = "song-$type-master",
+        songIdentifier = "song",
+        type = type,
+        difficulty = "master",
+        version = "ORANGE",
+        level = "12",
+        levelValue = 12.0,
+        internalLevel = "12.0",
+        internalLevelValue = 12.0,
+        noteDesigner = null,
+        tap = null,
+        hold = null,
+        slide = null,
+        touch = null,
+        breakCount = null,
+        total = null,
+        regionJp = true,
+        regionIntl = true,
+        regionUsa = true,
+        regionCn = true,
+    )
 }

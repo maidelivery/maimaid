@@ -106,6 +106,8 @@
 "song.detail.metadata.bpm" = "BPM";
 "song.detail.metadata.category" = "分类";
 "song.detail.metadata.version" = "版本";
+"song.detail.chart.addedVersion" = "追加版本";
+"song.detail.constantHistory" = "定数变化历史";
 "song.detail.metadata.releaseDate" = "上线日";
 "song.detail.region.jp" = "日本";
 "song.detail.region.intl" = "国际";
@@ -313,6 +315,10 @@
 "bestTable.export.fitDiff" = "已开启拟合定数";
 "bestTable.export.fitDiff.rating" = "拟合 Rating";
 "bestTable.settings.useFitDiff" = "使用拟合定数";
+"bestTable.settings.constants" = "计算定数";
+"bestTable.settings.useVersionConstant" = "使用版本定数";
+"bestTable.export.versionConstant" = "已开启版本定数";
+"bestTable.export.versionConstant.rating" = "版本定数 Rating";
 "bestTable.action.export" = "导出 B50 图片";
 
 // Chinese (Simplified) Localizable.strings entries for Version Override Feature

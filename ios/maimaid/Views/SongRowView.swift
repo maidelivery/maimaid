@@ -3,6 +3,7 @@ import SwiftData
 
 struct SongRowView: View {
     let song: Song
+    var chartType: String? = nil
     var scoreCache: [String: Score] = [:]
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
@@ -19,14 +20,11 @@ struct SongRowView: View {
         return ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type, colorScheme)
     }
 
-    private var versionBadgeColor: Color {
-        if song.sheets.contains(where: { $0.type.lowercased() == "utage" }) ||
-            song.category.lowercased().contains("utage") ||
-            song.category.contains("宴") {
-            return ThemeUtils.utageColor(colorScheme)
-        }
-        
-        return song.sheets.contains(where: { $0.type.lowercased() == "dx" }) ? .orange : .blue
+    private var versionBadgeChartTypes: [String] {
+        ThemeUtils.versionBadgeChartTypes(
+            sheetTypes: song.sheets.map(\.type),
+            explicitType: chartType
+        )
     }
     
     var body: some View {
@@ -57,15 +55,10 @@ struct SongRowView: View {
                 // Version + Type badge
                 VStack(alignment: .trailing, spacing: 4) {
                     if let version = song.version {
-                        Text(ThemeUtils.versionAbbreviation(version))
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(
-                                versionBadgeColor,
-                                in: RoundedRectangle(cornerRadius: 4)
-                            )
+                        ChartTypeVersionBadge(
+                            text: ThemeUtils.versionAbbreviation(version),
+                            chartTypes: versionBadgeChartTypes
+                        )
                     }
                     
                     // Difficulty dots - use cached scores for better performance

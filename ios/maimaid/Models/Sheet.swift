@@ -11,6 +11,7 @@ final class Sheet {
     var levelValue: Double?
     var internalLevel: String?
     var internalLevelValue: Double?
+    var multiverInternalLevelValue: [String: Double]?
     var noteDesigner: String?
 
     // Server-specific metadata. JP is represented by the base fields above.
@@ -52,6 +53,15 @@ final class Sheet {
             return scores.first { $0.userProfileId == uid }
         }
         return scores.first { $0.userProfileId == nil }
+    }
+
+    func versionInternalLevelValue(for version: String?) -> Double? {
+        guard let version, !version.isEmpty else { return nil }
+        return multiverInternalLevelValue?
+            .first { storedVersion, _ in
+                storedVersion.caseInsensitiveCompare(version) == .orderedSame
+            }?
+            .value
     }
     
     init(songIdentifier: String, type: String, difficulty: String, version: String? = nil, level: String, levelValue: Double? = nil, internalLevel: String? = nil, internalLevelValue: Double? = nil, noteDesigner: String? = nil, tap: Int? = nil, hold: Int? = nil, slide: Int? = nil, touch: Int? = nil, breakCount: Int? = nil, total: Int? = nil, songId: Int = 0) {

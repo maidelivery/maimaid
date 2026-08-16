@@ -24,7 +24,8 @@ struct BestTableView: View {
     @State private var overriddenVersion: String?
     @State private var showVersionPicker = false
     @State private var cachedServerVersion: String?
-    @AppStorage(AppStorageKeys.useFitDiff) private var useFitDiff = false
+    @AppStorage(AppStorageKeys.best50ConstantMode) private var constantMode: Best50ConstantMode = .server
+    @AppStorage(AppStorageKeys.useFitDiff) private var legacyUseFitDiff = false
     
     // MARK: - Performance / Lifecycle
     @State private var calculationTask: Task<Void, Never>?
@@ -157,7 +158,12 @@ struct BestTableView: View {
                 }
                 .padding(.vertical, 4)
                 
-                Toggle("bestTable.settings.useFitDiff", isOn: $useFitDiff)
+            }
+
+            Section("bestTable.settings.constants") {
+                Toggle("bestTable.settings.useFitDiff", isOn: fittedConstantBinding)
+                    .tint(.orange)
+                Toggle("bestTable.settings.useVersionConstant", isOn: versionConstantBinding)
                     .tint(.orange)
             }
             
@@ -236,6 +242,7 @@ struct BestTableView: View {
             )
         }
         .onAppear {
+            migrateLegacyConstantModeIfNeeded()
             isVisible = true
             cache.updateSongs(songs)
             synchronizeCapacityDrafts()
@@ -291,7 +298,7 @@ struct BestTableView: View {
         .onChange(of: overriddenVersion) { _, _ in
             scheduleCalculation()
         }
-        .onChange(of: useFitDiff) { _, _ in
+        .onChange(of: constantMode) { _, _ in
             scheduleCalculation()
         }
         .onReceive(NotificationCenter.default.publisher(for: .maimaiScoresDidChange)) { notification in
@@ -345,7 +352,7 @@ struct BestTableView: View {
                     totalRating: cache.b50Result.total,
                     userName: activeProfile?.name ?? configs.first?.userName,
                     currentVersion: effectiveVersion,
-                    useFitDiff: useFitDiff,
+                    constantMode: constantMode,
                     colorScheme: colorScheme
                 )
             }
@@ -439,7 +446,7 @@ struct BestTableView: View {
     }
     
     private func performCalculation() async {
-        if useFitDiff {
+        if constantMode == .fitted {
             await ChartStatsService.shared.fetchStats()
         }
         
@@ -450,8 +457,30 @@ struct BestTableView: View {
             activeProfile: activeProfile,
             configs: configs,
             overriddenVersion: overriddenVersion,
-            useFitDiff: useFitDiff
+            constantMode: constantMode
         )
+    }
+
+    private var fittedConstantBinding: Binding<Bool> {
+        Binding(
+            get: { constantMode == .fitted },
+            set: { constantMode = $0 ? .fitted : .server }
+        )
+    }
+
+    private var versionConstantBinding: Binding<Bool> {
+        Binding(
+            get: { constantMode == .version },
+            set: { constantMode = $0 ? .version : .server }
+        )
+    }
+
+    private func migrateLegacyConstantModeIfNeeded() {
+        guard legacyUseFitDiff else { return }
+        if constantMode == .server {
+            constantMode = .fitted
+        }
+        legacyUseFitDiff = false
     }
     
     private func ratingRow(entry: RatingUtils.RatingEntry) -> some View {

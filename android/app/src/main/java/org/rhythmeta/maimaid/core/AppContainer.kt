@@ -48,7 +48,11 @@ class AppContainer(context: Context) {
         applicationContext,
         MaimaidDatabase::class.java,
         "maimaid.db",
-    ).addMigrations(MaimaidDatabase.Migration1To2, MaimaidDatabase.Migration2To3)
+    ).addMigrations(
+        MaimaidDatabase.Migration1To2,
+        MaimaidDatabase.Migration2To3,
+        MaimaidDatabase.Migration3To4,
+    )
         .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
         .build()
 
@@ -58,6 +62,7 @@ class AppContainer(context: Context) {
     val presetAvatarImageStore = PresetAvatarImageStore(applicationContext)
     val profileAvatarStore = ProfileAvatarStore(applicationContext)
     val profileCredentialStore = ProfileCredentialStore(applicationContext)
+    private val chartFitStore = ChartFitStore(applicationContext, json)
     private val backendApiClient = BackendApiClient(BuildConfig.BACKEND_URL, json)
     val backendSessionManager = BackendSessionManager(
         authBaseUrl = BuildConfig.BACKEND_AUTH_URL,
@@ -94,19 +99,20 @@ class AppContainer(context: Context) {
         profileRepository = profileRepository,
     )
 
-    val best50Repository = Best50Repository(
-        database = database,
-        profileRepository = profileRepository,
-    )
-
     val catalogRepository = CatalogRepository(
         database = database,
         client = StaticBundleClient(BuildConfig.BACKEND_URL, json),
         syncStateStore = CatalogSyncStateStore(applicationContext),
         coverImageStore = coverImageStore,
         presetAvatarRepository = presetAvatarRepository,
-        chartFitStore = ChartFitStore(applicationContext, json),
+        chartFitStore = chartFitStore,
         danStore = DanStore(applicationContext, json),
+    )
+
+    val best50Repository = Best50Repository(
+        database = database,
+        profileRepository = profileRepository,
+        catalogRepository = catalogRepository,
     )
 
     val recommendationRepository = RecommendationRepository(

@@ -61,6 +61,7 @@ import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.data.StaticAssetUrls
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.Best50State
+import org.rhythmeta.maimaid.core.data.Best50ConstantMode
 import org.rhythmeta.maimaid.core.data.CoverImageStore
 import org.rhythmeta.maimaid.core.data.RatingUtils
 import org.rhythmeta.maimaid.core.data.ScoreRules
@@ -78,6 +79,7 @@ import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -95,8 +97,13 @@ fun BestTableScreen(
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
     var selectedVersion by remember { mutableStateOf<String?>(null) }
-    val best50Flow = remember(selectedVersion) {
-        container.best50Repository.observeBest50(selectedVersion)
+    val constantMode by container.appPreferencesRepository.best50ConstantMode
+        .collectAsStateWithLifecycle(Best50ConstantMode.Server)
+    val best50Flow = remember(selectedVersion, constantMode) {
+        container.best50Repository.observeBest50(
+            versionOverride = selectedVersion,
+            constantMode = constantMode,
+        )
     }
     val best50 by best50Flow.collectAsStateWithLifecycle(Best50State())
     var b35Text by remember(activeProfile?.id) {
@@ -208,6 +215,43 @@ fun BestTableScreen(
                         scope.launch { container.profileRepository.updateBestCapacity(b35, b15) }
                     },
                 )
+            }
+            item {
+                SmallTitle(
+                    text = stringResource(R.string.best50_constant_section),
+                    insideMargin = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 16.dp,
+                    insideMargin = PaddingValues(0.dp),
+                    colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
+                ) {
+                    Column {
+                        SwitchPreference(
+                            checked = constantMode == Best50ConstantMode.Fitted,
+                            onCheckedChange = { checked ->
+                                scope.launch {
+                                    container.appPreferencesRepository.setBest50ConstantMode(
+                                        if (checked) Best50ConstantMode.Fitted else Best50ConstantMode.Server,
+                                    )
+                                }
+                            },
+                            title = stringResource(R.string.best50_use_fitted_constant),
+                        )
+                        SwitchPreference(
+                            checked = constantMode == Best50ConstantMode.Version,
+                            onCheckedChange = { checked ->
+                                scope.launch {
+                                    container.appPreferencesRepository.setBest50ConstantMode(
+                                        if (checked) Best50ConstantMode.Version else Best50ConstantMode.Server,
+                                    )
+                                }
+                            },
+                            title = stringResource(R.string.best50_use_version_constant),
+                        )
+                    }
+                }
             }
             bestEntrySection(
                 sectionKey = "new",

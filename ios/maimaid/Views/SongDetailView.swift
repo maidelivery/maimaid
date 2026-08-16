@@ -34,7 +34,7 @@ struct SongDetailView: View {
     private var availableTypes: [String] {
         Array(Set(song.sheets.map { $0.type.lowercased() })).sorted().reversed()
     }
-    
+
     var body: some View {
         SongDetailContent(song: song, selectedType: $selectedType, selectedSheet: $selectedSheet, toastMessage: $toastMessage)
     }
@@ -134,6 +134,22 @@ struct SongDetailContent: View {
     
     private var availableTypes: [String] {
         Array(Set(song.sheets.map { $0.type.lowercased() })).sorted().reversed()
+    }
+
+    private var activeServer: GameServer {
+        activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
+    }
+
+    private var selectedChartMainVersion: String? {
+        chartMainVersion(for: selectedType)
+    }
+
+    private func chartMainVersion(for type: String) -> String? {
+        ChartMainVersionResolver.resolve(
+            sheets: song.sheets.filter { $0.type.caseInsensitiveCompare(type) == .orderedSame },
+            server: activeServer,
+            fallback: song.version
+        )
     }
     
     private var currentTitle: String {
@@ -719,7 +735,7 @@ struct SongDetailContent: View {
         metadataPill(icon: "square.grid.2x2", value: song.category, label: nil, isGrid: isGrid)
             .onTapGesture { copyToClipboard(song.category, label: String(localized: "song.detail.metadata.category")) }
         
-        if let version = song.version {
+        if let version = selectedChartMainVersion {
             metadataPill(icon: "clock", value: ThemeUtils.versionAbbreviation(version), label: nil, isGrid: isGrid)
                 .onTapGesture { copyToClipboard(version, label: String(localized: "song.detail.metadata.version")) }
         }
@@ -900,18 +916,9 @@ struct SongDetailContent: View {
         localizedChartType(selectedType)
     }
 
-    private var chartTypeVersions: [String: String] {
-        song.sheets.reduce(into: [:]) { versions, sheet in
-            let type = sheet.type.lowercased()
-            guard versions[type] == nil, let version = normalizedChartVersion(sheet.version) else {
-                return
-            }
-            versions[type] = version
-        }
-    }
-
     private var currentChartTypeAccessibilityText: String {
-        guard availableTypes.count > 1, let version = chartTypeVersionAbbreviation(for: selectedType) else {
+        guard availableTypes.count > 1,
+              let version = chartTypeVersionAbbreviation(for: selectedType) else {
             return currentChartTypeText
         }
 
@@ -933,16 +940,8 @@ struct SongDetailContent: View {
         }
     }
 
-    private func normalizedChartVersion(_ version: String?) -> String? {
-        guard let version else { return nil }
-
-        let trimmedVersion = version.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmedVersion.isEmpty ? nil : trimmedVersion
-    }
-
     private func chartTypeVersionAbbreviation(for type: String) -> String? {
-        guard let version = chartTypeVersions[type.lowercased()] else { return nil }
-        return ThemeUtils.versionAbbreviation(version)
+        chartMainVersion(for: type).map { ThemeUtils.versionAbbreviation($0) }
     }
 
     private func chartTypePickerTitle(_ type: String) -> String {
@@ -1004,7 +1003,7 @@ struct SongDetailContent: View {
         VStack(spacing: 12) {
             ForEach(filteredSheets) { sheet in
                 let stat = statsService.getStat(for: sheet)
-                SheetCardView(sheet: sheet, stat: stat) {
+                SheetCardView(sheet: sheet, mainChartVersion: selectedChartMainVersion, stat: stat) {
                     selectedSheet = sheet
                 }
             }
@@ -1018,6 +1017,7 @@ struct SongDetailContent: View {
 
 struct SheetCardView: View {
     let sheet: Sheet
+    let mainChartVersion: String?
     let stat: ChartStat?
     let onRecord: () -> Void
     @State private var isExpanded = false
@@ -1051,6 +1051,25 @@ struct SheetCardView: View {
 
     private var resolvedMetadata: ResolvedSheetMetadata {
         ServerChartPolicy.metadata(for: sheet, on: activeServer)
+    }
+
+    private var additionVersion: String? {
+        guard let version = resolvedMetadata.version?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !version.isEmpty else {
+            return nil
+        }
+        guard let mainChartVersion = mainChartVersion?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !mainChartVersion.isEmpty else {
+            return version
+        }
+        return version.caseInsensitiveCompare(mainChartVersion) == .orderedSame ? nil : version
+    }
+
+    private var constantChanges: [ChartConstantHistoryEntry] {
+        ChartConstantHistoryEntry.changes(
+            from: sheet.multiverInternalLevelValue,
+            versionSequence: UserDefaults.app.maimaiVersionSequence
+        )
     }
     
     var body: some View {
@@ -1245,6 +1264,14 @@ struct SheetCardView: View {
                 .fill(diffColor.opacity(0.12))
                 .frame(height: 1)
                 .padding(.horizontal, 16)
+
+            if let additionVersion {
+                SongDetailChartVersionRow(version: additionVersion, tint: diffColor)
+            }
+
+            if !constantChanges.isEmpty {
+                SongDetailConstantHistorySection(changes: constantChanges)
+            }
 
             // Current best score
             bestScoreRow

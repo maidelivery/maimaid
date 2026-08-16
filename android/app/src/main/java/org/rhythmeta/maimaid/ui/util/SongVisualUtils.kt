@@ -134,21 +134,31 @@ internal object SongVisualUtils {
         }
     }
 
-    fun versionBadgeColor(
+    fun versionBadgeChartTypes(
         song: SongEntity,
         sheets: List<SheetEntity>,
-        darkTheme: Boolean,
-    ): Color {
+        explicitType: String? = null,
+    ): List<String> {
+        explicitType
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+            ?.let { return listOf(canonicalChartType(it)) }
+
         val isUtage = sheets.any { it.type.contains("utage", ignoreCase = true) } ||
             song.category.contains("utage", ignoreCase = true) ||
             song.category.contains("宴")
+        val types = sheets.map { canonicalChartType(it.type) }.toSet()
         return when {
-            isUtage -> utageColor(darkTheme)
-            sheets.any { it.type.equals("dx", ignoreCase = true) } -> {
-                if (darkTheme) Color(0xFFFF9F0A) else Color(0xFFFF9500)
-            }
-            else -> if (darkTheme) Color(0xFF0A84FF) else Color(0xFF007AFF)
+            "std" in types && "dx" in types -> listOf("std", "dx")
+            isUtage -> listOf("utage")
+            "dx" in types -> listOf("dx")
+            else -> listOf("std")
         }
+    }
+
+    private fun canonicalChartType(type: String): String = when (type.trim().lowercase()) {
+        "standard" -> "std"
+        else -> type.trim().lowercase()
     }
 
     fun utageColor(darkTheme: Boolean): Color =

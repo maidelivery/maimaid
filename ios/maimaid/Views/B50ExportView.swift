@@ -9,7 +9,7 @@ struct B50ExportView: View {
     let totalRating: Int
     let userName: String?
     let currentVersion: String? // 当前设定的最新版本
-    let useFitDiff: Bool
+    let constantMode: Best50ConstantMode
     
     private let columns = 5
     private let cardWidth: CGFloat = 220
@@ -85,8 +85,8 @@ struct B50ExportView: View {
                         .font(.system(size: 56, weight: .black, design: .rounded))
                         .foregroundStyle(ThemeUtils.ratingGradient(totalRating))
                     
-                    if useFitDiff {
-                        Text(String(localized: "bestTable.export.fitDiff.rating"))
+                    if let ratingModeLabel {
+                        Text(ratingModeLabel)
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(.orange)
                     }
@@ -208,8 +208,8 @@ struct B50ExportView: View {
                     Text(ThemeUtils.versionAbbreviation(version))
                         .font(.system(size: 11, weight: .semibold))
                     
-                    if useFitDiff {
-                        Text(String(localized: "bestTable.export.fitDiff"))
+                    if let constantModeLabel {
+                        Text(constantModeLabel)
                             .font(.system(size: 9, weight: .semibold))
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)
@@ -229,6 +229,28 @@ struct B50ExportView: View {
             }
         }
         .padding(.vertical, 24)
+    }
+
+    private var ratingModeLabel: String? {
+        switch constantMode {
+        case .server:
+            nil
+        case .fitted:
+            String(localized: "bestTable.export.fitDiff.rating")
+        case .version:
+            String(localized: "bestTable.export.versionConstant.rating")
+        }
+    }
+
+    private var constantModeLabel: String? {
+        switch constantMode {
+        case .server:
+            nil
+        case .fitted:
+            String(localized: "bestTable.export.fitDiff")
+        case .version:
+            String(localized: "bestTable.export.versionConstant")
+        }
     }
 }
 
@@ -406,7 +428,7 @@ extension B50ExportView {
         totalRating: Int,
         userName: String?,
         currentVersion: String? = nil,
-        useFitDiff: Bool = false,
+        constantMode: Best50ConstantMode = .server,
         colorScheme: ColorScheme? = nil
     ) -> UIImage? {
         let view = B50ExportView(
@@ -415,7 +437,7 @@ extension B50ExportView {
             totalRating: totalRating,
             userName: userName,
             currentVersion: currentVersion,
-            useFitDiff: useFitDiff
+            constantMode: constantMode
         )
         .environment(\.colorScheme, colorScheme ?? .light)
         .preferredColorScheme(colorScheme)
