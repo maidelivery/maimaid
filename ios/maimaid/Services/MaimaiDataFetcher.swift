@@ -53,9 +53,10 @@ private struct BackendStaticManifestResponse: Decodable {
     let md5: String
     let createdAt: Date?
     let downloadURL: URL?
+    let assets: StaticAssetConfiguration?
 
     enum CodingKeys: String, CodingKey {
-        case version, md5, createdAt
+        case version, md5, createdAt, assets
         case downloadURL = "downloadUrl"
     }
 }
@@ -75,6 +76,7 @@ private struct BackendStaticBundleResources: Decodable {
     let songIDJSON: [SongIdItem]?
     let utageNoteJSON: [UtageChartStatsItem]?
     let lxnsAliases: AliasListResponse?
+    let lxnsIconList: LxnsPresetIconListResponse?
     let chartFit: ChartStatsResponse?
     let legacyChartFit: ChartStatsResponse?
     let danInfo: [DanCategory]?
@@ -88,6 +90,7 @@ private struct BackendStaticBundleResources: Decodable {
         case songIDJSON = "songid_json"
         case utageNoteJSON = "utage_note_json"
         case lxnsAliases = "lxns_aliases"
+        case lxnsIconList = "lxns_icon_list"
         case chartFit = "chart_fit"
         case legacyChartFit = "df_chart_fit"
         case danInfo = "dan_info"
@@ -269,6 +272,7 @@ class MaimaiDataFetcher {
             method: "GET",
             authentication: .none
         )
+        StaticAssetURL.update(manifest.assets)
 
         if !forceApply, UserDefaults.app.staticBundleMd5 == manifest.md5 {
             return (nil, true)
@@ -517,7 +521,10 @@ class MaimaiDataFetcher {
             // --- 阶段 3: Icons ---
             if options.updateIcons {
                 updateStage(.fetchingIcons, base: 0.45, message: String(localized: "data.sync.status.fetchingIcons"))
-                if let iconUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/icon/list") {
+                if let bundledIcons = bundleResources?.lxnsIconList {
+                    lxnsIcons = bundledIcons.icons
+                    log(String(localized: "data.sync.log.fetchedIcons \(lxnsIcons.count)"))
+                } else if let iconUrl = URL(string: "https://maimai.lxns.net/api/v0/maimai/icon/list") {
                     let (data, _) = try await URLSession.shared.data(from: iconUrl)
                     let response = try JSONDecoder().decode(LxnsPresetIconListResponse.self, from: data)
                     lxnsIcons = response.icons
@@ -914,10 +921,10 @@ class MaimaiDataFetcher {
                 updateStage(.downloadingImages, base: 0.75, message: String(localized: "data.sync.status.scanningCovers"))
                 let descriptor = FetchDescriptor<Song>()
                 let allSongs = try modelContext.fetch(descriptor)
-                var coverDownloadTasks: [(String, String)] = []
+                var coverDownloadTasks: [([URL], String)] = []
                 for song in allSongs {
                     if !ImageDownloader.shared.imageExists(imageName: song.imageName) {
-                        coverDownloadTasks.append(("https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/\(song.imageName)", song.imageName))
+                        coverDownloadTasks.append((StaticAssetURL.coverURLs(for: song.imageName), song.imageName))
                     }
                 }
                 
@@ -948,10 +955,10 @@ class MaimaiDataFetcher {
                 updateStage(.downloadingIcons, base: 0.85, message: String(localized: "data.sync.status.downloadingIcons"))
                 let descriptor = FetchDescriptor<MaimaiIcon>()
                 let allIcons = try modelContext.fetch(descriptor)
-                var iconDownloadTasks: [(String, Int)] = []
+                var iconDownloadTasks: [([URL], Int)] = []
                 for icon in allIcons {
                     if !ImageDownloader.shared.iconExists(iconId: icon.id) {
-                        iconDownloadTasks.append((icon.iconUrl, icon.id))
+                        iconDownloadTasks.append((StaticAssetURL.presetAvatarURLs(for: icon.id), icon.id))
                     }
                 }
                 

@@ -34,6 +34,18 @@ const publishBundleSchema = z.object({
 	force: z.boolean().default(false),
 });
 
+const staticAssetUploadSchema = z.object({
+	assets: z
+		.array(
+			z.object({
+				kind: z.enum(["cover", "presetAvatar"]),
+				name: z.string().min(1).max(200),
+			}),
+		)
+		.min(1)
+		.max(100),
+});
+
 export const jobsInternalRoute = new Hono<AppEnv>();
 jobsInternalRoute.use("*", internalJobAuthRequired);
 
@@ -58,8 +70,19 @@ jobsInternalRoute.post("/enqueue", standardValidator("json", enqueueSchema, vali
 jobsInternalRoute.get("/static-bundle/sources", async (c) => {
 	const staticBundleService = c.var.resolve(StaticBundleService);
 	const sources = await staticBundleService.listEnabledSourceTargets();
-	return ok(c, { sources });
+	return ok(c, { sources, assets: staticBundleService.staticAssetConfiguration() });
 });
+
+/** Checks a bounded asset batch and signs uploads only for objects missing from R2. */
+jobsInternalRoute.post(
+	"/static-bundle/assets/uploads",
+	standardValidator("json", staticAssetUploadSchema, validationHook),
+	async (c) => {
+		const body = c.req.valid("json");
+		const staticBundleService = c.var.resolve(StaticBundleService);
+		return ok(c, await staticBundleService.prepareStaticAssetUploads(body.assets));
+	},
+);
 
 /**
  * Step 2: the one part of a build that needs the database. CI derives the song-id

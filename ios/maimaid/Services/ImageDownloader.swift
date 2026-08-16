@@ -46,29 +46,40 @@ class ImageDownloader {
         return fileManager.fileExists(atPath: url.path)
     }
     
-    func downloadImage(from urlString: String, as imageName: String) async throws -> URL {
+    func downloadImage(from urls: [URL], as imageName: String) async throws -> URL {
         guard isValidImageName(imageName) else {
             throw URLError(.badURL)
         }
         
         let destinationUrl = getCoverUrl(for: imageName)
-        return try await downloadAndSave(from: urlString, to: destinationUrl)
+        return try await downloadAndSave(from: urls, to: destinationUrl)
     }
     
-    func downloadIcon(from urlString: String, id: Int) async throws -> URL {
+    func downloadIcon(from urls: [URL], id: Int) async throws -> URL {
         let destinationUrl = getIconUrl(for: id)
-        return try await downloadAndSave(from: urlString, to: destinationUrl)
+        return try await downloadAndSave(from: urls, to: destinationUrl)
     }
     
-    private func downloadAndSave(from urlString: String, to destinationUrl: URL) async throws -> URL {
+    private func downloadAndSave(from urls: [URL], to destinationUrl: URL) async throws -> URL {
         if fileManager.fileExists(atPath: destinationUrl.path) {
             return destinationUrl
         }
-        
-        guard let url = URL(string: urlString) else {
-            throw URLError(.badURL)
+
+        var lastError: Error = URLError(.badURL)
+        for url in urls {
+            do {
+                return try await downloadAndSave(from: url, to: destinationUrl)
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                lastError = error
+            }
         }
-        
+
+        throw lastError
+    }
+
+    private func downloadAndSave(from url: URL, to destinationUrl: URL) async throws -> URL {
         var request = URLRequest(url: url)
         request.setValue(AppKeys.userAgent, forHTTPHeaderField: "User-Agent")
         

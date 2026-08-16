@@ -23,6 +23,14 @@ describe("StaticBundleService R2 publishing", () => {
 		};
 		const storage = {
 			staticBundlePublicUrl: vi.fn().mockReturnValue("https://static.example.com/static-bundles/bundle.json"),
+			staticAssetConfiguration: vi.fn().mockReturnValue({
+				coverBaseUrl:
+					"https://static.example.com/cdn-cgi/image/format=avif,quality=80,width=512,fit=scale-down/static-assets/covers/",
+				coverFallbackBaseUrl: "https://static.example.com/static-assets/covers/",
+				presetAvatarBaseUrl:
+					"https://static.example.com/cdn-cgi/image/format=avif,quality=80,width=256,fit=scale-down/static-assets/lxns-icons/",
+				presetAvatarFallbackBaseUrl: "https://static.example.com/static-assets/lxns-icons/",
+			}),
 		};
 
 		const result = await makeService(database, storage).manifest();
@@ -32,6 +40,7 @@ describe("StaticBundleService R2 publishing", () => {
 			md5: bundle.md5,
 			createdAt: bundle.createdAt,
 			downloadUrl: "https://static.example.com/static-bundles/bundle.json",
+			assets: storage.staticAssetConfiguration(),
 		});
 	});
 

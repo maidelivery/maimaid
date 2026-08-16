@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import org.rhythmeta.maimaid.core.data.StaticBundleResponse
+import org.rhythmeta.maimaid.core.data.StaticAssetConfiguration
+import org.rhythmeta.maimaid.core.data.StaticAssetUrls
 import org.rhythmeta.maimaid.core.data.StaticManifest
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -17,7 +19,9 @@ class StaticBundleClient(
     private val baseUrl: String,
     private val json: Json,
 ) {
-    suspend fun fetchManifest(): StaticManifest = get("/v1/static/manifest")
+    suspend fun fetchManifest(): StaticManifest = get<StaticManifest>("/v1/static/manifest").also {
+        StaticAssetUrls.configure(it.assets)
+    }
 
     suspend fun fetchBundle(
         manifest: StaticManifest,
@@ -41,10 +45,11 @@ class StaticBundleClient(
     suspend fun downloadCover(
         imageName: String,
         destination: File,
+        assets: StaticAssetConfiguration?,
         onTransfer: (downloadedBytes: Long, totalBytes: Long?) -> Unit = { _, _ -> },
     ) = withContext(Dispatchers.IO) {
         downloadImage(
-            urlString = "$COVER_BASE_URL${Uri.encode(imageName)}",
+            urlStrings = StaticAssetUrls.coverCandidates(imageName, assets),
             destination = destination,
             emptyResponseMessage = "Empty cover response",
             onTransfer = onTransfer,
@@ -54,14 +59,35 @@ class StaticBundleClient(
     suspend fun downloadPresetAvatar(
         id: Int,
         destination: File,
+        assets: StaticAssetConfiguration?,
         onTransfer: (downloadedBytes: Long, totalBytes: Long?) -> Unit = { _, _ -> },
     ) = withContext(Dispatchers.IO) {
         downloadImage(
-            urlString = "$PRESET_AVATAR_BASE_URL$id.png",
+            urlStrings = StaticAssetUrls.presetAvatarCandidates(id, assets),
             destination = destination,
             emptyResponseMessage = "Empty preset avatar response",
             onTransfer = onTransfer,
         )
+    }
+
+    private fun downloadImage(
+        urlStrings: List<String>,
+        destination: File,
+        emptyResponseMessage: String,
+        onTransfer: (downloadedBytes: Long, totalBytes: Long?) -> Unit,
+    ) {
+        var lastError: Exception? = null
+        for (urlString in urlStrings) {
+            try {
+                downloadImage(urlString, destination, emptyResponseMessage, onTransfer)
+                return
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                lastError = error
+            }
+        }
+        throw lastError ?: IllegalStateException(emptyResponseMessage)
     }
 
     private fun downloadImage(
@@ -157,8 +183,6 @@ class StaticBundleClient(
     }
 
     private companion object {
-        const val COVER_BASE_URL = "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/"
-        const val PRESET_AVATAR_BASE_URL = "https://assets2.lxns.net/maimai/icon/"
         const val CONNECT_TIMEOUT_MILLIS = 15_000
         const val READ_TIMEOUT_MILLIS = 60_000
         const val TransferBufferSize = 64 * 1_024

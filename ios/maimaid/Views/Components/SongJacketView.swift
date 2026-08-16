@@ -111,7 +111,7 @@ struct SongJacketView: View {
                 Image(uiImage: uiImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-            } else if let url = URL(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/\(imageName)") {
+            } else if let url = StaticAssetURL.coverURL(for: imageName) {
                 AsyncImage(url: url) { image in
                     image
                         .resizable()

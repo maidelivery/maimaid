@@ -34,6 +34,7 @@ import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.data.CoverImageStore
 import org.rhythmeta.maimaid.core.data.ResolvedSheetMetadata
 import org.rhythmeta.maimaid.core.data.ServerChartPolicy
+import org.rhythmeta.maimaid.core.data.StaticAssetUrls
 import org.rhythmeta.maimaid.core.database.GameVersionEntity
 import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
@@ -316,7 +317,7 @@ internal fun SongJacket(
     val cachedCover = remember(imageName) { coverImageStore.fileFor(imageName) }
     val model = remember(context, cachedCover, imageName) {
         ImageRequest.Builder(context)
-            .data(cachedCover ?: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/$imageName")
+            .data(cachedCover ?: StaticAssetUrls.coverUrl(imageName))
             .build()
     }
 

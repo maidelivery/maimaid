@@ -43,6 +43,7 @@ import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.PlateChartEntry
 import org.rhythmeta.maimaid.core.data.PlateLevelSection
 import org.rhythmeta.maimaid.core.data.PlateProgressResponse
+import org.rhythmeta.maimaid.core.data.StaticAssetUrls
 import org.rhythmeta.maimaid.core.data.PlateType
 import org.rhythmeta.maimaid.core.data.ScoreRules
 import org.rhythmeta.maimaid.core.data.VersionPlateGroup
@@ -343,7 +344,7 @@ private fun PlateJacket(
     val cachedCover = remember(chart.song.imageName) { container.coverImageStore.fileFor(chart.song.imageName) }
     val model = remember(context, cachedCover, chart.song.imageName) {
         ImageRequest.Builder(context)
-            .data(cachedCover ?: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/${chart.song.imageName}")
+            .data(cachedCover ?: StaticAssetUrls.coverUrl(chart.song.imageName))
             .build()
     }
     val saturation = if (chart.achieved) 1f else 0.08f

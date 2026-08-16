@@ -19,7 +19,7 @@ data class PresetAvatar(
     val genre: String,
 ) {
     val imageUrl: String
-        get() = PresetAvatarUrl.forIcon(id)
+        get() = StaticAssetUrls.presetAvatarUrl(id)
 }
 
 class PresetAvatarRepository(
@@ -36,8 +36,11 @@ class PresetAvatarRepository(
         return avatarDao.avatars().map(PresetAvatarEntity::toPresetAvatar)
     }
 
-    suspend fun refresh(): List<PresetAvatar> {
-        val avatars = fetchRemoteAvatars()
+    suspend fun refresh(bundledAvatars: List<PresetAvatar>? = null): List<PresetAvatar> {
+        val avatars = bundledAvatars
+            ?.takeIf { it.isNotEmpty() }
+            ?: list().takeIf { it.isNotEmpty() }
+            ?: fetchRemoteAvatars()
         if (avatars.isEmpty()) return list()
         database.withTransaction {
             avatarDao.deleteAll()
@@ -78,18 +81,11 @@ class PresetAvatarRepository(
 }
 
 object PresetAvatarUrl {
-    private const val ImageBaseUrl = "https://assets2.lxns.net/maimai/icon/"
-    private val PresetUrlPattern = Regex("^https://assets2\\.lxns\\.net/maimai/icon/(\\d+)\\.png(?:\\?.*)?$")
+    fun forIcon(id: Int): String = StaticAssetUrls.presetAvatarUrl(id)
 
-    fun forIcon(id: Int): String = "$ImageBaseUrl$id.png"
+    fun isPreset(url: String?): Boolean = iconId(url) != null
 
-    fun isPreset(url: String?): Boolean = url?.matches(PresetUrlPattern) == true
-
-    fun iconId(url: String?): Int? = url
-        ?.let(PresetUrlPattern::matchEntire)
-        ?.groupValues
-        ?.getOrNull(1)
-        ?.toIntOrNull()
+    fun iconId(url: String?): Int? = StaticAssetUrls.presetAvatarId(url)
 }
 
 private fun PresetAvatarEntity.toPresetAvatar() = PresetAvatar(id, name, genre)

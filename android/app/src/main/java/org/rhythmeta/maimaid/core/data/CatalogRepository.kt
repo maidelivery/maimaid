@@ -83,6 +83,7 @@ class CatalogRepository(
             ) {
                 downloadMissingCovers(
                     imageNames = catalogDao.imageNames(),
+                    assets = manifest.assets,
                     reporter = StageProgressReporter(
                         version = manifest.version,
                         stage = CatalogSyncStage.Covers,
@@ -91,6 +92,7 @@ class CatalogRepository(
                     ),
                 )
                 syncPresetAvatars(
+                    assets = manifest.assets,
                     reporter = StageProgressReporter(
                         version = manifest.version,
                         stage = CatalogSyncStage.PresetAvatars,
@@ -117,6 +119,7 @@ class CatalogRepository(
             applyBundle(bundle)
             downloadMissingCovers(
                 imageNames = bundle.payload.resources.catalog.songs.map { it.imageName.orEmpty() },
+                assets = manifest.assets,
                 reporter = StageProgressReporter(
                     version = bundle.version,
                     stage = CatalogSyncStage.Covers,
@@ -125,6 +128,8 @@ class CatalogRepository(
                 ),
             )
             syncPresetAvatars(
+                bundledAvatars = bundle.payload.resources.presetAvatars?.icons,
+                assets = manifest.assets,
                 reporter = StageProgressReporter(
                     version = bundle.version,
                     stage = CatalogSyncStage.PresetAvatars,
@@ -147,19 +152,24 @@ class CatalogRepository(
 
     private suspend fun downloadMissingCovers(
         imageNames: Iterable<String>,
+        assets: StaticAssetConfiguration?,
         reporter: StageProgressReporter,
     ) {
         reporter.start()
         coverImageStore.downloadMissing(imageNames, reporter::onItemsProgress) { imageName, destination ->
-            client.downloadCover(imageName, destination, reporter::onTransfer)
+            client.downloadCover(imageName, destination, assets, reporter::onTransfer)
         }
         reporter.complete()
     }
 
-    private suspend fun syncPresetAvatars(reporter: StageProgressReporter) {
+    private suspend fun syncPresetAvatars(
+        bundledAvatars: List<PresetAvatar>? = null,
+        assets: StaticAssetConfiguration?,
+        reporter: StageProgressReporter,
+    ) {
         reporter.start()
         val avatars = try {
-            presetAvatarRepository.refresh()
+            presetAvatarRepository.refresh(bundledAvatars)
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {
@@ -167,7 +177,7 @@ class CatalogRepository(
             return
         }
         presetAvatarRepository.downloadMissing(avatars, reporter::onItemsProgress) { id, destination ->
-            client.downloadPresetAvatar(id, destination, reporter::onTransfer)
+            client.downloadPresetAvatar(id, destination, assets, reporter::onTransfer)
         }
         reporter.complete()
     }
