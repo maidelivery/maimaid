@@ -14,6 +14,7 @@ data class CatalogFilterSettings(
     val maxLevel: Double = 15.0,
     val showFavoritesOnly: Boolean = false,
     val hideUnavailableSongs: Boolean = false,
+    val showPlayableSongsOnly: Boolean = false,
 ) {
     val hasTransientFilters: Boolean
         get() = selectedCategories.isNotEmpty() ||
@@ -22,5 +23,6 @@ data class CatalogFilterSettings(
             selectedTypes.isNotEmpty() ||
             minLevel != 1.0 ||
             maxLevel != 15.0 ||
-            showFavoritesOnly
+            showFavoritesOnly ||
+            showPlayableSongsOnly
 }

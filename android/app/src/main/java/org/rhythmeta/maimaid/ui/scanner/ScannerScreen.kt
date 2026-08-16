@@ -68,6 +68,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.AppContainer
+import org.rhythmeta.maimaid.core.data.ServerChartPolicy
 import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.SongAliasEntity
@@ -96,6 +97,7 @@ fun ScannerScreen(
     sheets: List<SheetEntity>,
     aliases: List<SongAliasEntity>,
     scores: List<ScoreEntity>,
+    server: String,
     showBoundingBoxes: Boolean,
     contentTopPadding: Dp,
     enabled: Boolean,
@@ -137,8 +139,8 @@ fun ScannerScreen(
         }
     }
 
-    LaunchedEffect(songs, sheets, aliases) {
-        viewModel.updateCatalog(songs, sheets, aliases)
+    LaunchedEffect(songs, sheets, aliases, server) {
+        viewModel.updateCatalog(songs, sheets, aliases, server)
     }
     LaunchedEffect(enabled, cameraPermissionGranted) {
         if (enabled && !cameraPermissionGranted) permissionLauncher.launch(Manifest.permission.CAMERA)
@@ -215,7 +217,7 @@ fun ScannerScreen(
             ) {
                 IconButton(
                     onClick = {
-                        val description = match?.let(::captureDescription).orEmpty()
+                        val description = match?.let { captureDescription(it, server) }.orEmpty()
                         cameraController.capture(context, description) { saved ->
                             viewModel.showMessage(
                                 if (saved) ScannerMessage.PhotoSaved else ScannerMessage.PhotoSaveFailed,
@@ -243,6 +245,7 @@ fun ScannerScreen(
                     ScannerResultCard(
                         match = scannerMatch,
                         coverImageStore = container.coverImageStore,
+                        server = server,
                         onClick = {
                             if (scannerMatch.recognition.screenType == MaimaiScreenType.Choose) {
                                 viewModel.reset()
@@ -269,6 +272,7 @@ fun ScannerScreen(
                 sheet = sheet,
                 score = scores.firstOrNull { it.sheetKey == sheet.sheetKey },
                 history = emptyList(),
+                resolvedMetadata = ServerChartPolicy.metadata(sheet, server),
             ),
             saveStatus = state.scoreSaveStatus,
             initialAchievement = match.recognition.achievement,
@@ -344,6 +348,7 @@ private fun ScannerStatusOverlay(state: ScannerUiState, modifier: Modifier = Mod
 private fun ScannerResultCard(
     match: ScannerMatch,
     coverImageStore: org.rhythmeta.maimaid.core.data.CoverImageStore,
+    server: String,
     onClick: () -> Unit,
 ) {
     val recognition = match.recognition
@@ -491,7 +496,7 @@ private fun ScannerResultCard(
             }
             if (isScore) match.sheet?.let { sheet ->
                 Text(
-                    text = sheet.internalLevel ?: sheet.level,
+                    text = ServerChartPolicy.metadata(sheet, server).displayLevel,
                     color = difficultyColor.copy(alpha = 0.85f),
                     fontWeight = FontWeight.Black,
                     style = MiuixTheme.textStyles.body1.copy(
@@ -574,9 +579,9 @@ private fun ScannerDebugOverlay(
     }
 }
 
-private fun captureDescription(match: ScannerMatch): String = listOfNotNull(
+private fun captureDescription(match: ScannerMatch, server: String): String = listOfNotNull(
     match.song.title,
-    match.sheet?.level?.let { "LV$it" },
+    match.sheet?.let { "LV${ServerChartPolicy.metadata(it, server).displayLevel}" },
     match.recognition.difficulty?.uppercase(),
     match.recognition.chartType?.uppercase(),
 ).joinToString(" ")

@@ -80,6 +80,12 @@ class MainViewModel(
         initialValue = false,
     )
 
+    val catalogShowPlayableSongsOnly = container.appPreferencesRepository.catalogShowPlayableSongsOnly.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = false,
+    )
+
     private val catalogSummaryState = combine(
         container.catalogRepository.songCount,
         container.catalogRepository.sheetCount,
@@ -232,6 +238,12 @@ class MainViewModel(
     fun setCatalogHideUnavailableSongs(hide: Boolean) {
         viewModelScope.launch {
             container.appPreferencesRepository.setCatalogHideUnavailableSongs(hide)
+        }
+    }
+
+    fun setCatalogShowPlayableSongsOnly(show: Boolean) {
+        viewModelScope.launch {
+            container.appPreferencesRepository.setCatalogShowPlayableSongsOnly(show)
         }
     }
 

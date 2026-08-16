@@ -62,6 +62,77 @@ class CatalogQueryTest {
     }
 
     @Test
+    fun `hide unavailable keeps jp only songs for cn profiles`() {
+        val jpOnly = song("jp-only")
+        val deleted = song("deleted")
+
+        val result = query(
+            songs = listOf(jpOnly, deleted),
+            sheets = mapOf(
+                jpOnly.songIdentifier to listOf(sheet(jpOnly, playable = true)),
+                deleted.songIdentifier to listOf(sheet(deleted, playable = false)),
+            ),
+            settings = CatalogFilterSettings(hideUnavailableSongs = true),
+            server = "cn",
+        )
+
+        assertEquals(listOf("jp-only"), result.map(SongEntity::songIdentifier))
+    }
+
+    @Test
+    fun `playable only filters songs by the active server`() {
+        val cnPlayable = song("cn-playable")
+        val jpOnly = song("jp-only")
+
+        val result = query(
+            songs = listOf(cnPlayable, jpOnly),
+            sheets = mapOf(
+                cnPlayable.songIdentifier to listOf(sheet(cnPlayable, playable = true).copy(regionCn = true)),
+                jpOnly.songIdentifier to listOf(sheet(jpOnly, playable = true)),
+            ),
+            settings = CatalogFilterSettings(showPlayableSongsOnly = true),
+            server = "cn",
+        )
+
+        assertEquals(listOf("cn-playable"), result.map(SongEntity::songIdentifier))
+    }
+
+    @Test
+    fun `cn constant controls level filtering and difficulty sorting`() {
+        val lower = song("lower", sortOrder = 0)
+        val higher = song("higher", sortOrder = 1)
+        val sheets = mapOf(
+            lower.songIdentifier to listOf(
+                sheet(lower, constant = 13.9).copy(cnLevelValue = 13.7, regionCn = true),
+            ),
+            higher.songIdentifier to listOf(
+                sheet(higher, constant = 13.9).copy(cnLevelValue = 13.8, regionCn = true),
+            ),
+        )
+
+        val filtered = query(
+            songs = listOf(lower, higher),
+            sheets = sheets,
+            settings = CatalogFilterSettings(
+                selectedDifficulties = setOf("master"),
+                minLevel = 13.8,
+                maxLevel = 13.8,
+            ),
+            server = "cn",
+        )
+        val sorted = query(
+            songs = listOf(lower, higher),
+            sheets = sheets,
+            sortOption = CatalogSortOption.Difficulty,
+            ascending = false,
+            server = "cn",
+        )
+
+        assertEquals(listOf("higher"), filtered.map(SongEntity::songIdentifier))
+        assertEquals(listOf("higher", "lower"), sorted.map(SongEntity::songIdentifier))
+    }
+
+    @Test
     fun `version and date sorting uses version order then release date`() {
         val newestV1 = song("new-v1", version = "V1", releaseDate = "2020-06-01", sortOrder = 0)
         val oldestV1 = song("old-v1", version = "V1", releaseDate = "2020-02-01", sortOrder = 1)
@@ -192,6 +263,7 @@ class CatalogQueryTest {
         searchText: String = "",
         sortOption: CatalogSortOption = CatalogSortOption.DefaultOrder,
         ascending: Boolean = true,
+        server: String = "jp",
     ): List<SongEntity> = CatalogQuery.filterAndSort(
         songs = songs,
         sheetsBySong = sheets,
@@ -201,6 +273,7 @@ class CatalogQueryTest {
         searchText = searchText,
         sortOption = sortOption,
         sortAscending = ascending,
+        server = server,
     )
 
     private fun song(

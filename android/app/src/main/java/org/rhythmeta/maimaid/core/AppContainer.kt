@@ -119,6 +119,7 @@ class AppContainer(context: Context) {
         catalogRepository = catalogRepository,
         scoreRepository = scoreRepository,
         communityAliasService = communityAliasService,
+        profileRepository = profileRepository,
     )
 
     val constantTableRepository = ConstantTableRepository(

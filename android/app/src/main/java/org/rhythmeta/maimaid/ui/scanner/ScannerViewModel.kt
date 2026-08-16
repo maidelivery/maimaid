@@ -63,12 +63,14 @@ class ScannerViewModel(
         songs: List<SongEntity>,
         sheets: List<SheetEntity>,
         aliases: List<SongAliasEntity>,
+        server: String,
     ) {
         catalog = ScannerCatalog(
             songs = songs,
             sheets = sheets,
             aliasesBySong = aliases.groupBy(SongAliasEntity::songIdentifier)
                 .mapValues { (_, values) -> values.map(SongAliasEntity::alias) },
+            server = server,
         )
     }
 

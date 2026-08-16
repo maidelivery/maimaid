@@ -7,13 +7,21 @@ class ScoreQueryRepository(
     private val catalogRepository: CatalogRepository,
     private val scoreRepository: ScoreRepository,
     private val communityAliasService: CommunityAliasService,
+    private val profileRepository: ProfileRepository,
 ) {
     fun observeScoreQuery(): Flow<ScoreQueryResponse> = combine(
         catalogRepository.songs,
         catalogRepository.sheets,
         scoreRepository.observeActiveScores(),
         communityAliasService.searchableAliases,
-    ) { songs, sheets, scores, aliases ->
-        ScoreQueryCalculator.build(songs, sheets, scores, aliases)
+        profileRepository.activeProfile,
+    ) { songs, sheets, scores, aliases, profile ->
+        ScoreQueryCalculator.build(
+            songs = songs,
+            sheets = sheets,
+            scores = scores,
+            aliases = aliases,
+            server = profile?.server ?: "jp",
+        )
     }
 }

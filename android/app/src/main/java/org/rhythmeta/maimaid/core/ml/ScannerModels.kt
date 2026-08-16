@@ -51,6 +51,7 @@ data class ScannerCatalog(
     val songs: List<SongEntity>,
     val sheets: List<SheetEntity>,
     val aliasesBySong: Map<String, List<String>>,
+    val server: String = "jp",
 ) {
     val sheetsBySong: Map<String, List<SheetEntity>> = sheets.groupBy(SheetEntity::songIdentifier)
 }

@@ -110,6 +110,7 @@ import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.ScoreInput
+import org.rhythmeta.maimaid.core.data.ServerChartPolicy
 import org.rhythmeta.maimaid.core.data.RatingUtils
 import org.rhythmeta.maimaid.core.data.ScoreRules
 import org.rhythmeta.maimaid.core.data.ScoreToleranceCalculator
@@ -1347,6 +1348,7 @@ private fun SheetScoreCard(
 ) {
     var expanded by rememberSaveable(chart.sheet.sheetKey) { mutableStateOf(false) }
     val isUtage = chart.sheet.type.contains("utage", ignoreCase = true)
+    val metadata = chart.resolvedMetadata ?: ServerChartPolicy.metadata(chart.sheet, "jp")
     val expandInteractionSource = remember { MutableInteractionSource() }
     val chevronRotation by animateFloatAsState(
         targetValue = if (expanded) 90f else 0f,
@@ -1410,9 +1412,7 @@ private fun SheetScoreCard(
                 }
             }
             Text(
-                text = chart.sheet.internalLevelValue?.let(::formatPreciseLevel)
-                    ?: chart.sheet.internalLevel
-                    ?: chart.sheet.level,
+                text = metadata.displayLevel,
                 style = MiuixTheme.textStyles.title3,
                 fontWeight = FontWeight.Bold,
                 color = accent,
@@ -1437,7 +1437,7 @@ private fun SheetScoreCard(
                 NoteStatisticsSection(chart.sheet)
 
                 if (!isUtage) {
-                    (chart.sheet.internalLevelValue ?: chart.sheet.levelValue)
+                    metadata.ratingLevel
                         ?.takeIf { it > 0.0 }
                         ?.let { level -> RatingTableSection(level) }
                 }
@@ -2468,6 +2468,7 @@ internal fun ScoreEntrySheet(
                 ScoreEntrySongCard(
                     song = song,
                     sheet = chart.sheet,
+                    metadata = chart.resolvedMetadata,
                 )
             }
             item {

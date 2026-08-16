@@ -28,6 +28,26 @@ class ScoreQueryCalculatorTest {
     }
 
     @Test
+    fun `cn build uses cn constant and excludes charts unavailable in cn`() {
+        val cnSong = song("cn", "CN Song")
+        val jpOnlySong = song("jp", "JP Song")
+        val cnSheet = sheet("cn", 13.9).copy(cnLevelValue = 13.8, regionCn = true)
+        val jpOnlySheet = sheet("jp", 13.9).copy(regionCn = false)
+
+        val response = ScoreQueryCalculator.build(
+            songs = listOf(cnSong, jpOnlySong),
+            sheets = listOf(cnSheet, jpOnlySheet),
+            scores = listOf(score(cnSheet, 100.0), score(jpOnlySheet, 100.0)),
+            aliases = emptyList(),
+            server = "cn",
+        )
+
+        assertEquals(listOf("cn"), response.entries.map(ScoreQueryEntry::songIdentifier))
+        assertEquals(13.8, response.entries.single().level, 0.0)
+        assertEquals(RatingUtils.calculate(13.8, 100.0), response.entries.single().rating)
+    }
+
+    @Test
     fun `search matches title artist and aliases`() {
         val song = song("id", "World's end", artist = "xi")
         val sheet = sheet("id", 13.0)

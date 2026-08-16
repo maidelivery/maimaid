@@ -2,6 +2,7 @@ package org.rhythmeta.maimaid.ui.catalog
 
 import org.rhythmeta.maimaid.core.data.CatalogSortOption
 import org.rhythmeta.maimaid.core.data.SearchTextNormalizer
+import org.rhythmeta.maimaid.core.data.ServerChartPolicy
 import org.rhythmeta.maimaid.core.database.GameVersionEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.SongEntity
@@ -17,6 +18,7 @@ internal object CatalogQuery {
         searchText: String,
         sortOption: CatalogSortOption,
         sortAscending: Boolean,
+        server: String = "jp",
     ): List<SongEntity> {
         val trimmedSearch = searchText.trim()
         val normalizedSearch = trimmedSearch.normalizedForSearch()
@@ -42,27 +44,34 @@ internal object CatalogQuery {
                 return@filter false
             }
 
-            if (hasTypes || hasDifficulties || settings.hideUnavailableSongs) {
+            if (hasTypes || hasDifficulties || settings.hideUnavailableSongs || settings.showPlayableSongsOnly) {
                 var hasMatchingType = !hasTypes
                 var hasMatchingDifficulty = !hasDifficulties
                 var isPlayable = !settings.hideUnavailableSongs
+                var hasPlayableOnActiveServer = !settings.showPlayableSongsOnly
 
                 sheets.forEach { sheet ->
+                    val isSheetPlayable = sheet.regionJp || sheet.regionIntl || sheet.regionCn
                     if (hasTypes && sheet.type.lowercase() in settings.selectedTypes) {
                         hasMatchingType = true
                     }
                     if (hasDifficulties && sheet.difficulty.lowercase() in settings.selectedDifficulties) {
-                        val level = sheet.internalLevelValue ?: sheet.levelValue ?: 0.0
+                        val level = ServerChartPolicy.metadata(sheet, server).ratingLevel ?: 0.0
                         if (level in settings.minLevel..settings.maxLevel) {
                             hasMatchingDifficulty = true
                         }
                     }
-                    if (settings.hideUnavailableSongs && (sheet.regionJp || sheet.regionIntl || sheet.regionCn)) {
+                    if (settings.hideUnavailableSongs && isSheetPlayable) {
                         isPlayable = true
+                    }
+                    if (settings.showPlayableSongsOnly && ServerChartPolicy.isPlayable(sheet, server)) {
+                        hasPlayableOnActiveServer = true
                     }
                 }
 
-                if (!hasMatchingType || !hasMatchingDifficulty || !isPlayable) return@filter false
+                if (!hasMatchingType || !hasMatchingDifficulty || !isPlayable || !hasPlayableOnActiveServer) {
+                    return@filter false
+                }
             }
             true
         }
@@ -72,7 +81,10 @@ internal object CatalogQuery {
             .distinct()
             .associateWith { version -> SongVisualUtils.versionSortOrder(version, versions) }
         val maxDifficulty = sheetsBySong.mapValues { (_, sheets) ->
-            sheets.maxOfOrNull { it.internalLevelValue ?: it.levelValue ?: 0.0 } ?: 0.0
+            sheets.asSequence()
+                .filter { it.regionJp || it.regionIntl || it.regionCn }
+                .mapNotNull { ServerChartPolicy.metadata(it, server).ratingLevel }
+                .maxOrNull() ?: 0.0
         }
         return filtered.sortedWith { first, second ->
             when (sortOption) {

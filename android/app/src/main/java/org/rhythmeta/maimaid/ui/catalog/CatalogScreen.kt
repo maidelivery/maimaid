@@ -59,6 +59,7 @@ fun CatalogScreen(
     query: String,
     gridColumns: Int,
     songAliases: List<SongAliasEntity>,
+    server: String,
     contentTopPadding: Dp,
     showFilterDialog: Boolean,
     onFilterSettingsChange: (CatalogFilterSettings) -> Unit,
@@ -82,6 +83,7 @@ fun CatalogScreen(
         query,
         sortOption,
         sortAscending,
+        server,
     ) {
         CatalogQuery.filterAndSort(
             songs = songs,
@@ -92,6 +94,7 @@ fun CatalogScreen(
             searchText = query,
             sortOption = sortOption,
             sortAscending = sortAscending,
+            server = server,
         )
     }
     val categories = remember(songCategories, songs) {

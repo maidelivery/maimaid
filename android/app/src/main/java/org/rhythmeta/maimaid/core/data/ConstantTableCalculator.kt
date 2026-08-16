@@ -39,6 +39,7 @@ object ConstantTableCalculator {
         sheets: List<SheetEntity>,
         scores: List<ScoreEntity>,
         userName: String? = null,
+        server: String = "jp",
     ): ConstantTableResponse {
         val songsById = songs
             .asSequence()
@@ -48,11 +49,15 @@ object ConstantTableCalculator {
         val scoresBySheet = scores.associateBy(ScoreEntity::sheetKey)
         val entries = sheets.mapNotNull { sheet ->
             val song = songsById[sheet.songIdentifier] ?: return@mapNotNull null
-            if (sheet.isRemoved || sheet.type.contains("utage", ignoreCase = true)) return@mapNotNull null
-            val level = sheet.internalLevelValue
-                ?: sheet.levelValue
-                ?: sheet.internalLevel?.toDoubleOrNull()
-                ?: sheet.level.toDoubleOrNull()
+            if (sheet.type.contains("utage", ignoreCase = true) ||
+                !ServerChartPolicy.isPlayable(sheet, server)
+            ) {
+                return@mapNotNull null
+            }
+            val metadata = ServerChartPolicy.metadata(sheet, server)
+            val level = metadata.ratingLevel
+                ?: metadata.internalLevel?.toDoubleOrNull()
+                ?: metadata.level.toDoubleOrNull()
                 ?: return@mapNotNull null
             if (level <= 0.0) return@mapNotNull null
             val score = scoresBySheet[sheet.sheetKey]

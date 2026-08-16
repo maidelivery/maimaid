@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.ScoreInput
+import org.rhythmeta.maimaid.core.data.ServerChartPolicy
 import org.rhythmeta.maimaid.core.data.StaticBundleResponse
 import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
@@ -21,13 +22,20 @@ class SongDetailViewModel(
     private val entrySheetKey = MutableStateFlow<String?>(null)
     private val saveStatus = MutableStateFlow(ScoreSaveStatus.Idle)
 
-    val uiState = combine(
+    private val sheetsWithServer = combine(
         container.catalogRepository.observeSheetsForSong(songIdentifier),
+        container.profileRepository.activeProfile,
+    ) { sheets, profile ->
+        sheets to (profile?.server ?: "jp")
+    }
+
+    val uiState = combine(
+        sheetsWithServer,
         container.scoreRepository.observeSongScoreData(songIdentifier),
         container.catalogRepository.chartFit,
         entrySheetKey,
         saveStatus,
-    ) { sheets, scoreData, chartFit, selectedSheetKey, status ->
+    ) { (sheets, server), scoreData, chartFit, selectedSheetKey, status ->
         val scoresBySheet = scoreData.scores.associateBy { it.sheetKey }
         val historyBySheet = scoreData.playRecords.groupBy { it.sheetKey }
         SongDetailUiState(
@@ -44,6 +52,7 @@ class SongDetailViewModel(
                         score = scoresBySheet[sheet.sheetKey],
                         history = historyBySheet[sheet.sheetKey].orEmpty(),
                         chartFit = chartFit.findFor(sheet),
+                        resolvedMetadata = ServerChartPolicy.metadata(sheet, server),
                     )
                 },
             entrySheetKey = selectedSheetKey,

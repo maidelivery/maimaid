@@ -26,6 +26,27 @@ class ConstantTableCalculatorTest {
     }
 
     @Test
+    fun `cn build uses cn constant and excludes charts unavailable in cn`() {
+        val cnSong = song("cn", "CN Song")
+        val jpOnlySong = song("jp", "JP Song")
+        val cnSheet = sheet("cn", "master", 13.0, 13.9).copy(
+            cnLevelValue = 13.8,
+            regionCn = true,
+        )
+        val jpOnlySheet = sheet("jp", "master", 13.0, 13.9).copy(regionCn = false)
+
+        val result = ConstantTableCalculator.build(
+            songs = listOf(cnSong, jpOnlySong),
+            sheets = listOf(cnSheet, jpOnlySheet),
+            scores = emptyList(),
+            server = "cn",
+        )
+
+        assertEquals(listOf("cn"), result.entries.map(ConstantTableEntry::songIdentifier))
+        assertEquals(13.8, result.entries.single().level, 0.0)
+    }
+
+    @Test
     fun `fifteen constants belong to fourteen through fifteen bucket`() {
         val entries = listOf(
             entry("a", "A", 15.0),
