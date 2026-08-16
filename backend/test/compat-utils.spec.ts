@@ -48,5 +48,6 @@ describe("compat utils", () => {
 		expect(normalizeChartType("STD")).toBe("standard");
 		expect(normalizeChartType("dx")).toBe("dx");
 		expect(normalizeChartType("utage")).toBe("utage");
+		expect(normalizeChartType("utage2p")).toBe("utage");
 	});
 });

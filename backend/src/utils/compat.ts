@@ -81,7 +81,7 @@ export const normalizeChartType = (value?: string): string | null => {
 	if (lower === "dx") {
 		return "dx";
 	}
-	if (lower === "utage") {
+	if (lower.startsWith("utage")) {
 		return "utage";
 	}
 	return lower;
