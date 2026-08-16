@@ -28,6 +28,76 @@ export type StaticSourceTarget = {
 	fallbackUrls: string[];
 };
 
+export type StaticBundleArtifact = {
+	version: string;
+	md5: string;
+	createdAt: string;
+	payload: Record<string, unknown>;
+	sourceMeta: Record<string, unknown>;
+};
+
+const STATIC_BUNDLE_MD5_PATTERN = /^[0-9a-f]{32}$/u;
+const STATIC_BUNDLE_VERSION_PATTERN = /^bundle-\d+$/u;
+
+export const assertStaticBundleMd5 = (md5: string) => {
+	if (!STATIC_BUNDLE_MD5_PATTERN.test(md5)) {
+		throw new AppError(400, "static_bundle_invalid_md5", "Bundle md5 must be 32 lowercase hex characters.");
+	}
+};
+
+export const assertStaticBundleVersion = (version: string) => {
+	if (!STATIC_BUNDLE_VERSION_PATTERN.test(version)) {
+		throw new AppError(400, "static_bundle_invalid_version", "Bundle version has an invalid format.");
+	}
+};
+
+export const createStaticBundleArtifact = (
+	version: string,
+	md5: string,
+	createdAt: Date,
+	payload: Record<string, unknown>,
+	sourceMeta: Record<string, unknown>,
+): StaticBundleArtifact => {
+	assertStaticBundleVersion(version);
+	assertStaticBundleMd5(md5);
+	return {
+		version,
+		md5,
+		createdAt: createdAt.toISOString(),
+		payload,
+		sourceMeta,
+	};
+};
+
+export const parseStaticBundleArtifact = (raw: string, expected: { version: string; md5: string }): StaticBundleArtifact => {
+	let decoded: unknown;
+	try {
+		decoded = JSON.parse(raw);
+	} catch {
+		throw new AppError(400, "static_bundle_artifact_invalid", "Static bundle artifact is not valid JSON.");
+	}
+
+	const record = toRecord(decoded);
+	const version = typeof record?.version === "string" ? record.version : "";
+	const md5 = typeof record?.md5 === "string" ? record.md5 : "";
+	const createdAt = typeof record?.createdAt === "string" ? record.createdAt : "";
+	const payload = toRecord(record?.payload);
+	const sourceMeta = toRecord(record?.sourceMeta);
+	assertStaticBundleVersion(version);
+	assertStaticBundleMd5(md5);
+	if (version !== expected.version || md5 !== expected.md5) {
+		throw new AppError(
+			400,
+			"static_bundle_artifact_mismatch",
+			"Static bundle artifact metadata does not match the publish request.",
+		);
+	}
+	if (!Number.isFinite(Date.parse(createdAt)) || !payload || !sourceMeta) {
+		throw new AppError(400, "static_bundle_artifact_invalid", "Static bundle artifact is missing required fields.");
+	}
+	return { version, md5, createdAt, payload, sourceMeta };
+};
+
 export type DanSection = {
 	title?: string;
 	description?: string;
@@ -46,6 +116,262 @@ export const toRecord = (value: unknown): Record<string, unknown> | null =>
 
 /** `df_chart_fit` is the historical name for `chart_fit`. */
 export const normalizeSourceCategory = (category: string) => (category === "df_chart_fit" ? "chart_fit" : category);
+
+type CatalogVersionRecord = {
+	version: string;
+	releaseDate: number;
+};
+
+const releaseDateMillis = (value: unknown): number | null => {
+	if (typeof value !== "string" || !value.trim()) {
+		return null;
+	}
+	const millis = Date.parse(value);
+	return Number.isFinite(millis) ? millis : null;
+};
+
+const levelValueForDisplayLevel = (value: unknown): number | null => {
+	if (typeof value !== "string") {
+		return null;
+	}
+	const match = value.trim().match(/^(\d+)(\+)?/u);
+	if (!match) {
+		return null;
+	}
+	const base = Number(match[1]);
+	return Number.isFinite(base) ? base + (match[2] ? 0.6 : 0) : null;
+};
+
+const dxDataProviderSongId = (internalId: unknown, chartType: unknown): number | null => {
+	const numericId = Number(internalId);
+	if (!Number.isSafeInteger(numericId) || numericId <= 0) {
+		return null;
+	}
+	if (normalizeChartType(typeof chartType === "string" ? chartType : undefined) === "dx" && numericId < 10000) {
+		return numericId + 10000;
+	}
+	return numericId;
+};
+
+const catalogVersions = (value: unknown): CatalogVersionRecord[] => {
+	if (!Array.isArray(value)) {
+		return [];
+	}
+	return value
+		.map((item) => {
+			const record = toRecord(item);
+			const version = typeof record?.version === "string" ? record.version.trim() : "";
+			const releaseDate = releaseDateMillis(record?.releaseDate);
+			return version && releaseDate !== null ? { version, releaseDate } : null;
+		})
+		.filter((item): item is CatalogVersionRecord => item !== null)
+		.sort((left, right) => left.releaseDate - right.releaseDate);
+};
+
+const regionVersionLags = {
+	intl: 4,
+	cn: 15,
+} as const;
+
+type VersionedRegion = keyof typeof regionVersionLags;
+
+const versionAtMonthLag = (versions: CatalogVersionRecord[], referenceDate: number | null, monthLag: number): string | null => {
+	if (versions.length === 0 || referenceDate === null) {
+		return null;
+	}
+	const cutoff = new Date(referenceDate);
+	cutoff.setUTCMonth(cutoff.getUTCMonth() - monthLag);
+	return versions.filter((version) => version.releaseDate <= cutoff.getTime()).at(-1)?.version ?? versions[0]?.version ?? null;
+};
+
+const versionedInternalLevel = (payload: unknown, targetVersion: string | null): number | null => {
+	const values = toRecord(payload);
+	if (!values || !targetVersion) {
+		return null;
+	}
+	const value = Number(values[targetVersion]);
+	return Number.isFinite(value) && value > 0 ? value : null;
+};
+
+const metadataForInternalLevel = (value: number) => {
+	const rounded = Math.round(value * 10) / 10;
+	const base = Math.floor(rounded);
+	const isPlus = rounded >= base + 0.6;
+	return {
+		level: `${base}${isPlus ? "+" : ""}`,
+		levelValue: base + (isPlus ? 0.6 : 0),
+		internalLevel: rounded.toFixed(1),
+		internalLevelValue: rounded,
+	};
+};
+
+const applyDxDataRegionConstants = (sheet: Record<string, unknown>, regionVersions: Record<VersionedRegion, string | null>) => {
+	const multiverInternalLevelValue = sheet.multiverInternalLevelValue;
+	if (!toRecord(multiverInternalLevelValue)) {
+		return sheet;
+	}
+
+	const regions = toRecord(sheet.regions);
+	const regionOverrides = { ...(toRecord(sheet.regionOverrides) ?? {}) };
+	for (const region of Object.keys(regionVersionLags) as VersionedRegion[]) {
+		if (regions?.[region] !== true) {
+			continue;
+		}
+		const internalLevel = versionedInternalLevel(multiverInternalLevelValue, regionVersions[region]);
+		if (internalLevel === null) {
+			continue;
+		}
+		regionOverrides[region] = {
+			...(toRecord(regionOverrides[region]) ?? {}),
+			...metadataForInternalLevel(internalLevel),
+		};
+	}
+
+	return Object.keys(regionOverrides).length > 0 ? { ...sheet, regionOverrides } : sheet;
+};
+
+export const versionForCatalogReleaseDate = (
+	releaseDate: unknown,
+	fallbackVersion: unknown,
+	versions: CatalogVersionRecord[],
+): string | null => {
+	const fallback = typeof fallbackVersion === "string" ? fallbackVersion.trim() : "";
+	const chartDate = releaseDateMillis(releaseDate);
+	if (chartDate === null) {
+		return fallback || null;
+	}
+
+	let matched: CatalogVersionRecord | undefined;
+	for (const version of versions) {
+		if (version.releaseDate > chartDate) {
+			break;
+		}
+		matched = version;
+	}
+	const fallbackReleaseDate = versions.find((version) => version.version === fallback)?.releaseDate;
+	if (matched && fallbackReleaseDate !== undefined && fallbackReleaseDate > chartDate) {
+		return fallback;
+	}
+	return matched?.version ?? (fallback || null);
+};
+
+/**
+ * Normalizes dxdata's chart release metadata into the catalog contract.
+ * dxdata keeps the original song version in `sheet.version` and the actual
+ * chart addition in `sheet.releaseDate`; plate groups need the latter.
+ */
+export const normalizeDxDataCatalog = (payload: unknown): Record<string, unknown> => {
+	const root = toRecord(payload);
+	const songs = Array.isArray(root?.songs) ? root.songs : null;
+	if (!root || !songs) {
+		throw new AppError(502, "static_source_invalid_payload", "dxdata is missing songs.");
+	}
+
+	const versions = catalogVersions(root.versions);
+	const referenceDate = releaseDateMillis(root.updateTime) ?? versions.at(-1)?.releaseDate ?? null;
+	const regionVersions: Record<VersionedRegion, string | null> = {
+		intl: versionAtMonthLag(versions, referenceDate, regionVersionLags.intl),
+		cn: versionAtMonthLag(versions, referenceDate, regionVersionLags.cn),
+	};
+	const normalizedSongs = songs.map((rawSong) => {
+		const song = toRecord(rawSong);
+		if (!song) {
+			return rawSong;
+		}
+
+		const rawSheets = Array.isArray(song.sheets) ? song.sheets : [];
+		const normalizedSheets = rawSheets.map((rawSheet) => {
+			const sheet = toRecord(rawSheet);
+			if (!sheet) {
+				return rawSheet;
+			}
+			const version = versionForCatalogReleaseDate(sheet.releaseDate, sheet.version, versions);
+			const existingLevelValue = Number(sheet.levelValue);
+			const levelValue =
+				Number.isFinite(existingLevelValue) && existingLevelValue > 0
+					? existingLevelValue
+					: levelValueForDisplayLevel(sheet.level);
+			return applyDxDataRegionConstants(
+				{
+					...sheet,
+					...(version ? { version } : {}),
+					...(levelValue !== null ? { levelValue } : {}),
+				},
+				regionVersions,
+			);
+		});
+
+		const songCharts = normalizedSheets
+			.map(toRecord)
+			.filter((sheet): sheet is Record<string, unknown> => sheet !== null)
+			.filter((sheet) => typeof sheet.type !== "string" || !sheet.type.toLocaleLowerCase().includes("utage"));
+		const firstReleasedChart = songCharts
+			.map((sheet) => ({
+				releaseDate: sheet.releaseDate,
+				millis: releaseDateMillis(sheet.releaseDate),
+				version: sheet.version,
+			}))
+			.filter(
+				(item): item is { releaseDate: string; millis: number; version: unknown } =>
+					typeof item.releaseDate === "string" && item.millis !== null,
+			)
+			.sort((left, right) => left.millis - right.millis)[0];
+		const firstReleaseDate = firstReleasedChart?.releaseDate;
+		const version = versionForCatalogReleaseDate(
+			song.releaseDate || firstReleaseDate,
+			song.version || firstReleasedChart?.version,
+			versions,
+		);
+
+		const imageName = typeof song.imageName === "string" ? song.imageName.trim() : "";
+		return {
+			...song,
+			...(imageName && !imageName.toLocaleLowerCase().endsWith(".png") ? { imageName: `${imageName}.png` } : {}),
+			...(version ? { version } : {}),
+			...(song.releaseDate || !firstReleaseDate ? {} : { releaseDate: firstReleaseDate }),
+			sheets: normalizedSheets,
+		};
+	});
+
+	return {
+		...root,
+		songs: normalizedSongs,
+	};
+};
+
+export const mergeSongIdPayload = (catalogPayload: unknown, existingPayload: unknown): Array<{ id: number; name: string }> => {
+	const rows = new Map<number, string>();
+	const existingRows = Array.isArray(existingPayload) ? existingPayload : [];
+	for (const item of existingRows) {
+		const record = toRecord(item);
+		const id = Number(record?.id);
+		const name = typeof record?.name === "string" ? record.name.trim() : "";
+		if (Number.isFinite(id) && id > 0 && name) {
+			rows.set(Math.trunc(id), name);
+		}
+	}
+
+	const catalog = toRecord(catalogPayload);
+	const songs = Array.isArray(catalog?.songs) ? catalog.songs : [];
+	for (const rawSong of songs) {
+		const song = toRecord(rawSong);
+		const name = typeof song?.title === "string" ? song.title.trim() : "";
+		if (!name || !Array.isArray(song?.sheets)) {
+			continue;
+		}
+		for (const rawSheet of song.sheets) {
+			const sheet = toRecord(rawSheet);
+			const id = dxDataProviderSongId(sheet?.internalId, sheet?.type);
+			if (id !== null) {
+				rows.set(id, rows.get(id) ?? name);
+			}
+		}
+	}
+
+	return Array.from(rows.entries())
+		.sort(([left], [right]) => left - right)
+		.map(([id, name]) => ({ id, name }));
+};
 
 export const tryParseText = (raw: string, contentType: string | null) => {
 	const normalizedType = (contentType ?? "").toLowerCase();
@@ -149,12 +475,7 @@ export const normalizeLxnsAliasesPayload = (lxnsPayload: unknown, songIdPayload:
 
 type LxnsPlayableSong = {
 	artist: string;
-	charts: Map<string, LxnsChartOverride>;
-};
-
-type LxnsChartOverride = {
-	level?: string;
-	levelValue?: number;
+	charts: Set<string>;
 };
 
 export type LxnsCnRegionMergeStats = {
@@ -171,7 +492,7 @@ const lxnsChartKey = (chartType: string, difficulty: string) => `${chartType}|${
 
 /**
  * Treats the LXNS CN song list as authoritative for ordinary chart availability.
- * Other region flags and Utage sheets keep their catalog values.
+ * Constants always come from dxdata's version history during normalization.
  */
 export const mergeLxnsCnRegions = (
 	dataJson: unknown,
@@ -200,7 +521,7 @@ export const mergeLxnsCnRegions = (
 		}
 
 		const difficulties = toRecord(song.difficulties);
-		const charts = new Map<string, LxnsChartOverride>();
+		const charts = new Set<string>();
 		for (const chartType of ["standard", "dx"] as const) {
 			const rawCharts = difficulties?.[chartType];
 			if (!Array.isArray(rawCharts)) {
@@ -220,12 +541,7 @@ export const mergeLxnsCnRegions = (
 				if (!difficulty) {
 					continue;
 				}
-				const level = typeof chart.level === "string" ? chart.level.trim() : "";
-				const levelValue = Number(chart.level_value);
-				charts.set(lxnsChartKey(chartType, difficulty), {
-					...(level ? { level } : {}),
-					...(Number.isFinite(levelValue) && levelValue > 0 ? { levelValue } : {}),
-				});
+				charts.add(lxnsChartKey(chartType, difficulty));
 			}
 		}
 
@@ -273,46 +589,18 @@ export const mergeLxnsCnRegions = (
 			catalogChartCount += 1;
 			const difficulty = normalizeCatalogIdentity(sheet.difficulty);
 			const key = lxnsChartKey(chartType, difficulty);
-			const cnChart = candidates
-				.map((candidate) => candidate.charts.get(key))
-				.find((chart): chart is LxnsChartOverride => chart !== undefined);
-			const isPlayableInCn = cnChart !== undefined;
+			const isPlayableInCn = candidates.some((candidate) => candidate.charts.has(key));
 			if (isPlayableInCn) {
 				matchedChartCount += 1;
 			}
 
-			const regionOverrides = {
-				...(toRecord(sheet.regionOverrides) ?? {}),
-			};
-			if (cnChart) {
-				regionOverrides.cn = {
-					...(toRecord(regionOverrides.cn) ?? {}),
-					...(cnChart.level ? { level: cnChart.level } : {}),
-					...(cnChart.levelValue !== undefined
-						? {
-								levelValue: cnChart.levelValue,
-								internalLevel: cnChart.levelValue.toFixed(1),
-								internalLevelValue: cnChart.levelValue,
-							}
-						: {}),
-				};
-			} else {
-				delete regionOverrides.cn;
-			}
-
-			const mergedSheet: Record<string, unknown> = {
+			return {
 				...sheet,
 				regions: {
 					...(toRecord(sheet.regions) ?? {}),
 					cn: isPlayableInCn,
 				},
 			};
-			if (Object.keys(regionOverrides).length > 0) {
-				mergedSheet.regionOverrides = regionOverrides;
-			} else {
-				delete mergedSheet.regionOverrides;
-			}
-			return mergedSheet;
 		});
 
 		return {
@@ -791,7 +1079,8 @@ export const composeBundlePayload = async (
 		throw new AppError(502, "static_source_missing", "LXNS song list source is required for CN region validation.");
 	}
 	const cnRegionMerge = mergeLxnsCnRegions(resources.data_json, resources.lxns_song_list);
-	resources.data_json = cnRegionMerge.dataJson;
+	resources.data_json = normalizeDxDataCatalog(cnRegionMerge.dataJson);
+	resources.songid_json = mergeSongIdPayload(resources.data_json, resources.songid_json);
 	delete resources.lxns_song_list;
 	const lxnsSongListMeta = toRecord(sourceMeta.lxns_song_list) ?? {};
 	sourceMeta.lxns_song_list = {

@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { describe, expect, it } from "vitest";
 import {
+	buildSongIdMapping,
 	chartFitAchievementCurve,
 	chartFitGetDiff,
 	chartFitPercentCurve,
@@ -102,5 +103,27 @@ describe("chart fit payload normalization and merge", () => {
 		expect(diffData).toBeDefined();
 		expect(diffData.dist.length).toBe(14);
 		expect(diffData.fc_dist.length).toBe(5);
+	});
+});
+
+describe("buildSongIdMapping", () => {
+	it("maps dxdata internal ids into provider ids by chart type", () => {
+		const mapping = buildSongIdMapping(
+			{
+				songs: [
+					{
+						title: "Dragoon",
+						sheets: [
+							{ type: "std", internalId: 367 },
+							{ type: "dx", internalId: 367 },
+						],
+					},
+				],
+			},
+			[],
+		);
+
+		expect(mapping.byTitleAndType.get("dragoon|standard")).toBe(367);
+		expect(mapping.byTitleAndType.get("dragoon|dx")).toBe(10367);
 	});
 });

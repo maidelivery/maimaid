@@ -7,4 +7,5 @@ data class StaticManifest(
     val version: String,
     val md5: String,
     val createdAt: String? = null,
+    val downloadUrl: String? = null,
 )

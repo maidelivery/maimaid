@@ -6,17 +6,22 @@ import { AppError } from "../lib/errors.js";
 import { buildSongIdMapping, ChartFitService } from "./chart-fit.service.js";
 import { CatalogService } from "./catalog.service.js";
 import {
+	assertStaticBundleMd5,
+	assertStaticBundleVersion,
 	composeBundlePayload,
+	createStaticBundleArtifact,
 	normalizeSourceCategory,
+	parseStaticBundleArtifact,
 	toRecord,
 	type ComposedBundle,
 	type StaticSourceTarget,
 } from "./static-bundle.utils.js";
+import { StorageService } from "./storage.service.js";
 
 const STATIC_SOURCE_DEFAULTS: Array<{ category: string; activeUrl: string; fallbackUrls: string[] }> = [
 	{
 		category: "data_json",
-		activeUrl: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json",
+		activeUrl: "https://raw.githubusercontent.com/gekichumai/dxrating/refs/heads/main/packages/dxdata/dxdata.json",
 		fallbackUrls: [],
 	},
 	{
@@ -62,6 +67,7 @@ const STATIC_BUNDLE_SCHEDULE_ROW_ID = 1;
 const STATIC_BUNDLE_CRON_JOB_NAME = "maimaid-static-bundle-build-request";
 const STATIC_BUNDLE_CRON_DRIVER_EXPRESSION = "* * * * *";
 const STATIC_BUNDLE_BUILD_CRON_SQL = "SELECT public.enqueue_static_bundle_build_if_due();";
+const LEGACY_DATA_JSON_URL = "https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json";
 
 export type StaticBundlePeriodicBuildSchedule = {
 	enabled: boolean;
@@ -81,6 +87,7 @@ export class StaticBundleService {
 		@inject(TOKENS.Env) private readonly env: Env,
 		@inject(ChartFitService) private readonly chartFitService: ChartFitService,
 		@inject(CatalogService) private readonly catalogService: CatalogService,
+		@inject(StorageService) private readonly storageService: StorageService,
 	) {}
 
 	private toJsonValue(value: unknown): Prisma.InputJsonValue {
@@ -126,10 +133,14 @@ export class StaticBundleService {
 		}
 
 		for (const item of STATIC_SOURCE_DEFAULTS) {
+			if (item.category === "data_json") {
+				await this.prisma.staticSource.updateMany({
+					where: { category: item.category, activeUrl: LEGACY_DATA_JSON_URL },
+					data: { activeUrl: item.activeUrl, fallbackUrls: item.fallbackUrls },
+				});
+			}
 			await this.prisma.staticSource.upsert({
-				where: {
-					category: item.category,
-				},
+				where: { category: item.category },
 				update: {},
 				create: {
 					category: item.category,
@@ -282,8 +293,8 @@ export class StaticBundleService {
 	/**
 	 * Build in-process: compute, then publish. Still used by the admin "build now"
 	 * button and by `manifest()` when no bundle exists yet. The scheduled path runs
-	 * the compute half in GitHub Actions and calls `publishBundle` over HTTP, so
-	 * this is the fallback rather than the normal route.
+	 * the compute half in GitHub Actions, uploads the artifact to R2, and asks the
+	 * API to activate it. This remains the fallback path for local deployments.
 	 */
 	async buildBundle(force = false) {
 		const sources = await this.listEnabledSourceTargets();
@@ -291,6 +302,61 @@ export class StaticBundleService {
 			this.chartFitService.refreshSnapshotWithMapping(buildSongIdMapping(input.dataJson, input.songidJson)),
 		);
 		return this.publishBundle({ ...composed, force });
+	}
+
+	async prepareBundleUpload(md5: string, force = false) {
+		assertStaticBundleMd5(md5);
+
+		if (!force) {
+			const existing = await this.findBundleByMd5(md5);
+			if (existing?.objectKey) {
+				return {
+					uploadRequired: false as const,
+					bundle: existing,
+				};
+			}
+			if (existing) {
+				return this.createUploadPreparation(existing.version, md5, existing.createdAt);
+			}
+		}
+
+		const createdAt = new Date();
+		return this.createUploadPreparation(this.createBundleVersion(createdAt), md5, createdAt);
+	}
+
+	async publishUploadedBundle(input: { version: string; md5: string; objectKey: string; force?: boolean }) {
+		assertStaticBundleVersion(input.version);
+		assertStaticBundleMd5(input.md5);
+		const expectedObjectKey = this.storageService.staticBundleObjectKey(input.version, input.md5);
+		if (input.objectKey !== expectedObjectKey) {
+			throw new AppError(400, "static_bundle_object_key_mismatch", "Static bundle object key does not match its metadata.");
+		}
+
+		const rawArtifact = await this.storageService.getStaticBundleArtifact(input.objectKey);
+		const artifact = parseStaticBundleArtifact(rawArtifact, input);
+		const existing = input.force ? null : await this.findBundleByMd5(input.md5);
+		if (existing) {
+			if (existing.version === input.version && !existing.objectKey) {
+				const bundle = await this.prisma.staticBundle.update({
+					where: { id: existing.id },
+					data: { objectKey: input.objectKey },
+				});
+				return { bundle, created: false };
+			}
+			if (existing.objectKey !== input.objectKey) {
+				await this.deleteStaticBundleArtifactBestEffort(input.objectKey);
+			}
+			return { bundle: existing, created: false };
+		}
+
+		return this.persistBundle({
+			version: artifact.version,
+			md5: artifact.md5,
+			createdAt: new Date(artifact.createdAt),
+			payload: artifact.payload,
+			sourceMeta: artifact.sourceMeta,
+			objectKey: input.objectKey,
+		});
 	}
 
 	/**
@@ -305,24 +371,28 @@ export class StaticBundleService {
 	 * of silently poisoning client caching.
 	 */
 	async publishBundle(input: PublishBundleInput) {
-		if (!/^[0-9a-f]{32}$/.test(input.md5)) {
-			throw new AppError(400, "static_bundle_invalid_md5", "Bundle md5 must be 32 lowercase hex characters.");
-		}
-
-		const resourcesRecord = toRecord(input.payload.resources);
-		const dataJsonResource = resourcesRecord?.data_json;
-		// Checked before the insert. Previously this threw *after* activating the
-		// bundle, leaving an active row whose catalog had never been applied.
-		if (dataJsonResource === undefined || dataJsonResource === null) {
-			throw new AppError(502, "static_bundle_missing_catalog_data", "Bundle payload is missing data_json.");
-		}
+		assertStaticBundleMd5(input.md5);
+		this.dataJsonResource(input.payload);
 
 		if (!input.force) {
-			const existing = await this.prisma.staticBundle.findFirst({
-				where: { md5: input.md5 },
-				orderBy: { createdAt: "desc" },
-			});
+			const existing = await this.findBundleByMd5(input.md5);
 			if (existing) {
+				if (!existing.objectKey && this.storageService.isStaticBundleStorageConfigured()) {
+					const objectKey = this.storageService.staticBundleObjectKey(existing.version, existing.md5);
+					const artifact = createStaticBundleArtifact(
+						existing.version,
+						existing.md5,
+						existing.createdAt,
+						input.payload,
+						input.sourceMeta,
+					);
+					await this.storageService.putStaticBundleArtifact(objectKey, JSON.stringify(artifact));
+					const bundle = await this.prisma.staticBundle.update({
+						where: { id: existing.id },
+						data: { objectKey },
+					});
+					return { bundle, created: false };
+				}
 				return {
 					bundle: existing,
 					created: false,
@@ -330,7 +400,34 @@ export class StaticBundleService {
 			}
 		}
 
-		const version = `bundle-${Date.now()}`;
+		const createdAt = new Date();
+		const version = this.createBundleVersion(createdAt);
+		let objectKey: string | null = null;
+		if (this.storageService.isStaticBundleStorageConfigured()) {
+			objectKey = this.storageService.staticBundleObjectKey(version, input.md5);
+			const artifact = createStaticBundleArtifact(version, input.md5, createdAt, input.payload, input.sourceMeta);
+			await this.storageService.putStaticBundleArtifact(objectKey, JSON.stringify(artifact));
+		}
+
+		return this.persistBundle({
+			version,
+			md5: input.md5,
+			createdAt,
+			payload: input.payload,
+			sourceMeta: input.sourceMeta,
+			objectKey,
+		});
+	}
+
+	private async persistBundle(input: {
+		version: string;
+		md5: string;
+		createdAt: Date;
+		payload: Record<string, unknown>;
+		sourceMeta: Record<string, unknown>;
+		objectKey: string | null;
+	}) {
+		const dataJsonResource = this.dataJsonResource(input.payload);
 		const bundle = await this.prisma.$transaction(async (tx) => {
 			await tx.staticBundle.updateMany({
 				where: { active: true },
@@ -338,12 +435,14 @@ export class StaticBundleService {
 			});
 			return tx.staticBundle.create({
 				data: {
-					version,
+					version: input.version,
 					md5: input.md5,
+					objectKey: input.objectKey,
 					payloadJson: this.toJsonValue(input.payload),
 					sourceMeta: this.toJsonValue(input.sourceMeta),
 					active: true,
-					activatedAt: new Date(),
+					createdAt: input.createdAt,
+					activatedAt: input.createdAt,
 				},
 			});
 		});
@@ -372,6 +471,40 @@ export class StaticBundleService {
 		};
 	}
 
+	private dataJsonResource(payload: Record<string, unknown>) {
+		const resourcesRecord = toRecord(payload.resources);
+		const dataJsonResource = resourcesRecord?.data_json;
+		if (dataJsonResource === undefined || dataJsonResource === null) {
+			throw new AppError(502, "static_bundle_missing_catalog_data", "Bundle payload is missing data_json.");
+		}
+		return dataJsonResource;
+	}
+
+	private findBundleByMd5(md5: string) {
+		return this.prisma.staticBundle.findFirst({
+			where: { md5 },
+			orderBy: { createdAt: "desc" },
+		});
+	}
+
+	private createBundleVersion(createdAt: Date) {
+		return `bundle-${createdAt.getTime()}`;
+	}
+
+	private async createUploadPreparation(version: string, md5: string, createdAt: Date) {
+		const upload = await this.storageService.createStaticBundleUploadUrl(version, md5);
+		return {
+			uploadRequired: true as const,
+			version,
+			md5,
+			createdAt,
+			objectKey: upload.key,
+			uploadUrl: upload.uploadUrl,
+			contentType: upload.contentType,
+			cacheControl: upload.cacheControl,
+		};
+	}
+
 	/**
 	 * Drop bundles older than the newest `STATIC_BUNDLE_RETENTION`. Runs after the
 	 * insert so a prune failure cannot lose the bundle that was just built. The
@@ -387,12 +520,36 @@ export class StaticBundleService {
 		if (keep.length < STATIC_BUNDLE_RETENTION) {
 			return;
 		}
-		await this.prisma.staticBundle.deleteMany({
+		const removable = await this.prisma.staticBundle.findMany({
 			where: {
 				active: false,
 				id: { notIn: keep.map((row) => row.id) },
 			},
+			select: { id: true, objectKey: true },
 		});
+		if (removable.length === 0) {
+			return;
+		}
+		await this.prisma.staticBundle.deleteMany({
+			where: { id: { in: removable.map((row) => row.id) } },
+		});
+		await Promise.all(
+			removable
+				.map((row) => row.objectKey)
+				.filter((key): key is string => Boolean(key))
+				.map((key) => this.deleteStaticBundleArtifactBestEffort(key)),
+		);
+	}
+
+	private async deleteStaticBundleArtifactBestEffort(objectKey: string) {
+		if (!this.storageService.isStaticBundleStorageConfigured()) {
+			return;
+		}
+		try {
+			await this.storageService.deleteStaticBundleArtifact(objectKey);
+		} catch {
+			// Database retention remains authoritative; a later R2 lifecycle rule can remove an orphan.
+		}
 	}
 
 	async listBundles(limit = 20) {
@@ -409,16 +566,17 @@ export class StaticBundleService {
 		});
 		if (!active) {
 			const result = await this.buildBundle(false);
-			return {
-				version: result.bundle.version,
-				md5: result.bundle.md5,
-				createdAt: result.bundle.createdAt,
-			};
+			return this.toManifest(result.bundle);
 		}
+		return this.toManifest(active);
+	}
+
+	private toManifest(bundle: { version: string; md5: string; createdAt: Date; objectKey: string | null }) {
 		return {
-			version: active.version,
-			md5: active.md5,
-			createdAt: active.createdAt,
+			version: bundle.version,
+			md5: bundle.md5,
+			createdAt: bundle.createdAt,
+			downloadUrl: bundle.objectKey ? this.storageService.staticBundlePublicUrl(bundle.objectKey) : null,
 		};
 	}
 

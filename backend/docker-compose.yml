@@ -26,8 +26,8 @@ services:
     restart: unless-stopped
 
   # Object storage is Cloudflare R2, so there is no storage container here. Point
-  # the S3_* vars in .env.docker at an R2 bucket, or leave them blank to run
-  # without object storage (avatar upload then returns storage_not_configured).
+  # the S3_* vars in .env.docker at the private avatar and public static-bundle
+  # buckets, or leave them blank to run without object storage.
   backend:
     build:
       context: .

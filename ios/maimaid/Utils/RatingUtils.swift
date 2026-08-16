@@ -314,6 +314,7 @@ enum RatingUtils {
         let type: String
         let difficulty: String
         let version: String?
+        let total: Int?
         let internalLevelValue: Double?
         let fitDiffValue: Double?
         let isPlayable: Bool
@@ -384,6 +385,7 @@ enum RatingUtils {
                     diff: sheetData.difficulty,
                     type: sheetData.type,
                     dxScore: scoreData.dxScore,
+                    maxDxScore: max(sheetData.total ?? 0, 0) * 3,
                     fc: scoreData.fc,
                     fs: scoreData.fs
                 )
@@ -418,6 +420,7 @@ extension Array where Element == Song {
         let type: String
         let difficulty: String
         let version: String?
+        let total: Int?
         let internalLevelValue: Double?
         let fitDiffValue: Double?
         let isPlayable: Bool
@@ -454,6 +457,7 @@ extension Array where Element == Song {
                         type: sheet.type,
                         difficulty: sheet.difficulty,
                         version: metadata?.version ?? sheet.version,
+                        total: sheet.total,
                         internalLevelValue: metadata?.ratingLevel,
                         fitDiffValue: fitDiffValue,
                         isPlayable: server.map { ServerChartPolicy.isPlayable(sheet, on: $0) } ?? false
@@ -487,6 +491,7 @@ extension Array where Element == Song {
                     type: sheet.type,
                     difficulty: sheet.difficulty,
                     version: sheet.version,
+                    total: sheet.total,
                     internalLevelValue: sheet.internalLevelValue,
                     fitDiffValue: sheet.fitDiffValue,
                     isPlayable: sheet.isPlayable

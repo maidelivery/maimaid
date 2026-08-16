@@ -22,16 +22,15 @@ const songIdMappingSchema = z.object({
 	byTitle: z.record(z.string(), z.array(z.number())),
 });
 
-/**
- * The payload is several MB of upstream JSON, so it is deliberately not validated
- * structurally: walking it with Zod would double the parse cost this endpoint
- * exists to keep off the server. `publishBundle` checks the md5 format and that
- * `resources.data_json` is present, which is what actually has to hold.
- */
-const publishBundleSchema = z.object({
-	payload: z.record(z.string(), z.unknown()),
-	sourceMeta: z.record(z.string(), z.unknown()),
+const prepareBundleUploadSchema = z.object({
 	md5: z.string(),
+	force: z.boolean().default(false),
+});
+
+const publishBundleSchema = z.object({
+	version: z.string(),
+	md5: z.string(),
+	objectKey: z.string(),
 	force: z.boolean().default(false),
 });
 
@@ -78,14 +77,36 @@ jobsInternalRoute.post(
 	},
 );
 
-/** Step 3: persist and activate the bundle CI assembled, and apply its catalog. */
+/** Step 3: reserve an immutable R2 key and issue a short-lived upload URL. */
+jobsInternalRoute.post(
+	"/static-bundle/upload",
+	standardValidator("json", prepareBundleUploadSchema, validationHook),
+	async (c) => {
+		const body = c.req.valid("json");
+		const staticBundleService = c.var.resolve(StaticBundleService);
+		const result = await staticBundleService.prepareBundleUpload(body.md5, body.force);
+		if (!result.uploadRequired) {
+			return ok(c, {
+				uploadRequired: false,
+				bundle: {
+					version: result.bundle.version,
+					md5: result.bundle.md5,
+					createdAt: result.bundle.createdAt,
+				},
+			});
+		}
+		return ok(c, result);
+	},
+);
+
+/** Step 4: read the uploaded artifact from R2, persist it, activate it, and apply its catalog. */
 jobsInternalRoute.post("/static-bundle/publish", standardValidator("json", publishBundleSchema, validationHook), async (c) => {
 	const body = c.req.valid("json");
 	const staticBundleService = c.var.resolve(StaticBundleService);
-	const result = await staticBundleService.publishBundle({
-		payload: body.payload,
-		sourceMeta: body.sourceMeta,
+	const result = await staticBundleService.publishUploadedBundle({
+		version: body.version,
 		md5: body.md5,
+		objectKey: body.objectKey,
 		force: body.force,
 	});
 	return ok(c, {

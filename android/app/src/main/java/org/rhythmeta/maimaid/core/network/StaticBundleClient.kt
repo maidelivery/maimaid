@@ -1,6 +1,7 @@
 package org.rhythmeta.maimaid.core.network
 
 import android.net.Uri
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -19,9 +20,23 @@ class StaticBundleClient(
     suspend fun fetchManifest(): StaticManifest = get("/v1/static/manifest")
 
     suspend fun fetchBundle(
-        version: String,
+        manifest: StaticManifest,
         onTransfer: (downloadedBytes: Long, totalBytes: Long?) -> Unit = { _, _ -> },
-    ): StaticBundleResponse = get("/v1/static/bundle/${Uri.encode(version)}", onTransfer)
+    ): StaticBundleResponse {
+        manifest.downloadUrl?.takeIf(String::isNotBlank)?.let { downloadUrl ->
+            try {
+                return getUrl<StaticBundleResponse>(downloadUrl, onTransfer).validatedAgainst(manifest)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // The API route preserves downloads while R2 or its public domain is unavailable.
+            }
+        }
+        return get<StaticBundleResponse>(
+            "/v1/static/bundle/${Uri.encode(manifest.version)}",
+            onTransfer,
+        ).validatedAgainst(manifest)
+    }
 
     suspend fun downloadCover(
         imageName: String,
@@ -89,8 +104,13 @@ class StaticBundleClient(
     private suspend inline fun <reified T> get(
         path: String,
         noinline onTransfer: ((downloadedBytes: Long, totalBytes: Long?) -> Unit)? = null,
+    ): T = getUrl("${baseUrl.trimEnd('/')}$path", onTransfer)
+
+    private suspend inline fun <reified T> getUrl(
+        url: String,
+        noinline onTransfer: ((downloadedBytes: Long, totalBytes: Long?) -> Unit)? = null,
     ): T = withContext(Dispatchers.IO) {
-        val connection = URL("${baseUrl.trimEnd('/')}$path").openConnection() as HttpURLConnection
+        val connection = URL(url).openConnection() as HttpURLConnection
         try {
             connection.requestMethod = "GET"
             connection.connectTimeout = CONNECT_TIMEOUT_MILLIS
@@ -114,6 +134,11 @@ class StaticBundleClient(
         } finally {
             connection.disconnect()
         }
+    }
+
+    private fun StaticBundleResponse.validatedAgainst(manifest: StaticManifest): StaticBundleResponse {
+        check(version == manifest.version && md5 == manifest.md5) { "Static bundle metadata mismatch" }
+        return this
     }
 
     private fun readBody(

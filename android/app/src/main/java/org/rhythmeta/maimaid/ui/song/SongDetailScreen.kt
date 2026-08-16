@@ -254,6 +254,7 @@ fun SongDetailScreen(
         factory = SongDetailViewModel.Factory(song.songIdentifier, container),
     )
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val gameVersions by container.catalogRepository.versions.collectAsStateWithLifecycle(initialValue = emptyList())
     val aliases by container.catalogRepository
         .observeAliasesForSong(song.songIdentifier)
         .collectAsStateWithLifecycle(initialValue = emptyList())
@@ -291,6 +292,20 @@ fun SongDetailScreen(
     val accentColor = detailColors?.accent ?: MiuixTheme.colorScheme.primary
     val cachedCover = remember(song.imageName) { container.coverImageStore.fileFor(song.imageName) }
     val chartTypes = state.charts.map { it.sheet.type.displayChartType() }.distinct()
+    val chartTypeVersionLabels = remember(state.charts, gameVersions) {
+        state.charts
+            .groupBy { it.sheet.type.displayChartType() }
+            .mapNotNull { (type, charts) ->
+                charts.firstNotNullOfOrNull { chart ->
+                    chart.resolvedMetadata?.version
+                        ?.trim()
+                        ?.takeIf(String::isNotEmpty)
+                }?.let { version ->
+                    type to SongVisualUtils.versionAbbreviation(version, gameVersions)
+                }
+            }
+            .toMap()
+    }
     var selectedType by rememberSaveable(song.songIdentifier) { mutableStateOf<String?>(null) }
     LaunchedEffect(chartTypes) {
         if (selectedType == null && chartTypes.isNotEmpty()) {
@@ -303,7 +318,9 @@ fun SongDetailScreen(
         selectedType == null || chart.sheet.type.displayChartType() == selectedType
     }
     val selectedChartVersion = visibleCharts.firstNotNullOfOrNull { chart ->
-        chart.sheet.version?.trim()?.takeIf(String::isNotEmpty)
+        (chart.resolvedMetadata?.version ?: chart.sheet.version)
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
     } ?: song.version?.trim()?.takeIf(String::isNotEmpty)
     val selectedProviderSongId = visibleCharts
         .firstOrNull { it.sheet.providerSongId > 0 }
@@ -368,6 +385,7 @@ fun SongDetailScreen(
                         selected = selectedType,
                         surfaceColor = surfaceColor,
                         selectedSurfaceColor = selectedSurfaceColor,
+                        versionLabels = chartTypeVersionLabels,
                         onSelected = { selectedType = it },
                     )
                 }
@@ -1149,6 +1167,7 @@ private fun ChartTypeSelector(
     selected: String?,
     surfaceColor: Color,
     selectedSurfaceColor: Color,
+    versionLabels: Map<String, String>,
     onSelected: (String?) -> Unit,
 ) {
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
@@ -1160,6 +1179,10 @@ private fun ChartTypeSelector(
                 darkTheme = darkTheme,
                 fallbackColor = MiuixTheme.colorScheme.primary,
             )
+            val label = versionLabels[type]
+                ?.takeIf { types.size > 1 && isSelected }
+                ?.let { "$type / $it" }
+                ?: type
             Row(
                 modifier = Modifier
                     .weight(1f)
@@ -1185,8 +1208,8 @@ private fun ChartTypeSelector(
                 )
                 Spacer(Modifier.width(7.dp))
                 Text(
-                    text = type,
-                    style = MiuixTheme.textStyles.button,
+                    text = label,
+                    style = MiuixTheme.textStyles.footnote2.copy(fontSize = 14.sp),
                     color = if (isSelected) typeColor else MiuixTheme.colorScheme.onSurface,
                     maxLines = 1,
                 )

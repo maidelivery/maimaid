@@ -4,6 +4,11 @@ import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
 import { StorageService } from "./storage.service.js";
 
+const updatedAtPrecisionWindow = (expectedUpdatedAt: Date) => ({
+	gte: expectedUpdatedAt,
+	lt: new Date(expectedUpdatedAt.getTime() + 1),
+});
+
 @singleton()
 export class ProfileService {
 	constructor(
@@ -111,12 +116,7 @@ export class ProfileService {
 		if (input.b35RecLimit !== undefined) data.b35RecLimit = input.b35RecLimit;
 		if (input.b15RecLimit !== undefined) data.b15RecLimit = input.b15RecLimit;
 
-		const expectedUpdatedAtRange = expectedUpdatedAt
-			? {
-					gte: expectedUpdatedAt,
-					lt: new Date(expectedUpdatedAt.getTime() + 1),
-				}
-			: undefined;
+		const expectedUpdatedAtRange = expectedUpdatedAt ? updatedAtPrecisionWindow(expectedUpdatedAt) : undefined;
 		const updated = expectedUpdatedAtRange
 			? await database.profile
 					.updateManyAndReturn({
@@ -248,10 +248,11 @@ export class ProfileService {
 		}
 
 		const { key, uploadUrl } = await this.storageService.createAvatarUploadUrl(profileId, contentType);
-		const updated = expectedUpdatedAt
+		const expectedUpdatedAtRange = expectedUpdatedAt ? updatedAtPrecisionWindow(expectedUpdatedAt) : undefined;
+		const updated = expectedUpdatedAtRange
 			? await this.prisma.profile
 					.updateManyAndReturn({
-						where: { id: profileId, userId, updatedAt: expectedUpdatedAt },
+						where: { id: profileId, userId, updatedAt: expectedUpdatedAtRange },
 						data: { avatarObjectKey: key },
 					})
 					.then((profiles) => profiles[0] ?? null)

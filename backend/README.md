@@ -124,6 +124,7 @@ See `backend/.env.docker.example`:
 - S3: `S3_*`
   - For Podman local testing, keep `S3_ENDPOINT=http://minio:9000` and set `S3_PUBLIC_ENDPOINT=http://localhost:9000` so pre-signed upload URLs are reachable from iOS/macOS host.
   - In local compose, keep `S3_ACCESS_KEY_ID/S3_SECRET_ACCESS_KEY` aligned with `MINIO_ROOT_USER/MINIO_ROOT_PASSWORD`.
+  - Keep `S3_BUCKET` private for avatars. Set `S3_STATIC_BUNDLE_BUCKET` to a separate public R2 bucket and `S3_STATIC_BUNDLE_PUBLIC_BASE_URL` to its custom domain or `r2.dev` origin.
 
 ## API surfaces
 
