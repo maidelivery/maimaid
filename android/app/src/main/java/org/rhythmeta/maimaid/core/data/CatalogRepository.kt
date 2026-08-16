@@ -111,7 +111,7 @@ class CatalogRepository(
                 useByteProgress = true,
             )
             bundleReporter.start(totalItems = 1)
-            val bundle = client.fetchBundle(manifest.version, bundleReporter::onTransfer)
+            val bundle = client.fetchBundle(manifest, bundleReporter::onTransfer)
             bundleReporter.complete()
             showSimpleStage(bundle.version, CatalogSyncStage.ImportingCatalog, 0.4f)
             applyBundle(bundle)

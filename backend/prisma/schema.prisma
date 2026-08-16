@@ -506,6 +506,7 @@ model StaticBundle {
   id          BigInt   @id @default(autoincrement())
   version     String   @unique
   md5         String
+  objectKey   String?
   payloadJson Json
   sourceMeta  Json?
   active      Boolean  @default(false)

@@ -651,19 +651,22 @@ private fun ProfileAvatarEditor(
             size = 84,
             presetAvatarRepository = presetAvatarRepository,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(onClick = onSelect) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Button(onClick = onSelect, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Rounded.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(7.dp))
                 Text(stringResource(R.string.profile_change_avatar))
             }
-            Button(onClick = onChoosePreset) {
+            Button(onClick = onChoosePreset, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Rounded.EmojiEmotions, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(7.dp))
                 Text(stringResource(R.string.profile_preset_avatar))
             }
             if (avatarPath != null || avatarUrl != null) {
-                Button(onClick = onClear) {
+                Button(onClick = onClear, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Rounded.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(7.dp))
                     Text(stringResource(R.string.profile_clear_avatar))

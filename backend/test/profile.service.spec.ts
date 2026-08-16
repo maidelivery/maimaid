@@ -65,4 +65,48 @@ describe("ProfileService", () => {
 			},
 		});
 	});
+
+	it("matches avatar upload profile versions at API millisecond precision", async () => {
+		const userId = "018f05e0-8674-7d98-a678-8fd69a4a2d64";
+		const profileId = "018f05e0-8674-7d98-a678-8fd69a4a2d63";
+		const expectedUpdatedAt = new Date("2026-08-13T10:20:30.123Z");
+		const updateManyAndReturn = vi.fn().mockResolvedValue([
+			{
+				id: profileId,
+				updatedAt: expectedUpdatedAt,
+			},
+		]);
+		const database = {
+			profile: {
+				findFirst: vi.fn().mockResolvedValue({ id: profileId, userId }),
+				updateManyAndReturn,
+			},
+		};
+		const storage = {
+			createAvatarUploadUrl: vi.fn().mockResolvedValue({
+				key: `avatars/profiles/${profileId}`,
+				uploadUrl: "https://storage.example/avatar",
+			}),
+		};
+		const service = new ProfileService(database as never, storage as never);
+
+		const result = await service.createAvatarUploadUrl(userId, profileId, "image/png", expectedUpdatedAt);
+
+		expect(updateManyAndReturn).toHaveBeenCalledWith({
+			where: {
+				id: profileId,
+				userId,
+				updatedAt: {
+					gte: expectedUpdatedAt,
+					lt: new Date("2026-08-13T10:20:30.124Z"),
+				},
+			},
+			data: { avatarObjectKey: `avatars/profiles/${profileId}` },
+		});
+		expect(result).toEqual({
+			key: `avatars/profiles/${profileId}`,
+			uploadUrl: "https://storage.example/avatar",
+			updatedAt: "2026-08-13T10:20:30.123Z",
+		});
+	});
 });

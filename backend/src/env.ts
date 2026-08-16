@@ -10,6 +10,8 @@ const optionalString = z
 		return trimmed ? trimmed : undefined;
 	});
 
+const optionalUrl = optionalString.pipe(z.url().optional());
+
 const EnvSchema = z.object({
 	NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 	HOST: z.string().min(1).default("0.0.0.0"),
@@ -46,6 +48,9 @@ const EnvSchema = z.object({
 	S3_BUCKET: z.string().min(1).default("maimaid-assets"),
 	S3_ACCESS_KEY_ID: optionalString,
 	S3_SECRET_ACCESS_KEY: optionalString,
+	// Static bundles use a separate public bucket so avatar objects can remain private.
+	S3_STATIC_BUNDLE_BUCKET: optionalString,
+	S3_STATIC_BUNDLE_PUBLIC_BASE_URL: optionalUrl,
 	CATALOG_SOURCE_URL: z.url().optional(),
 	STATIC_SYNC_INTERVAL_HOURS: z.coerce.number().int().positive().default(6),
 	// pg_cron enqueues into "job_queue" but nothing consumed it, so scheduled

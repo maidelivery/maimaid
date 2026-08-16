@@ -52,6 +52,12 @@ private struct BackendStaticManifestResponse: Decodable {
     let version: String
     let md5: String
     let createdAt: Date?
+    let downloadURL: URL?
+
+    enum CodingKeys: String, CodingKey {
+        case version, md5, createdAt
+        case downloadURL = "downloadUrl"
+    }
 }
 
 private struct BackendStaticBundleResponse: Decodable {
@@ -268,13 +274,44 @@ class MaimaiDataFetcher {
             return (nil, true)
         }
 
+        let bundle = try await fetchStaticBundle(manifest: manifest)
+        return (bundle, false)
+    }
+
+    private func fetchStaticBundle(manifest: BackendStaticManifestResponse) async throws -> BackendStaticBundleResponse {
+        if let downloadURL = manifest.downloadURL {
+            do {
+                var request = URLRequest(url: downloadURL)
+                request.setValue("application/json", forHTTPHeaderField: "Accept")
+                request.setValue("maimaid-ios", forHTTPHeaderField: "User-Agent")
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard let httpResponse = response as? HTTPURLResponse,
+                      (200...299).contains(httpResponse.statusCode) else {
+                    throw BackendAPIError.badResponse
+                }
+                let bundle = try BackendAPIClient.decoder.decode(BackendStaticBundleResponse.self, from: data)
+                try validate(bundle: bundle, manifest: manifest)
+                return bundle
+            } catch {
+                try Task.checkCancellation()
+                logger.warning("R2 static bundle download failed; using API fallback: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+
         let encodedVersion = manifest.version.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? manifest.version
         let bundle: BackendStaticBundleResponse = try await BackendAPIClient.request(
             path: "v1/static/bundle/\(encodedVersion)",
             method: "GET",
             authentication: .none
         )
-        return (bundle, false)
+        try validate(bundle: bundle, manifest: manifest)
+        return bundle
+    }
+
+    private func validate(bundle: BackendStaticBundleResponse, manifest: BackendStaticManifestResponse) throws {
+        guard bundle.version == manifest.version, bundle.md5 == manifest.md5 else {
+            throw BackendAPIError.badResponse
+        }
     }
 
     private func loadRemoteData(bundleResources: BackendStaticBundleResources?) async throws -> RemoteDataResponse {

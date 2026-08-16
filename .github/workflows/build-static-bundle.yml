@@ -4,8 +4,8 @@ name: Build static bundle
 # several MB), merges chart stats, and hashes the result — parsing and
 # re-serializing well over 10 MB of JSON. That used to run inside the API process
 # on a 1 vCPU / 1 GB host, where it was by far the heaviest thing the server did
-# and a plausible OOM. Here it runs on a runner instead, and the API only receives
-# the finished bundle to store and activate.
+# and a plausible OOM. Here it runs on a runner, uploads the artifact directly to
+# R2 through a pre-signed URL, and asks the API to validate and activate it.
 
 "on":
   schedule:

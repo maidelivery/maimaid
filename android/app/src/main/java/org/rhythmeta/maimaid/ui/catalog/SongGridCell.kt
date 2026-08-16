@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
@@ -33,6 +34,8 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+private val ProgressDotLightSurface = Color(0xFFF9F7FC)
 
 @Composable
 internal fun SongGridCell(
@@ -101,6 +104,8 @@ internal fun SongGridCell(
                     .squircleSurface(
                         color = if (isUtage) {
                             SongVisualUtils.utageColor(darkTheme).copy(alpha = 0.68f)
+                        } else if (darkTheme) {
+                            ProgressDotLightSurface.copy(alpha = 0.88f)
                         } else {
                             MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.88f)
                         },

@@ -7,6 +7,8 @@ import { AppError } from "../lib/errors.js";
 
 @singleton()
 export class StorageService {
+	private static readonly STATIC_BUNDLE_CONTENT_TYPE = "application/json";
+	private static readonly STATIC_BUNDLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 	private readonly client: S3Client | null;
 	private readonly signingClient: S3Client | null;
 
@@ -64,6 +66,85 @@ export class StorageService {
 		return { key, uploadUrl };
 	}
 
+	isStaticBundleStorageConfigured() {
+		return Boolean(
+			this.client && this.signingClient && this.env.S3_STATIC_BUNDLE_BUCKET && this.env.S3_STATIC_BUNDLE_PUBLIC_BASE_URL,
+		);
+	}
+
+	staticBundleObjectKey(version: string, md5: string) {
+		return `static-bundles/${version}-${md5}.json`;
+	}
+
+	async createStaticBundleUploadUrl(
+		version: string,
+		md5: string,
+	): Promise<{ key: string; uploadUrl: string; contentType: string; cacheControl: string }> {
+		const { signingClient, bucket } = this.requireStaticBundleStorage();
+		const key = this.staticBundleObjectKey(version, md5);
+		const command = new PutObjectCommand({
+			Bucket: bucket,
+			Key: key,
+			ContentType: StorageService.STATIC_BUNDLE_CONTENT_TYPE,
+			CacheControl: StorageService.STATIC_BUNDLE_CACHE_CONTROL,
+		});
+		const uploadUrl = await getSignedUrl(signingClient, command, { expiresIn: 600 });
+		return {
+			key,
+			uploadUrl,
+			contentType: StorageService.STATIC_BUNDLE_CONTENT_TYPE,
+			cacheControl: StorageService.STATIC_BUNDLE_CACHE_CONTROL,
+		};
+	}
+
+	async putStaticBundleArtifact(key: string, body: string) {
+		const { client, bucket } = this.requireStaticBundleStorage();
+		await client.send(
+			new PutObjectCommand({
+				Bucket: bucket,
+				Key: key,
+				Body: body,
+				ContentType: StorageService.STATIC_BUNDLE_CONTENT_TYPE,
+				CacheControl: StorageService.STATIC_BUNDLE_CACHE_CONTROL,
+			}),
+		);
+	}
+
+	async getStaticBundleArtifact(key: string) {
+		const { client, bucket } = this.requireStaticBundleStorage();
+		const object = await this.getObjectFromBucket(
+			client,
+			bucket,
+			key,
+			"static_bundle_object_not_found",
+			"Static bundle object not found.",
+		);
+		return new Response(object.body).text();
+	}
+
+	async deleteStaticBundleArtifact(key: string) {
+		const { client, bucket } = this.requireStaticBundleStorage();
+		await client.send(
+			new DeleteObjectCommand({
+				Bucket: bucket,
+				Key: key,
+			}),
+		);
+	}
+
+	staticBundlePublicUrl(key: string): string | null {
+		const baseUrl = this.env.S3_STATIC_BUNDLE_PUBLIC_BASE_URL;
+		if (!baseUrl) {
+			return null;
+		}
+		const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+		const encodedKey = key
+			.split("/")
+			.map((segment) => encodeURIComponent(segment))
+			.join("/");
+		return new URL(encodedKey, normalizedBaseUrl).toString();
+	}
+
 	async deleteAvatar(profileId: string) {
 		if (!this.client) {
 			throw new AppError(500, "storage_not_configured", "S3 storage is not configured.");
@@ -83,17 +164,26 @@ export class StorageService {
 		if (!this.client) {
 			throw new AppError(500, "storage_not_configured", "S3 storage is not configured.");
 		}
+		return this.getObjectFromBucket(this.client, this.env.S3_BUCKET, key, "avatar_not_found", "Avatar object not found.");
+	}
 
+	private async getObjectFromBucket(
+		client: S3Client,
+		bucket: string,
+		key: string,
+		notFoundCode: string,
+		notFoundMessage: string,
+	): Promise<{ body: BodyInit; contentType: string | null; etag: string | null; lastModified: Date | null }> {
 		try {
-			const result = await this.client.send(
+			const result = await client.send(
 				new GetObjectCommand({
-					Bucket: this.env.S3_BUCKET,
+					Bucket: bucket,
 					Key: key,
 				}),
 			);
 
 			if (!result.Body) {
-				throw new AppError(404, "avatar_not_found", "Avatar object not found.");
+				throw new AppError(404, notFoundCode, notFoundMessage);
 			}
 
 			const body = await this.toBodyInit(result.Body);
@@ -106,10 +196,22 @@ export class StorageService {
 		} catch (error) {
 			const statusCode = this.readHttpStatus(error);
 			if (statusCode === 404) {
-				throw new AppError(404, "avatar_not_found", "Avatar object not found.");
+				throw new AppError(404, notFoundCode, notFoundMessage);
 			}
 			throw error;
 		}
+	}
+
+	private requireStaticBundleStorage() {
+		const bucket = this.env.S3_STATIC_BUNDLE_BUCKET;
+		if (!this.client || !this.signingClient || !bucket || !this.env.S3_STATIC_BUNDLE_PUBLIC_BASE_URL) {
+			throw new AppError(500, "static_bundle_storage_not_configured", "Static bundle R2 storage is not configured.");
+		}
+		return {
+			client: this.client,
+			signingClient: this.signingClient,
+			bucket,
+		};
 	}
 
 	private async toBodyInit(body: unknown): Promise<BodyInit> {

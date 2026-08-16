@@ -9,9 +9,9 @@
  *
  * The compute itself is `composeBundlePayload`, shared verbatim with
  * `StaticBundleService.buildBundle`, so the md5 cannot drift between the two
- * paths. Only two things reach the server:
+ * paths. The API receives only compact coordination data:
  *   - the song-id mapping (a few hundred KB), so it can aggregate `best_scores`
- *   - the finished bundle, to store and activate
+ *   - the finished artifact metadata, after CI uploads the JSON directly to R2
  *
  * Usage:
  *   MAIMAID_API_URL=https://api.example.com \
@@ -39,9 +39,8 @@ if (!jobToken) {
 	throw new Error("MAIMAID_INTERNAL_JOB_TOKEN is required.");
 }
 
-// The publish request carries the whole bundle, so it can take a while to upload
-// and for the server to write plus apply the catalog. Node's default is no
-// timeout at all, which would hang a stuck build until the CI job limit.
+// Source fetches, R2 upload, and catalog apply can each take a while. Node's
+// default has no timeout, which would leave a stuck build until the CI job limit.
 const REQUEST_TIMEOUT_MS = 10 * 60_000;
 
 const callApi = async <T>(path: string, init?: { method?: string; body?: unknown }): Promise<T> => {
@@ -86,6 +85,52 @@ const main = async () => {
 	});
 
 	console.log(`[build] composed md5=${composed.md5}`);
+	const preparation = await callApi<
+		| {
+				uploadRequired: false;
+				bundle: { version: string; md5: string; createdAt: string };
+		  }
+		| {
+				uploadRequired: true;
+				version: string;
+				md5: string;
+				createdAt: string;
+				objectKey: string;
+				uploadUrl: string;
+				contentType: string;
+				cacheControl: string;
+		  }
+	>("/internal/jobs/static-bundle/upload", {
+		method: "POST",
+		body: { md5: composed.md5, force },
+	});
+
+	if (!preparation.uploadRequired) {
+		console.log(`[build] unchanged; kept ${preparation.bundle.version} (md5=${preparation.bundle.md5})`);
+		return;
+	}
+
+	const artifact = JSON.stringify({
+		version: preparation.version,
+		md5: preparation.md5,
+		createdAt: preparation.createdAt,
+		payload: composed.payload,
+		sourceMeta: composed.sourceMeta,
+	});
+	console.log(`[build] uploading ${(Buffer.byteLength(artifact) / 1024 / 1024).toFixed(1)} MiB to R2`);
+	const uploadResponse = await fetch(preparation.uploadUrl, {
+		method: "PUT",
+		headers: {
+			"content-type": preparation.contentType,
+			"cache-control": preparation.cacheControl,
+		},
+		body: artifact,
+		signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+	});
+	if (!uploadResponse.ok) {
+		const detail = (await uploadResponse.text().catch(() => "")).slice(0, 2000);
+		throw new Error(`R2 upload failed: HTTP ${uploadResponse.status} ${detail}`);
+	}
 
 	const result = await callApi<{
 		created: boolean;
@@ -93,9 +138,9 @@ const main = async () => {
 	}>("/internal/jobs/static-bundle/publish", {
 		method: "POST",
 		body: {
-			payload: composed.payload,
-			sourceMeta: composed.sourceMeta,
-			md5: composed.md5,
+			version: preparation.version,
+			md5: preparation.md5,
+			objectKey: preparation.objectKey,
 			force,
 		},
 	});
@@ -104,7 +149,7 @@ const main = async () => {
 		console.log(`[build] published ${result.bundle.version} (md5=${result.bundle.md5})`);
 		return;
 	}
-	console.log(`[build] unchanged; kept ${result.bundle.version} (md5=${result.bundle.md5})`);
+	console.log(`[build] activated existing ${result.bundle.version} (md5=${result.bundle.md5})`);
 };
 
 main().catch((error: unknown) => {

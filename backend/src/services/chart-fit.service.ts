@@ -5,7 +5,8 @@ import { TOKENS } from "../di/tokens.js";
 const CHART_SLOT_COUNT = 5;
 const DIST_BUCKET_COUNT = 14;
 const FC_BUCKET_COUNT = 5;
-const DEFAULT_DATA_JSON_URL = "https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json";
+const DEFAULT_DATA_JSON_URL =
+	"https://raw.githubusercontent.com/gekichumai/dxrating/refs/heads/main/packages/dxdata/dxdata.json";
 const DEFAULT_SONGID_JSON_URL = "https://static.shikoch.in/songid.json";
 
 const DIFFICULTY_INDEX_MAP: Record<string, number> = {
@@ -519,7 +520,8 @@ export const mergeChartStatsPayloads = (
 
 /**
  * Maps a local sheet (title + chart type) onto the upstream numeric song id.
- * Derived purely from `data.json` and `songid.json`.
+ * Derived from the catalog's numeric song id or dxdata's per-sheet internalId,
+ * with `songid.json` retained for title-only fallbacks.
  */
 export type ChartFitSongIdMapping = {
 	byTitleAndType: Map<string, number>;
@@ -549,12 +551,12 @@ export const buildSongIdMapping = (dataJson: unknown, songidJson: unknown): Char
 			continue;
 		}
 
-		const songIdRaw = toFiniteNumber(row.songId);
 		const titleRaw = typeof row.title === "string" ? row.title : "";
-		if (songIdRaw === null || !titleRaw.trim()) {
+		if (!titleRaw.trim()) {
 			continue;
 		}
-		const songId = Math.trunc(songIdRaw);
+		const songIdRaw = toFiniteNumber(row.songId);
+		const songId = songIdRaw === null ? null : Math.trunc(songIdRaw);
 
 		const normalizedTitle = normalizeTitle(titleRaw);
 		const sheets = Array.isArray(row.sheets) ? row.sheets : [];
@@ -565,7 +567,15 @@ export const buildSongIdMapping = (dataJson: unknown, songidJson: unknown): Char
 			if (!normalizedType) {
 				continue;
 			}
-			byTitleAndType.set(`${normalizedTitle}|${normalizedType}`, songId);
+			const internalIdRaw = toFiniteNumber(sheetRecord?.internalId);
+			const internalId = internalIdRaw === null ? null : Math.trunc(internalIdRaw);
+			let sheetSongId = songId ?? internalId;
+			if (songId === null && internalId !== null && normalizedType === "dx" && internalId < 10000) {
+				sheetSongId = internalId + 10000;
+			}
+			if (sheetSongId !== null && sheetSongId > 0) {
+				byTitleAndType.set(`${normalizedTitle}|${normalizedType}`, sheetSongId);
+			}
 		}
 	}
 
