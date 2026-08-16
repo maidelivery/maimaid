@@ -117,6 +117,7 @@ object PlateProgressCalculator {
         groupId: String?,
         difficulty: String,
         plateType: PlateType,
+        server: String = "jp",
     ): PlateProgressResponse {
         val groups = buildGroups(versions)
         val group = groups.firstOrNull { it.id == groupId } ?: groups.firstOrNull()
@@ -126,7 +127,6 @@ object PlateProgressCalculator {
         val songsById = songs
             .asSequence()
             .filterNot(SongEntity::isRemoved)
-            .filter { it.version in group.versions }
             .filterNot { it.category.contains("utage", true) || it.category.contains("宴") }
             .associateBy(SongEntity::songIdentifier)
         val scoresBySheet = scores.associateBy(ScoreEntity::sheetKey)
@@ -134,25 +134,23 @@ object PlateProgressCalculator {
             val song = songsById[sheet.songIdentifier] ?: return@mapNotNull null
             if (
                 sheet.isRemoved ||
-                !sheet.regionJp ||
+                !ServerChartPolicy.isPlayable(sheet, server) ||
                 sheet.type.contains("utage", true) ||
                 !sheet.difficulty.equals(resolvedDifficulty, true) ||
-                !sheet.version.isNullOrBlank() && sheet.version !in group.versions
+                ServerChartPolicy.metadata(sheet, server).version
+                    ?.takeIf(String::isNotBlank)
+                    ?.let { it !in group.versions }
+                    ?: (song.version !in group.versions)
             ) return@mapNotNull null
             val score = scoresBySheet[sheet.sheetKey]
             PlateChartEntry(song, sheet, score, resolvedPlate.isAchieved(score))
         }.sortedWith(compareBy({ it.song.sortOrder }, { it.song.title.lowercase(Locale.ROOT) }))
         val sections = charts
-            .groupBy { chartLevel(it.sheet) }
+            .groupBy { ServerChartPolicy.metadata(it.sheet, server).displayLevel }
             .map { (level, entries) -> PlateLevelSection(level, entries) }
             .sortedByDescending { parseLevel(it.level) }
         return PlateProgressResponse(groups, group, resolvedDifficulty, resolvedPlate, sections)
     }
-
-    private fun chartLevel(sheet: SheetEntity): String = sheet.internalLevel
-        ?.takeIf(String::isNotBlank)
-        ?: sheet.internalLevelValue?.let { String.format(Locale.ROOT, "%.1f", it) }
-        ?: sheet.level
 
     private fun parseLevel(level: String): Double = level.replace("+", ".7").toDoubleOrNull() ?: 0.0
 }

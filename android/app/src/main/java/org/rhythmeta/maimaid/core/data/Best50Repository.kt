@@ -39,7 +39,7 @@ class Best50Repository(
                     database.catalogDao().observeSongs(),
                     database.catalogDao().observeSheets(),
                 ) { rows, versions, songs, sheets ->
-                    calculate(
+                    calculateBest50(
                         rows = rows,
                         versions = versions,
                         songs = songs,
@@ -52,63 +52,68 @@ class Best50Repository(
                 }
             }
         }.flowOn(Dispatchers.Default)
+}
 
-    private fun calculate(
-        rows: List<Best50Row>,
-        versions: List<GameVersionEntity>,
-        songs: List<org.rhythmeta.maimaid.core.database.SongEntity>,
-        sheets: List<org.rhythmeta.maimaid.core.database.SheetEntity>,
-        server: String,
-        b35Count: Int,
-        b15Count: Int,
-        versionOverride: String?,
-    ): Best50State {
-        val versionNames = versions.sortedBy { it.sortOrder }.map { it.name }
-        val latest = versionOverride?.takeIf { candidate ->
-            versionNames.any { it.equals(candidate, ignoreCase = true) }
-        } ?: RatingUtils.latestVersionForServer(songs, sheets, versions, server)
-        val afterCircle = RatingUtils.isAfterCircle(latest, versionNames)
-        val b35 = mutableListOf<RatingUtils.Entry>()
-        val b15 = mutableListOf<RatingUtils.Entry>()
-        rows.forEach { row ->
-            if (row.category.contains("utage", ignoreCase = true) || row.type.contains("utage", ignoreCase = true)) return@forEach
-            val activeRegion = when (server.lowercase()) {
-                "cn" -> row.regionCn
-                "intl", "us", "usa" -> row.regionIntl
-                else -> row.regionJp
-            }
-            val isNew = RatingUtils.category(row.sheetVersion ?: row.songVersion, latest, server, activeRegion, versionNames) ?: return@forEach
-            val level = row.internalLevelValue ?: return@forEach
-            val rating = RatingUtils.calculate(level, row.achievement, row.fc, afterCircle)
-            if (rating <= 0) return@forEach
-            (if (isNew) b15 else b35).add(
-                RatingUtils.Entry(
-                    sheetKey = row.sheetKey,
-                    songIdentifier = row.songIdentifier,
-                    songId = row.songId,
-                    title = row.title,
-                    imageName = row.imageName,
-                    achievement = row.achievement,
-                    rating = rating,
-                    level = level,
-                    difficulty = row.difficulty,
-                    type = row.type,
-                    dxScore = row.dxScore,
-                    maxDxScore = row.maxDxScore,
-                    fc = row.fc,
-                    fs = row.fs,
-                    isNew = isNew,
-                ),
-            )
-        }
-        val selected35 = b35.sortedByDescending { it.rating }.take(b35Count.coerceAtLeast(0))
-        val selected15 = b15.sortedByDescending { it.rating }.take(b15Count.coerceAtLeast(0))
-        return Best50State(
-            total = (selected35 + selected15).sumOf { it.rating },
-            b35 = selected35,
-            b15 = selected15,
-            latestVersion = latest,
-            isEmpty = selected35.isEmpty() && selected15.isEmpty(),
+internal fun calculateBest50(
+    rows: List<Best50Row>,
+    versions: List<GameVersionEntity>,
+    songs: List<org.rhythmeta.maimaid.core.database.SongEntity>,
+    sheets: List<org.rhythmeta.maimaid.core.database.SheetEntity>,
+    server: String,
+    b35Count: Int,
+    b15Count: Int,
+    versionOverride: String?,
+): Best50State {
+    val versionNames = versions.sortedBy { it.sortOrder }.map { it.name }
+    val latest = versionOverride?.takeIf { candidate ->
+        versionNames.any { it.equals(candidate, ignoreCase = true) }
+    } ?: RatingUtils.latestVersionForServer(songs, sheets, versions, server)
+    val afterCircle = RatingUtils.isAfterCircle(latest, versionNames)
+    val sheetsByKey = sheets.filterNot { it.isRemoved }.associateBy { it.sheetKey }
+    val b35 = mutableListOf<RatingUtils.Entry>()
+    val b15 = mutableListOf<RatingUtils.Entry>()
+    rows.forEach { row ->
+        if (row.category.contains("utage", ignoreCase = true) || row.type.contains("utage", ignoreCase = true)) return@forEach
+        val sheet = sheetsByKey[row.sheetKey] ?: return@forEach
+        if (!ServerChartPolicy.isPlayable(sheet, server)) return@forEach
+        val metadata = ServerChartPolicy.metadata(sheet, server)
+        val isNew = RatingUtils.category(
+            metadata.version ?: row.songVersion,
+            latest,
+            server,
+            true,
+            versionNames,
+        ) ?: return@forEach
+        val level = metadata.ratingLevel ?: return@forEach
+        val rating = RatingUtils.calculate(level, row.achievement, row.fc, afterCircle)
+        if (rating <= 0) return@forEach
+        (if (isNew) b15 else b35).add(
+            RatingUtils.Entry(
+                sheetKey = row.sheetKey,
+                songIdentifier = row.songIdentifier,
+                songId = row.songId,
+                title = row.title,
+                imageName = row.imageName,
+                achievement = row.achievement,
+                rating = rating,
+                level = level,
+                difficulty = row.difficulty,
+                type = row.type,
+                dxScore = row.dxScore,
+                maxDxScore = row.maxDxScore,
+                fc = row.fc,
+                fs = row.fs,
+                isNew = isNew,
+            ),
         )
     }
+    val selected35 = b35.sortedByDescending { it.rating }.take(b35Count.coerceAtLeast(0))
+    val selected15 = b15.sortedByDescending { it.rating }.take(b15Count.coerceAtLeast(0))
+    return Best50State(
+        total = (selected35 + selected15).sumOf { it.rating },
+        b35 = selected35,
+        b15 = selected15,
+        latestVersion = latest,
+        isEmpty = selected35.isEmpty() && selected15.isEmpty(),
+    )
 }

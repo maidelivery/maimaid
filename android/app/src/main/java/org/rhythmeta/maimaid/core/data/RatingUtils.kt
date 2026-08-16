@@ -154,13 +154,9 @@ object RatingUtils {
     private val SongEntity.isUtage: Boolean
         get() = category.contains("utage", ignoreCase = true) || category.contains("宴")
 
-    private fun SheetEntity.isActiveInAnyRegion(): Boolean = regionJp || regionIntl || regionCn
+    private fun SheetEntity.isActiveInAnyRegion(): Boolean = !isRemoved && (regionJp || regionIntl || regionCn)
 
-    private fun SheetEntity.isActiveOnServer(server: String): Boolean = when (server.lowercase()) {
-        "cn" -> regionCn
-        "intl", "us", "usa" -> regionIntl
-        else -> regionJp
-    }
+    private fun SheetEntity.isActiveOnServer(server: String): Boolean = ServerChartPolicy.isPlayable(this, server)
 
     private fun versionIndex(version: String, versions: List<String>): Int? {
         versions.indexOfFirst { it.equals(version, ignoreCase = true) }.takeIf { it >= 0 }?.let { return it }

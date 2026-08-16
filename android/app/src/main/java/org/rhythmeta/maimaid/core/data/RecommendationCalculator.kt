@@ -63,8 +63,9 @@ object RecommendationCalculator {
         activeSheets.forEach { sheet ->
             val song = songsById[sheet.songIdentifier] ?: return@forEach
             if (song.isUtage || sheet.isUtage) return@forEach
+            if (!ServerChartPolicy.isPlayable(sheet, profile.server)) return@forEach
             val score = scoresBySheet[sheet.sheetKey] ?: return@forEach
-            val level = sheet.ratingLevel ?: return@forEach
+            val level = ServerChartPolicy.metadata(sheet, profile.server).ratingLevel ?: return@forEach
             val isNew = category(sheet, song, latestVersion, profile.server, versionNames)
                 ?: return@forEach
             val rating = RatingUtils.calculate(
@@ -94,7 +95,8 @@ object RecommendationCalculator {
         activeSheets.forEach { sheet ->
             val song = songsById[sheet.songIdentifier] ?: return@forEach
             if (song.isUtage || sheet.isUtage) return@forEach
-            val level = sheet.ratingLevel ?: return@forEach
+            if (!ServerChartPolicy.isPlayable(sheet, profile.server)) return@forEach
+            val level = ServerChartPolicy.metadata(sheet, profile.server).ratingLevel ?: return@forEach
             val currentScore = scoresBySheet[sheet.sheetKey]
             val currentAchievement = currentScore?.achievement ?: 0.0
             if (currentAchievement >= 100.5) return@forEach
@@ -156,17 +158,16 @@ object RecommendationCalculator {
         latestVersion: String?,
         server: String,
         versions: List<String>,
-    ): Boolean? = RatingUtils.category(
-        songVersion = sheet.version ?: song.version,
-        latestVersion = latestVersion,
-        server = server,
-        activeRegion = when (server.lowercase()) {
-            "cn" -> sheet.regionCn
-            "intl", "us", "usa" -> sheet.regionIntl
-            else -> sheet.regionJp
-        },
-        versions = versions,
-    )
+    ): Boolean? {
+        val metadata = ServerChartPolicy.metadata(sheet, server)
+        return RatingUtils.category(
+            songVersion = metadata.version ?: song.version,
+            latestVersion = latestVersion,
+            server = server,
+            activeRegion = ServerChartPolicy.isPlayable(sheet, server),
+            versions = versions,
+        )
+    }
 
     private fun replacementThreshold(entries: List<SelectedEntry>, capacity: Int): Int =
         if (capacity > 0 && entries.size >= capacity) entries.lastOrNull()?.rating ?: 0 else 0
@@ -221,9 +222,6 @@ object RecommendationCalculator {
 
     private val SheetEntity.isUtage: Boolean
         get() = type.contains("utage", ignoreCase = true)
-
-    private val SheetEntity.ratingLevel: Double?
-        get() = (internalLevelValue ?: levelValue)?.takeIf { it > 0.0 }
 
     private data class SelectedEntry(val sheetKey: String, val level: Double, val rating: Int)
     private data class Target(val rank: String, val achievement: Double, val rating: Int, val gain: Int)
