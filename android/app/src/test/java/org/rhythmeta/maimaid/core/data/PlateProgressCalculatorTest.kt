@@ -78,6 +78,29 @@ class PlateProgressCalculatorTest {
         assertEquals(PlateType.Kiwami, result.plateType)
     }
 
+    @Test
+    fun `calculation uses profile server availability and constant`() {
+        val versions = listOf(version("PRiSM PLUS", "鏡", 0))
+        val cnSheet = sheet("cn", "PRiSM PLUS", false).copy(
+            regionCn = true,
+            cnInternalLevel = "13.8",
+            cnInternalLevelValue = 13.8,
+        )
+        val result = PlateProgressCalculator.calculate(
+            songs = listOf(song("cn", "PRiSM PLUS")),
+            sheets = listOf(cnSheet),
+            scores = emptyList(),
+            versions = versions,
+            groupId = null,
+            difficulty = "master",
+            plateType = PlateType.Kiwami,
+            server = "cn",
+        )
+
+        assertEquals(1, result.totalCount)
+        assertEquals("13.8", result.sections.single().level)
+    }
+
     private fun version(name: String, abbr: String, order: Int) = GameVersionEntity(name, abbr, null, order)
 
     private fun song(id: String, version: String, category: String = "maimai") = SongEntity(

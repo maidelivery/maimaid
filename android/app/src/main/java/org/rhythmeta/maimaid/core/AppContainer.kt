@@ -48,7 +48,7 @@ class AppContainer(context: Context) {
         applicationContext,
         MaimaidDatabase::class.java,
         "maimaid.db",
-    ).addMigrations(MaimaidDatabase.Migration1To2)
+    ).addMigrations(MaimaidDatabase.Migration1To2, MaimaidDatabase.Migration2To3)
         .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
         .build()
 
@@ -130,6 +130,7 @@ class AppContainer(context: Context) {
     val plateProgressRepository = PlateProgressRepository(
         catalogRepository = catalogRepository,
         scoreRepository = scoreRepository,
+        profileRepository = profileRepository,
     )
 
     val danRepository = DanRepository(

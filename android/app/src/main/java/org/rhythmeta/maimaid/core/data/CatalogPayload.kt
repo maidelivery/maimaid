@@ -37,6 +37,16 @@ data class CatalogPayload(
         val noteDesigner: String? = null,
         val noteCounts: NoteCounts? = null,
         val regions: Map<String, Boolean>? = null,
+        val regionOverrides: Map<String, SheetOverride>? = null,
+    )
+
+    @Serializable
+    data class SheetOverride(
+        val version: String? = null,
+        val level: String? = null,
+        val levelValue: Double? = null,
+        val internalLevel: String? = null,
+        val internalLevelValue: Double? = null,
     )
 
     @Serializable

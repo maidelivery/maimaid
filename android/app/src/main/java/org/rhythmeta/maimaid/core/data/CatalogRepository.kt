@@ -212,6 +212,8 @@ class CatalogRepository(
                 ?: emptyList()
             remote.sheets.map { sheet ->
                 val providerSongId = selectProviderId(ids, sheet.type)
+                val intlOverride = sheet.regionOverrides?.get("intl")
+                val cnOverride = sheet.regionOverrides?.get("cn")
                 val utageStat = if (sheet.type.equals("utage", ignoreCase = true)) {
                     utageStats.resolve(
                         providerSongId = providerSongId,
@@ -238,6 +240,16 @@ class CatalogRepository(
                     internalLevel = sheet.internalLevel,
                     internalLevelValue = sheet.internalLevelValue,
                     noteDesigner = sheet.noteDesigner,
+                    intlVersion = intlOverride?.version,
+                    intlLevel = intlOverride?.level,
+                    intlLevelValue = intlOverride?.levelValue,
+                    intlInternalLevel = intlOverride?.internalLevel,
+                    intlInternalLevelValue = intlOverride?.internalLevelValue,
+                    cnVersion = cnOverride?.version,
+                    cnLevel = cnOverride?.level,
+                    cnLevelValue = cnOverride?.levelValue,
+                    cnInternalLevel = cnOverride?.internalLevel,
+                    cnInternalLevelValue = cnOverride?.internalLevelValue,
                     tap = utageNoteTypes?.tap ?: sheet.noteCounts?.tap,
                     hold = utageNoteTypes?.hold ?: sheet.noteCounts?.hold,
                     slide = utageNoteTypes?.slide ?: sheet.noteCounts?.slide,

@@ -17,7 +17,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SongAliasEntity::class,
         PresetAvatarEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class MaimaidDatabase : RoomDatabase() {
@@ -36,6 +36,21 @@ abstract class MaimaidDatabase : RoomDatabase() {
                         "`genre` TEXT NOT NULL, " +
                         "PRIMARY KEY(`id`))",
                 )
+            }
+        }
+
+        val Migration2To3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `sheets` ADD COLUMN `intlVersion` TEXT")
+                db.execSQL("ALTER TABLE `sheets` ADD COLUMN `intlLevel` TEXT")
+                db.execSQL("ALTER TABLE `sheets` ADD COLUMN `intlLevelValue` REAL")
+                db.execSQL("ALTER TABLE `sheets` ADD COLUMN `intlInternalLevel` TEXT")
+                db.execSQL("ALTER TABLE `sheets` ADD COLUMN `intlInternalLevelValue` REAL")
+                db.execSQL("ALTER TABLE `sheets` ADD COLUMN `cnVersion` TEXT")
+                db.execSQL("ALTER TABLE `sheets` ADD COLUMN `cnLevel` TEXT")
+                db.execSQL("ALTER TABLE `sheets` ADD COLUMN `cnLevelValue` REAL")
+                db.execSQL("ALTER TABLE `sheets` ADD COLUMN `cnInternalLevel` TEXT")
+                db.execSQL("ALTER TABLE `sheets` ADD COLUMN `cnInternalLevelValue` REAL")
             }
         }
     }

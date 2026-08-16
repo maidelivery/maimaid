@@ -86,6 +86,25 @@ class RecommendationCalculatorTest {
     }
 
     @Test
+    fun `recommendations use the active server constant`() {
+        val cnSheet = sheet("new", "CiRCLE", 13.9).copy(
+            regionJp = false,
+            regionCn = true,
+            cnInternalLevel = "13.8",
+            cnInternalLevelValue = 13.8,
+        )
+        val result = RecommendationCalculator.calculate(
+            songs = listOf(song("new", "CiRCLE")),
+            sheets = listOf(cnSheet),
+            scores = emptyList(),
+            versions = versions,
+            profile = profile(b15Count = 15, server = "cn"),
+        )
+
+        assertEquals(RatingUtils.calculate(13.8, 97.0), result.b15.single().potentialGain)
+    }
+
+    @Test
     fun `old recommendations prefer lower fit difficulty when gains match`() {
         val firstSong = song("first", "BUDDiES")
         val secondSong = song("second", "BUDDiES")
@@ -175,10 +194,10 @@ class RecommendationCalculatorTest {
         profile = profile(b15Count),
     )
 
-    private fun profile(b15Count: Int) = UserProfileEntity(
+    private fun profile(b15Count: Int, server: String = "jp") = UserProfileEntity(
         id = "profile",
         name = "Player",
-        server = "jp",
+        server = server,
         isActive = true,
         createdAt = 0,
         b35Count = 35,

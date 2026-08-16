@@ -14,6 +14,7 @@ data class PlateProgressSelection(
 class PlateProgressRepository(
     private val catalogRepository: CatalogRepository,
     private val scoreRepository: ScoreRepository,
+    private val profileRepository: ProfileRepository,
 ) {
     fun observePlateProgress(selection: Flow<PlateProgressSelection>): Flow<PlateProgressResponse> {
         val catalog = combine(
@@ -21,7 +22,12 @@ class PlateProgressRepository(
             catalogRepository.sheets,
             catalogRepository.versions,
         ) { songs, sheets, versions -> Triple(songs, sheets, versions) }
-        return combine(catalog, scoreRepository.observeActiveScores(), selection) { input, scores, selected ->
+        return combine(
+            catalog,
+            scoreRepository.observeActiveScores(),
+            profileRepository.activeProfile,
+            selection,
+        ) { input, scores, profile, selected ->
             PlateProgressCalculator.calculate(
                 songs = input.first,
                 sheets = input.second,
@@ -30,6 +36,7 @@ class PlateProgressRepository(
                 groupId = selected.groupId,
                 difficulty = selected.difficulty,
                 plateType = selected.plateType,
+                server = profile?.server ?: "jp",
             )
         }.flowOn(Dispatchers.Default)
     }
