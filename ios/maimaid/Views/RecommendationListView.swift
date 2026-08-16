@@ -138,6 +138,9 @@ struct RecommendationListView: View {
             }
             Task { await loadRecommendations(force: true) }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .maimaiCatalogDidChange)) { _ in
+            Task { await loadRecommendations(force: true) }
+        }
     }
     
     private func loadMoreB15() {

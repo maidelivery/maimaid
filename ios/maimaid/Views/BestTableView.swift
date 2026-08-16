@@ -268,6 +268,9 @@ struct BestTableView: View {
             synchronizeCapacityDrafts()
             scheduleCalculation()
         }
+        .onChange(of: activeProfile?.server) { _, _ in
+            scheduleCalculation()
+        }
         .onChange(of: currentB35Count) { _, newValue in
             if focusedCapacityField != .old {
                 b35CountDraft = newValue
@@ -298,6 +301,10 @@ struct BestTableView: View {
                 return
             }
             scheduleCalculation(delay: .milliseconds(180))
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .maimaiCatalogDidChange)) { _ in
+            cache.updateSongs(songs)
+            scheduleCalculation()
         }
     }
     

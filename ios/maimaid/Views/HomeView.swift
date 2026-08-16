@@ -119,6 +119,10 @@ struct HomeView: View {
                 refreshScoreFingerprintCache()
                 scheduleB50Update()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .maimaiCatalogDidChange)) { _ in
+                hasComputedB50 = false
+                scheduleB50Update()
+            }
             .onChange(of: activeProfile?.b15Count) { _, _ in
                 scheduleB50Update()
             }

@@ -88,8 +88,13 @@ class RecommendationService {
             for sheet in song.sheets {
                 if sheet.type.lowercased().contains("utage") { continue }
 
-                let internalLevelValue = sheet.internalLevelValue ?? sheet.levelValue ?? 0.0
-                guard internalLevelValue > 0 else { continue }
+                guard let server = serverContext,
+                      ServerChartPolicy.isPlayable(sheet, on: server) else {
+                    continue
+                }
+
+                let metadata = ServerChartPolicy.metadata(for: sheet, on: server)
+                guard let internalLevelValue = metadata.ratingLevel else { continue }
 
                 // 🔴 修复：使用 ScoreService 获取当前用户的成绩
                 let currentScore = ScoreService.shared.score(for: sheet, context: modelContext)
@@ -98,22 +103,11 @@ class RecommendationService {
 
                 // Determine region/version at the chart level so newly added charts on old songs
                 // can still enter B15 when the chart itself belongs to the latest version.
-                let isRegionActive: Bool
-                if let targetServer = serverContext {
-                    switch targetServer {
-                    case .jp: isRegionActive = sheet.regionJp
-                    case .intl: isRegionActive = sheet.regionIntl
-                    case .cn: isRegionActive = sheet.regionCn
-                    }
-                } else {
-                    isRegionActive = false
-                }
-
                 let category = RatingUtils.determineSongCategory(
-                    songVersion: sheet.version ?? song.version,
+                    songVersion: metadata.version ?? song.version,
                     latestServerVersion: latestVersion,
                     server: serverContext,
-                    isRegionActive: isRegionActive
+                    isRegionActive: true
                 )
                 if category == .excluded { continue }
 
