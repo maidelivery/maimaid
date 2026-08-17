@@ -1202,6 +1202,7 @@ function App() {
 		forgotResultMessage,
 		setForgotResultMessage,
 		verificationEmail,
+		setVerificationEmail,
 		verificationEmailSent,
 		verificationResult,
 		setVerificationResult,
@@ -1396,6 +1397,7 @@ function App() {
 				forgotResultMessage={forgotResultMessage}
 				setForgotResultMessage={setForgotResultMessage}
 				verificationEmail={verificationEmail}
+				setVerificationEmail={setVerificationEmail}
 				verificationEmailSent={verificationEmailSent}
 				verificationResult={verificationResult}
 				setVerificationResult={setVerificationResult}

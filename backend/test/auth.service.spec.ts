@@ -50,6 +50,7 @@ type AuthServicePrivateAPI = {
 			redirectUri?: string;
 		},
 	) => string;
+	createEmailVerificationToken: (userId: string, enforceRateLimit: boolean) => Promise<string>;
 };
 
 const createUserRecord = (overrides: Partial<User> = {}): User => ({
@@ -104,6 +105,48 @@ describe("AuthService", () => {
 		expect(url.searchParams.get("token")).toBe("reset-token");
 		expect(url.searchParams.get("client")).toBe("app");
 		expect(url.searchParams.get("redirect_uri")).toBe("maimaid://auth/callback");
+	});
+
+	it("creates email verification tokens that expire after one hour", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-08-17T12:00:00Z"));
+		try {
+			const prisma = {
+				emailVerificationToken: {
+					create: vi.fn().mockResolvedValue({}),
+				},
+			};
+			const env = createEnv();
+			const service = new AuthService(prisma as never, new JwtService(env), env);
+			const createEmailVerificationToken = (service as unknown as AuthServicePrivateAPI).createEmailVerificationToken.bind(
+				service,
+			);
+
+			await createEmailVerificationToken("user-1", false);
+
+			const createInput = prisma.emailVerificationToken.create.mock.calls[0]?.[0] as {
+				data: { expiresAt: Date };
+			};
+			expect(createInput.data.expiresAt).toEqual(new Date("2026-08-17T13:00:00Z"));
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("reports the actual verification email delivery result when resending", async () => {
+		const user = createUserRecord({ emailVerifiedAt: null });
+		const prisma = {
+			user: {
+				findUnique: vi.fn().mockResolvedValue(user),
+			},
+		};
+		const env = createEnv();
+		const service = new AuthService(prisma as never, new JwtService(env), env);
+		vi.spyOn(service as never, "sendVerificationEmail").mockResolvedValue(false);
+
+		const result = await service.resendVerification(user.email);
+
+		expect(result).toEqual({ verificationEmailSent: false });
 	});
 
 	it("stores username and opaque password fields during registration finish", async () => {

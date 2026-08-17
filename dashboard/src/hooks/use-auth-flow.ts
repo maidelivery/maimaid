@@ -678,6 +678,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 			});
 			setVerificationEmailSent(payload.verificationEmailSent);
 			if (payload.verificationEmailSent) {
+				setVerificationResult(null);
 				showToast(t("flowResendSuccess"), "success");
 			} else {
 				showToast(t("flowResendFailed"), "warning");
@@ -959,6 +960,7 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 		forgotResultMessage,
 		setForgotResultMessage,
 		verificationEmail,
+		setVerificationEmail,
 		verificationEmailSent,
 		verificationResult,
 		setVerificationResult,
