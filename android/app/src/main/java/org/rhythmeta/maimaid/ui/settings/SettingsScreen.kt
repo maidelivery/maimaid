@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.SetMeal
@@ -58,6 +59,7 @@ fun SettingsScreen(
     onShowScannerBoundingBoxesChange: (Boolean) -> Unit,
     thirdPartyScoreSyncEnabled: Boolean,
     canSyncThirdPartyScores: Boolean,
+    canImportOtogame: Boolean,
     onThirdPartyScoreSyncEnabledChange: (Boolean) -> Unit,
     onOpenDetail: (AppDetail) -> Unit,
 ) {
@@ -108,6 +110,14 @@ fun SettingsScreen(
                     summary = stringResource(R.string.settings_lxns_description),
                     onClick = { onOpenDetail(AppDetail.LxnsImport) },
                 )
+                if (canImportOtogame) {
+                    SettingsRow(
+                        icon = Icons.Rounded.History,
+                        title = stringResource(R.string.settings_otogame),
+                        summary = stringResource(R.string.settings_otogame_description),
+                        onClick = { onOpenDetail(AppDetail.OtogameImport) },
+                    )
+                }
                 SettingsToggleRow(
                     icon = Icons.Rounded.Sync,
                     title = stringResource(R.string.settings_score_sync),

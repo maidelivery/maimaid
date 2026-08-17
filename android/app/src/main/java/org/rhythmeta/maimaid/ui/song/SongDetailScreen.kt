@@ -105,7 +105,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
@@ -159,6 +158,7 @@ import top.yukonga.miuix.kmp.basic.SnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.squircle.squircleBorder
@@ -2959,38 +2959,30 @@ private fun ScoreEntryMessage(
 
 @Composable
 private fun DeleteRecordDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier.widthIn(max = 420.dp),
-            cornerRadius = 8.dp,
-            insideMargin = androidx.compose.foundation.layout.PaddingValues(16.dp),
+    WindowDialog(
+        show = true,
+        title = stringResource(R.string.score_delete_record_title),
+        summary = stringResource(R.string.score_delete_record_message),
+        onDismissRequest = onDismiss,
+        outsideMargin = DpSize(24.dp, 24.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(
-                text = stringResource(R.string.score_delete_record_title),
-                style = MiuixTheme.textStyles.title3,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.score_delete_record_message),
-                color = MiuixTheme.colorScheme.onBackgroundVariant,
-            )
-            Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(),
             ) {
-                TextButton(
-                    text = stringResource(R.string.action_cancel),
-                    onClick = onDismiss,
-                    cornerRadius = 8.dp,
-                )
-                TextButton(
-                    text = stringResource(R.string.action_delete),
-                    onClick = onConfirm,
-                    cornerRadius = 8.dp,
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                )
+                Text(stringResource(R.string.action_cancel))
+            }
+            Button(
+                onClick = onConfirm,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColorsPrimary(),
+            ) {
+                Text(stringResource(R.string.action_delete))
             }
         }
     }

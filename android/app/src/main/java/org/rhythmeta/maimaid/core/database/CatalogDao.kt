@@ -22,6 +22,9 @@ interface CatalogDao {
     @Query("SELECT * FROM songs WHERE isRemoved = 0 ORDER BY sortOrder")
     fun observeSongs(): Flow<List<SongEntity>>
 
+    @Query("SELECT * FROM songs WHERE isRemoved = 0 ORDER BY sortOrder")
+    suspend fun songs(): List<SongEntity>
+
     @Query("SELECT * FROM sheets WHERE isRemoved = 0")
     fun observeSheets(): Flow<List<SheetEntity>>
 

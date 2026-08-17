@@ -77,6 +77,8 @@ import org.rhythmeta.maimaid.ui.scorequery.ScoreQueryViewModel
 import org.rhythmeta.maimaid.ui.settings.BackendAuthScreen
 import org.rhythmeta.maimaid.ui.settings.DivingFishImportScreen
 import org.rhythmeta.maimaid.ui.settings.LxnsImportScreen
+import org.rhythmeta.maimaid.ui.settings.OtogameImportScreen
+import org.rhythmeta.maimaid.ui.settings.OtogameLoginScreen
 
 @Composable
 internal fun DetailScreen(
@@ -102,6 +104,7 @@ internal fun DetailScreen(
     onOpenSong: (String) -> Unit,
     onOpenDanCategory: (String, String) -> Unit,
     onOpenCommunityAliases: () -> Unit,
+    onOpenOtogameLogin: () -> Unit,
     onSongDetailBackgroundChanged: (androidx.compose.ui.graphics.Color?) -> Unit,
     onSongDetailTitleChanged: (String) -> Unit,
 ) {
@@ -206,6 +209,15 @@ internal fun DetailScreen(
             contentTopPadding = songContentTopPadding,
         )
         AppDetail.LxnsImport -> LxnsImportScreen(
+            container = container,
+            contentTopPadding = songContentTopPadding,
+        )
+        AppDetail.OtogameImport -> OtogameImportScreen(
+            container = container,
+            contentTopPadding = songContentTopPadding,
+            onOpenLogin = onOpenOtogameLogin,
+        )
+        AppDetail.OtogameLogin -> OtogameLoginScreen(
             container = container,
             contentTopPadding = songContentTopPadding,
         )

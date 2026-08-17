@@ -59,6 +59,7 @@
 "settings.title" = "設定";
 "settings.data.importDivingFish" = "Diving Fish からインポート";
 "settings.data.importLxns" = "LXNS からインポート";
+"settings.data.importOtogame" = "Otogame からインポート";
 "settings.data.bound" = "連携済み";
 "settings.sync.header" = "スコアの同期";
 "settings.sync.footer" = "DF/LXNS からのスコア取り込みはすべてのサーバープロフィールで利用できます。スコア送信は有効なプロフィールが中国版サーバーの場合のみ動作します。クラウド同期はこの設定とは独立しています。";
@@ -232,6 +233,26 @@
 "import.status.error" = "エラー";
 "import.status.error.message %@" = "エラー: %@";
 "import.status.error.unknown" = "ネットワークエラー";
+
+// Otogame
+"import.otogame.title" = "Otogame からインポート";
+"import.otogame.description" = "アクセス可能な再生履歴をすべて同期します。同期処理ごとに、アクセス可能な範囲をスキャンし、ローカルで重複レコードを削除します。";
+"import.otogame.activeProfile %@" = "現在のプロフィール：%@";
+"import.otogame.session.ready" = "Otogame セッション準備完了";
+"import.otogame.session.required" = "Otogame にログインしてください";
+"import.otogame.action.openLogin" = "Otogame ログインを開く";
+"import.otogame.action.sync" = "プレイ履歴を同期";
+"import.otogame.action.syncing" = "プレイ履歴を同期中...";
+"import.otogame.login.title" = "Otogame ログイン";
+"import.otogame.login.reload" = "再読み込み";
+"import.otogame.profileRequired" = "有効な日本版プロフィールが必要です。";
+"import.otogame.status.header" = "インポート状況";
+"import.otogame.result.imported" = "プレイ履歴をインポートしました";
+"import.otogame.result.noChanges" = "新しいプレイはありません";
+"import.otogame.result.loginRequired" = "Otogame セッションの期限が切れました。再度ログインしてください。";
+"import.otogame.result.failed" = "Otogame からのインポートに失敗しました。";
+"import.otogame.result.counts %lld %lld %lld %lld" = "取得 %1$lld 件、インポート %2$lld 件、重複 %3$lld 件、未一致 %4$lld 件";
+"import.otogame.error.http %lld" = "Otogame が HTTP %lld を返しました。";
 
 // Diving Fish
 "import.df.title" = "Diving Fish からインポート";

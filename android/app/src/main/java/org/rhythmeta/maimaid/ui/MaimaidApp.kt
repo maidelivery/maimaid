@@ -99,6 +99,8 @@ import org.rhythmeta.maimaid.ui.recommendation.RecommendationPageSwitcher
 import org.rhythmeta.maimaid.ui.scorequery.ScoreQueryTopBarActions
 import org.rhythmeta.maimaid.ui.scorequery.ScoreQueryViewModel
 import org.rhythmeta.maimaid.ui.scanner.ScannerScreen
+import org.rhythmeta.maimaid.ui.settings.OtogameImportScreen
+import org.rhythmeta.maimaid.ui.settings.OtogameLoginScreen
 import org.rhythmeta.maimaid.ui.settings.SettingsScreen
 import org.rhythmeta.maimaid.ui.theme.AppThemeColorSource
 import org.rhythmeta.maimaid.ui.theme.AppThemeMode
@@ -463,6 +465,7 @@ fun MaimaidApp(
                     AppDetail.CommunityAliases if communityAliasesFromSong -> AppDetail.Song
                     AppDetail.Song -> songReturnDetail
                     AppDetail.DanDetail -> AppDetail.Dan
+                    AppDetail.OtogameLogin -> AppDetail.OtogameImport
                     else -> null
                 }
                 val currentDetail = detail
@@ -607,6 +610,8 @@ fun MaimaidApp(
                 thirdPartyScoreSyncEnabled = thirdPartyScoreSyncEnabled,
                 canSyncThirdPartyScores = uiState.activeProfile?.server
                     ?.equals("cn", ignoreCase = true) == true,
+                canImportOtogame = uiState.activeProfile?.server
+                    ?.equals("jp", ignoreCase = true) == true,
                 onThirdPartyScoreSyncEnabledChange = viewModel::setThirdPartyScoreSyncEnabled,
                 onOpenDetail = openDetail,
             )
@@ -639,6 +644,7 @@ fun MaimaidApp(
                     AppDetail.CommunityAliases if communityAliasesFromSong -> AppDetail.Song
                     AppDetail.Song -> songReturnDetail
                     AppDetail.DanDetail -> AppDetail.Dan
+                    AppDetail.OtogameLogin -> AppDetail.OtogameImport
                     else -> null
                 }
                 val currentDetail = detail
@@ -988,6 +994,7 @@ fun MaimaidApp(
                             onOpenSong = openSongFromDetail,
                             onOpenDanCategory = { _, _ -> },
                             onOpenCommunityAliases = {},
+                            onOpenOtogameLogin = {},
                             onSongDetailBackgroundChanged = {},
                             onSongDetailTitleChanged = {},
                         )
@@ -1128,6 +1135,79 @@ fun MaimaidApp(
             }
         }
 
+        val showOtogameImportLayer = detail == AppDetail.OtogameImport ||
+            detail == AppDetail.OtogameLogin
+        if (showOtogameImportLayer) {
+            val isForeground = detail == AppDetail.OtogameImport
+            val sourceDimAlpha = if (isForeground) 0f else 0.1f * (1f - detailSourceProgress)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationX = if (isForeground) {
+                            if (gestureInProgress) {
+                                size.width * backProgress.value
+                            } else {
+                                size.width * detailEntranceProgress.value
+                            }
+                        } else {
+                            -size.width * 0.25f * (1f - detailSourceProgress)
+                        }
+                        if (isForeground) {
+                            shape = foregroundShape
+                            clip = detailIsMoving
+                            shadowElevation = if (detailIsMoving) 12.dp.toPx() else 0f
+                        }
+                    },
+            ) {
+                DetailNavigationLayer(
+                    title = detailTitle(AppDetail.OtogameImport),
+                    onBack = closeDetail,
+                ) { contentTopPadding ->
+                    OtogameImportScreen(
+                        container = container,
+                        contentTopPadding = contentTopPadding,
+                        onOpenLogin = { openDetail(AppDetail.OtogameLogin) },
+                    )
+                }
+                if (sourceDimAlpha > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = sourceDimAlpha)),
+                    )
+                }
+            }
+        }
+
+        if (detail == AppDetail.OtogameLogin) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationX = if (gestureInProgress) {
+                            size.width * backProgress.value
+                        } else {
+                            size.width * detailEntranceProgress.value
+                        }
+                        shape = foregroundShape
+                        clip = detailIsMoving
+                        shadowElevation = if (detailIsMoving) 12.dp.toPx() else 0f
+                    },
+            ) {
+                SongNavigationLayer(
+                    title = detailTitle(AppDetail.OtogameLogin),
+                    backgroundColor = backgroundColor,
+                    onBack = closeDetail,
+                ) { contentTopPadding ->
+                    OtogameLoginScreen(
+                        container = container,
+                        contentTopPadding = contentTopPadding,
+                    )
+                }
+            }
+        }
+
         val retainedSongSourceDetail = when {
             detail == AppDetail.BestTable ||
             detail == AppDetail.Recommendations ||
@@ -1256,6 +1336,7 @@ fun MaimaidApp(
                         onOpenSong = openSongFromDetail,
                         onOpenDanCategory = { _, _ -> },
                         onOpenCommunityAliases = {},
+                        onOpenOtogameLogin = {},
                         onSongDetailBackgroundChanged = {},
                         onSongDetailTitleChanged = {},
                     )
@@ -1327,6 +1408,7 @@ fun MaimaidApp(
                         onOpenSong = openSongFromDetail,
                         onOpenDanCategory = { _, _ -> },
                         onOpenCommunityAliases = openCommunityAliasesFromSong,
+                        onOpenOtogameLogin = {},
                         onSongDetailBackgroundChanged = { color ->
                             selectedSongId?.let { songId ->
                                 songDetailBackground = color?.let { songId to it }
@@ -1357,6 +1439,8 @@ fun MaimaidApp(
                 it == AppDetail.PlateProgress ||
                 it == AppDetail.Dan ||
                 it == AppDetail.DanDetail ||
+                it == AppDetail.OtogameImport ||
+                it == AppDetail.OtogameLogin ||
                 it == AppDetail.Song
         }?.let { activeDetail ->
             val detailScrollBehavior = MiuixScrollBehavior()
@@ -1401,7 +1485,8 @@ fun MaimaidApp(
                                 activeDetail == AppDetail.CommunityAliases ||
                                 activeDetail == AppDetail.UsefulLinks ||
                                 activeDetail == AppDetail.DivingFishImport ||
-                                activeDetail == AppDetail.LxnsImport
+                                activeDetail == AppDetail.LxnsImport ||
+                                activeDetail == AppDetail.OtogameImport
                             ) {
                                 Modifier
                                     .nestedScroll(detailScrollBehavior.nestedScrollConnection)
@@ -1439,7 +1524,10 @@ fun MaimaidApp(
                                 actions = { detailActions(activeDetail) },
                                 defaultWindowInsetsPadding = true,
                             )
-                        } else if (activeDetail == AppDetail.StaticData) {
+                        } else if (
+                            activeDetail == AppDetail.StaticData ||
+                            activeDetail == AppDetail.OtogameLogin
+                        ) {
                             val detailTitle = detailTitle(activeDetail)
                             SmallTopAppBar(
                                 title = detailTitle,
@@ -1467,7 +1555,8 @@ fun MaimaidApp(
                             activeDetail == AppDetail.CommunityAliases ||
                             activeDetail == AppDetail.UsefulLinks ||
                             activeDetail == AppDetail.DivingFishImport ||
-                            activeDetail == AppDetail.LxnsImport
+                            activeDetail == AppDetail.LxnsImport ||
+                            activeDetail == AppDetail.OtogameImport
                         ) {
                             val detailTitle = if (activeDetail == AppDetail.DanDetail) {
                                 selectedDanCategoryTitle ?: detailTitle(AppDetail.Dan)
@@ -1566,6 +1655,8 @@ fun MaimaidApp(
                                     AppDetail.UsefulLinks,
                                     AppDetail.DivingFishImport,
                                     AppDetail.LxnsImport,
+                                    AppDetail.OtogameImport,
+                                    AppDetail.OtogameLogin,
                                     -> Modifier.layerBackdrop(detailBackdrop)
                                     AppDetail.StaticData -> Modifier
                                         .padding(paddingValues)
@@ -1601,6 +1692,7 @@ fun MaimaidApp(
                                 openDetail(AppDetail.DanDetail)
                             },
                             onOpenCommunityAliases = openCommunityAliasesFromSong,
+                            onOpenOtogameLogin = { openDetail(AppDetail.OtogameLogin) },
                             onSongDetailBackgroundChanged = { color ->
                                 val currentSongId = selectedSongId
                                 if (detail == AppDetail.Song && currentSongId != null) {
@@ -1911,6 +2003,8 @@ private fun detailTitle(detail: AppDetail): String = when (detail) {
     AppDetail.BackendAuth -> stringResource(R.string.detail_cloud_account)
     AppDetail.DivingFishImport -> stringResource(R.string.detail_diving_fish)
     AppDetail.LxnsImport -> stringResource(R.string.detail_lxns)
+    AppDetail.OtogameImport -> stringResource(R.string.detail_otogame)
+    AppDetail.OtogameLogin -> stringResource(R.string.detail_otogame_login)
     AppDetail.Appearance -> stringResource(R.string.detail_appearance)
     AppDetail.About -> stringResource(R.string.detail_about)
     AppDetail.Song -> ""

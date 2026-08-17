@@ -59,6 +59,7 @@
 "settings.title" = "Settings";
 "settings.data.importDivingFish" = "Import from Diving Fish";
 "settings.data.importLxns" = "Import from LXNS";
+"settings.data.importOtogame" = "Import from Otogame";
 "settings.data.bound" = "Bound";
 "settings.sync.header" = "Score Sync";
 "settings.sync.footer" = "DF/LXNS score import works with every server profile. Score uploads run only while the active profile uses the CN server. Cloud sync remains independent.";
@@ -233,6 +234,26 @@
 "import.status.error" = "Error";
 "import.status.error.message %@" = "Error: %@";
 "import.status.error.unknown" = "Network error";
+
+// Otogame
+"import.otogame.title" = "Import from Otogame";
+"import.otogame.description" = "Sync all accessible play history. Each sync scans the accessible range and deduplicates records locally.";
+"import.otogame.activeProfile %@" = "Active profile: %@";
+"import.otogame.session.ready" = "Otogame session ready";
+"import.otogame.session.required" = "Sign in to Otogame first";
+"import.otogame.action.openLogin" = "Open Otogame Login";
+"import.otogame.action.sync" = "Sync Play History";
+"import.otogame.action.syncing" = "Syncing play history...";
+"import.otogame.login.title" = "Otogame Login";
+"import.otogame.login.reload" = "Reload";
+"import.otogame.profileRequired" = "An active Japanese server profile is required.";
+"import.otogame.status.header" = "Import Status";
+"import.otogame.result.imported" = "Play history imported";
+"import.otogame.result.noChanges" = "No new plays found";
+"import.otogame.result.loginRequired" = "The Otogame session expired. Sign in again.";
+"import.otogame.result.failed" = "Otogame import failed.";
+"import.otogame.result.counts %lld %lld %lld %lld" = "Fetched %1$lld, imported %2$lld, duplicates %3$lld, unmatched %4$lld";
+"import.otogame.error.http %lld" = "Otogame returned HTTP %lld.";
 
 // Diving Fish
 "import.df.title" = "Import from Diving Fish";

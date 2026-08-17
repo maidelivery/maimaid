@@ -270,6 +270,7 @@ final class ScoreService {
         dxScore: Int = 0,
         fc: String? = nil,
         fs: String? = nil,
+        achievementDate: Date = Date(),
         context: ModelContext
     ) -> Score {
         let profileId = currentActiveProfileId(context: context)
@@ -283,7 +284,7 @@ final class ScoreService {
             if isNewRateBetter {
                 existing.rate = rate
                 existing.rank = rank
-                existing.achievementDate = Date()
+                existing.achievementDate = achievementDate
             }
             
             existing.dxScore = max(existing.dxScore, dxScore)
@@ -298,7 +299,7 @@ final class ScoreService {
                 dxScore: dxScore,
                 fc: canonicalFC,
                 fs: fs,
-                achievementDate: Date(),
+                achievementDate: achievementDate,
                 userProfileId: profileId
             )
             context.insert(newScore)
@@ -312,24 +313,27 @@ final class ScoreService {
     
     /// 记录游玩历史 - 自动关联当前用户
     func recordPlay(
+        id: UUID = UUID(),
         sheet: Sheet,
         rate: Double,
         rank: String,
         dxScore: Int = 0,
         fc: String? = nil,
         fs: String? = nil,
+        playDate: Date = Date(),
         context: ModelContext
     ) -> PlayRecord {
         let profileId = currentActiveProfileId(context: context)
         
         let record = PlayRecord(
+            id: id,
             sheetId: "\(sheet.songIdentifier)-\(sheet.type)-\(sheet.difficulty)",
             rate: rate,
             rank: rank,
             dxScore: dxScore,
             fc: ThemeUtils.canonicalFC(fc),
             fs: fs,
-            playDate: Date(),
+            playDate: playDate,
             userProfileId: profileId
         )
         context.insert(record)

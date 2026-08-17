@@ -22,6 +22,7 @@ import org.rhythmeta.maimaid.core.data.CommunityAliasService
 import org.rhythmeta.maimaid.core.data.DanRepository
 import org.rhythmeta.maimaid.core.data.DanStore
 import org.rhythmeta.maimaid.core.data.PlateProgressRepository
+import org.rhythmeta.maimaid.core.data.OtogameImportService
 import org.rhythmeta.maimaid.core.data.PresetAvatarRepository
 import org.rhythmeta.maimaid.core.data.PresetAvatarImageStore
 import org.rhythmeta.maimaid.core.data.ProfileAvatarStore
@@ -162,6 +163,11 @@ class AppContainer(context: Context) {
         credentials = profileCredentialStore,
         backendSyncCoordinator = backendSyncCoordinator,
         backendImportService = backendImportService,
+        json = json,
+    )
+
+    val otogameImportService = OtogameImportService(
+        database = database,
         json = json,
     )
 
