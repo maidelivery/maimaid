@@ -1,14 +1,13 @@
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import Image from "next/image";
-import { Loader2Icon } from "lucide-react";
+import { Loader2Icon, RefreshCwIcon } from "lucide-react";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Toaster } from "@/components/ui/sonner";
-import { cn } from "@/lib/utils";
 import { PASSWORD_COMPLEXITY_HINT } from "@/lib/app-helpers";
 import type { AuthMode, LoginStep, VerificationResult } from "@/lib/app-types";
 import { useTranslation } from "react-i18next";
@@ -34,6 +33,7 @@ type AuthScreenProps = {
 	forgotResultMessage: string | null;
 	setForgotResultMessage: Dispatch<SetStateAction<string | null>>;
 	verificationEmail: string;
+	setVerificationEmail: Dispatch<SetStateAction<string>>;
 	verificationEmailSent: boolean | null;
 	verificationResult: VerificationResult | null;
 	setVerificationResult: Dispatch<SetStateAction<VerificationResult | null>>;
@@ -91,6 +91,7 @@ export function AuthScreen(props: AuthScreenProps) {
 		forgotResultMessage,
 		setForgotResultMessage,
 		verificationEmail,
+		setVerificationEmail,
 		verificationEmailSent,
 		verificationResult,
 		setVerificationResult,
@@ -517,22 +518,44 @@ export function AuthScreen(props: AuthScreenProps) {
 
 						{authMode === "verify-email" ? (
 							<>
-								{verificationResult ? (
-									<p className={cn("text-sm", verificationResult.status === "success" ? "text-emerald-500" : "text-red-500")}>
-										{verificationResult.status === "success" ? t("auth:verifySuccess") : t("auth:verifyExpired")}
-									</p>
+								{verificationResult?.status === "success" ? (
+									<p className="text-sm text-foreground">{t("auth:verifySuccess")}</p>
 								) : (
 									<>
-										<p className="text-sm text-muted-foreground">
-											{t("auth:verifyCreated1")}
-											{verificationEmail}
-											{t("auth:verifyCreated2")}
-										</p>
-										<p className={cn("text-sm", verificationEmailSent ? "text-emerald-500" : "text-yellow-500")}>
-											{verificationEmailSent ? t("auth:verifySent") : t("auth:verifyFailSend")}
-										</p>
+										{verificationResult?.status === "error" ? (
+											<p className="text-sm text-destructive">{t("auth:verifyExpired")}</p>
+										) : (
+											<p className="text-sm text-muted-foreground">
+												{t("auth:verifyCreated1")}
+												{verificationEmail}
+												{t("auth:verifyCreated2")}
+											</p>
+										)}
+										<FieldGroup>
+											<Field>
+												<FieldLabel htmlFor="verification-email">{t("auth:email")}</FieldLabel>
+												<Input
+													id="verification-email"
+													type="email"
+													autoComplete="email"
+													value={verificationEmail}
+													onChange={(event) => setVerificationEmail(event.target.value)}
+													disabled={loading}
+												/>
+												<FieldDescription>{t("auth:verifyDeliveryHint")}</FieldDescription>
+											</Field>
+										</FieldGroup>
+										{verificationEmailSent !== null ? (
+											<p className="text-sm text-muted-foreground">
+												{verificationEmailSent ? t("auth:verifySent") : t("auth:verifyFailSend")}
+											</p>
+										) : null}
 										<Button variant="outline" onClick={() => void handleResendVerification()} disabled={loading}>
-											{loading ? <Loader2Icon data-icon="inline-start" className="animate-spin" /> : null}
+											{loading ? (
+												<Loader2Icon data-icon="inline-start" className="animate-spin" />
+											) : (
+												<RefreshCwIcon data-icon="inline-start" />
+											)}
 											{t("auth:btnResendVerify")}
 										</Button>
 									</>

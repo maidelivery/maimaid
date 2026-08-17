@@ -33,7 +33,7 @@ type OpaqueLoginStartResult =
 	  };
 
 const APP_SESSION_CODE_TTL_SECONDS = 120;
-const EMAIL_VERIFICATION_TOKEN_TTL_MS = 15 * 60_000;
+const EMAIL_VERIFICATION_TOKEN_TTL_MS = 60 * 60_000;
 
 type AuthEmailType = "verify" | "reset";
 type AuthChannel = "web" | "app";
@@ -342,8 +342,8 @@ export class AuthService {
 			return { verificationEmailSent: true };
 		}
 
-		await this.sendVerificationEmail(user.id, user.email, false, emailLinkContext);
-		return { verificationEmailSent: true };
+		const verificationEmailSent = await this.sendVerificationEmail(user.id, user.email, false, emailLinkContext);
+		return { verificationEmailSent };
 	}
 
 	async verifyEmail(token: string): Promise<User> {
@@ -627,7 +627,8 @@ export class AuthService {
 			subject: "maimaid email verification",
 			html: this.renderAuthEmailTemplate({
 				title: "Verify your email",
-				description: "Confirm this email address to finish setting up your maimaid Dashboard account.",
+				description:
+					"Confirm this email address to finish setting up your maimaid Dashboard account. This link expires in 1 hour.",
 				buttonLabel: "Verify email",
 				actionUrl: verifyUrl,
 			}),
