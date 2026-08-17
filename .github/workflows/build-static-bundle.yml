@@ -11,7 +11,7 @@ name: Build static bundle
   schedule:
     # Every 6 hours, matching the STATIC_SYNC_INTERVAL_HOURS default. Off the hour
     # so this does not pile onto the top-of-hour spike on GitHub's schedulers.
-    - cron: "23 */6 * * *"
+    - cron: "0 0 */1 * *"
   workflow_dispatch:
     inputs:
       force:
