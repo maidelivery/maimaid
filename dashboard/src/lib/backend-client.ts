@@ -7,6 +7,17 @@ export type BackendError = {
 	message?: string;
 };
 
+export class BackendRequestError extends Error {
+	constructor(
+		readonly status: number,
+		readonly code: string | null,
+		message: string,
+	) {
+		super(message);
+		this.name = "BackendRequestError";
+	}
+}
+
 export type BackendRequestOptions = {
 	method?: "GET" | "POST" | "PATCH" | "DELETE";
 	body?: unknown;
@@ -153,7 +164,9 @@ export async function requestJson<T>(
 	}
 
 	if (!response.ok) {
-		throw new Error(toUserSafeErrorMessage(response.status, payload));
+		const unsafeCode = (payload as BackendError | null)?.code;
+		const code = typeof unsafeCode === "string" ? unsafeCode.trim().toLowerCase() : null;
+		throw new BackendRequestError(response.status, code || null, toUserSafeErrorMessage(response.status, payload));
 	}
 
 	return payload as T;

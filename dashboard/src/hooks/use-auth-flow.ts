@@ -27,6 +27,7 @@ import {
 	startOpaqueLogin as startOpaqueClientLogin,
 	startOpaqueRegistration,
 } from "@/lib/opaque-password";
+import { BackendRequestError } from "@/lib/backend-client";
 import { toSession, type LoginResponse, type Session } from "@/lib/session";
 
 type RequestOptions = {
@@ -445,6 +446,14 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 		setLoginStep("password");
 	};
 
+	const transitionToEmailVerification = (email: string) => {
+		setVerificationEmail(email);
+		setVerificationEmailSent(null);
+		setVerificationResult(null);
+		setLoginPassword("");
+		setAuthMode("verify-email");
+	};
+
 	const handleLoginWithPassword = async () => {
 		const normalizedEmail = loginEmail.trim().toLowerCase();
 		const password = loginPassword;
@@ -465,6 +474,10 @@ export function useAuthFlow(input: UseAuthFlowInput) {
 
 			await applyLoginPayload(payload, t("flowLoginSuccess"));
 		} catch (error) {
+			if (error instanceof BackendRequestError && error.code === "email_not_verified") {
+				transitionToEmailVerification(normalizedEmail);
+				return;
+			}
 			showToast((error as Error).message, "error");
 		} finally {
 			setLoading(false);
