@@ -128,6 +128,7 @@ struct RemoteSheet: Decodable {
     let version: String?
     let level: String
     let levelValue: Double?
+    let internalId: Int?
     let internalLevel: String?
     let internalLevelValue: Double?
     let multiverInternalLevelValue: [String: Double]?
@@ -164,6 +165,7 @@ struct RemoteNoteCounts: Decodable {
 @MainActor
 class MaimaiDataFetcher {
     static let shared = MaimaiDataFetcher()
+    private static let currentStaticBundleSchemaVersion = 2
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "maimaid",
         category: "MaimaiDataFetcher"
@@ -275,7 +277,9 @@ class MaimaiDataFetcher {
         )
         StaticAssetURL.update(manifest.assets)
 
-        if !forceApply, UserDefaults.app.staticBundleMd5 == manifest.md5 {
+        if !forceApply,
+           UserDefaults.app.staticBundleMd5 == manifest.md5,
+           UserDefaults.app.staticBundleSchemaVersion >= Self.currentStaticBundleSchemaVersion {
             return (nil, true)
         }
 
@@ -357,6 +361,7 @@ class MaimaiDataFetcher {
             var remoteSongs: [RemoteSong] = []
             var aliasMap: [String: [String]] = [:]
             var aliasMapByNormalizedTitle: [String: [String]] = [:]
+            var aliasMapByProviderSongId: [Int: [String]] = [:]
             var hasFreshAliasSnapshot = false
             var titleToSongId: [String: Int] = [:]
             var titleToSongIdByNormalized: [String: Int] = [:]
@@ -495,21 +500,20 @@ class MaimaiDataFetcher {
                 if !aliasItems.isEmpty {
                     hasFreshAliasSnapshot = true
                     for item in aliasItems {
+                        aliasMapByProviderSongId[item.song_id] = Self.mergingAliases(
+                            item.aliases,
+                            into: aliasMapByProviderSongId[item.song_id] ?? []
+                        )
                         let resolvedTitles = Self.resolveLxnsAliasTitles(songId: item.song_id, songIdToTitle: songIdToTitle)
                         guard !resolvedTitles.isEmpty else { continue }
 
                         for title in resolvedTitles {
                             let normalizedTitle = Self.normalizeSongLookupTitle(title)
                             let normalizedAliases = normalizedTitle.isEmpty ? nil : aliasMapByNormalizedTitle[normalizedTitle]
-                            var merged = aliasMap[title] ?? normalizedAliases ?? []
-                            var seen = Set(merged.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
-                            for alias in item.aliases {
-                                let normalized = alias.trimmingCharacters(in: .whitespacesAndNewlines)
-                                let key = normalized.lowercased()
-                                guard !normalized.isEmpty else { continue }
-                                guard seen.insert(key).inserted else { continue }
-                                merged.append(normalized)
-                            }
+                            let merged = Self.mergingAliases(
+                                item.aliases,
+                                into: aliasMap[title] ?? normalizedAliases ?? []
+                            )
                             aliasMap[title] = merged
                             if !normalizedTitle.isEmpty {
                                 aliasMapByNormalizedTitle[normalizedTitle] = merged
@@ -607,6 +611,7 @@ class MaimaiDataFetcher {
                                     version: sh.version,
                                     level: sh.level,
                                     levelValue: sh.levelValue,
+                                    internalId: sh.songId > 0 ? sh.songId : nil,
                                     internalLevel: sh.internalLevel,
                                     internalLevelValue: sh.internalLevelValue,
                                     multiverInternalLevelValue: sh.multiverInternalLevelValue,
@@ -702,17 +707,46 @@ class MaimaiDataFetcher {
                         if let version = remoteSong.version { song.version = version }
                         if let date = remoteSong.releaseDate { song.releaseDate = date }
                     }
+
+                    let normalizedSongTitle = Self.normalizeSongLookupTitle(song.title)
+                    let trimmedSearch = song.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let searchTitle = trimmedSearch.isEmpty ? song.title : trimmedSearch
+                    let normalizedSearchTitle = Self.normalizeSongLookupTitle(searchTitle)
+                    let titleProviderIds = nameToProviderIds[searchTitle]
+                        ?? nameToProviderIdsByNormalized[normalizedSearchTitle]
+                        ?? []
+                    let sheetProviderIds = remoteSong.sheets.compactMap {
+                        ProviderSongIDResolver.resolve(internalID: $0.internalId, chartType: $0.type)
+                    }
+                    let possibleProviderIds = (sheetProviderIds + titleProviderIds).reduce(into: [Int]()) { result, id in
+                        guard !result.contains(id) else { return }
+                        result.append(id)
+                    }
                     
                     if options.updateAliases {
-                        let normalizedSongTitle = Self.normalizeSongLookupTitle(song.title)
                         if let officialId = titleToSongId[song.title] ?? titleToSongIdByNormalized[normalizedSongTitle] {
                             song.songId = officialId
+                        }
+                        if let resolvedID = ProviderSongIDResolver.preferredID(
+                            from: possibleProviderIds,
+                            chartTypes: remoteSong.sheets.map(\.type)
+                        ) {
+                            song.songId = resolvedID
+                            providerMatchCount += 1
                         }
                         if hasFreshAliasSnapshot {
                             // Full replace on each successful alias sync so stale local aliases
                             // (e.g. removed community aliases) do not survive future refreshes.
                             let normalizedAliases = normalizedSongTitle.isEmpty ? nil : aliasMapByNormalizedTitle[normalizedSongTitle]
-                            let officialAliases = aliasMap[song.title] ?? normalizedAliases ?? []
+                            var officialAliases = aliasMap[song.title] ?? normalizedAliases ?? []
+                            for providerSongId in possibleProviderIds {
+                                for relatedID in ProviderSongIDResolver.relatedIDs(to: providerSongId) {
+                                    officialAliases = Self.mergingAliases(
+                                        aliasMapByProviderSongId[relatedID] ?? [],
+                                        into: officialAliases
+                                    )
+                                }
+                            }
                             if officialAliases.isEmpty {
                                 song.aliases = []
                             } else {
@@ -725,30 +759,6 @@ class MaimaiDataFetcher {
                             }
                         }
                         
-                        let trimmedSearch = song.title.trimmingCharacters(in: .whitespacesAndNewlines)
-                        let searchTitle = trimmedSearch.isEmpty ? song.title : trimmedSearch
-                        let normalizedSearchTitle = Self.normalizeSongLookupTitle(searchTitle)
-                        if let possibleIds = nameToProviderIds[searchTitle] ?? nameToProviderIdsByNormalized[normalizedSearchTitle] {
-                            let hasUtage = remoteSong.sheets.contains { $0.type.lowercased() == "utage" }
-                            let hasDX = remoteSong.sheets.contains { $0.type.lowercased() == "dx" }
-                            let hasStd = remoteSong.sheets.contains { $0.type.lowercased() == "std" }
-                            
-                            var assignedId: Int? = nil
-                            if hasUtage {
-                                assignedId = possibleIds.first { $0 >= 100000 }
-                            }
-                            if assignedId == nil && hasDX {
-                                assignedId = possibleIds.first { $0 >= 10000 && $0 < 100000 }
-                            }
-                            if assignedId == nil && hasStd {
-                                assignedId = possibleIds.first { $0 < 10000 }
-                            }
-                            
-                            if let finalId = assignedId {
-                                song.songId = finalId
-                                providerMatchCount += 1
-                            }
-                        }
                     }
                     
                     var sheetMap: [String: Sheet] = [:]
@@ -779,17 +789,20 @@ class MaimaiDataFetcher {
                             }
                         }
                         
-                        let trimmedSearchSheet = song.title.trimmingCharacters(in: .whitespacesAndNewlines)
-                        let searchTitle = trimmedSearchSheet.isEmpty ? song.title : trimmedSearchSheet
-                        let normalizedSearchTitle = Self.normalizeSongLookupTitle(searchTitle)
-                        if let possibleIds = nameToProviderIds[searchTitle] ?? nameToProviderIdsByNormalized[normalizedSearchTitle] {
+                        if let directProviderId = ProviderSongIDResolver.resolve(
+                            internalID: remoteSheet.internalId,
+                            chartType: remoteSheet.type
+                        ) {
+                            sheet.songId = directProviderId
+                            sheetMatchCount += 1
+                        } else if !titleProviderIds.isEmpty {
                             let type = remoteSheet.type.lowercased()
                             if type == "utage" {
-                                if let id = possibleIds.first(where: { $0 >= 100000 }) { sheet.songId = id }
+                                if let id = titleProviderIds.first(where: { $0 >= 100000 }) { sheet.songId = id }
                             } else if type == "dx" {
-                                if let id = possibleIds.first(where: { $0 >= 10000 && $0 < 100000 }) { sheet.songId = id }
+                                if let id = titleProviderIds.first(where: { $0 >= 10000 && $0 < 100000 }) { sheet.songId = id }
                             } else if type == "std" {
-                                if let id = possibleIds.first(where: { $0 < 10000 }) { sheet.songId = id }
+                                if let id = titleProviderIds.first(where: { $0 < 10000 }) { sheet.songId = id }
                             }
                             if sheet.songId > 0 {
                                 sheetMatchCount += 1
@@ -886,6 +899,7 @@ class MaimaiDataFetcher {
                 remoteSongs = []
                 aliasMap = [:]
                 aliasMapByNormalizedTitle = [:]
+                aliasMapByProviderSongId = [:]
                 titleToSongId = [:]
                 titleToSongIdByNormalized = [:]
                 nameToProviderIds = [:]
@@ -1016,6 +1030,7 @@ class MaimaiDataFetcher {
             }
             if let md5 = staticBundle?.bundle?.md5 {
                 UserDefaults.app.staticBundleMd5 = md5
+                UserDefaults.app.staticBundleSchemaVersion = Self.currentStaticBundleSchemaVersion
             }
             try modelContext.save()
 
@@ -1206,6 +1221,19 @@ class MaimaiDataFetcher {
             .replacingOccurrences(of: #"\s+"#, with: "", options: .regularExpression)
     }
 
+    private static func mergingAliases(_ aliases: [String], into existing: [String]) -> [String] {
+        var merged = existing
+        var seen = Set(existing.map {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        })
+        for alias in aliases {
+            let trimmed = alias.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, seen.insert(trimmed.lowercased()).inserted else { continue }
+            merged.append(trimmed)
+        }
+        return merged
+    }
+
     private static func resolveLxnsAliasTitles(songId: Int, songIdToTitle: [Int: String]) -> [String] {
         var titles: [String] = []
         var seen = Set<String>()
@@ -1220,42 +1248,7 @@ class MaimaiDataFetcher {
     }
 
     private static func expandLxnsSongIdCandidates(_ songId: Int) -> [Int] {
-        guard songId > 0 else {
-            return []
-        }
-
-        var candidates: [Int] = []
-        let appendCandidate: (Int) -> Void = { value in
-            guard value > 0 else { return }
-            guard !candidates.contains(value) else { return }
-            candidates.append(value)
-        }
-
-        appendCandidate(songId)
-
-        if songId < 10000 {
-            appendCandidate(songId + 10000)
-        }
-
-        if songId > 10000 && songId < 100000 {
-            let baseId = songId % 10000
-            if baseId > 0 {
-                appendCandidate(baseId)
-                appendCandidate(baseId + 10000)
-            }
-        }
-
-        if songId >= 100000 {
-            let baseId = songId % 100000
-            if baseId > 0 {
-                appendCandidate(baseId)
-                if baseId < 10000 {
-                    appendCandidate(baseId + 10000)
-                }
-            }
-        }
-
-        return candidates
+        ProviderSongIDResolver.relatedIDs(to: songId)
     }
 
     private static func extractUtageKanji(from text: String) -> String? {

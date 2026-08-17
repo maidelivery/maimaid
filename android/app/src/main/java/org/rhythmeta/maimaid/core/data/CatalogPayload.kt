@@ -32,6 +32,7 @@ data class CatalogPayload(
         val version: String? = null,
         val level: String,
         val levelValue: Double? = null,
+        val internalId: Int? = null,
         val internalLevel: String? = null,
         val internalLevelValue: Double? = null,
         val noteDesigner: String? = null,
