@@ -1,0 +1,64 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/DanDetailView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "dan.detail.page.selection",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 48
+        }
+      },
+      {
+        "comment": "",
+        "key": "dan.detail.page.regular",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "dan.detail.page.true",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 50
+        }
+      },
+      {
+        "comment": "",
+        "key": "Lv.%@",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 397
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@%%",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 417
+        }
+      },
+      {
+        "comment": "",
+        "key": "dan.detail.noRecord",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 424
+        }
+      },
+      {
+        "comment": "",
+        "key": "dan.detail.missing",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 518
+        }
+      }
+    ]
+  },
+  "version": 1
+}

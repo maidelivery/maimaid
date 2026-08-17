@@ -1,0 +1,65 @@
+{
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ChartTypeVersionBadge.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ChartTypeVersionBadge.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ChartTypeVersionBadge.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ChartTypeVersionBadge.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ChartTypeVersionBadge.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ChartTypeVersionBadge.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/CommunityAliasVotingBoardView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/CommunityAliasVotingBoardView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/CommunityAliasVotingBoardView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/CommunityAliasVotingBoardView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/CommunityAliasVotingBoardView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/CommunityAliasVotingBoardView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ConstantTableExportImageView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ConstantTableExportImageView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ConstantTableExportImageView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ConstantTableExportImageView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ConstantTableExportImageView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ConstantTableExportImageView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ConstantTableExportView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ConstantTableExportView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ConstantTableExportView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ConstantTableExportView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ConstantTableExportView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ConstantTableExportView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/DanDetailView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/DanDetailView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/DanDetailView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/DanDetailView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/DanDetailView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/DanDetailView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/DanListView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/DanListView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/DanListView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/DanListView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/DanListView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/DanListView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/DanSectionPageView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/DanSectionPageView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/DanSectionPageView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/DanSectionPageView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/DanSectionPageView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/DanSectionPageView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/FilterView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/FilterView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/FilterView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/FilterView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/FilterView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/FilterView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/FirstLaunchView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/FirstLaunchView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/FirstLaunchView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/FirstLaunchView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/FirstLaunchView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/FirstLaunchView.swiftdeps"
+  }
+}

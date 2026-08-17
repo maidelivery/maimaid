@@ -1,0 +1,32 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Services/PhotoService.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "photo.error.albumFetch",
+        "location": {
+          "startingColumn": 73,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "photo.error.albumPlaceholder",
+        "location": {
+          "startingColumn": 73,
+          "startingLine": 35
+        }
+      },
+      {
+        "comment": "",
+        "key": "photo.error.accessDenied",
+        "location": {
+          "startingColumn": 73,
+          "startingLine": 109
+        }
+      }
+    ]
+  },
+  "version": 1
+}

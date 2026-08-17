@@ -1,0 +1,1139 @@
+{
+  "" : {
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid-primary.dia",
+    "emit-module-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid-primary-emit-module.dia",
+    "pch" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid-primary.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/DerivedSources/CoreMLGenerated/maimaid v1.41n/maimaid v1.41n.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid v1.41n.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid v1.41n.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid v1.41n.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid v1.41n.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid v1.41n.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid v1.41n.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid v1.41n.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid v1.41n~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/DerivedSources/CoreMLGenerated/maimaidetector v1.2n/maimaidetector v1.2n.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidetector v1.2n.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidetector v1.2n.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidetector v1.2n.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidetector v1.2n.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidetector v1.2n.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidetector v1.2n.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidetector v1.2n.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidetector v1.2n~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/DerivedSources/CoreMLGenerated/maimaidistinguish v1.2/maimaidistinguish v1.2.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidistinguish v1.2.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidistinguish v1.2.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidistinguish v1.2.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidistinguish v1.2.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidistinguish v1.2.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidistinguish v1.2.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidistinguish v1.2.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidistinguish v1.2~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/AppKeys.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AppKeys.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AppKeys.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AppKeys.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AppKeys.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AppKeys.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AppKeys.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AppKeys.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AppKeys~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/Best50ConstantMode.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Best50ConstantMode.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Best50ConstantMode.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Best50ConstantMode.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Best50ConstantMode.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Best50ConstantMode.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Best50ConstantMode.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Best50ConstantMode.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Best50ConstantMode~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/ChartConstantHistoryEntry.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartConstantHistoryEntry.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartConstantHistoryEntry.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartConstantHistoryEntry.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartConstantHistoryEntry.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartConstantHistoryEntry.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartConstantHistoryEntry.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartConstantHistoryEntry.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartConstantHistoryEntry~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/CommunityAliasCache.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasCache.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasCache.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasCache.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasCache.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasCache.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasCache.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasCache.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasCache~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/Dan.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Dan.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Dan.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Dan.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Dan.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Dan.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Dan.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Dan.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Dan~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/MLChooseProcessor.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLChooseProcessor.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLChooseProcessor.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLChooseProcessor.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLChooseProcessor.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLChooseProcessor.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLChooseProcessor.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLChooseProcessor.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLChooseProcessor~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/MLDistinguishProcessor.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLDistinguishProcessor.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLDistinguishProcessor.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLDistinguishProcessor.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLDistinguishProcessor.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLDistinguishProcessor.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLDistinguishProcessor.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLDistinguishProcessor.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLDistinguishProcessor~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/MLScoreProcessor.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLScoreProcessor.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLScoreProcessor.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLScoreProcessor.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLScoreProcessor.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLScoreProcessor.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLScoreProcessor.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLScoreProcessor.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MLScoreProcessor~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/MaimaiIcon.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIcon.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIcon.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIcon.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIcon.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIcon.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIcon.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIcon.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIcon~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/PlayRecord.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlayRecord.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlayRecord.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlayRecord.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlayRecord.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlayRecord.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlayRecord.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlayRecord.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlayRecord~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/ScannerNoteCountValidator.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerNoteCountValidator.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerNoteCountValidator.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerNoteCountValidator.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerNoteCountValidator.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerNoteCountValidator.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerNoteCountValidator.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerNoteCountValidator.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerNoteCountValidator~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/Score.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Score.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Score.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Score.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Score.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Score.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Score.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Score.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Score~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/ScoreService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreService.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreService.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreService.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreService.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreService~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/Sheet.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Sheet.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Sheet.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Sheet.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Sheet.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Sheet.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Sheet.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Sheet.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Sheet~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/Song.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Song.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Song.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Song.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Song.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Song.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Song.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Song.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/Song~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/SyncConfig.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConfig.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConfig.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConfig.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConfig.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConfig.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConfig.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConfig.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConfig~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/UserProfile.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfile.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfile.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfile.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfile.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfile.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfile.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfile.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfile~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/UtageChartStatsItem.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageChartStatsItem.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageChartStatsItem.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageChartStatsItem.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageChartStatsItem.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageChartStatsItem.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageChartStatsItem.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageChartStatsItem.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageChartStatsItem~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Models/UtageNoteTypes.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageNoteTypes.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageNoteTypes.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageNoteTypes.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageNoteTypes.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageNoteTypes.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageNoteTypes.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageNoteTypes.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UtageNoteTypes~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/AccountDataResolutionCoordinator.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AccountDataResolutionCoordinator.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AccountDataResolutionCoordinator.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AccountDataResolutionCoordinator.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AccountDataResolutionCoordinator.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AccountDataResolutionCoordinator.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AccountDataResolutionCoordinator.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AccountDataResolutionCoordinator.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AccountDataResolutionCoordinator~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/AuthUtils.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AuthUtils.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AuthUtils.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AuthUtils.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AuthUtils.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AuthUtils.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AuthUtils.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AuthUtils.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AuthUtils~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/B50CacheService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50CacheService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50CacheService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50CacheService.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50CacheService.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50CacheService.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50CacheService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50CacheService.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50CacheService~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendAPIClient.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAPIClient.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAPIClient.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAPIClient.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAPIClient.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAPIClient.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAPIClient.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAPIClient.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAPIClient~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendCloudSyncService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendCloudSyncService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendCloudSyncService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendCloudSyncService.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendCloudSyncService.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendCloudSyncService.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendCloudSyncService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendCloudSyncService.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendCloudSyncService~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendConfig.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendConfig.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendConfig.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendConfig.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendConfig.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendConfig.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendConfig.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendConfig.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendConfig~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendImportService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendImportService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendImportService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendImportService.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendImportService.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendImportService.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendImportService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendImportService.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendImportService~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendIncrementalSyncService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendIncrementalSyncService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendIncrementalSyncService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendIncrementalSyncService.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendIncrementalSyncService.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendIncrementalSyncService.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendIncrementalSyncService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendIncrementalSyncService.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendIncrementalSyncService~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendScoreSyncService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendScoreSyncService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendScoreSyncService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendScoreSyncService.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendScoreSyncService.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendScoreSyncService.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendScoreSyncService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendScoreSyncService.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendScoreSyncService~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendSessionManager.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSessionManager.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSessionManager.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSessionManager.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSessionManager.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSessionManager.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSessionManager.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSessionManager.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSessionManager~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendSyncShared.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSyncShared.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSyncShared.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSyncShared.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSyncShared.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSyncShared.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSyncShared.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSyncShared.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendSyncShared~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/ChartStatsService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartStatsService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartStatsService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartStatsService.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartStatsService.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartStatsService.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartStatsService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartStatsService.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartStatsService~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/CommunityAliasService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasService.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasService.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasService.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasService.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasService~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/ImageDownloader.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ImageDownloader.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ImageDownloader.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ImageDownloader.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ImageDownloader.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ImageDownloader.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ImageDownloader.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ImageDownloader.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ImageDownloader~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/MaimaiDataFetcher.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiDataFetcher.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiDataFetcher.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiDataFetcher.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiDataFetcher.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiDataFetcher.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiDataFetcher.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiDataFetcher.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiDataFetcher~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/OtogameImportPolicy.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportPolicy.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportPolicy.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportPolicy.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportPolicy.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportPolicy.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportPolicy.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportPolicy.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportPolicy~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/OtogameImportService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportService.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportService.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportService.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportService.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportService~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/OtogamePlaylogModels.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogamePlaylogModels.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogamePlaylogModels.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogamePlaylogModels.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogamePlaylogModels.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogamePlaylogModels.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogamePlaylogModels.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogamePlaylogModels.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogamePlaylogModels~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/OtogameSheetMatcher.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameSheetMatcher.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameSheetMatcher.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameSheetMatcher.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameSheetMatcher.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameSheetMatcher.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameSheetMatcher.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameSheetMatcher.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameSheetMatcher~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/PhotoService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PhotoService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PhotoService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PhotoService.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PhotoService.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PhotoService.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PhotoService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PhotoService.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PhotoService~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/PlateService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateService.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateService.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateService.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateService.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateService~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/ProfileCredentialStore.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProfileCredentialStore.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProfileCredentialStore.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProfileCredentialStore.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProfileCredentialStore.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProfileCredentialStore.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProfileCredentialStore.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProfileCredentialStore.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProfileCredentialStore~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/RecommendationService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationService.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationService.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationService.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationService.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationService~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/ServerChartPolicy.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerChartPolicy.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerChartPolicy.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerChartPolicy.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerChartPolicy.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerChartPolicy.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerChartPolicy.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerChartPolicy.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerChartPolicy~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/ServerVersionService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerVersionService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerVersionService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerVersionService.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerVersionService.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerVersionService.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerVersionService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerVersionService.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ServerVersionService~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/SongJacketColorLoader.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketColorLoader.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketColorLoader.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketColorLoader.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketColorLoader.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketColorLoader.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketColorLoader.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketColorLoader.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketColorLoader~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/StaticAssetConfiguration.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetConfiguration.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetConfiguration.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetConfiguration.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetConfiguration.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetConfiguration.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetConfiguration.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetConfiguration.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetConfiguration~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/StaticAssetURL.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetURL.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetURL.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetURL.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetURL.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetURL.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetURL.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetURL.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticAssetURL~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/SyncManager.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncManager.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncManager.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncManager.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncManager.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncManager.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncManager.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncManager.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncManager~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/SongsView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongsView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongsView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongsView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongsView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongsView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongsView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongsView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongsView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Utils/ChartMainVersionResolver.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartMainVersionResolver.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartMainVersionResolver.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartMainVersionResolver.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartMainVersionResolver.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartMainVersionResolver.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartMainVersionResolver.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartMainVersionResolver.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartMainVersionResolver~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Utils/FilterUtils.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterUtils.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterUtils.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterUtils.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterUtils.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterUtils.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterUtils.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterUtils.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterUtils~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Utils/ProviderSongIDResolver.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProviderSongIDResolver.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProviderSongIDResolver.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProviderSongIDResolver.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProviderSongIDResolver.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProviderSongIDResolver.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProviderSongIDResolver.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProviderSongIDResolver.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ProviderSongIDResolver~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Utils/RatingUtils.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RatingUtils.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RatingUtils.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RatingUtils.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RatingUtils.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RatingUtils.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RatingUtils.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RatingUtils.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RatingUtils~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Utils/SearchTextNormalizer.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SearchTextNormalizer.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SearchTextNormalizer.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SearchTextNormalizer.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SearchTextNormalizer.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SearchTextNormalizer.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SearchTextNormalizer.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SearchTextNormalizer.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SearchTextNormalizer~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Utils/ThemeUtils.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ThemeUtils.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ThemeUtils.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ThemeUtils.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ThemeUtils.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ThemeUtils.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ThemeUtils.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ThemeUtils.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ThemeUtils~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/B50ExportView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50ExportView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50ExportView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50ExportView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50ExportView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50ExportView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50ExportView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50ExportView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50ExportView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/BestTableView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BestTableView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BestTableView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BestTableView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BestTableView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BestTableView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BestTableView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BestTableView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BestTableView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/CameraPreviewView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraPreviewView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraPreviewView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraPreviewView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraPreviewView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraPreviewView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraPreviewView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraPreviewView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraPreviewView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/CameraViewController.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraViewController.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraViewController.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraViewController.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraViewController.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraViewController.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraViewController.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraViewController.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraViewController~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ChartTypeVersionBadge.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartTypeVersionBadge.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartTypeVersionBadge.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartTypeVersionBadge.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartTypeVersionBadge.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartTypeVersionBadge.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartTypeVersionBadge.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartTypeVersionBadge.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ChartTypeVersionBadge~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/CommunityAliasVotingBoardView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasVotingBoardView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasVotingBoardView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasVotingBoardView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasVotingBoardView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasVotingBoardView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasVotingBoardView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasVotingBoardView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CommunityAliasVotingBoardView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Components/AvatarCropEditorView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarCropEditorView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarCropEditorView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarCropEditorView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarCropEditorView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarCropEditorView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarCropEditorView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarCropEditorView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarCropEditorView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Components/AvatarViews.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarViews.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarViews.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarViews.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarViews.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarViews.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarViews.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarViews.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/AvatarViews~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Components/BadgeView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BadgeView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BadgeView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BadgeView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BadgeView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BadgeView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BadgeView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BadgeView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BadgeView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Components/MaimaiIconPicker.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIconPicker.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIconPicker.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIconPicker.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIconPicker.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIconPicker.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIconPicker.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIconPicker.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MaimaiIconPicker~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Components/MarqueeText.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MarqueeText.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MarqueeText.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MarqueeText.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MarqueeText.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MarqueeText.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MarqueeText.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MarqueeText.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MarqueeText~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Components/RemoteImage.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RemoteImage.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RemoteImage.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RemoteImage.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RemoteImage.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RemoteImage.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RemoteImage.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RemoteImage.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RemoteImage~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Components/SkeletonModifier.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SkeletonModifier.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SkeletonModifier.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SkeletonModifier.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SkeletonModifier.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SkeletonModifier.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SkeletonModifier.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SkeletonModifier.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SkeletonModifier~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Components/SongJacketView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongJacketView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ConstantTableExportImageView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportImageView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportImageView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportImageView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportImageView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportImageView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportImageView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportImageView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportImageView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ConstantTableExportView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ConstantTableExportView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/DanDetailView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanDetailView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanDetailView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanDetailView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanDetailView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanDetailView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanDetailView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanDetailView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanDetailView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/DanListView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanListView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanListView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanListView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanListView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanListView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanListView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanListView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanListView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/DanSectionPageView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanSectionPageView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanSectionPageView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanSectionPageView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanSectionPageView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanSectionPageView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanSectionPageView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanSectionPageView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DanSectionPageView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/FilterView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FilterView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/FirstLaunchView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FirstLaunchView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FirstLaunchView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FirstLaunchView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FirstLaunchView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FirstLaunchView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FirstLaunchView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FirstLaunchView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/FirstLaunchView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/HomeDashboardLifecycleView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardLifecycleView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardLifecycleView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardLifecycleView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardLifecycleView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardLifecycleView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardLifecycleView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardLifecycleView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardLifecycleView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/HomeDashboardView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeDashboardView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/HomeView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/HomeView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/MainTabView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MainTabView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MainTabView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MainTabView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MainTabView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MainTabView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MainTabView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MainTabView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/MainTabView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/PlateProgressView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateProgressView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateProgressView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateProgressView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateProgressView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateProgressView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateProgressView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateProgressView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/PlateProgressView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/RandomSongView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RandomSongView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RandomSongView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RandomSongView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RandomSongView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RandomSongView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RandomSongView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RandomSongView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RandomSongView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/RecommendationListView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationListView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationListView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationListView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationListView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationListView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationListView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationListView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationListView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/RecommendationPageView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationPageView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationPageView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationPageView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationPageView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationPageView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationPageView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationPageView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/RecommendationPageView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ScannerDebugOverlayView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerDebugOverlayView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerDebugOverlayView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerDebugOverlayView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerDebugOverlayView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerDebugOverlayView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerDebugOverlayView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerDebugOverlayView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerDebugOverlayView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ScannerResultCardView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerResultCardView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerResultCardView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerResultCardView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerResultCardView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerResultCardView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerResultCardView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerResultCardView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerResultCardView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ScannerView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ScoreEntryView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreEntryView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreEntryView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreEntryView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreEntryView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreEntryView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreEntryView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreEntryView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreEntryView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ScoreQueryFilterSettings.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterSettings.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterSettings.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterSettings.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterSettings.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterSettings.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterSettings.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterSettings.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterSettings~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ScoreQueryFilterView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ScoreQueryView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/BackendAuthView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAuthView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAuthView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAuthView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAuthView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAuthView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAuthView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAuthView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BackendAuthView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/DivingFishImportView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DivingFishImportView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DivingFishImportView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DivingFishImportView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DivingFishImportView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DivingFishImportView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DivingFishImportView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DivingFishImportView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/DivingFishImportView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/LxnsImportView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/LxnsImportView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/LxnsImportView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/LxnsImportView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/LxnsImportView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/LxnsImportView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/LxnsImportView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/LxnsImportView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/LxnsImportView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/OtogameImportView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/OtogameImportViewModel.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportViewModel.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportViewModel.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportViewModel.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportViewModel.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportViewModel.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportViewModel.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportViewModel.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameImportViewModel~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/OtogameLoginView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameLoginView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameLoginView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameLoginView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameLoginView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameLoginView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameLoginView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameLoginView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameLoginView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/OtogameWebView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameWebView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameWebView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameWebView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameWebView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameWebView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameWebView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameWebView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameWebView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/StaticDataUpdateView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticDataUpdateView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticDataUpdateView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticDataUpdateView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticDataUpdateView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticDataUpdateView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticDataUpdateView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticDataUpdateView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticDataUpdateView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/SyncConflictResolutionSheet.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConflictResolutionSheet.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConflictResolutionSheet.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConflictResolutionSheet.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConflictResolutionSheet.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConflictResolutionSheet.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConflictResolutionSheet.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConflictResolutionSheet.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConflictResolutionSheet~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/UserProfileEditView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileEditView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileEditView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileEditView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileEditView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileEditView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileEditView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileEditView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileEditView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/UserProfileListView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileListView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileListView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileListView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileListView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileListView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileListView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileListView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileListView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/SettingsView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SettingsView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SettingsView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SettingsView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SettingsView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SettingsView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SettingsView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SettingsView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SettingsView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/SongDetailChartVersionRow.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailChartVersionRow.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailChartVersionRow.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailChartVersionRow.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailChartVersionRow.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailChartVersionRow.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailChartVersionRow.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailChartVersionRow.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailChartVersionRow~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/SongDetailConstantHistorySection.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailConstantHistorySection.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailConstantHistorySection.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailConstantHistorySection.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailConstantHistorySection.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailConstantHistorySection.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailConstantHistorySection.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailConstantHistorySection.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailConstantHistorySection~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/SongDetailView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/SongRowView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongRowView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongRowView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongRowView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongRowView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongRowView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongRowView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongRowView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongRowView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/UsefulLinksView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UsefulLinksView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UsefulLinksView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UsefulLinksView.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UsefulLinksView.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UsefulLinksView.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UsefulLinksView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UsefulLinksView.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UsefulLinksView~partial.swiftmodule"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/maimaidApp.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidApp.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidApp.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidApp.dia",
+    "index-unit-output-path" : "/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidApp.o",
+    "llvm-bc" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidApp.bc",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidApp.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidApp.swiftdeps",
+    "swiftmodule" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidApp~partial.swiftmodule"
+  }
+}

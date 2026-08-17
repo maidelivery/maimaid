@@ -1,0 +1,144 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/FilterView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "filter.title",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 140
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.quick",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 21
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.category",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 90
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.version",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.type",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.favorites",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 23
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 27
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.hideDeleted",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 36
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.playableOnly",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 41
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 45
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.levelRange.hint",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 83
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.difficulty",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.levelRange",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "%.1f - %.1f",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 73
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.done",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 144
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.reset",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 148
+        }
+      }
+    ]
+  },
+  "version": 1
+}

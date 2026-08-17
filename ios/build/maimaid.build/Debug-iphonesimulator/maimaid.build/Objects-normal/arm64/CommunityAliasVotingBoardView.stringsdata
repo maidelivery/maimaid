@@ -1,0 +1,152 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/CommunityAliasVotingBoardView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "community.alias.board.title",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 71
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.board.config.title",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 100
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.board.config.message",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 102
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.board.login.title",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 113
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.board.login.message",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 115
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.board.login.refresh",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 125
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.board.empty.title",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 138
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.board.empty.message",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 140
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.board.loading",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 154
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.board.group.subtitle %lld",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 175
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.board.deadline %@",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 220
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.vote.cancelSupport %lld",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 283
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.vote.support %lld",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 284
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.vote.cancelOppose %lld",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 287
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.vote.oppose %lld",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 288
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.board.tip.voteUpdated",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 349
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.board.tip.loginRequired",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 321
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.board.tip.voteFailedFallback",
+        "location": {
+          "startingColumn": 71,
+          "startingLine": 329
+        }
+      }
+    ]
+  },
+  "version": 1
+}

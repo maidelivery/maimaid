@@ -1,0 +1,72 @@
+{
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/AuthUtils.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/AuthUtils.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/AuthUtils.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/AuthUtils.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/AuthUtils.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/AuthUtils.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/B50CacheService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/B50CacheService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/B50CacheService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/B50CacheService.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/B50CacheService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/B50CacheService.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendAPIClient.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendAPIClient.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendAPIClient.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendAPIClient.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendAPIClient.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendAPIClient.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendCloudSyncService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendCloudSyncService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendCloudSyncService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendCloudSyncService.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendCloudSyncService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendCloudSyncService.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendConfig.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendConfig.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendConfig.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendConfig.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendConfig.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendConfig.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendImportService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendImportService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendImportService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendImportService.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendImportService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendImportService.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendIncrementalSyncService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendIncrementalSyncService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendIncrementalSyncService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendIncrementalSyncService.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendIncrementalSyncService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendIncrementalSyncService.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendScoreSyncService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendScoreSyncService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendScoreSyncService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendScoreSyncService.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendScoreSyncService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendScoreSyncService.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendSessionManager.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendSessionManager.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendSessionManager.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendSessionManager.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendSessionManager.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendSessionManager.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendSyncShared.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendSyncShared.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendSyncShared.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendSyncShared.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendSyncShared.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/BackendSyncShared.swiftdeps"
+  }
+}

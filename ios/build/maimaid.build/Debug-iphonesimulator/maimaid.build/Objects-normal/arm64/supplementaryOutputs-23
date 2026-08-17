@@ -1,0 +1,65 @@
+{
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ScannerResultCardView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerResultCardView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerResultCardView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerResultCardView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerResultCardView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerResultCardView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ScannerView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScannerView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ScoreEntryView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreEntryView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreEntryView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreEntryView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreEntryView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreEntryView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ScoreQueryFilterSettings.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterSettings.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterSettings.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterSettings.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterSettings.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterSettings.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ScoreQueryFilterView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryFilterView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ScoreQueryView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/ScoreQueryView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/SettingsView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SettingsView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SettingsView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SettingsView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SettingsView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SettingsView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/SongDetailChartVersionRow.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailChartVersionRow.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailChartVersionRow.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailChartVersionRow.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailChartVersionRow.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailChartVersionRow.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/SongDetailConstantHistorySection.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailConstantHistorySection.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailConstantHistorySection.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailConstantHistorySection.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailConstantHistorySection.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailConstantHistorySection.swiftdeps"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendCloudSyncService.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "settings.cloud.error.avatarUploadFailed",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 440
+        }
+      }
+    ]
+  },
+  "version": 1
+}

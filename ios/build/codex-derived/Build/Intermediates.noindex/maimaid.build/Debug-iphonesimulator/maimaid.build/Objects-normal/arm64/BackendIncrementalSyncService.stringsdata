@@ -1,0 +1,64 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Services/BackendIncrementalSyncService.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "settings.cloud.error.profileConflict",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 715
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.cloud.error.playRecordMappingFailed",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 872
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.cloud.error.scoreMappingFailed",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 879
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.cloud.error.scoreMappingFailed",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 1072
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.cloud.error.profileConflict",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 620
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.cloud.error.scoreMappingFailed",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 1235
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.cloud.error.playRecordMappingFailed",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 1308
+        }
+      }
+    ]
+  },
+  "version": 1
+}

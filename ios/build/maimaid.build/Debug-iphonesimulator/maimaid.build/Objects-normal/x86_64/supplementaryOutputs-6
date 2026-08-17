@@ -1,0 +1,72 @@
+{
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/ChartStatsService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ChartStatsService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ChartStatsService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ChartStatsService.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ChartStatsService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ChartStatsService.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/CommunityAliasService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/CommunityAliasService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/CommunityAliasService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/CommunityAliasService.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/CommunityAliasService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/CommunityAliasService.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/ImageDownloader.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ImageDownloader.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ImageDownloader.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ImageDownloader.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ImageDownloader.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/ImageDownloader.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/MaimaiDataFetcher.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/MaimaiDataFetcher.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/MaimaiDataFetcher.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/MaimaiDataFetcher.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/MaimaiDataFetcher.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/MaimaiDataFetcher.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/OtogameImportPolicy.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogameImportPolicy.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogameImportPolicy.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogameImportPolicy.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogameImportPolicy.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogameImportPolicy.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/OtogameImportService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogameImportService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogameImportService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogameImportService.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogameImportService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogameImportService.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/OtogamePlaylogModels.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogamePlaylogModels.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogamePlaylogModels.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogamePlaylogModels.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogamePlaylogModels.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogamePlaylogModels.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/OtogameSheetMatcher.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogameSheetMatcher.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogameSheetMatcher.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogameSheetMatcher.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogameSheetMatcher.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/OtogameSheetMatcher.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/PhotoService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/PhotoService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/PhotoService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/PhotoService.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/PhotoService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/PhotoService.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Services/PlateService.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/PlateService.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/PlateService.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/PlateService.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/PlateService.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/x86_64/PlateService.swiftdeps"
+  }
+}

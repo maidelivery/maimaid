@@ -1,0 +1,16 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Services/SyncManager.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "common.unknown",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 42
+        }
+      }
+    ]
+  },
+  "version": 1
+}

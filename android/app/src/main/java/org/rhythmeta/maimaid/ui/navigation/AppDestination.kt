@@ -23,6 +23,8 @@ enum class AppDetail {
     BackendAuth,
     DivingFishImport,
     LxnsImport,
+    OtogameImport,
+    OtogameLogin,
     Appearance,
     About,
     Song,

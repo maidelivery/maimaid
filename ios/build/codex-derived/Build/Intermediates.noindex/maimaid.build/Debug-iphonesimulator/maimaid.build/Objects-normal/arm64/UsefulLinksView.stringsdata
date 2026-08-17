@@ -1,0 +1,128 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/UsefulLinksView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "links.nearcade.title",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 17
+        }
+      },
+      {
+        "comment": "",
+        "key": "links.nearcade.subtitle",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 18
+        }
+      },
+      {
+        "comment": "",
+        "key": "links.dx_jp.title",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 24
+        }
+      },
+      {
+        "comment": "",
+        "key": "links.dx_jp.subtitle",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 25
+        }
+      },
+      {
+        "comment": "",
+        "key": "links.df.title",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 31
+        }
+      },
+      {
+        "comment": "",
+        "key": "links.df.subtitle",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "links.lxns.title",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 38
+        }
+      },
+      {
+        "comment": "",
+        "key": "links.lxns.subtitle",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 39
+        }
+      },
+      {
+        "comment": "",
+        "key": "links.gamerch.title",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 45
+        }
+      },
+      {
+        "comment": "",
+        "key": "links.gamerch.subtitle",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 46
+        }
+      },
+      {
+        "comment": "",
+        "key": "links.dxrating.title",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "links.dxrating.subtitle",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 53
+        }
+      },
+      {
+        "comment": "",
+        "key": "links.mailv.title",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 59
+        }
+      },
+      {
+        "comment": "",
+        "key": "links.mailv.subtitle",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 60
+        }
+      },
+      {
+        "comment": "",
+        "key": "links.title",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 77
+        }
+      }
+    ]
+  },
+  "version": 1
+}

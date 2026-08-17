@@ -1,0 +1,368 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/LxnsImportView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "import.status.failed",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 43
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.error",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.status.failed.expired",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 45
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.status.checking",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 57
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.status.connected",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 59
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.title",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 85
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.bound.header",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 131
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.manage.header",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 153
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.header",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 221
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.status.failed.expired",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 573
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.status.failed.expired",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 581
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.conflict.applying",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 467
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.success %lld",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 482
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.error.message %@",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 486
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.status.connected",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 119
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.step1.footer",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 120
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.status",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 134
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.status.fetching",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 355
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.status.refreshing",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 360
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.status.failed.expired",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 370
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.failed.network",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 373
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.action.relogin",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 154
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.error.clientId",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 259
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.step1.header",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 174
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.step1.footer",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 176
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.error.security",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 287
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.status.exchanging",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 293
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.status.failed.token %@",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 325
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.status.failed.networkToken",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 342
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.action.startImport",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 198
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.step2.header",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 211
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.step2.footer",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 213
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld / %lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 246
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.error.unknown",
+        "location": {
+          "startingColumn": 128,
+          "startingLine": 325
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.status.fetching",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 380
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.noChanges",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 409
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.processing %lld",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 414
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.conflict.checking",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 416
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.conflict.detected %lld",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 424
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.conflict.applying",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 429
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.success %lld",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 439
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.submit.loginRequired",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 388
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.error.unknown",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 382
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.error.message %@",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 441
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.lxns.summary.footer",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 526
+        }
+      }
+    ]
+  },
+  "version": 1
+}

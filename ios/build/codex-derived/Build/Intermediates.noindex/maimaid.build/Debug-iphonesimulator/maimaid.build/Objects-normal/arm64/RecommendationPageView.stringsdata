@@ -1,0 +1,24 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/RecommendationPageView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "rec.empty.desc",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 15
+        }
+      },
+      {
+        "comment": "",
+        "key": "rec.empty.title",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 13
+        }
+      }
+    ]
+  },
+  "version": 1
+}

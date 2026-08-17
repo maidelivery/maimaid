@@ -59,6 +59,7 @@
 "settings.title" = "设置";
 "settings.data.importDivingFish" = "从 Diving Fish 导入成绩";
 "settings.data.importLxns" = "从 LXNS 导入成绩";
+"settings.data.importOtogame" = "从 Otogame 导入成绩";
 "settings.data.bound" = "已绑定";
 "settings.sync.header" = "成绩同步";
 "settings.sync.footer" = "DF/LXNS 成绩导入适用于所有服务器档案；成绩上送仅在当前激活档案为国服时生效。自家云端同步不受此开关影响。";
@@ -233,6 +234,26 @@
 "import.status.error" = "错误";
 "import.status.error.message %@" = "导入错误：%@";
 "import.status.error.unknown" = "未知网络错误";
+
+// Otogame
+"import.otogame.title" = "从 Otogame 导入";
+"import.otogame.description" = "同步全部可访问记录。每次同步都会扫描可访问范围并在本地去重。";
+"import.otogame.activeProfile %@" = "当前档案：%@";
+"import.otogame.session.ready" = "Otogame 登录状态已就绪";
+"import.otogame.session.required" = "请先登录 Otogame";
+"import.otogame.action.openLogin" = "打开 Otogame 登录页";
+"import.otogame.action.sync" = "同步游玩记录";
+"import.otogame.action.syncing" = "正在同步游玩记录...";
+"import.otogame.login.title" = "Otogame 登录";
+"import.otogame.login.reload" = "重新加载";
+"import.otogame.profileRequired" = "需要启用一个日服档案。";
+"import.otogame.status.header" = "导入状态";
+"import.otogame.result.imported" = "游玩记录已导入";
+"import.otogame.result.noChanges" = "没有发现新的游玩记录";
+"import.otogame.result.loginRequired" = "Otogame 登录状态已过期，请重新登录。";
+"import.otogame.result.failed" = "Otogame 导入失败。";
+"import.otogame.result.counts %lld %lld %lld %lld" = "拉取 %1$lld 条，导入 %2$lld 条，重复 %3$lld 条，未匹配 %4$lld 条";
+"import.otogame.error.http %lld" = "Otogame 返回了 HTTP %lld。";
 
 // Diving Fish
 "import.df.title" = "从 Diving Fish 导入";

@@ -1,0 +1,64 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/MainTabView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "tab.home",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 22
+        }
+      },
+      {
+        "comment": "",
+        "key": "tab.scan",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 26
+        }
+      },
+      {
+        "comment": "",
+        "key": "tab.search",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 30
+        }
+      },
+      {
+        "comment": "",
+        "key": "tab.settings",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 35
+        }
+      },
+      {
+        "comment": "",
+        "key": "search.placeholder",
+        "location": {
+          "startingColumn": 60,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "userProfile.defaultName",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 136
+        }
+      },
+      {
+        "comment": "",
+        "key": "userProfile.defaultName",
+        "location": {
+          "startingColumn": 56,
+          "startingLine": 94
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,32 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Services/ServerVersionService.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "server.jp",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 13
+        }
+      },
+      {
+        "comment": "",
+        "key": "server.intl",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 14
+        }
+      },
+      {
+        "comment": "",
+        "key": "server.cn",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 15
+        }
+      }
+    ]
+  },
+  "version": 1
+}

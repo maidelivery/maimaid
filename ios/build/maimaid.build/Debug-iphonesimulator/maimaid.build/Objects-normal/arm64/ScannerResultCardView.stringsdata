@@ -1,0 +1,32 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ScannerResultCardView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "RE: MASTER",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "scanner.chart.std",
+        "location": {
+          "startingColumn": 94,
+          "startingLine": 72
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@%%",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 88
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,272 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/BestTableView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "bestTable.title",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 215
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.section.new %lld",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 170
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.section.old %lld",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 192
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.version",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.capacity",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 128
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.constants",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 163
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.rating",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 74
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.old.count %lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 84
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.new.count %lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 85
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.version.current",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 99
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.version.unknown",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 339
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.version.reset",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 113
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.old",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 131
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.new",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 143
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.total",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 152
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 153
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.useFitDiff",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 164
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.useVersionConstant",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 166
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.empty",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 177
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.empty",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 199
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.action.export",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 225
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.done",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 232
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 393
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@%%",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 512
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 520
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 545
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.base %.1f",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 548
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.version.title",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 620
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.version.available",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 594
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.version.auto",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 576
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.version.cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 624
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.settings.version.confirm",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 630
+        }
+      }
+    ]
+  },
+  "version": 1
+}

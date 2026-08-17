@@ -1,0 +1,65 @@
+{
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/B50ExportView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50ExportView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50ExportView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50ExportView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50ExportView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/B50ExportView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/BestTableView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BestTableView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BestTableView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BestTableView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BestTableView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/BestTableView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/CameraPreviewView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraPreviewView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraPreviewView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraPreviewView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraPreviewView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraPreviewView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/CameraViewController.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraViewController.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraViewController.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraViewController.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraViewController.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/CameraViewController.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/OtogameWebView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameWebView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameWebView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameWebView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameWebView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/OtogameWebView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/StaticDataUpdateView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticDataUpdateView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticDataUpdateView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticDataUpdateView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticDataUpdateView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/StaticDataUpdateView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/SyncConflictResolutionSheet.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConflictResolutionSheet.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConflictResolutionSheet.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConflictResolutionSheet.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConflictResolutionSheet.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SyncConflictResolutionSheet.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/UserProfileEditView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileEditView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileEditView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileEditView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileEditView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileEditView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/UserProfileListView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileListView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileListView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileListView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileListView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/codex-derived/Build/Intermediates.noindex/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UserProfileListView.swiftdeps"
+  }
+}

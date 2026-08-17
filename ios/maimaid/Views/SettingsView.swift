@@ -72,6 +72,18 @@ struct SettingsView: View {
                             }
                         }
                     }
+
+                    if activeProfile?.server == GameServer.jp.rawValue {
+                        NavigationLink {
+                            OtogameImportView()
+                        } label: {
+                            settingsRowLabel(
+                                icon: "clock.arrow.trianglehead.counterclockwise.rotate.90",
+                                iconColor: .orange,
+                                title: "settings.data.importOtogame"
+                            )
+                        }
+                    }
                     
                     Toggle("settings.sync.autoUpload", isOn: Binding(
                         get: { config?.isAutoUploadEnabled ?? false },

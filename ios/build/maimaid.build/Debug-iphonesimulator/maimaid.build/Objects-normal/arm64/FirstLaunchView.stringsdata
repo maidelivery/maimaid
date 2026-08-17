@@ -1,0 +1,144 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/FirstLaunchView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "onboarding.feature.fastScan",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 12
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.feature.fastScan.detail",
+        "location": {
+          "startingColumn": 54,
+          "startingLine": 12
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.feature.localOffline",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 13
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.feature.localOffline.detail",
+        "location": {
+          "startingColumn": 58,
+          "startingLine": 13
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.feature.multiUser",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 14
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.feature.multiUser.detail",
+        "location": {
+          "startingColumn": 59,
+          "startingLine": 14
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.download.action.retry",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 24
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.download.action.start",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 25
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.subtitle",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.titlePrefix",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 65
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.appName",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 70
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.feature.fastScan",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 12
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.feature.fastScan.detail",
+        "location": {
+          "startingColumn": 54,
+          "startingLine": 12
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.feature.localOffline",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 13
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.feature.localOffline.detail",
+        "location": {
+          "startingColumn": 58,
+          "startingLine": 13
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.feature.multiUser",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 14
+        }
+      },
+      {
+        "comment": "",
+        "key": "onboarding.feature.multiUser.detail",
+        "location": {
+          "startingColumn": 59,
+          "startingLine": 14
+        }
+      }
+    ]
+  },
+  "version": 1
+}

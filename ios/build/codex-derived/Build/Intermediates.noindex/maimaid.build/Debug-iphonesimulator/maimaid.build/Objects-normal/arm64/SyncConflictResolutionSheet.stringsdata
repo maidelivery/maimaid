@@ -1,0 +1,168 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/SyncConflictResolutionSheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "settings.cloud.resolution.title",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 26
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.import.resolution.title",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 28
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.cloud.resolution.section.actions",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 35
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.import.resolution.section.actions",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 37
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.cloud.resolution.title",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 75
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.import.resolution.section.conflicts",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 126
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.cloud.resolution.processing",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 261
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.import.resolution.processing",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 263
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.cloud.resolution.message.current",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.cloud.resolution.message.owner",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 87
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.import.resolution.summary.localOnly",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 102
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.import.resolution.summary.different",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 109
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.import.resolution.section.summary",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 113
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.import.resolution.more.hide",
+        "location": {
+          "startingColumn": 53,
+          "startingLine": 141
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.import.resolution.more.show %lld",
+        "location": {
+          "startingColumn": 53,
+          "startingLine": 142
+        }
+      },
+      {
+        "comment": "",
+        "key": "scanner.chart.std",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 328
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.import.resolution.value.local",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 203
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.import.resolution.value.remote",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 204
+        }
+      },
+      {
+        "comment": "",
+        "key": "settings.import.resolution.value.missing",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 246
+        }
+      },
+      {
+        "comment": "",
+        "key": "DX %lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 225
+        }
+      }
+    ]
+  },
+  "version": 1
+}

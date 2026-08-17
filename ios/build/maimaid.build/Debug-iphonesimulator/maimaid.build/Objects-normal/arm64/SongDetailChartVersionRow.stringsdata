@@ -1,0 +1,16 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/SongDetailChartVersionRow.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "song.detail.chart.addedVersion",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 9
+        }
+      }
+    ]
+  },
+  "version": 1
+}

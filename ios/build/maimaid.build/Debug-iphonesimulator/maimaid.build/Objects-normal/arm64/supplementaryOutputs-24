@@ -1,0 +1,65 @@
+{
+  "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/DerivedSources/CoreMLGenerated/maimaid v1.41n/maimaid v1.41n.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid v1.41n.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid v1.41n.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid v1.41n.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid v1.41n.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaid v1.41n.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/DerivedSources/CoreMLGenerated/maimaidetector v1.2n/maimaidetector v1.2n.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidetector v1.2n.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidetector v1.2n.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidetector v1.2n.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidetector v1.2n.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidetector v1.2n.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/DerivedSources/CoreMLGenerated/maimaidistinguish v1.2/maimaidistinguish v1.2.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidistinguish v1.2.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidistinguish v1.2.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidistinguish v1.2.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidistinguish v1.2.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidistinguish v1.2.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/SongsView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongsView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongsView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongsView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongsView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongsView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/SongDetailView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongDetailView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/SongRowView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongRowView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongRowView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongRowView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongRowView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/SongRowView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/Views/UsefulLinksView.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UsefulLinksView.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UsefulLinksView.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UsefulLinksView.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UsefulLinksView.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/UsefulLinksView.swiftdeps"
+  },
+  "/Users/shiko/Projects/maimaid/ios/maimaid/maimaidApp.swift" : {
+    "const-values" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidApp.swiftconstvalues",
+    "dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidApp.d",
+    "diagnostics" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidApp.dia",
+    "object" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidApp.o",
+    "swift-dependencies" : "/Users/shiko/Projects/maimaid/ios/build/maimaid.build/Debug-iphonesimulator/maimaid.build/Objects-normal/arm64/maimaidApp.swiftdeps"
+  }
+}

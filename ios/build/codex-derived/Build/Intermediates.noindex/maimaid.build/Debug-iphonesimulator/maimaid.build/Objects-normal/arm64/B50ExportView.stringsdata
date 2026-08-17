@@ -1,0 +1,144 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/B50ExportView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "bestTable.section.new %lld",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 40
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.section.old %lld",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 50
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.rating",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 76
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 84
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.export.fitDiff.rating",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 239
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.export.versionConstant.rating",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 241
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.section.new %lld",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 99
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.section.old %lld",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 104
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.export.fitDiff",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 250
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.export.versionConstant",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 252
+        }
+      },
+      {
+        "comment": "",
+        "key": "bestTable.export.watermark",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 225
+        }
+      },
+      {
+        "comment": "",
+        "key": "#%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 322
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@%%",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 347
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 355
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld/%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 382
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 366
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 374
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,336 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/ScoreEntryView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "scanner.chart.std",
+        "location": {
+          "startingColumn": 62,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.combo",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 102
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.sync",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 117
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.validation.rateRange",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 142
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.validation.rateFormat",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 139
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.validation.dxRange %lld",
+        "location": {
+          "startingColumn": 53,
+          "startingLine": 153
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.validation.dxFormat",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 150
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.savedHint",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 170
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.title",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 230
+        }
+      },
+      {
+        "comment": "",
+        "key": "profile.edit.cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 234
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.done",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 239
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.keyboard.next",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 245
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.done",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 253
+        }
+      },
+      {
+        "comment": "",
+        "key": "song.detail.table.achievement",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 321
+        }
+      },
+      {
+        "comment": "",
+        "key": "song.detail.table.achievement",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 334
+        }
+      },
+      {
+        "comment": "",
+        "key": "%",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 336
+        }
+      },
+      {
+        "comment": "",
+        "key": "0.0000",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 326
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.rank",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 361
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.rank.pending",
+        "location": {
+          "startingColumn": 85,
+          "startingLine": 362
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.dxScore",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 369
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.dxScore",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 378
+        }
+      },
+      {
+        "comment": "",
+        "key": "/ %lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 381
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.combo",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 429
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.sync",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 455
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.combo",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 408
+        }
+      },
+      {
+        "comment": "",
+        "key": "common.none",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 409
+        }
+      },
+      {
+        "comment": "",
+        "key": "FC",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 410
+        }
+      },
+      {
+        "comment": "",
+        "key": "FC+",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 411
+        }
+      },
+      {
+        "comment": "",
+        "key": "AP",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 412
+        }
+      },
+      {
+        "comment": "",
+        "key": "AP+",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 413
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.sync",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 433
+        }
+      },
+      {
+        "comment": "",
+        "key": "common.none",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 434
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sync",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 435
+        }
+      },
+      {
+        "comment": "",
+        "key": "FS",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 436
+        }
+      },
+      {
+        "comment": "",
+        "key": "FS+",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 437
+        }
+      },
+      {
+        "comment": "",
+        "key": "FDX",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 438
+        }
+      },
+      {
+        "comment": "",
+        "key": "FDX+",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 439
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.currentBest",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 473
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@%% · %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 477
+        }
+      },
+      {
+        "comment": "",
+        "key": "filter.done",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 504
+        }
+      },
+      {
+        "comment": "",
+        "key": "score.entry.save",
+        "location": {
+          "startingColumn": 85,
+          "startingLine": 504
+        }
+      }
+    ]
+  },
+  "version": 1
+}

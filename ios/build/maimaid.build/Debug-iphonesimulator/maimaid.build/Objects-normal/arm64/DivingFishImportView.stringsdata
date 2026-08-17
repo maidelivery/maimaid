@@ -1,0 +1,240 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/Settings/DivingFishImportView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "import.status.failed",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 22
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.error",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 23
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.df.title",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.df.bound.header",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 85
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.header",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 180
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.conflict.applying",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 315
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.success %lld",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 330
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.error.message %@",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 334
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.df.setup.footer",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 74
+        }
+      },
+      {
+        "comment": "",
+        "key": "common.unknown",
+        "location": {
+          "startingColumn": 71,
+          "startingLine": 73
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.df.username",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 88
+        }
+      },
+      {
+        "comment": "",
+        "key": "common.unknown",
+        "location": {
+          "startingColumn": 73,
+          "startingLine": 90
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.df.status.connecting",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 231
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.noChanges",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 259
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.conflict.checking",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 264
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.conflict.detected %lld",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 272
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.conflict.applying",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 277
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.success %lld",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 287
+        }
+      },
+      {
+        "comment": "",
+        "key": "community.alias.submit.loginRequired",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 238
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.error.unknown",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 226
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.error.message %@",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 289
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.df.action.update",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 123
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.df.rebind.header",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 128
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.df.rebind.footer",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 130
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.df.setup.footer",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 147
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.df.action.bindImport",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 163
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld / %lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 197
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.status.importing",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 204
+        }
+      },
+      {
+        "comment": "",
+        "key": "import.df.summary.footer",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 374
+        }
+      }
+    ]
+  },
+  "version": 1
+}
