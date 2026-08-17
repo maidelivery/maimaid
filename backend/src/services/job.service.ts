@@ -1,4 +1,4 @@
-import { inject, singleton } from "tsyringe";
+import { inject, injectable } from "tsyringe";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import { CatalogService } from "./catalog.service.js";
@@ -29,7 +29,7 @@ export type DispatchResult = {
 	error?: string;
 };
 
-@singleton()
+@injectable()
 export class JobService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,

@@ -7,6 +7,8 @@ node_modules/
 vite.config.*.timestamp*
 
 backend/dist/
+backend/.worker-dist/
+backend/.wrangler/
 backend/.env.docker
 backend/.env.docker.local
 

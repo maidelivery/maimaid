@@ -1,6 +1,6 @@
 import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { inject, singleton } from "tsyringe";
+import { inject, injectable } from "tsyringe";
 import type { Env } from "../env.js";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
@@ -19,7 +19,7 @@ export type StaticAssetConfiguration = {
 	presetAvatarFallbackBaseUrl: string;
 };
 
-@singleton()
+@injectable()
 export class StorageService {
 	private static readonly STATIC_BUNDLE_CONTENT_TYPE = "application/json";
 	private static readonly STATIC_BUNDLE_CACHE_CONTROL = "public, max-age=31536000, immutable";

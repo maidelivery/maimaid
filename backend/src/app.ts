@@ -1,11 +1,11 @@
 import "reflect-metadata";
-import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
+import { createMiddleware } from "hono/factory";
 import { Scalar } from "@scalar/hono-api-reference";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
+import type { PrismaClient } from "@prisma/client";
+import { container } from "tsyringe";
 import { ZodError } from "zod";
 import { isAppError } from "./lib/errors.js";
 import { buildValidationDetails } from "./http/validation.js";
@@ -21,48 +21,43 @@ import { syncV1Route } from "./routes/v1/sync.route.js";
 import { staticV1Route } from "./routes/v1/static.route.js";
 import { jobsInternalRoute } from "./routes/internal/jobs.route.js";
 import type { AppEnv } from "./types/hono.js";
-import { getEnv } from "./env.js";
-import { buildOpenApiDocument } from "./openapi.js";
-import { tsyringe } from "@hono/tsyringe";
+import type { Env } from "./env.js";
+import { TOKENS } from "./di/tokens.js";
 
-const resolvePrebuiltOpenApiPath = () => {
-	const currentFilePath = fileURLToPath(import.meta.url);
-	return path.join(path.dirname(currentFilePath), "openapi.prebuilt.json");
+type AppDependencies = {
+	env: Env;
+	prisma: PrismaClient;
 };
 
-const loadPrebuiltOpenApiDocument = (env: ReturnType<typeof getEnv>) => {
-	if (env.NODE_ENV !== "production") {
-		return null;
-	}
-
-	const prebuiltPath = resolvePrebuiltOpenApiPath();
-	if (!existsSync(prebuiltPath)) {
-		return null;
-	}
-
-	try {
-		const raw = readFileSync(prebuiltPath, "utf8");
-		const parsed = JSON.parse(raw) as unknown;
-		if (typeof parsed !== "object" || parsed === null) {
-			return null;
-		}
-		return parsed;
-	} catch (error) {
-		console.warn("[openapi] failed to load prebuilt openapi document, fallback to runtime generation", error);
-		return null;
-	}
+type CreateAppOptions = {
+	resolveDependencies?: (context: Context<AppEnv>) => AppDependencies;
 };
 
-export const createApp = () => {
-	const env = getEnv();
-	const corsAllowedOrigins = env.CORS_ALLOWED_ORIGINS.split(",")
-		.map((item) => item.trim())
-		.filter((item) => item.length > 0);
+const missingDependencies = (): never => {
+	throw new Error("Application dependencies are unavailable for this request.");
+};
+
+export const createApp = (options: CreateAppOptions = {}) => {
+	const resolveDependencies = options.resolveDependencies ?? missingDependencies;
 	const app = new Hono<AppEnv>();
+	const dependencyMiddleware = createMiddleware<AppEnv>(async (context, next) => {
+		const childContainer = container.createChildContainer();
+		const dependencies = resolveDependencies(context);
+		childContainer.register(TOKENS.Env, { useValue: dependencies.env });
+		childContainer.register(TOKENS.Prisma, { useValue: dependencies.prisma });
+		context.set("resolve", (token) => childContainer.resolve(token));
+		await next();
+	});
 
+	app.use("*", dependencyMiddleware);
 	app.use(
 		cors({
-			origin: (origin) => {
+			origin: (origin, context) => {
+				const corsAllowedOrigins = (context as Context<AppEnv>).var
+					.resolve<Env>(TOKENS.Env)
+					.CORS_ALLOWED_ORIGINS.split(",")
+					.map((item) => item.trim())
+					.filter((item) => item.length > 0);
 				if (!origin) {
 					return null;
 				}
@@ -76,8 +71,6 @@ export const createApp = () => {
 		}),
 	);
 
-	app.use(tsyringe());
-
 	app.route("/health", healthRoute);
 	app.route("/v1/auth", authV1Route);
 	app.route("/v1/profiles", profilesV1Route);
@@ -89,19 +82,6 @@ export const createApp = () => {
 	app.route("/v1", syncV1Route);
 	app.route("/v1/static", staticV1Route);
 	app.route("/internal/jobs", jobsInternalRoute);
-
-	const openApiDocument = loadPrebuiltOpenApiDocument(env) ?? buildOpenApiDocument(app, env);
-
-	app.get("/openapi.json", (c) => c.json(openApiDocument));
-
-	app.get(
-		"/docs",
-		Scalar({
-			url: "/openapi.json",
-			pageTitle: "maimaid backend API docs",
-			theme: "kepler",
-		}),
-	);
 
 	app.get("/", (c) =>
 		c.json({
@@ -122,6 +102,7 @@ export const createApp = () => {
 	);
 
 	app.onError((error, c) => {
+		const env = c.var.resolve<Env>(TOKENS.Env);
 		if (isAppError(error)) {
 			return c.json(
 				{
@@ -160,4 +141,16 @@ export const createApp = () => {
 	});
 
 	return app;
+};
+
+export const registerOpenApiRoutes = (app: ReturnType<typeof createApp>, openApiDocument: unknown) => {
+	app.get("/openapi.json", (c) => c.json(openApiDocument));
+	app.get(
+		"/docs",
+		Scalar({
+			url: "/openapi.json",
+			pageTitle: "maimaid backend API docs",
+			theme: "kepler",
+		}),
+	);
 };

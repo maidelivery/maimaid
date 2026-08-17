@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { assignUserHandle, buildUsernameBaseFromEmail } from "../src/lib/user-handle.js";
-import { getPrismaClient } from "../src/lib/prisma.js";
+import { getPrismaClient } from "../src/lib/node-prisma.js";
 
 const prisma = getPrismaClient();
 

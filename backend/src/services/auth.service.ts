@@ -1,5 +1,5 @@
 import { compare, hash } from "bcryptjs";
-import { inject, singleton } from "tsyringe";
+import { inject, injectable } from "tsyringe";
 import type { PrismaClient, User } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
@@ -43,7 +43,7 @@ export type AuthEmailLinkContext = {
 	redirectUri?: string;
 };
 
-@singleton()
+@injectable()
 export class AuthService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,

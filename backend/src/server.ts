@@ -1,21 +1,53 @@
 import "reflect-metadata";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
-import { createApp } from "./app.js";
+import { createApp, registerOpenApiRoutes } from "./app.js";
 import { TOKENS } from "./di/tokens.js";
-import { getEnv } from "./env.js";
+import { getEnv } from "./node-env.js";
 import type { PrismaClient } from "@prisma/client";
 import { CatalogService } from "./services/catalog.service.js";
 import { JobService } from "./services/job.service.js";
 import { StaticBundleService } from "./services/static-bundle.service.js";
 import { container } from "tsyringe";
-import { getPrismaClient } from "./lib/prisma.js";
+import { getPrismaClient } from "./lib/node-prisma.js";
+import { buildOpenApiDocument } from "./openapi.js";
 
 const env = getEnv();
-const app = createApp();
-
 const prisma = getPrismaClient();
 container.register(TOKENS.Env, { useValue: env });
 container.register(TOKENS.Prisma, { useValue: prisma });
+
+const app = createApp({
+	resolveDependencies: () => ({ env, prisma }),
+});
+
+const resolvePrebuiltOpenApiPath = () => {
+	const currentFilePath = fileURLToPath(import.meta.url);
+	return path.join(path.dirname(currentFilePath), "openapi.prebuilt.json");
+};
+
+const loadPrebuiltOpenApiDocument = () => {
+	if (env.NODE_ENV !== "production") {
+		return null;
+	}
+
+	const prebuiltPath = resolvePrebuiltOpenApiPath();
+	if (!existsSync(prebuiltPath)) {
+		return null;
+	}
+
+	try {
+		const parsed = JSON.parse(readFileSync(prebuiltPath, "utf8")) as unknown;
+		return typeof parsed === "object" && parsed !== null ? parsed : null;
+	} catch (error) {
+		console.warn("[openapi] failed to load prebuilt document, falling back to runtime generation", error);
+		return null;
+	}
+};
+
+registerOpenApiRoutes(app, loadPrebuiltOpenApiDocument() ?? buildOpenApiDocument(app, env));
 
 const toRecord = (value: unknown): Record<string, unknown> | null => {
 	return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;

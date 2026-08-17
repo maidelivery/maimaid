@@ -7,6 +7,9 @@
 		"postinstall": "prisma generate",
 		"dev": "tsx watch src/server.ts",
 		"build": "tsc -p tsconfig.build.json && pnpm run openapi:build",
+		"worker:build": "pnpm run build && wrangler deploy --config wrangler.jsonc --dry-run --outdir .worker-dist",
+		"worker:dev": "pnpm run build && wrangler dev --config wrangler.jsonc",
+		"worker:deploy": "pnpm run build && wrangler deploy --config wrangler.jsonc",
 		"openapi:build": "node scripts/generate-openapi.mjs",
 		"lint": "eslint .",
 		"typecheck:scripts": "tsc -p tsconfig.scripts.json",
@@ -32,7 +35,6 @@
 		"@aws-sdk/s3-request-presigner": "^3.908.0",
 		"@hono/node-server": "^1.14.4",
 		"@hono/standard-validator": "^0.2.2",
-		"@hono/tsyringe": "^1.0.1",
 		"@prisma/adapter-pg": "^7.5.0",
 		"@prisma/client": "^7.5.0",
 		"@scalar/hono-api-reference": "^0.10.5",
@@ -60,6 +62,7 @@
 		"prettier": "^3.6.2",
 		"tsx": "^4.20.5",
 		"typescript-eslint": "^8.46.1",
-		"vitest": "^3.2.4"
+		"vitest": "^3.2.4",
+		"wrangler": "4.123.0"
 	}
 }

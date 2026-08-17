@@ -1,5 +1,6 @@
 **/node_modules
 backend/dist
+backend/.worker-dist
 dashboard/.next
 dashboard/out
 dashboard/tsconfig.tsbuildinfo

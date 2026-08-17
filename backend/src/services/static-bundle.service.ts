@@ -1,4 +1,4 @@
-import { inject, singleton } from "tsyringe";
+import { inject, injectable } from "tsyringe";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import type { Env } from "../env.js";
@@ -70,9 +70,7 @@ const STATIC_SOURCE_DEFAULTS: Array<{ category: string; activeUrl: string; fallb
 const STATIC_BUNDLE_RETENTION = 5;
 
 const STATIC_BUNDLE_SCHEDULE_ROW_ID = 1;
-const STATIC_BUNDLE_CRON_JOB_NAME = "maimaid-static-bundle-build-request";
 const STATIC_BUNDLE_CRON_DRIVER_EXPRESSION = "* * * * *";
-const STATIC_BUNDLE_BUILD_CRON_SQL = "SELECT public.enqueue_static_bundle_build_if_due();";
 const LEGACY_DATA_JSON_URL = "https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json";
 
 export type StaticBundlePeriodicBuildSchedule = {
@@ -86,7 +84,7 @@ export type PublishBundleInput = ComposedBundle & {
 	force?: boolean;
 };
 
-@singleton()
+@injectable()
 export class StaticBundleService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
@@ -730,27 +728,9 @@ export class StaticBundleService {
 		await this.ensurePgCronAvailable();
 		const cronExpression = this.toCronExpression();
 		try {
-			await this.prisma.$executeRawUnsafe(`
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = '${STATIC_BUNDLE_CRON_JOB_NAME}') THEN
-    PERFORM cron.unschedule((SELECT jobid FROM cron.job WHERE jobname = '${STATIC_BUNDLE_CRON_JOB_NAME}' LIMIT 1));
-  END IF;
-END;
-$$;
-      `);
-
-			if (!enabled) {
-				return;
-			}
-
-			await this.prisma.$executeRawUnsafe(`
-SELECT cron.schedule(
-  '${STATIC_BUNDLE_CRON_JOB_NAME}',
-  '${cronExpression}',
-  $$${STATIC_BUNDLE_BUILD_CRON_SQL}$$
-);
-      `);
+			await this.prisma.$executeRaw`
+				SELECT public.sync_maimaid_static_bundle_cron(${enabled}, ${cronExpression})
+			`;
 		} catch (error) {
 			throw new AppError(500, "static_bundle_schedule_sync_failed", "Failed to sync static bundle periodic build schedule.", {
 				error: error instanceof Error ? error.message : "unknown_error",

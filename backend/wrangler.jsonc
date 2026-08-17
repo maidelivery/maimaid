@@ -1,0 +1,28 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "maimaid-backend",
+	"main": ".worker/index.ts",
+	"compatibility_date": "2026-08-17",
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": true,
+	"preview_urls": false,
+	"upload_source_maps": true,
+	"routes": [
+		{
+			"pattern": "api.rhythmeta.org/health*",
+			"zone_name": "rhythmeta.org"
+		}
+	],
+	"placement": {
+		"mode": "smart",
+	},
+	"observability": {
+		"enabled": true,
+	},
+	"hyperdrive": [
+		{
+			"binding": "HYPERDRIVE",
+			"id": "33c968fb6dfd4218bed8c2e8eddeb959",
+		},
+	],
+}

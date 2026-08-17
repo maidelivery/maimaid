@@ -11,7 +11,6 @@ import { isPasswordComplexEnough, MAX_PASSWORD_LENGTH, PASSWORD_COMPLEXITY_ERROR
 import type { AppEnv } from "../../types/hono.js";
 import type { Env } from "../../env.js";
 import { RateLimitService } from "../../services/rate-limit.service.js";
-import { container } from "tsyringe";
 import {
 	INVALID_USERNAME_MESSAGE,
 	USERNAME_MAX_LENGTH,
@@ -184,7 +183,7 @@ const enforceRateLimit = async (
 		windowSeconds: number;
 	},
 ) => {
-	const rateLimitService = container.resolve(RateLimitService);
+	const rateLimitService = c.var.resolve(RateLimitService);
 	await rateLimitService.consume({
 		bucket: input.bucket,
 		key: input.key,
@@ -201,7 +200,7 @@ const invalidVerifyEmailQueryHook: ValidationHook<z.infer<typeof verifyEmailQuer
 	const rawQuery = result.data as Record<string, string | undefined>;
 	const callbackTarget = resolveAuthCallbackTarget(rawQuery.client, rawQuery.redirect_uri);
 	return c.redirect(
-		buildAuthCallbackUrl(callbackTarget, {
+		buildAuthCallbackUrl(c, callbackTarget, {
 			action: "verify-email",
 			status: "error",
 			code: "invalid_verification_token",
@@ -218,7 +217,7 @@ const invalidPasswordResetQueryHook: ValidationHook<z.infer<typeof passwordReset
 	const rawQuery = result.data as Record<string, string | undefined>;
 	const callbackTarget = resolveAuthCallbackTarget(rawQuery.client, rawQuery.redirect_uri);
 	return c.redirect(
-		buildPasswordResetCallbackUrl(callbackTarget, {
+		buildPasswordResetCallbackUrl(c, callbackTarget, {
 			action: "reset-password",
 			status: "error",
 			code: "invalid_reset_token",
@@ -432,7 +431,7 @@ authV1Route.get("/verify-email", standardValidator("query", verifyEmailQuerySche
 		}
 
 		return c.redirect(
-			buildAuthCallbackUrl(callbackTarget, {
+			buildAuthCallbackUrl(c, callbackTarget, {
 				action: "verify-email",
 				status: "success",
 				code: "email_verified",
@@ -442,7 +441,7 @@ authV1Route.get("/verify-email", standardValidator("query", verifyEmailQuerySche
 	} catch (error) {
 		if (isAppError(error) && error.code === "invalid_verification_token") {
 			return c.redirect(
-				buildAuthCallbackUrl(callbackTarget, {
+				buildAuthCallbackUrl(c, callbackTarget, {
 					action: "verify-email",
 					status: "error",
 					code: "invalid_verification_token",
@@ -466,7 +465,7 @@ authV1Route.get(
 		try {
 			const resetContext = await authService.validatePasswordResetToken(query.token);
 			return c.redirect(
-				buildPasswordResetCallbackUrl(callbackTarget, {
+				buildPasswordResetCallbackUrl(c, callbackTarget, {
 					action: "reset-password",
 					status: "success",
 					code: "recovery_ready",
@@ -478,7 +477,7 @@ authV1Route.get(
 		} catch (error) {
 			if (isAppError(error) && error.code === "invalid_reset_token") {
 				return c.redirect(
-					buildPasswordResetCallbackUrl(callbackTarget, {
+					buildPasswordResetCallbackUrl(c, callbackTarget, {
 						action: "reset-password",
 						status: "error",
 						code: "invalid_reset_token",
@@ -788,16 +787,16 @@ type AuthCallbackTarget =
 			redirectUri: string;
 	  };
 
-const buildAuthCallbackUrl = (target: AuthCallbackTarget, input: AuthCallbackInput): string => {
+const buildAuthCallbackUrl = (c: Context<AppEnv>, target: AuthCallbackTarget, input: AuthCallbackInput): string => {
 	if (target.kind === "app") {
 		return buildAppAuthUrl(target.redirectUri, input);
 	}
 
-	return buildDashboardAuthUrl(input);
+	return buildDashboardAuthUrl(c, input);
 };
 
-const buildDashboardAuthUrl = (input: AuthCallbackInput): string => {
-	const env = container.resolve<Env>(TOKENS.Env);
+const buildDashboardAuthUrl = (c: Context<AppEnv>, input: AuthCallbackInput): string => {
+	const env = c.var.resolve<Env>(TOKENS.Env);
 	const baseUrl = (env.WEBAUTHN_ORIGIN?.trim() || env.APP_PUBLIC_URL?.trim() || `http://localhost:${env.PORT}`).replace(
 		/\/+$/u,
 		"",
@@ -815,12 +814,12 @@ const buildDashboardAuthUrl = (input: AuthCallbackInput): string => {
 	return callback.toString();
 };
 
-const buildPasswordResetCallbackUrl = (target: AuthCallbackTarget, input: AuthCallbackInput): string => {
+const buildPasswordResetCallbackUrl = (c: Context<AppEnv>, target: AuthCallbackTarget, input: AuthCallbackInput): string => {
 	if (target.kind !== "app") {
-		return buildAuthCallbackUrl(target, input);
+		return buildAuthCallbackUrl(c, target, input);
 	}
 
-	const dashboardUrl = new URL(buildDashboardAuthUrl(input));
+	const dashboardUrl = new URL(buildDashboardAuthUrl(c, input));
 	dashboardUrl.searchParams.set("client", "app");
 	dashboardUrl.searchParams.set("authMode", "reset-password");
 	dashboardUrl.searchParams.set("redirect_uri", target.redirectUri);
