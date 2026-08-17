@@ -7,12 +7,7 @@
 	"workers_dev": true,
 	"preview_urls": false,
 	"upload_source_maps": true,
-	"routes": [
-		{
-			"pattern": "api.rhythmeta.org/health*",
-			"zone_name": "rhythmeta.org"
-		}
-	],
+	"routes": [],
 	"placement": {
 		"mode": "smart",
 	},
