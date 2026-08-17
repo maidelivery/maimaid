@@ -26,7 +26,7 @@ class CatalogSyncStateStore(
     }
 
     private companion object {
-        const val CurrentCatalogSchemaVersion = 1
+        const val CurrentCatalogSchemaVersion = 2
         val CatalogVersionKey = stringPreferencesKey("catalog_version")
         val CatalogMd5Key = stringPreferencesKey("catalog_md5")
         val CatalogSchemaVersionKey = intPreferencesKey("catalog_schema_version")

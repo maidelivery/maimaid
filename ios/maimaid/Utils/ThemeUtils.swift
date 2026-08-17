@@ -36,6 +36,7 @@ enum UserDefaultsKeys {
     static let communityAliasApprovedSyncAt = "communityAlias.approvedSyncAt"
     static let communityAliasLastPollAt = "communityAlias.lastPollAt"
     static let staticBundleMd5 = "static.bundle.md5"
+    static let staticBundleSchemaVersion = "static.bundle.schemaVersion"
 }
 
 enum BundleInfoKeys {
@@ -181,6 +182,11 @@ extension UserDefaults {
                 removeObject(forKey: UserDefaultsKeys.staticBundleMd5)
             }
         }
+    }
+
+    var staticBundleSchemaVersion: Int {
+        get { integer(forKey: UserDefaultsKeys.staticBundleSchemaVersion) }
+        set { set(newValue, forKey: UserDefaultsKeys.staticBundleSchemaVersion) }
     }
 }
 

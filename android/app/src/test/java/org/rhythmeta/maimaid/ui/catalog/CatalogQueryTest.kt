@@ -255,6 +255,24 @@ class CatalogQueryTest {
         )
     }
 
+    @Test
+    fun `search matches the provider id for the blank title song`() {
+        val blankTitle = song("blank-title").copy(title = "　")
+
+        assertEquals(
+            listOf("blank-title"),
+            query(
+                songs = listOf(blankTitle),
+                sheets = mapOf(
+                    blankTitle.songIdentifier to listOf(
+                        sheet(blankTitle, providerSongId = 11_422),
+                    ),
+                ),
+                searchText = "11422",
+            ).map(SongEntity::songIdentifier),
+        )
+    }
+
     private fun query(
         songs: List<SongEntity>,
         sheets: Map<String, List<SheetEntity>> = emptyMap(),

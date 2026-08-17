@@ -222,7 +222,8 @@ class CatalogRepository(
                 ?: providerIds[normalizeTitle(remote.title.orEmpty())]
                 ?: emptyList()
             remote.sheets.map { sheet ->
-                val providerSongId = selectProviderId(ids, sheet.type)
+                val providerSongId = ProviderSongIdResolver.resolve(sheet.internalId, sheet.type)
+                    ?: selectProviderId(ids, sheet.type)
                 val intlOverride = sheet.regionOverrides?.get("intl")
                 val cnOverride = sheet.regionOverrides?.get("cn")
                 val utageStat = if (sheet.type.equals("utage", ignoreCase = true)) {
@@ -279,12 +280,16 @@ class CatalogRepository(
         }
 
         val aliases = resources.aliases?.aliases.orEmpty().flatMap { item ->
-            val songIdentifier = providerIdToSongIdentifier[item.songId] ?: return@flatMap emptyList()
-            item.aliases
-                .map(String::trim)
-                .filter(String::isNotEmpty)
-                .distinctBy { it.lowercase() }
-                .map { alias -> SongAliasEntity(songIdentifier, alias) }
+            val songIdentifiers = ProviderSongIdResolver.relatedIds(item.songId)
+                .mapNotNull(providerIdToSongIdentifier::get)
+                .distinct()
+            songIdentifiers.flatMap { songIdentifier ->
+                item.aliases
+                    .map(String::trim)
+                    .filter(String::isNotEmpty)
+                    .distinctBy { it.lowercase() }
+                    .map { alias -> SongAliasEntity(songIdentifier, alias) }
+            }
         }.distinctBy { "${it.songIdentifier}\u0000${it.alias.lowercase()}" }
 
         database.withTransaction {
