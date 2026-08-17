@@ -1,8 +1,6 @@
 import "reflect-metadata";
 import * as opaque from "@serenity-kit/opaque";
-import { container } from "tsyringe";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TOKENS } from "../src/di/tokens.js";
 import type { Env } from "../src/env.js";
 import { AdminUserService } from "../src/services/admin-user.service.js";
 
@@ -47,13 +45,6 @@ afterEach(() => {
 describe("AdminUserService", () => {
 	it("creates users through opaque start and finish without storing raw passwords", async () => {
 		const env = createEnv();
-		vi.spyOn(container, "resolve").mockImplementation((token: unknown) => {
-			if (token === TOKENS.Env) {
-				return env as never;
-			}
-			throw new Error(`Unexpected token: ${String(token)}`);
-		});
-
 		const userCreate = vi.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
 			id: "user-1",
 			email: data.email,
@@ -87,7 +78,7 @@ describe("AdminUserService", () => {
 			),
 		};
 
-		const service = new AdminUserService(prisma as never);
+		const service = new AdminUserService(prisma as never, env);
 		const password = "Password1!";
 		const registrationStart = opaque.client.startRegistration({ password });
 		const startPayload = await service.startOpaqueCreateUser({
@@ -154,7 +145,7 @@ describe("AdminUserService", () => {
 			},
 		};
 
-		const service = new AdminUserService(prisma as never);
+		const service = new AdminUserService(prisma as never, createEnv());
 		const result = await service.listUsers({ limit: 20, offset: 0 });
 
 		expect(result.total).toBe(1);

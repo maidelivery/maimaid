@@ -1,4 +1,4 @@
-import { inject, singleton } from "tsyringe";
+import { inject, injectable } from "tsyringe";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 
@@ -668,7 +668,7 @@ export const resolveSongIdFromMapping = (
 // consumer of disk on a small host.
 const CHART_FIT_SNAPSHOT_RETENTION = 5;
 
-@singleton()
+@injectable()
 export class ChartFitService {
 	constructor(@inject(TOKENS.Prisma) private readonly prisma: PrismaClient) {}
 

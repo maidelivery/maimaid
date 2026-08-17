@@ -1,5 +1,5 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
-import { inject, singleton } from "tsyringe";
+import { inject, injectable } from "tsyringe";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
 import { CatalogService } from "./catalog.service.js";
@@ -8,7 +8,7 @@ import { buildHandle } from "../lib/user-handle.js";
 const SHANGHAI_TIMEZONE = "Asia/Shanghai";
 type DuplicateReason = "lxns_existing" | "community_existing" | "admin_rejected_locked";
 
-@singleton()
+@injectable()
 export class CommunityAliasService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,

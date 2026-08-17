@@ -3,9 +3,9 @@ import type { Context, Next } from "hono";
 import { createMiddleware } from "hono/factory";
 import { JwtService } from "../services/jwt.service.js";
 import { AppError } from "../lib/errors.js";
-import { getEnv } from "../env.js";
+import type { Env } from "../env.js";
 import type { AppEnv, AuthContext } from "../types/hono.js";
-import { container } from "tsyringe";
+import { TOKENS } from "../di/tokens.js";
 
 const resolveAuthContext = async (c: Context<AppEnv>): Promise<AuthContext | null> => {
 	const authorization = c.req.header("Authorization");
@@ -14,7 +14,7 @@ const resolveAuthContext = async (c: Context<AppEnv>): Promise<AuthContext | nul
 	}
 
 	const token = authorization.replace(/^Bearer\s+/i, "");
-	const jwt = container.resolve(JwtService);
+	const jwt = c.var.resolve(JwtService);
 	const payload = await jwt.verifyAccessToken(token);
 	return {
 		userId: payload.sub,
@@ -77,7 +77,7 @@ const secretMatches = (candidate: string, expected: string) => {
  * changes.
  */
 export const internalJobAuthRequired = createMiddleware<AppEnv>(async (c: Context<AppEnv>, next: Next) => {
-	const expected = getEnv().INTERNAL_JOB_TOKEN;
+	const expected = c.var.resolve<Env>(TOKENS.Env).INTERNAL_JOB_TOKEN;
 	const authorization = c.req.header("Authorization");
 	const presented = authorization?.startsWith("Bearer ") ? authorization.replace(/^Bearer\s+/i, "") : null;
 

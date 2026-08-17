@@ -1,5 +1,5 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
-import { inject, singleton } from "tsyringe";
+import { inject, injectable } from "tsyringe";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
 import { StorageService } from "./storage.service.js";
@@ -9,7 +9,7 @@ const updatedAtPrecisionWindow = (expectedUpdatedAt: Date) => ({
 	lt: new Date(expectedUpdatedAt.getTime() + 1),
 });
 
-@singleton()
+@injectable()
 export class ProfileService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,

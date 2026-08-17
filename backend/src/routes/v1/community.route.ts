@@ -6,7 +6,6 @@ import { ok } from "../../http/response.js";
 import { createCustomMethodParamSchema, standardValidator, validationHook } from "../../http/validation.js";
 import type { AppEnv } from "../../types/hono.js";
 import { RateLimitService } from "../../services/rate-limit.service.js";
-import { container } from "tsyringe";
 
 const submitSchema = z.object({
 	songIdentifier: z.string().min(1),
@@ -110,8 +109,11 @@ const resolveClientIp = (c: Context<AppEnv>): string => {
 	return "unknown";
 };
 
-const enforceRateLimit = async (input: { bucket: string; key: string; limit: number; windowSeconds: number }) => {
-	const rateLimitService = container.resolve(RateLimitService);
+const enforceRateLimit = async (
+	c: Context<AppEnv>,
+	input: { bucket: string; key: string; limit: number; windowSeconds: number },
+) => {
+	const rateLimitService = c.var.resolve(RateLimitService);
 	await rateLimitService.consume({
 		bucket: input.bucket,
 		key: input.key,
@@ -203,7 +205,7 @@ communityV1Route.post(
 
 communityV1Route.get("/aliases:sync", standardValidator("query", approvedSyncQuerySchema, validationHook), async (c) => {
 	const communityAliasService = c.var.resolve(CommunityAliasService);
-	await enforceRateLimit({
+	await enforceRateLimit(c, {
 		...COMMUNITY_RATE_LIMIT.approvedSyncIp,
 		key: resolveClientIp(c),
 	});

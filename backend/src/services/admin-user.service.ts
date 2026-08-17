@@ -1,4 +1,4 @@
-import { container, inject, singleton } from "tsyringe";
+import { inject, injectable } from "tsyringe";
 import type { PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
@@ -6,9 +6,12 @@ import { assignUserHandle, buildUsernameBaseFromEmail, serializeUserIdentity } f
 import { createOpaqueRegistrationResponse, hashPasswordFingerprint, normalizeOpaqueEnvelope } from "../lib/opaque-password.js";
 import type { Env } from "../env.js";
 
-@singleton()
+@injectable()
 export class AdminUserService {
-	constructor(@inject(TOKENS.Prisma) private readonly prisma: PrismaClient) {}
+	constructor(
+		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
+		@inject(TOKENS.Env) private readonly env: Env,
+	) {}
 
 	async listUsers(input: { limit: number; offset: number }) {
 		const rows = await this.prisma.user.findMany({
@@ -65,10 +68,9 @@ export class AdminUserService {
 			throw new AppError(409, "email_exists", "Email already exists.");
 		}
 
-		const env = container.resolve<Env>(TOKENS.Env);
 		return {
 			registrationResponse: await createOpaqueRegistrationResponse({
-				serverSetup: env.OPAQUE_SERVER_SETUP,
+				serverSetup: this.env.OPAQUE_SERVER_SETUP,
 				userIdentifier: normalizedEmail,
 				registrationRequest: input.registrationRequest,
 			}),

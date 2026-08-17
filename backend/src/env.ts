@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { loadBackendEnvFiles } from "./lib/env-files.js";
 
 /** Treats a blank value the same as an absent one. */
 const optionalString = z
@@ -75,14 +74,4 @@ const EnvSchema = z.object({
 
 export type Env = z.infer<typeof EnvSchema>;
 
-let envCache: Env | null = null;
-
-export const getEnv = (): Env => {
-	if (envCache) {
-		return envCache;
-	}
-
-	loadBackendEnvFiles();
-	envCache = EnvSchema.parse(process.env);
-	return envCache;
-};
+export const parseEnv = (input: unknown): Env => EnvSchema.parse(input);
