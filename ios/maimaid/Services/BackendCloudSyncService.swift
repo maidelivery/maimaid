@@ -93,6 +93,8 @@ private struct BackendPlayRecordsResponse: Decodable {
     let records: [BackendRemotePlayRecord]
 }
 
+private let cloudSyncPlayRecordPageSize = 2_000
+
 private struct BackendRemoteSheet: Decodable {
     let songIdentifier: String
     let songId: Int
@@ -261,14 +263,8 @@ enum BackendCloudSyncService {
                 authentication: .required
             )
 
-            let recordsResponse: BackendPlayRecordsResponse = try await BackendAPIClient.request(
-                path: "v1/play-records?profileId=\(escapedProfileId)&limit=5000",
-                method: "GET",
-                authentication: .required
-            )
-
             scoresByProfileId[profileId] = scoresResponse.scores.compactMap { mapRemoteScore($0) }
-            recordsByProfileId[profileId] = recordsResponse.records.compactMap { mapRemoteRecord($0) }
+            recordsByProfileId[profileId] = try await fetchPlayRecords(profileId: escapedProfileId)
         }
 
         return CloudSnapshot(
@@ -276,6 +272,23 @@ enum BackendCloudSyncService {
             scoresByProfileId: scoresByProfileId,
             recordsByProfileId: recordsByProfileId
         )
+    }
+
+    private static func fetchPlayRecords(profileId: String) async throws -> [CloudSnapshotPlayRecord] {
+        var records: [CloudSnapshotPlayRecord] = []
+        var offset = 0
+        while true {
+            let response: BackendPlayRecordsResponse = try await BackendAPIClient.request(
+                path: "v1/play-records?profileId=\(profileId)&limit=\(cloudSyncPlayRecordPageSize)&offset=\(offset)",
+                method: "GET",
+                authentication: .required
+            )
+            guard !response.records.isEmpty else { break }
+            records.append(contentsOf: response.records.compactMap { mapRemoteRecord($0) })
+            offset += response.records.count
+            if response.records.count < cloudSyncPlayRecordPageSize { break }
+        }
+        return records
     }
 
     static func uploadAvatarIfNeeded(

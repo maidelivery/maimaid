@@ -1,0 +1,312 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Services/MaimaiDataFetcher.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "data.sync.eta.minutes %lld %lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 213
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.eta.seconds %lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 215
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.eta.calculating",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 208
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.start",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 358
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.noUpdate",
+        "location": {
+          "startingColumn": 79,
+          "startingLine": 377
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.fetchingData",
+        "location": {
+          "startingColumn": 88,
+          "startingLine": 384
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.fetchedData %lld",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 387
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.fetchingAliases",
+        "location": {
+          "startingColumn": 86,
+          "startingLine": 393
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.fetchedProviderIds %lld",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 438
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.fetchedProviderIds %lld",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 493
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.fetchingIcons",
+        "location": {
+          "startingColumn": 84,
+          "startingLine": 528
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.fetchedIcons %lld",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 531
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.fetchedIcons %lld",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 536
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.fetchingDanData",
+        "location": {
+          "startingColumn": 86,
+          "startingLine": 542
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.fetchedDanData %lld",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 548
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.danUnavailable",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 550
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.fetchingChartStats",
+        "location": {
+          "startingColumn": 89,
+          "startingLine": 555
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.chartStatsUpdated",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 558
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.chartFitUnavailable",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 561
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.fetchingUtageChartStats",
+        "location": {
+          "startingColumn": 94,
+          "startingLine": 566
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.fetchedUtageChartStats %lld",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 570
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.fetchedUtageChartStats %lld",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 578
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.processing",
+        "location": {
+          "startingColumn": 86,
+          "startingLine": 584
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.newSong %@",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 691
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.processingSong %@",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 883
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.processingCompleted %lld %lld",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 893
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.syncedSummary %lld %lld",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 894
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.mergedUtageChartStats %lld",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 896
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.scanningCovers",
+        "location": {
+          "startingColumn": 88,
+          "startingLine": 938
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.downloadingCovers %lld %lld",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 957
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.downloadingIcons",
+        "location": {
+          "startingColumn": 87,
+          "startingLine": 972
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.downloadingIcons %lld",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 983
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.saving",
+        "location": {
+          "startingColumn": 73,
+          "startingLine": 1021
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.completed",
+        "location": {
+          "startingColumn": 75,
+          "startingLine": 1047
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.failed %@",
+        "location": {
+          "startingColumn": 72,
+          "startingLine": 1052
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.providerIdError %@",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 495
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.log.intermediateSaveFailed %@",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 888
+        }
+      },
+      {
+        "comment": "",
+        "key": "data.sync.status.downloadingIconsProgress %lld %lld",
+        "location": {
+          "startingColumn": 67,
+          "startingLine": 1011
+        }
+      }
+    ]
+  },
+  "version": 1
+}

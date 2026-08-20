@@ -11,11 +11,30 @@ const sheet = (id: bigint) => ({
 });
 
 describe("ScoreService D1 writes", () => {
+	it("uses a stable lightweight page query for play records", async () => {
+		const findMany = vi.fn().mockResolvedValue([]);
+		const service = new ScoreService({ playRecord: { findMany } } as never, { DATABASE_DIALECT: "sqlite" } as never);
+
+		await service.listPlayRecords("profile", 2000, 4000);
+
+		const query = findMany.mock.calls[0]?.[0] as {
+			take: number;
+			skip: number;
+			orderBy: unknown;
+			select: Record<string, unknown>;
+		};
+		expect(query.take).toBe(2000);
+		expect(query.skip).toBe(4000);
+		expect(query.orderBy).toEqual([{ playTime: "desc" }, { id: "desc" }]);
+		expect(query.select.sourcePayload).toBeUndefined();
+		expect(query.select.sheet).toBeDefined();
+	});
+
 	it("chunks large best-score lookups for D1", async () => {
 		const create = vi.fn().mockResolvedValue({});
-		const sheetFindMany = vi.fn().mockImplementation(async (args: { where: { id: { in: bigint[] } } }) =>
-			args.where.id.in.map((id) => sheet(id)),
-		);
+		const sheetFindMany = vi
+			.fn()
+			.mockImplementation(async (args: { where: { id: { in: bigint[] } } }) => args.where.id.in.map((id) => sheet(id)));
 		const bestScoreFindMany = vi.fn().mockResolvedValue([]);
 		const database = {
 			$transaction: vi.fn(),
@@ -44,9 +63,9 @@ describe("ScoreService D1 writes", () => {
 
 	it("chunks large play-record duplicate lookups for D1", async () => {
 		const create = vi.fn().mockResolvedValue({});
-		const sheetFindMany = vi.fn().mockImplementation(async (args: { where: { id: { in: bigint[] } } }) =>
-			args.where.id.in.map((id) => sheet(id)),
-		);
+		const sheetFindMany = vi
+			.fn()
+			.mockImplementation(async (args: { where: { id: { in: bigint[] } } }) => args.where.id.in.map((id) => sheet(id)));
 		const playRecordFindMany = vi.fn().mockResolvedValue([]);
 		const database = {
 			$transaction: vi.fn(),

@@ -1,0 +1,64 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/SongsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "songs.title",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 559
+        }
+      },
+      {
+        "comment": "",
+        "key": "songs.unavailable.title",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 511
+        }
+      },
+      {
+        "comment": "",
+        "key": "songs.unavailable.description",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 513
+        }
+      },
+      {
+        "comment": "",
+        "key": "sort.title",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 574
+        }
+      },
+      {
+        "comment": "",
+        "key": "sort.ascending",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 588
+        }
+      },
+      {
+        "comment": "",
+        "key": "sort.descending",
+        "location": {
+          "startingColumn": 68,
+          "startingLine": 588
+        }
+      },
+      {
+        "comment": "",
+        "key": "宴",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 794
+        }
+      }
+    ]
+  },
+  "version": 1
+}

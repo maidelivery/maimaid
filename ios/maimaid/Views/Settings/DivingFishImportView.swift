@@ -9,6 +9,7 @@ struct DivingFishImportView: View {
     
     @State private var isConnected = false
     @State private var connectedUsername: String?
+    @State private var isAuthorizing = false
     @State private var isImporting = false
     @State private var importStatus: String = ""
     @State private var progress: Double = 0
@@ -105,16 +106,19 @@ struct DivingFishImportView: View {
                         await importData()
                     }
                 }
-                .disabled(isImporting || isResolvingImportConflict)
-                .opacity(isImporting || isResolvingImportConflict ? 0.6 : 1.0)
+                .disabled(isImporting || isAuthorizing || isResolvingImportConflict)
+                .opacity(isImporting || isAuthorizing || isResolvingImportConflict ? 0.6 : 1.0)
             }
             
-            Section("import.df.rebind.header") {
+            Section {
                 Button("import.df.action.update", systemImage: "person.badge.key") {
                     Task {
                         await authorizeDivingFish()
                     }
                 }
+                .disabled(isImporting || isAuthorizing || isResolvingImportConflict)
+            } header: {
+                Text("import.df.rebind.header")
             } footer: {
                 Text("import.df.rebind.footer")
             }
@@ -125,7 +129,7 @@ struct DivingFishImportView: View {
                         await authorizeDivingFish()
                     }
                 }
-                .disabled(isImporting || isResolvingImportConflict)
+                .disabled(isImporting || isAuthorizing || isResolvingImportConflict)
             } footer: {
                 Text("import.df.setup.footer")
             }
@@ -153,6 +157,12 @@ struct DivingFishImportView: View {
                             .tint(statusTint)
                         Text("\(Int(progress)) / \(totalRecords)")
                             .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                } else if isAuthorizing {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("import.df.status.connecting")
                             .foregroundStyle(.secondary)
                     }
                 } else if isImporting {
@@ -198,9 +208,9 @@ struct DivingFishImportView: View {
             importStatus = String(localized: "import.status.error.unknown")
             return
         }
-        isImporting = true
+        isAuthorizing = true
         importStatus = String(localized: "import.df.status.connecting")
-        defer { isImporting = false }
+        defer { isAuthorizing = false }
 
         do {
             await BackendSessionManager.shared.checkSession()

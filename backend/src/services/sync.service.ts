@@ -94,7 +94,7 @@ export class SyncService {
 		});
 	}
 
-	async buildSnapshot(userId: string, profileIds: string[]) {
+	async buildSnapshot(userId: string, profileIds: string[], includeRecords = true) {
 		const ids = Array.from(new Set(profileIds.filter((value) => value.length > 0)));
 		if (ids.length === 0) {
 			return {
@@ -104,13 +104,31 @@ export class SyncService {
 			};
 		}
 
-		const [profiles, scores, records] = await Promise.all([
+		const [profiles, scores] = await Promise.all([
 			this.prisma.profile.findMany({
 				where: {
 					userId,
 					id: {
 						in: ids,
 					},
+				},
+				select: {
+					id: true,
+					name: true,
+					server: true,
+					avatarUrl: true,
+					isActive: true,
+					playerRating: true,
+					plate: true,
+					dfUsername: true,
+					b35Count: true,
+					b15Count: true,
+					b35RecLimit: true,
+					b15RecLimit: true,
+					createdAt: true,
+					lastImportDateDf: true,
+					lastImportDateLxns: true,
+					updatedAt: true,
 				},
 				orderBy: [{ isActive: "desc" }, { createdAt: "asc" }],
 			}),
@@ -120,31 +138,53 @@ export class SyncService {
 						in: ids,
 					},
 				},
-				include: {
+				select: {
+					profileId: true,
+					achievements: true,
+					rank: true,
+					dxScore: true,
+					fc: true,
+					fs: true,
+					achievedAt: true,
 					sheet: {
-						include: {
-							song: true,
+						select: {
+							songIdentifier: true,
+							songId: true,
+							chartType: true,
+							difficulty: true,
 						},
 					},
 				},
 				orderBy: [{ updatedAt: "desc" }],
 			}),
-			this.prisma.playRecord.findMany({
-				where: {
-					profileId: {
-						in: ids,
-					},
-				},
-				include: {
-					sheet: {
-						include: {
-							song: true,
+		]);
+		const records = includeRecords
+			? await this.prisma.playRecord.findMany({
+					where: {
+						profileId: {
+							in: ids,
 						},
 					},
-				},
-				orderBy: [{ playTime: "desc" }],
-			}),
-		]);
+					select: {
+						profileId: true,
+						achievements: true,
+						rank: true,
+						dxScore: true,
+						fc: true,
+						fs: true,
+						playTime: true,
+						sheet: {
+							select: {
+								songIdentifier: true,
+								songId: true,
+								chartType: true,
+								difficulty: true,
+							},
+						},
+					},
+					orderBy: [{ playTime: "desc" }, { id: "desc" }],
+				})
+			: [];
 
 		return {
 			profiles,

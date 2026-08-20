@@ -19,6 +19,29 @@ import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.UserProfileEntity
 import org.rhythmeta.maimaid.core.network.BackendApiClient
 
+private const val ImportedSyncBatchSize = 2_000
+
+internal data class ImportedSyncBatch(
+    val scores: List<BackendScoreEntry>,
+    val records: List<BackendPlayRecordEntry>,
+)
+
+internal fun importedSyncBatches(
+    scores: List<BackendScoreEntry>,
+    records: List<BackendPlayRecordEntry>,
+    batchSize: Int = ImportedSyncBatchSize,
+): List<ImportedSyncBatch> {
+    require(batchSize > 0)
+    val scoreBatches = scores.chunked(batchSize)
+    val recordBatches = records.chunked(batchSize)
+    return List(maxOf(scoreBatches.size, recordBatches.size)) { index ->
+        ImportedSyncBatch(
+            scores = scoreBatches.getOrNull(index).orEmpty(),
+            records = recordBatches.getOrNull(index).orEmpty(),
+        )
+    }
+}
+
 enum class BackendAccountResolution {
     Merge,
     KeepLocal,
@@ -124,10 +147,10 @@ class BackendSyncCoordinator(
         sessionManager.state.value.user ?: error("Authentication required.")
         val state = syncStateStore.load()
         val responseElement = sessionManager.authorizedRequest(
-            path = "v1/sync:pull?sinceRevision=${state.lastRevision}&includeSnapshot=true&limit=500&profileId=$profileId",
+            path = "v1/sync:pull?sinceRevision=${state.lastRevision}&includeSnapshot=true&includeRecords=false&limit=500&profileId=$profileId",
         )
         val response = json.decodeFromJsonElement(BackendSyncPullResponse.serializer(), responseElement)
-        val snapshot = response.snapshot.filtered(profileId)
+        val snapshot = response.snapshot.filtered(profileId).copy(records = fetchPlayRecords(profileId))
         val sheetMap = buildSheetMap(database.catalogDao().sheets())
         val remoteBySheet = snapshot.scores.mapNotNull { remote ->
             val sheetKey = remote.sheet?.let { resolveSheetKey(it, sheetMap) } ?: return@mapNotNull null
@@ -182,7 +205,9 @@ class BackendSyncCoordinator(
                 },
             )
         }
-        if (resolution != ImportSyncResolution.UseImport) pushImportedProfileData(preview.profileId)
+        if (resolution != ImportSyncResolution.UseImport) {
+            pushImportedProfileData(preview.profileId, preview.snapshot)
+        }
         recordSyncedState(user.id)
     }
 
@@ -361,9 +386,15 @@ class BackendSyncCoordinator(
             fetchFullSnapshot()
         } else {
             val responseElement = sessionManager.authorizedRequest(
-                path = "v1/sync:pull?sinceRevision=$sinceRevision&includeSnapshot=true&limit=500",
+                path = "v1/sync:pull?sinceRevision=$sinceRevision&includeSnapshot=true&includeRecords=false&limit=500",
             )
-            json.decodeFromJsonElement(BackendSyncPullResponse.serializer(), responseElement)
+            val pullResponse = json.decodeFromJsonElement(BackendSyncPullResponse.serializer(), responseElement)
+            val records = mutableListOf<BackendRemotePlayRecord>()
+            pullResponse.snapshot.profiles
+                .map(BackendRemoteProfile::id)
+                .distinct()
+                .forEach { profileId -> records += fetchPlayRecords(profileId) }
+            pullResponse.copy(snapshot = pullResponse.snapshot.copy(records = records))
         }
         val syncState = syncStateStore.load()
         val localProfiles = database.profileDao().profiles().associateBy(UserProfileEntity::id)
@@ -415,7 +446,7 @@ class BackendSyncCoordinator(
 
     private suspend fun fetchFullSnapshot(): BackendSyncPullResponse {
         val responseElement = sessionManager.authorizedRequest(
-            path = "v1/sync:pull?sinceRevision=0&includeSnapshot=true&limit=500",
+            path = "v1/sync:pull?sinceRevision=0&includeSnapshot=true&includeRecords=false&limit=500",
         )
         val pullResponse = json.decodeFromJsonElement(BackendSyncPullResponse.serializer(), responseElement)
         val profilesElement = sessionManager.authorizedRequest("v1/profiles")
@@ -425,10 +456,25 @@ class BackendSyncCoordinator(
         profiles.forEach { profile ->
             val scoreElement = sessionManager.authorizedRequest("v1/scores?profileId=${profile.id}")
             scores += json.decodeFromJsonElement(ScoresResponse.serializer(), scoreElement).scores
-            val recordElement = sessionManager.authorizedRequest("v1/play-records?profileId=${profile.id}&limit=5000")
-            records += json.decodeFromJsonElement(RecordsResponse.serializer(), recordElement).records
+            records += fetchPlayRecords(profile.id)
         }
         return pullResponse.copy(snapshot = BackendSyncSnapshot(profiles, scores, records))
+    }
+
+    private suspend fun fetchPlayRecords(profileId: String): List<BackendRemotePlayRecord> {
+        val records = mutableListOf<BackendRemotePlayRecord>()
+        var offset = 0
+        while (true) {
+            val responseElement = sessionManager.authorizedRequest(
+                "v1/play-records?profileId=$profileId&limit=$ImportedSyncBatchSize&offset=$offset",
+            )
+            val page = json.decodeFromJsonElement(RecordsResponse.serializer(), responseElement).records
+            if (page.isEmpty()) break
+            records += page
+            offset += page.size
+            if (page.size < ImportedSyncBatchSize) break
+        }
+        return records
     }
 
     private suspend fun applySnapshot(
@@ -649,37 +695,51 @@ class BackendSyncCoordinator(
         if (uploadLocalAvatars()) pushAll(forceProfiles = false)
     }
 
-    private suspend fun pushImportedProfileData(profileId: String) {
+    private suspend fun pushImportedProfileData(profileId: String, importedSnapshot: BackendSyncSnapshot) {
         val sheets = database.catalogDao().sheets().associateBy(SheetEntity::sheetKey)
+        val sheetMap = buildSheetMap(sheets.values.toList())
+        val importedScores = importedSnapshot.scores.mapNotNull { score ->
+            val sheetKey = score.sheet?.let { resolveSheetKey(it, sheetMap) } ?: return@mapNotNull null
+            sheetKey to score
+        }.toMap()
         val scores = database.scoreDao().scores(profileId).mapNotNull { score ->
+            val imported = importedScores[score.sheetKey]
+            if (imported != null && sameScoreValue(score, imported)) return@mapNotNull null
             sheets[score.sheetKey]?.let { sheet -> score.toEntry(sheet) }
         }
+        val importedRecordFingerprints = importedSnapshot.records.mapNotNullTo(mutableSetOf()) { record ->
+            val sheetKey = record.sheet?.let { resolveSheetKey(it, sheetMap) } ?: return@mapNotNullTo null
+            recordFingerprint(record.toPlayRecordEntity(sheetKey, parseTime(record.playTime)))
+        }
         val records = database.scoreDao().playRecords(profileId).mapNotNull { record ->
+            if (recordFingerprint(record) in importedRecordFingerprints) return@mapNotNull null
             sheets[record.sheetKey]?.let { sheet -> record.toEntry(sheet) }
         }
         if (scores.isEmpty() && records.isEmpty()) return
 
-        val payload = BackendSyncPushPayload(
-            idempotencyKey = UUID.randomUUID().toString(),
-            profileUpserts = emptyList(),
-            scoreUpserts = scores.takeIf(List<BackendScoreEntry>::isNotEmpty)
-                ?.let { listOf(BackendScoreSet(profileId, it)) }
-                .orEmpty(),
-            playRecordUpserts = records.takeIf(List<BackendPlayRecordEntry>::isNotEmpty)
-                ?.let { listOf(BackendRecordSet(profileId, it)) }
-                .orEmpty(),
-        )
-        val responseElement = sessionManager.authorizedRequest(
-            path = "v1/sync:push",
-            method = "POST",
-            body = json.encodeToJsonElement(BackendSyncPushPayload.serializer(), payload),
-        )
-        val response = json.decodeFromJsonElement(BackendSyncPushResponse.serializer(), responseElement)
-        syncStateStore.update { current ->
-            current.copy(
-                lastRevision = response.latestRevision,
-                pendingMutation = null,
+        importedSyncBatches(scores, records).forEach { batch ->
+            val payload = BackendSyncPushPayload(
+                idempotencyKey = UUID.randomUUID().toString(),
+                profileUpserts = emptyList(),
+                scoreUpserts = batch.scores.takeIf(List<BackendScoreEntry>::isNotEmpty)
+                    ?.let { listOf(BackendScoreSet(profileId, it)) }
+                    .orEmpty(),
+                playRecordUpserts = batch.records.takeIf(List<BackendPlayRecordEntry>::isNotEmpty)
+                    ?.let { listOf(BackendRecordSet(profileId, it)) }
+                    .orEmpty(),
             )
+            val responseElement = sessionManager.authorizedRequest(
+                path = "v1/sync:push",
+                method = "POST",
+                body = json.encodeToJsonElement(BackendSyncPushPayload.serializer(), payload),
+            )
+            val response = json.decodeFromJsonElement(BackendSyncPushResponse.serializer(), responseElement)
+            syncStateStore.update { current ->
+                current.copy(
+                    lastRevision = response.latestRevision,
+                    pendingMutation = null,
+                )
+            }
         }
     }
 

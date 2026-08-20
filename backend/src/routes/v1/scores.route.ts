@@ -78,6 +78,14 @@ const playRecordsQuerySchema = z.object({
 			if (!Number.isFinite(parsed)) return 100;
 			return Math.max(1, Math.min(5000, Math.trunc(parsed)));
 		}),
+	offset: z
+		.string()
+		.optional()
+		.transform((value) => {
+			const parsed = Number(value ?? 0);
+			if (!Number.isFinite(parsed)) return 0;
+			return Math.max(0, Math.min(1_000_000, Math.trunc(parsed)));
+		}),
 });
 
 const scoreIdParamSchema = z.object({
@@ -289,7 +297,7 @@ scoresV1Route.get(
 			return ok(c, { records: [] });
 		}
 		await scoreService.requireProfileOwnership(query.profileId, auth.userId);
-		const records = await scoreService.listPlayRecords(query.profileId, query.limit);
+		const records = await scoreService.listPlayRecords(query.profileId, query.limit, query.offset);
 		return ok(c, { records });
 	},
 );

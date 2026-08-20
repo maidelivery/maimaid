@@ -108,6 +108,10 @@ const pullQuerySchema = z.object({
 			}
 			return value === "true";
 		}),
+	includeRecords: z
+		.enum(["true", "false"])
+		.optional()
+		.transform((value) => value !== "false"),
 });
 
 type ScoreEntryBody = z.infer<typeof scoreEntrySchema>;
@@ -465,7 +469,7 @@ syncV1Route.get("/sync:pull", authRequired, standardValidator("query", pullQuery
 				profileIds.add(event.profileId);
 			}
 		}
-		snapshot = await syncService.buildSnapshot(auth.userId, Array.from(profileIds));
+		snapshot = await syncService.buildSnapshot(auth.userId, Array.from(profileIds), query.includeRecords);
 	}
 
 	return ok(c, {

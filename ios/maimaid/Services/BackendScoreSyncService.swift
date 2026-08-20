@@ -49,7 +49,7 @@ enum BackendScoreSyncService {
             throw URLError(.badURL)
         }
 
-        try await BackendIncrementalSyncService.pushProfileUpdate(profile: profile, clientUpdatedAt: nil)
+        try await BackendIncrementalSyncService.ensureProfileExists(profile: profile)
     }
 
     static func uploadScore(profile: UserProfile, sheet: Sheet, score: Score) async throws {

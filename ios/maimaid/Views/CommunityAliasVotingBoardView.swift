@@ -174,6 +174,22 @@ struct CommunityAliasVotingBoardView: View {
         let songTitle = songTitleMap[group.songIdentifier] ?? group.songIdentifier
         let subtitle = String(localized: "community.alias.board.group.subtitle \(group.items.count)")
 
+        return Group {
+            if let song {
+                NavigationLink {
+                    SongDetailView(song: song)
+                } label: {
+                    songGroupHeaderContent(song: song, title: songTitle, subtitle: subtitle)
+                }
+                .buttonStyle(.plain)
+            } else {
+                songGroupHeaderContent(song: nil, title: songTitle, subtitle: subtitle)
+            }
+        }
+        .textCase(nil)
+    }
+
+    private func songGroupHeaderContent(song: Song?, title: String, subtitle: String) -> some View {
         return HStack(spacing: 12) {
             if let song {
                 SongJacketView(
@@ -193,7 +209,7 @@ struct CommunityAliasVotingBoardView: View {
             }
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(songTitle)
+                Text(title)
                     .font(.system(size: 14, weight: .semibold))
                     .lineLimit(1)
                 Text(subtitle)
@@ -204,7 +220,6 @@ struct CommunityAliasVotingBoardView: View {
             Spacer()
         }
         .padding(.vertical, 4)
-        .textCase(nil)
     }
 
     private func boardRow(_ item: CommunityAliasVotingBoardItem) -> some View {

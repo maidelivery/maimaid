@@ -1,0 +1,16 @@
+{
+  "source": "/Users/shiko/Projects/maimaid/ios/maimaid/Views/HomeDashboardView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "home.title",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 15
+        }
+      }
+    ]
+  },
+  "version": 1
+}

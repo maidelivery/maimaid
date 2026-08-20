@@ -80,25 +80,54 @@ export class ScoreService {
 	async listBestScores(profileId: string) {
 		return this.prisma.bestScore.findMany({
 			where: { profileId },
-			include: {
+			select: {
+				id: true,
+				profileId: true,
+				achievements: true,
+				rank: true,
+				dxScore: true,
+				fc: true,
+				fs: true,
+				achievedAt: true,
 				sheet: {
-					include: { song: true },
+					select: {
+						songIdentifier: true,
+						songId: true,
+						chartType: true,
+						difficulty: true,
+						song: { select: { title: true } },
+					},
 				},
 			},
 			orderBy: [{ updatedAt: "desc" }],
 		});
 	}
 
-	async listPlayRecords(profileId: string, limit: number) {
+	async listPlayRecords(profileId: string, limit: number, offset = 0) {
 		return this.prisma.playRecord.findMany({
 			where: { profileId },
-			include: {
+			select: {
+				id: true,
+				profileId: true,
+				achievements: true,
+				rank: true,
+				dxScore: true,
+				fc: true,
+				fs: true,
+				playTime: true,
 				sheet: {
-					include: { song: true },
+					select: {
+						songIdentifier: true,
+						songId: true,
+						chartType: true,
+						difficulty: true,
+						song: { select: { title: true } },
+					},
 				},
 			},
-			orderBy: [{ playTime: "desc" }],
+			orderBy: [{ playTime: "desc" }, { id: "desc" }],
 			take: limit,
+			skip: offset,
 		});
 	}
 

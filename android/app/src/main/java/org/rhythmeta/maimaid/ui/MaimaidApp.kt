@@ -186,6 +186,8 @@ fun MaimaidApp(
     var showScoreQueryFilter by rememberSaveable { mutableStateOf(false) }
     var songReturnDetail by rememberSaveable { mutableStateOf<AppDetail?>(null) }
     var communityAliasesFromSong by rememberSaveable { mutableStateOf(false) }
+    var communityAliasesSourceSongId by rememberSaveable { mutableStateOf<String?>(null) }
+    var communityAliasesSourceReturnDetail by rememberSaveable { mutableStateOf<AppDetail?>(null) }
     val randomSongSessionState = remember { RandomSongSessionState() }
     val backProgress = remember { Animatable(0f) }
     val detailEntranceProgress = remember { Animatable(0f) }
@@ -470,9 +472,28 @@ fun MaimaidApp(
                 }
                 val currentDetail = detail
                 detail = returnDetail
-                if (returnDetail != AppDetail.Song) selectedSongId = null
+                if (currentDetail == AppDetail.CommunityAliases && communityAliasesFromSong) {
+                    communityAliasesSourceSongId?.let { sourceSongId ->
+                        selectedSongId = sourceSongId
+                        songReturnDetail = communityAliasesSourceReturnDetail
+                    }
+                    communityAliasesSourceSongId = null
+                    communityAliasesSourceReturnDetail = null
+                }
+                val keepSelectedSong = returnDetail == AppDetail.Song ||
+                    (currentDetail == AppDetail.Song &&
+                        returnDetail == AppDetail.CommunityAliases &&
+                        communityAliasesFromSong)
+                if (!keepSelectedSong) selectedSongId = null
                 if (currentDetail == AppDetail.Song) {
-                    songReturnDetail = null
+                    if (returnDetail == AppDetail.CommunityAliases && communityAliasesFromSong) {
+                        communityAliasesSourceSongId?.let { sourceSongId ->
+                            selectedSongId = sourceSongId
+                            songReturnDetail = communityAliasesSourceReturnDetail
+                        }
+                    } else {
+                        songReturnDetail = null
+                    }
                 }
                 if (currentDetail == AppDetail.CommunityAliases) communityAliasesFromSong = false
             } else if (destination != RootDestination.Home) {
@@ -499,6 +520,8 @@ fun MaimaidApp(
         detailBackTransitionJob?.cancel()
         if (next == AppDetail.CommunityAliases && detail != AppDetail.Song) {
             communityAliasesFromSong = false
+            communityAliasesSourceSongId = null
+            communityAliasesSourceReturnDetail = null
         }
         if (next == AppDetail.Recommendations) {
             recommendationSwitcherVisible = true
@@ -538,13 +561,16 @@ fun MaimaidApp(
                 it == AppDetail.Recommendations ||
                 it == AppDetail.ScoreQuery ||
                 it == AppDetail.PlateProgress ||
-                it == AppDetail.DanDetail
+                it == AppDetail.DanDetail ||
+                it == AppDetail.CommunityAliases
         }
         selectedSongId = songId
         openDetail(AppDetail.Song)
     }
     val openCommunityAliasesFromSong: () -> Unit = {
         communityAliasesFromSong = true
+        communityAliasesSourceSongId = selectedSongId
+        communityAliasesSourceReturnDetail = songReturnDetail
         openDetail(AppDetail.CommunityAliases)
     }
     val rootPage: @Composable (RootDestination, Dp) -> Unit = { page, contentTopPadding ->
@@ -649,9 +675,28 @@ fun MaimaidApp(
                 }
                 val currentDetail = detail
                 detail = returnDetail
-                if (returnDetail != AppDetail.Song) selectedSongId = null
+                if (currentDetail == AppDetail.CommunityAliases && communityAliasesFromSong) {
+                    communityAliasesSourceSongId?.let { sourceSongId ->
+                        selectedSongId = sourceSongId
+                        songReturnDetail = communityAliasesSourceReturnDetail
+                    }
+                    communityAliasesSourceSongId = null
+                    communityAliasesSourceReturnDetail = null
+                }
+                val keepSelectedSong = returnDetail == AppDetail.Song ||
+                    (currentDetail == AppDetail.Song &&
+                        returnDetail == AppDetail.CommunityAliases &&
+                        communityAliasesFromSong)
+                if (!keepSelectedSong) selectedSongId = null
                 if (currentDetail == AppDetail.Song) {
-                    songReturnDetail = null
+                    if (returnDetail == AppDetail.CommunityAliases && communityAliasesFromSong) {
+                        communityAliasesSourceSongId?.let { sourceSongId ->
+                            selectedSongId = sourceSongId
+                            songReturnDetail = communityAliasesSourceReturnDetail
+                        }
+                    } else {
+                        songReturnDetail = null
+                    }
                 }
                 if (currentDetail == AppDetail.CommunityAliases) communityAliasesFromSong = false
                 backProgress.snapTo(0f)
@@ -1217,7 +1262,8 @@ fun MaimaidApp(
                 songReturnDetail == AppDetail.BestTable ||
                     songReturnDetail == AppDetail.Recommendations ||
                     songReturnDetail == AppDetail.ScoreQuery ||
-                    songReturnDetail == AppDetail.PlateProgress
+                    songReturnDetail == AppDetail.PlateProgress ||
+                    songReturnDetail == AppDetail.CommunityAliases
                 ) -> songReturnDetail
             detail == AppDetail.CommunityAliases && communityAliasesFromSong && (
                 songReturnDetail == AppDetail.BestTable ||
