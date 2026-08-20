@@ -1,6 +1,7 @@
 import { inject, injectable } from "tsyringe";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
+import type { Env } from "../env.js";
 import { AppError } from "../lib/errors.js";
 import { difficultyByLevelIndex, normalizeChartType, normalizeLxnsSongId } from "../utils/compat.js";
 
@@ -59,7 +60,15 @@ type ResolvedSheet = {
 
 @injectable()
 export class ScoreService {
-	constructor(@inject(TOKENS.Prisma) private readonly prisma: PrismaClient) {}
+	constructor(
+		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
+		@inject(TOKENS.Env) private readonly env: Env,
+	) {}
+
+	private async lockProfile(database: Prisma.TransactionClient, profileId: string) {
+		if (this.env.DATABASE_DIALECT === "sqlite") return;
+		await database.$queryRaw`SELECT "id" FROM "profiles" WHERE "id" = ${profileId}::uuid FOR UPDATE`;
+	}
 
 	async listBestScores(profileId: string) {
 		return this.prisma.bestScore.findMany({
@@ -188,12 +197,12 @@ export class ScoreService {
 		database?: Prisma.TransactionClient,
 	) {
 		if (database) {
-			await database.$queryRaw`SELECT "id" FROM "profiles" WHERE "id" = ${profileId}::uuid FOR UPDATE`;
+			await this.lockProfile(database, profileId);
 			return this.bulkUpsertBestScoresLocked(profileId, scores, source, database);
 		}
 		return this.prisma.$transaction(
 			async (transaction) => {
-				await transaction.$queryRaw`SELECT "id" FROM "profiles" WHERE "id" = ${profileId}::uuid FOR UPDATE`;
+				await this.lockProfile(transaction, profileId);
 				return this.bulkUpsertBestScoresLocked(profileId, scores, source, transaction);
 			},
 			{ maxWait: 10_000, timeout: 60_000 },
@@ -387,12 +396,12 @@ export class ScoreService {
 		database?: Prisma.TransactionClient,
 	) {
 		if (database) {
-			await database.$queryRaw`SELECT "id" FROM "profiles" WHERE "id" = ${profileId}::uuid FOR UPDATE`;
+			await this.lockProfile(database, profileId);
 			return this.bulkInsertPlayRecordsLocked(profileId, records, source, database);
 		}
 		return this.prisma.$transaction(
 			async (transaction) => {
-				await transaction.$queryRaw`SELECT "id" FROM "profiles" WHERE "id" = ${profileId}::uuid FOR UPDATE`;
+				await this.lockProfile(transaction, profileId);
 				return this.bulkInsertPlayRecordsLocked(profileId, records, source, transaction);
 			},
 			{ maxWait: 10_000, timeout: 60_000 },

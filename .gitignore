@@ -9,6 +9,8 @@ vite.config.*.timestamp*
 backend/dist/
 backend/.worker-dist/
 backend/.wrangler/
+backend/generated/
+backend/prisma/schema.d1.prisma
 backend/.env.docker
 backend/.env.docker.local
 

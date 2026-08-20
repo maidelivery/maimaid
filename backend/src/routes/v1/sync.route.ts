@@ -9,6 +9,7 @@ import { SyncService } from "../../services/sync.service.js";
 import { ProfileService } from "../../services/profile.service.js";
 import { ScoreService } from "../../services/score.service.js";
 import { PrismaClient } from "@prisma/client";
+import type { Env } from "../../env.js";
 
 const BULK_ARRAY_MAX = 10_000;
 
@@ -202,6 +203,7 @@ syncV1Route.post("/sync:push", authRequired, standardValidator("json", pushSchem
 	const profileService = c.var.resolve(ProfileService);
 	const scoreService = c.var.resolve(ScoreService);
 	const prisma = c.var.resolve<PrismaClient>(TOKENS.Prisma);
+	const env = c.var.resolve<Env>(TOKENS.Env);
 
 	const existing = await syncService.findMutation(auth.userId, body.idempotencyKey);
 	if (existing) {
@@ -234,7 +236,9 @@ syncV1Route.post("/sync:push", authRequired, standardValidator("json", pushSchem
 
 	const appliedResult = await prisma.$transaction(
 		async (transaction) => {
-			await transaction.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${auth.userId}::uuid FOR UPDATE`;
+			if (env.DATABASE_DIALECT === "postgresql") {
+				await transaction.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${auth.userId}::uuid FOR UPDATE`;
+			}
 			const replay = await syncService.findMutation(auth.userId, body.idempotencyKey, transaction);
 			if (replay) {
 				return replay.resultJson;

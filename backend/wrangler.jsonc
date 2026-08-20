@@ -7,17 +7,35 @@
 	"workers_dev": true,
 	"preview_urls": false,
 	"upload_source_maps": true,
-	"routes": [],
+	"triggers": {
+		"crons": ["0 4 * * *"],
+	},
+	"routes": [
+		{
+			"pattern": "api.rhythmeta.org",
+			"custom_domain": true,
+		},
+	],
 	"placement": {
 		"mode": "smart",
 	},
 	"observability": {
 		"enabled": true,
 	},
-	"hyperdrive": [
+	"limits": {
+		"cpu_ms": 300000,
+	},
+	"d1_databases": [
 		{
-			"binding": "HYPERDRIVE",
-			"id": "33c968fb6dfd4218bed8c2e8eddeb959",
+			"binding": "MAIMAID_D1",
+			"database_name": "maimaid",
+			"database_id": "7596cbdf-96ef-4d36-89fc-7c8c84ba11ad",
+		},
+	],
+	"r2_buckets": [
+		{
+			"binding": "MAIMAID_DATA",
+			"bucket_name": "maimaid-data",
 		},
 	],
 }

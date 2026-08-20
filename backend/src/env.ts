@@ -18,6 +18,7 @@ const EnvSchema = z.object({
 	APP_PUBLIC_URL: z.url().optional(),
 	CORS_ALLOWED_ORIGINS: z.string().default(""),
 	DATABASE_URL: z.string().min(1),
+	DATABASE_DIALECT: z.enum(["postgresql", "sqlite"]).default("postgresql"),
 	JWT_ISSUER: z.string().min(1).default("maimaid-backend"),
 	JWT_AUDIENCE: z.string().min(1).default("maimaid-clients"),
 	JWT_ACCESS_SECRET: z.string().min(16),
@@ -51,7 +52,7 @@ const EnvSchema = z.object({
 	S3_STATIC_BUNDLE_BUCKET: optionalString,
 	S3_STATIC_BUNDLE_PUBLIC_BASE_URL: optionalUrl,
 	CATALOG_SOURCE_URL: z.url().optional(),
-	STATIC_SYNC_INTERVAL_HOURS: z.coerce.number().int().positive().default(6),
+	STATIC_SYNC_INTERVAL_HOURS: z.coerce.number().int().positive().default(24),
 	// pg_cron enqueues into "job_queue" but nothing consumed it, so scheduled
 	// catalog syncs and bundle builds never ran. This runs a consumer inside the
 	// API process. Off by default: a bundle build fetches every upstream source

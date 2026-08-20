@@ -438,10 +438,7 @@ export class CommunityAliasService {
 		}
 		if (input.search) {
 			const search = input.search.trim();
-			where.OR = [
-				{ songIdentifier: { contains: search, mode: "insensitive" } },
-				{ aliasText: { contains: search, mode: "insensitive" } },
-			];
+			where.OR = [{ songIdentifier: { contains: search } }, { aliasText: { contains: search } }];
 		}
 
 		const [rows, totalCount] = await Promise.all([

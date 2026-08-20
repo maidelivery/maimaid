@@ -70,7 +70,7 @@ const STATIC_SOURCE_DEFAULTS: Array<{ category: string; activeUrl: string; fallb
 const STATIC_BUNDLE_RETENTION = 5;
 
 const STATIC_BUNDLE_SCHEDULE_ROW_ID = 1;
-const STATIC_BUNDLE_CRON_DRIVER_EXPRESSION = "* * * * *";
+const STATIC_BUNDLE_CRON_DRIVER_EXPRESSION = "0 4 * * *";
 const LEGACY_DATA_JSON_URL = "https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json";
 
 export type StaticBundlePeriodicBuildSchedule = {
@@ -295,10 +295,8 @@ export class StaticBundleService {
 	}
 
 	/**
-	 * Build in-process: compute, then publish. Still used by the admin "build now"
-	 * button and by `manifest()` when no bundle exists yet. The scheduled path runs
-	 * the compute half in GitHub Actions, uploads the artifact to R2, and asks the
-	 * API to activate it. This remains the fallback path for local deployments.
+	 * Build in-process: compute, then publish. Used by the daily Worker job, the
+	 * admin "build now" button, and `manifest()` when no bundle exists yet.
 	 */
 	async buildBundle(force = false) {
 		const sources = await this.listEnabledSourceTargets();
@@ -659,6 +657,36 @@ export class StaticBundleService {
 		});
 	}
 
+	async enqueuePeriodicBuildIfDue() {
+		if (this.env.DATABASE_DIALECT !== "sqlite") return false;
+		const config = await this.getOrCreatePeriodicBuildScheduleConfig();
+		const now = new Date();
+		if (!config.enabled || !config.nextEnqueueAt || config.nextEnqueueAt > now) return false;
+
+		const claimed = await this.prisma.staticBundleScheduleConfig.updateMany({
+			where: {
+				id: STATIC_BUNDLE_SCHEDULE_ROW_ID,
+				enabled: true,
+				nextEnqueueAt: { lte: now },
+			},
+			data: {
+				lastEnqueuedAt: now,
+				nextEnqueueAt: this.addHours(now, config.intervalHours),
+			},
+		});
+		if (claimed.count === 0) return false;
+
+		const existing = await this.prisma.jobQueue.count({
+			where: {
+				jobType: "static_bundle_build",
+				status: { in: ["pending", "running"] },
+			},
+		});
+		if (existing > 0) return false;
+		await this.enqueuePeriodicBuild();
+		return true;
+	}
+
 	private async getOrCreatePeriodicBuildScheduleConfig() {
 		const defaultIntervalHours = this.normalizeEnvIntervalHours(this.env.STATIC_SYNC_INTERVAL_HOURS);
 		return this.prisma.staticBundleScheduleConfig.upsert({
@@ -708,7 +736,7 @@ export class StaticBundleService {
 	}
 
 	private describeCronExpression() {
-		return `${STATIC_BUNDLE_CRON_DRIVER_EXPRESSION} (precise-hour driver)`;
+		return `${STATIC_BUNDLE_CRON_DRIVER_EXPRESSION} (daily at 12:00 Asia/Shanghai)`;
 	}
 
 	private async ensurePgCronAvailable() {
@@ -725,6 +753,7 @@ export class StaticBundleService {
 	}
 
 	private async syncPeriodicBuildCronJob(enabled: boolean) {
+		if (this.env.DATABASE_DIALECT === "sqlite") return;
 		await this.ensurePgCronAvailable();
 		const cronExpression = this.toCronExpression();
 		try {

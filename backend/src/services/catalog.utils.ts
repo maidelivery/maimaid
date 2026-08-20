@@ -65,3 +65,18 @@ export const songUpsertKey = (row: { songIdentifier: string }): string => row.so
 /** Conflict key for `sheets`: the stable business key, not the bigserial id. */
 export const sheetUpsertKey = (row: { songIdentifier: string; chartType: string; difficulty: string }): string =>
 	[row.songIdentifier, row.chartType, row.difficulty].join(DEDUPE_KEY_SEPARATOR);
+
+export type SqliteLiteralValue = string | number | bigint | boolean | Date | null;
+
+/** Encode one trusted, typed value for a SQLite statement without bind variables. */
+export const sqliteLiteral = (value: SqliteLiteralValue): string => {
+	if (value === null) return "NULL";
+	if (typeof value === "boolean") return value ? "1" : "0";
+	if (typeof value === "number") {
+		if (!Number.isFinite(value)) throw new Error("SQLite numeric literal must be finite");
+		return String(value);
+	}
+	if (typeof value === "bigint") return String(value);
+	const text = value instanceof Date ? value.toISOString() : value;
+	return `'${text.replaceAll("'", "''")}'`;
+};

@@ -128,7 +128,14 @@ export const createApp = (options: CreateAppOptions = {}) => {
 		console.error("[internal_error]", {
 			method: c.req.method,
 			url: c.req.url,
-			error,
+			error:
+				error instanceof Error
+					? {
+							name: error.name,
+							message: error.message,
+							stack: error.stack,
+						}
+					: error,
 		});
 
 		return c.json(

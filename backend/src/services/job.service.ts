@@ -1,6 +1,7 @@
 import { inject, injectable } from "tsyringe";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
+import type { Env } from "../env.js";
 import { CatalogService } from "./catalog.service.js";
 import { CommunityAliasService } from "./community-alias.service.js";
 import { StaticBundleService } from "./static-bundle.service.js";
@@ -33,6 +34,7 @@ export type DispatchResult = {
 export class JobService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
+		@inject(TOKENS.Env) private readonly env: Env,
 		@inject(CatalogService) private readonly catalogService: CatalogService,
 		@inject(CommunityAliasService) private readonly communityAliasService: CommunityAliasService,
 		@inject(StaticBundleService) private readonly staticBundleService: StaticBundleService,
@@ -56,6 +58,24 @@ export class JobService {
 	 * bundle build twice.
 	 */
 	private async claimNextJob(): Promise<ClaimedJob | null> {
+		if (this.env.DATABASE_DIALECT === "sqlite") {
+			const rows = await this.prisma.$queryRaw<ClaimedJob[]>(Prisma.sql`
+				UPDATE "job_queue"
+				   SET "status" = 'running',
+				       "startedAt" = CURRENT_TIMESTAMP,
+				       "updatedAt" = CURRENT_TIMESTAMP
+				 WHERE "id" = (
+				       SELECT "id"
+				         FROM "job_queue"
+				        WHERE "status" = 'pending'
+				          AND "scheduledAt" <= CURRENT_TIMESTAMP
+				        ORDER BY "scheduledAt" ASC
+				        LIMIT 1
+				 )
+				RETURNING "id", "jobType"
+			`);
+			return rows[0] ?? null;
+		}
 		const rows = await this.prisma.$queryRaw<ClaimedJob[]>(Prisma.sql`
 			UPDATE "job_queue"
 			   SET "status" = 'running',

@@ -52,6 +52,8 @@ jobsInternalRoute.use("*", internalJobAuthRequired);
 jobsInternalRoute.post("/dispatch", standardValidator("json", dispatchSchema, validationHook), async (c) => {
 	const body = c.req.valid("json");
 	const jobService = c.var.resolve(JobService);
+	const staticBundleService = c.var.resolve(StaticBundleService);
+	await staticBundleService.enqueuePeriodicBuildIfDue();
 	const result = await jobService.dispatch(body.limit);
 	return ok(c, { jobs: result });
 });

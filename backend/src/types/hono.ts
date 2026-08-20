@@ -11,6 +11,8 @@ export type AppEnv = {
 		HYPERDRIVE?: {
 			connectionString: string;
 		};
+		MAIMAID_D1?: unknown;
+		MAIMAID_DATA?: unknown;
 		[key: string]: unknown;
 	};
 	Variables: {

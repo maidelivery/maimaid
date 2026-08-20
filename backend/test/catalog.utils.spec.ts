@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { chunk, dedupeFirstWins, dedupeLastWins, sheetUpsertKey, songUpsertKey } from "../src/services/catalog.utils.js";
+import {
+	chunk,
+	dedupeFirstWins,
+	dedupeLastWins,
+	sheetUpsertKey,
+	songUpsertKey,
+	sqliteLiteral,
+} from "../src/services/catalog.utils.js";
 
 describe("chunk", () => {
 	it("splits into batches of at most the given size", () => {
@@ -62,5 +69,23 @@ describe("sheetUpsertKey", () => {
 		const a = sheetUpsertKey({ songIdentifier: "a", chartType: "b:c", difficulty: "d" });
 		const b = sheetUpsertKey({ songIdentifier: "a", chartType: "b", difficulty: "c:d" });
 		expect(a).not.toBe(b);
+	});
+});
+
+describe("sqliteLiteral", () => {
+	it("encodes typed SQLite values without bind variables", () => {
+		expect(sqliteLiteral(null)).toBe("NULL");
+		expect(sqliteLiteral(true)).toBe("1");
+		expect(sqliteLiteral(12.5)).toBe("12.5");
+		expect(sqliteLiteral(42n)).toBe("42");
+		expect(sqliteLiteral(new Date("2026-08-20T00:00:00.000Z"))).toBe("'2026-08-20T00:00:00.000Z'");
+	});
+
+	it("escapes quotes in strings", () => {
+		expect(sqliteLiteral("It's maimai")).toBe("'It''s maimai'");
+	});
+
+	it("rejects non-finite numbers", () => {
+		expect(() => sqliteLiteral(Number.NaN)).toThrow("must be finite");
 	});
 });

@@ -5,7 +5,7 @@ import { TOKENS } from "../di/tokens.js";
 import type { Env } from "../env.js";
 import { AppError } from "../lib/errors.js";
 import { sha256Hex } from "../lib/crypto.js";
-import { chunk, dedupeFirstWins, dedupeLastWins, sheetUpsertKey, songUpsertKey } from "./catalog.utils.js";
+import { chunk, dedupeFirstWins, dedupeLastWins, sheetUpsertKey, songUpsertKey, sqliteLiteral } from "./catalog.utils.js";
 
 export type RemoteDataResponse = {
 	songs: RemoteSong[];
@@ -118,6 +118,8 @@ type SheetUpsertRow = {
 // the number of round trips low enough for a single-core host.
 const SONG_UPSERT_CHUNK_SIZE = 500;
 const SHEET_UPSERT_CHUNK_SIZE = 500;
+const SQLITE_SONG_UPSERT_CHUNK_SIZE = 150;
+const SQLITE_SHEET_UPSERT_CHUNK_SIZE = 100;
 
 // A full apply is a handful of batched statements now, but it still rewrites
 // every song and sheet. Leave generous headroom for a 1 vCPU box where Postgres
@@ -125,12 +127,14 @@ const SHEET_UPSERT_CHUNK_SIZE = 500;
 const CATALOG_APPLY_TIMEOUT_MS = 120_000;
 const CATALOG_APPLY_MAX_WAIT_MS = 15_000;
 
+const sqliteValue = (value: Parameters<typeof sqliteLiteral>[0]) => Prisma.raw(sqliteLiteral(value));
+
 /**
  * Upsert songs on their primary key. `searchKeywords` and `songId` are
  * deliberately absent from the conflict target so values maintained elsewhere
  * survive a catalog apply.
  */
-const buildSongUpsertQuery = (rows: SongUpsertRow[]) => Prisma.sql`
+const buildPostgresSongUpsertQuery = (rows: SongUpsertRow[]) => Prisma.sql`
 	INSERT INTO "songs" (
 		"songIdentifier", "category", "title", "artist", "imageName", "version",
 		"releaseDate", "sortOrder", "bpm", "isNew", "isLocked", "comment",
@@ -180,7 +184,7 @@ const buildSongUpsertQuery = (rows: SongUpsertRow[]) => Prisma.sql`
  * "id" — referenced by "best_scores" and "play_records" via ON DELETE CASCADE —
  * stays stable and user scores are preserved.
  */
-const buildSheetUpsertQuery = (rows: SheetUpsertRow[]) => Prisma.sql`
+const buildPostgresSheetUpsertQuery = (rows: SheetUpsertRow[]) => Prisma.sql`
 	INSERT INTO "sheets" (
 		"songIdentifier", "chartType", "difficulty", "version", "level",
 		"levelValue", "internalLevel", "internalLevelValue", "noteDesigner",
@@ -238,6 +242,90 @@ const buildSheetUpsertQuery = (rows: SheetUpsertRow[]) => Prisma.sql`
 		"updatedAt" = now()
 `;
 
+const buildSqliteSongUpsertQuery = (rows: SongUpsertRow[]) => {
+	const updatedAt = new Date();
+	return Prisma.sql`
+		INSERT INTO "songs" (
+			"songIdentifier", "category", "title", "artist", "imageName", "version",
+			"releaseDate", "sortOrder", "bpm", "isNew", "isLocked", "comment",
+			"disabled", "snapshotId", "updatedAt"
+		)
+		VALUES ${Prisma.join(
+			rows.map(
+				(row) => Prisma.sql`(
+					${sqliteValue(row.songIdentifier)}, ${sqliteValue(row.category)}, ${sqliteValue(row.title)},
+					${sqliteValue(row.artist)}, ${sqliteValue(row.imageName)}, ${sqliteValue(row.version)},
+					${sqliteValue(row.releaseDate)}, ${sqliteValue(row.sortOrder)}, ${sqliteValue(row.bpm)},
+					${sqliteValue(row.isNew)}, ${sqliteValue(row.isLocked)}, ${sqliteValue(row.comment)},
+					${sqliteValue(false)}, ${sqliteValue(row.snapshotId)}, ${sqliteValue(updatedAt)}
+				)`,
+			),
+		)}
+		ON CONFLICT ("songIdentifier") DO UPDATE SET
+			"category" = EXCLUDED."category",
+			"title" = EXCLUDED."title",
+			"artist" = EXCLUDED."artist",
+			"imageName" = EXCLUDED."imageName",
+			"version" = EXCLUDED."version",
+			"releaseDate" = EXCLUDED."releaseDate",
+			"sortOrder" = EXCLUDED."sortOrder",
+			"bpm" = EXCLUDED."bpm",
+			"isNew" = EXCLUDED."isNew",
+			"isLocked" = EXCLUDED."isLocked",
+			"comment" = EXCLUDED."comment",
+			"disabled" = false,
+			"snapshotId" = EXCLUDED."snapshotId",
+			"updatedAt" = EXCLUDED."updatedAt"
+	`;
+};
+
+const buildSqliteSheetUpsertQuery = (rows: Array<SheetUpsertRow & { id: bigint }>) => {
+	const updatedAt = new Date();
+	return Prisma.sql`
+		INSERT INTO "sheets" (
+			"id", "songIdentifier", "chartType", "difficulty", "version", "level",
+			"levelValue", "internalLevel", "internalLevelValue", "noteDesigner",
+			"tap", "hold", "slide", "touch", "breakCount", "total",
+			"regionJp", "regionIntl", "regionUsa", "regionCn", "isSpecial",
+			"disabled", "updatedAt"
+		)
+		VALUES ${Prisma.join(
+			rows.map(
+				(row) => Prisma.sql`(
+					${sqliteValue(row.id)}, ${sqliteValue(row.songIdentifier)}, ${sqliteValue(row.chartType)},
+					${sqliteValue(row.difficulty)}, ${sqliteValue(row.version)}, ${sqliteValue(row.level)},
+					${sqliteValue(row.levelValue)}, ${sqliteValue(row.internalLevel)},
+					${sqliteValue(row.internalLevelValue)}, ${sqliteValue(row.noteDesigner)}, ${sqliteValue(row.tap)},
+					${sqliteValue(row.hold)}, ${sqliteValue(row.slide)}, ${sqliteValue(row.touch)},
+					${sqliteValue(row.breakCount)}, ${sqliteValue(row.total)}, ${sqliteValue(row.regionJp)},
+					${sqliteValue(row.regionIntl)}, ${sqliteValue(row.regionUsa)}, ${sqliteValue(row.regionCn)},
+					${sqliteValue(row.isSpecial)}, ${sqliteValue(false)}, ${sqliteValue(updatedAt)}
+				)`,
+			),
+		)}
+		ON CONFLICT ("songIdentifier", "chartType", "difficulty") DO UPDATE SET
+			"version" = EXCLUDED."version",
+			"level" = EXCLUDED."level",
+			"levelValue" = EXCLUDED."levelValue",
+			"internalLevel" = EXCLUDED."internalLevel",
+			"internalLevelValue" = EXCLUDED."internalLevelValue",
+			"noteDesigner" = EXCLUDED."noteDesigner",
+			"tap" = EXCLUDED."tap",
+			"hold" = EXCLUDED."hold",
+			"slide" = EXCLUDED."slide",
+			"touch" = EXCLUDED."touch",
+			"breakCount" = EXCLUDED."breakCount",
+			"total" = EXCLUDED."total",
+			"regionJp" = EXCLUDED."regionJp",
+			"regionIntl" = EXCLUDED."regionIntl",
+			"regionUsa" = EXCLUDED."regionUsa",
+			"regionCn" = EXCLUDED."regionCn",
+			"isSpecial" = EXCLUDED."isSpecial",
+			"disabled" = false,
+			"updatedAt" = EXCLUDED."updatedAt"
+	`;
+};
+
 @injectable()
 export class CatalogService {
 	private songIdentifierByNameCache: { expiresAt: number; value: Map<string, string> } | null = null;
@@ -254,10 +342,11 @@ export class CatalogService {
 			where.disabled = false;
 		}
 		if (keyword) {
+			const mode = this.env.DATABASE_DIALECT === "postgresql" ? { mode: "insensitive" as const } : {};
 			where.OR = [
-				{ title: { contains: keyword, mode: "insensitive" } },
-				{ artist: { contains: keyword, mode: "insensitive" } },
-				{ songIdentifier: { contains: keyword, mode: "insensitive" } },
+				{ title: { contains: keyword, ...mode } },
+				{ artist: { contains: keyword, ...mode } },
+				{ songIdentifier: { contains: keyword, ...mode } },
 			];
 		}
 
@@ -571,14 +660,29 @@ export class CatalogService {
 				await tx.song.updateMany({ data: { disabled: true } });
 				await tx.sheet.updateMany({ data: { disabled: true } });
 
-				for (const batch of chunk(dedupedSongRows, SONG_UPSERT_CHUNK_SIZE)) {
-					await tx.$executeRaw(buildSongUpsertQuery(batch));
+				const songChunkSize =
+					this.env.DATABASE_DIALECT === "sqlite" ? SQLITE_SONG_UPSERT_CHUNK_SIZE : SONG_UPSERT_CHUNK_SIZE;
+				for (const batch of chunk(dedupedSongRows, songChunkSize)) {
+					const query =
+						this.env.DATABASE_DIALECT === "sqlite"
+							? buildSqliteSongUpsertQuery(batch)
+							: buildPostgresSongUpsertQuery(batch);
+					await tx.$executeRaw(query);
 				}
 
 				// Upserted on the stable business key so "sheets"."id" survives and
 				// existing score rows keep pointing at the right chart.
-				for (const batch of chunk(dedupedSheetRows, SHEET_UPSERT_CHUNK_SIZE)) {
-					await tx.$executeRaw(buildSheetUpsertQuery(batch));
+				const sheetChunkSize =
+					this.env.DATABASE_DIALECT === "sqlite" ? SQLITE_SHEET_UPSERT_CHUNK_SIZE : SHEET_UPSERT_CHUNK_SIZE;
+				for (const batch of chunk(dedupedSheetRows, sheetChunkSize)) {
+					if (this.env.DATABASE_DIALECT === "sqlite") {
+						const firstId = await this.reserveD1Ids(tx, "Sheet", batch.length);
+						await tx.$executeRaw(
+							buildSqliteSheetUpsertQuery(batch.map((row, index) => ({ ...row, id: firstId + BigInt(index) }))),
+						);
+					} else {
+						await tx.$executeRaw(buildPostgresSheetUpsertQuery(batch));
+					}
 				}
 			},
 			{
@@ -586,6 +690,20 @@ export class CatalogService {
 				maxWait: CATALOG_APPLY_MAX_WAIT_MS,
 			},
 		);
+	}
+
+	private async reserveD1Ids(prisma: PrismaClient | Prisma.TransactionClient, model: string, count: number): Promise<bigint> {
+		const rows = await prisma.$queryRaw<Array<{ value: bigint | number }>>(Prisma.sql`
+			UPDATE "d1_sequences"
+			SET "value" = "value" + ${count}
+			WHERE "name" = ${model}
+			RETURNING "value"
+		`);
+		const end = rows[0]?.value;
+		if (end === undefined) {
+			throw new Error(`D1 sequence is missing: ${model}`);
+		}
+		return BigInt(end) - BigInt(count) + 1n;
 	}
 
 	private parseCatalogPayload(value: unknown): RemoteDataResponse | null {
