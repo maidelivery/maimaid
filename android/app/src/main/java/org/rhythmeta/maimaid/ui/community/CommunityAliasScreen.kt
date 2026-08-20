@@ -1,6 +1,7 @@
 package org.rhythmeta.maimaid.ui.community
 
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -64,6 +66,7 @@ internal fun CommunityAliasScreen(
     container: AppContainer,
     songs: List<SongEntity>,
     contentTopPadding: Dp,
+    onOpenSong: (String) -> Unit,
 ) {
     val viewModel = viewModel<CommunityAliasBoardViewModel>(
         factory = CommunityAliasBoardViewModel.Factory(container),
@@ -143,6 +146,7 @@ internal fun CommunityAliasScreen(
                                     fallbackTitle = songIdentifier,
                                     count = candidates.size,
                                     container = container,
+                                    onOpenSong = onOpenSong,
                                 )
                             }
                             items(
@@ -179,10 +183,18 @@ private fun CommunityAliasSongHeader(
     fallbackTitle: String,
     count: Int,
     container: AppContainer,
+    onOpenSong: (String) -> Unit,
 ) {
+    val navigationModifier = song?.let { currentSong ->
+        Modifier.clickable(role = Role.Button) {
+            onOpenSong(currentSong.songIdentifier)
+        }
+    } ?: Modifier
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(navigationModifier)
             .padding(top = 8.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),

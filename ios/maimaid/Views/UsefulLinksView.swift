@@ -30,7 +30,7 @@ struct UsefulLinksView: View {
         MaimaiLink(
             title: String(localized: "links.df.title"),
             subtitle: String(localized: "links.df.subtitle"),
-            url: "https://www.maimai.cn/",
+            url: "https://www.maimai.diving-fish.com/",
             icon: "chart.line.uptrend.xyaxis",
             color: .orange
         ),
@@ -63,7 +63,7 @@ struct UsefulLinksView: View {
             color: .blue
         )
     ]
-    
+
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -81,7 +81,7 @@ struct UsefulLinksView: View {
 
 private struct LinkCard: View {
     let link: MaimaiLink
-    
+
     var body: some View {
         Link(destination: URL(string: link.url)!) {
             HStack(spacing: 16) {
@@ -90,26 +90,26 @@ private struct LinkCard: View {
                     Circle()
                         .fill(link.color.opacity(0.1))
                         .frame(width: 48, height: 48)
-                    
+
                     Image(systemName: link.icon)
                         .font(.system(size: 22))
                         .foregroundStyle(link.color)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(link.title)
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.primary)
-                    
+
                     Text(link.subtitle)
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                 }
-                
+
                 Spacer()
-                
+
                 Image(systemName: "arrow.up.right")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.secondary.opacity(0.3))

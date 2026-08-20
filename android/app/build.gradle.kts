@@ -45,7 +45,7 @@ android {
         minSdk = 28
         targetSdk = 37
         versionCode = maimaidBuildNumber.get()
-		versionName = "1.2.1"
+		versionName = "1.2.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "BACKEND_URL", "\"${maimaidBackendUrl.get()}\"")

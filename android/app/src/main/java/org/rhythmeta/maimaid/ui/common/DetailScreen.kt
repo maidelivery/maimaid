@@ -194,6 +194,7 @@ internal fun DetailScreen(
             container = container,
             songs = state.songs,
             contentTopPadding = songContentTopPadding,
+            onOpenSong = onOpenSong,
         )
         AppDetail.Profiles -> ProfileScreen(
             container = container,
