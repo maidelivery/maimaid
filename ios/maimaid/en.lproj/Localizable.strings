@@ -261,15 +261,15 @@
 "import.df.username" = "Current Account";
 "import.df.action.quickSync" = "Quick Sync Scores";
 "import.df.rebind.header" = "Rebind";
-"import.df.rebind.footer" = "Update account/token. Needed for auto-upload.";
+"import.df.rebind.footer" = "Use OAuth again to connect a different Diving Fish account.";
 "import.df.username.placeholder" = "QQ / Username";
 "import.df.token.placeholder" = "Token (Optional, for sync)";
-"import.df.action.update" = "Update & Bind";
-"import.df.setup.header" = "Account Setup";
-"import.df.setup.footer" = "Enter QQ or username.";
+"import.df.action.update" = "Reconnect Diving Fish";
+"import.df.setup.header" = "Diving Fish OAuth";
+"import.df.setup.footer" = "Authorize in the browser, then return to maimaid.";
 "import.df.token.setup.placeholder" = "Token (for sync)";
-"import.df.action.bindImport" = "Bind & Import";
-"import.df.status.connecting" = "Connecting...";
+"import.df.action.bindImport" = "Connect Diving Fish";
+"import.df.status.connecting" = "Connecting to Diving Fish...";
 "import.df.summary.footer" = "This page imports scores from Diving Fish.";
 
 // LXNS

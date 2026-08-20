@@ -340,14 +340,11 @@ syncV1Route.post("/sync:push", authRequired, standardValidator("json", pushSchem
 			}
 
 			if (successfulActiveProfileId) {
-				const deactivatedProfiles = await transaction.profile.updateManyAndReturn({
-					where: {
-						userId: auth.userId,
-						isActive: true,
-						id: { not: successfulActiveProfileId },
-					},
-					data: { isActive: false },
-				});
+				const deactivatedProfiles = await profileService.deactivateOtherProfiles(
+					auth.userId,
+					successfulActiveProfileId,
+					transaction,
+				);
 				for (const profile of deactivatedProfiles) {
 					result.profileVersions[profile.id] = profile.updatedAt.toISOString();
 					await syncService.recordEvent(

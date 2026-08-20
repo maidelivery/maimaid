@@ -4,6 +4,7 @@ import { TOKENS } from "../di/tokens.js";
 import type { Env } from "../env.js";
 import { AppError } from "../lib/errors.js";
 import { difficultyByLevelIndex, normalizeChartType, normalizeLxnsSongId } from "../utils/compat.js";
+import { chunk } from "./catalog.utils.js";
 
 export type ScoreLocator = {
 	sheetId?: bigint;
@@ -47,6 +48,11 @@ export type UpdateBestScoreInput = {
 
 const FC_ORDER = ["fc", "fcp", "ap", "app"];
 const FS_ORDER = ["sync", "fs", "fsp", "fsd", "fsdp"];
+
+// Keep every D1 lookup below SQLite's conservative 100 bind-variable limit.
+// A score import can contain hundreds of sheets and records.
+const D1_LOOKUP_CHUNK_SIZE = 25;
+const POSTGRES_LOOKUP_CHUNK_SIZE = 500;
 
 type ResolvedSheet = {
 	id: bigint;
@@ -200,6 +206,9 @@ export class ScoreService {
 			await this.lockProfile(database, profileId);
 			return this.bulkUpsertBestScoresLocked(profileId, scores, source, database);
 		}
+		if (this.env.DATABASE_DIALECT === "sqlite") {
+			return this.bulkUpsertBestScoresLocked(profileId, scores, source, this.prisma);
+		}
 		return this.prisma.$transaction(
 			async (transaction) => {
 				await this.lockProfile(transaction, profileId);
@@ -213,7 +222,7 @@ export class ScoreService {
 		profileId: string,
 		scores: UpsertScoreInput[],
 		source: string,
-		database: Prisma.TransactionClient,
+		database: PrismaClient | Prisma.TransactionClient,
 	) {
 		const applied: Array<{ sheetId: bigint; action: "created" | "updated" }> = [];
 		const skipped: Array<{ reason: string; locator: ScoreLocator }> = [];
@@ -266,23 +275,35 @@ export class ScoreService {
 		}
 
 		const sheetIds = Array.from(groupedBySheetId.values()).map((entries) => entries[0]!.sheetId);
-		const existingRows = await database.bestScore.findMany({
-			where: {
-				profileId,
-				sheetId: {
-					in: sheetIds,
+		const existingRows: Array<{
+			id: string;
+			sheetId: bigint;
+			achievements: Prisma.Decimal;
+			dxScore: number;
+			fc: string | null;
+			fs: string | null;
+			achievedAt: Date;
+		}> = [];
+		for (const sheetIdBatch of chunk(sheetIds, this.lookupChunkSize())) {
+			const rows = await database.bestScore.findMany({
+				where: {
+					profileId,
+					sheetId: {
+						in: sheetIdBatch,
+					},
 				},
-			},
-			select: {
-				id: true,
-				sheetId: true,
-				achievements: true,
-				dxScore: true,
-				fc: true,
-				fs: true,
-				achievedAt: true,
-			},
-		});
+				select: {
+					id: true,
+					sheetId: true,
+					achievements: true,
+					dxScore: true,
+					fc: true,
+					fs: true,
+					achievedAt: true,
+				},
+			});
+			existingRows.push(...rows);
+		}
 		const existingBySheetId = new Map(existingRows.map((row) => [row.sheetId.toString(), row]));
 
 		const createRows: Prisma.BestScoreCreateManyInput[] = [];
@@ -364,12 +385,22 @@ export class ScoreService {
 		}
 
 		if (createRows.length > 0) {
-			await database.bestScore.createMany({
-				data: createRows,
-			});
+			if (this.env.DATABASE_DIALECT === "sqlite") {
+				for (const data of createRows) {
+					await database.bestScore.create({ data });
+				}
+			} else {
+				await database.bestScore.createMany({ data: createRows });
+			}
 		}
 		if (updateOps.length > 0) {
-			await Promise.all(updateOps);
+			if (this.env.DATABASE_DIALECT === "sqlite") {
+				for (const update of updateOps) {
+					await update;
+				}
+			} else {
+				await Promise.all(updateOps);
+			}
 		}
 
 		return {
@@ -379,12 +410,19 @@ export class ScoreService {
 	}
 
 	async replaceBestScores(profileId: string, scores: UpsertScoreInput[], source: string) {
-		const deleted = await this.prisma.bestScore.deleteMany({
-			where: { profileId },
-		});
+		let deletedCount: number;
+		if (this.env.DATABASE_DIALECT === "sqlite") {
+			const existing = await this.prisma.bestScore.findMany({ where: { profileId }, select: { id: true } });
+			for (const score of existing) {
+				await this.prisma.bestScore.delete({ where: { id: score.id } });
+			}
+			deletedCount = existing.length;
+		} else {
+			deletedCount = (await this.prisma.bestScore.deleteMany({ where: { profileId } })).count;
+		}
 		const result = await this.bulkUpsertBestScores(profileId, scores, source);
 		return {
-			deletedCount: deleted.count,
+			deletedCount,
 			...result,
 		};
 	}
@@ -399,6 +437,9 @@ export class ScoreService {
 			await this.lockProfile(database, profileId);
 			return this.bulkInsertPlayRecordsLocked(profileId, records, source, database);
 		}
+		if (this.env.DATABASE_DIALECT === "sqlite") {
+			return this.bulkInsertPlayRecordsLocked(profileId, records, source, this.prisma);
+		}
 		return this.prisma.$transaction(
 			async (transaction) => {
 				await this.lockProfile(transaction, profileId);
@@ -412,7 +453,7 @@ export class ScoreService {
 		profileId: string,
 		records: PlayRecordInput[],
 		source: string,
-		database: Prisma.TransactionClient,
+		database: PrismaClient | Prisma.TransactionClient,
 	) {
 		const created: Array<{ sheetId: bigint }> = [];
 		const skipped: Array<{ reason: string; locator: ScoreLocator }> = [];
@@ -472,24 +513,35 @@ export class ScoreService {
 			}
 		}
 
-		const existingRows = await database.playRecord.findMany({
-			where: {
-				profileId,
-				sheetId: { in: Array.from(sheetIds) },
-				playTime: {
-					gte: minPlayTime,
-					lte: maxPlayTime,
+		const existingRows: Array<{
+			sheetId: bigint;
+			playTime: Date;
+			achievements: Prisma.Decimal;
+			dxScore: number;
+			fc: string | null;
+			fs: string | null;
+		}> = [];
+		for (const sheetIdBatch of chunk(Array.from(sheetIds), this.lookupChunkSize())) {
+			const rows = await database.playRecord.findMany({
+				where: {
+					profileId,
+					sheetId: { in: sheetIdBatch },
+					playTime: {
+						gte: minPlayTime,
+						lte: maxPlayTime,
+					},
 				},
-			},
-			select: {
-				sheetId: true,
-				playTime: true,
-				achievements: true,
-				dxScore: true,
-				fc: true,
-				fs: true,
-			},
-		});
+				select: {
+					sheetId: true,
+					playTime: true,
+					achievements: true,
+					dxScore: true,
+					fc: true,
+					fs: true,
+				},
+			});
+			existingRows.push(...rows);
+		}
 		const existingKeys = new Set(
 			existingRows.map((row) =>
 				this.playRecordDuplicateKey({
@@ -535,9 +587,13 @@ export class ScoreService {
 		}
 
 		if (createRows.length > 0) {
-			await database.playRecord.createMany({
-				data: createRows,
-			});
+			if (this.env.DATABASE_DIALECT === "sqlite") {
+				for (const data of createRows) {
+					await database.playRecord.create({ data });
+				}
+			} else {
+				await database.playRecord.createMany({ data: createRows });
+			}
 		}
 
 		return {
@@ -547,12 +603,19 @@ export class ScoreService {
 	}
 
 	async replacePlayRecords(profileId: string, records: PlayRecordInput[], source: string) {
-		const deleted = await this.prisma.playRecord.deleteMany({
-			where: { profileId },
-		});
+		let deletedCount: number;
+		if (this.env.DATABASE_DIALECT === "sqlite") {
+			const existing = await this.prisma.playRecord.findMany({ where: { profileId }, select: { id: true } });
+			for (const record of existing) {
+				await this.prisma.playRecord.delete({ where: { id: record.id } });
+			}
+			deletedCount = existing.length;
+		} else {
+			deletedCount = (await this.prisma.playRecord.deleteMany({ where: { profileId } })).count;
+		}
 		const result = await this.bulkInsertPlayRecords(profileId, records, source);
 		return {
-			deletedCount: deleted.count,
+			deletedCount,
 			...result,
 		};
 	}
@@ -607,48 +670,12 @@ export class ScoreService {
 		}
 
 		if (sheetIds.size > 0) {
-			const rows = await database.sheet.findMany({
-				where: {
-					id: {
-						in: Array.from(sheetIds),
-					},
-				},
-				select: {
-					id: true,
-					songIdentifier: true,
-					chartType: true,
-					difficulty: true,
-					song: {
-						select: {
-							title: true,
-						},
-					},
-				},
-			});
-			const byId = new Map(rows.map((row) => [row.id.toString(), row]));
-			for (const [index, locator] of locators.entries()) {
-				if (locator.sheetId === undefined) {
-					continue;
-				}
-				resolved[index] = byId.get(locator.sheetId.toString()) ?? null;
-			}
-		}
-
-		const byIdentifierKey = new Map<string, ResolvedSheet>();
-		if (identifierCandidates.size > 0) {
-			const typeSet = Array.from(new Set(Array.from(normalizedByIndex.values()).map((item) => item.type)));
-			const difficultySet = Array.from(new Set(Array.from(normalizedByIndex.values()).map((item) => item.difficulty)));
-			if (typeSet.length > 0 && difficultySet.length > 0) {
-				const rows = await database.sheet.findMany({
+			const rows: ResolvedSheet[] = [];
+			for (const sheetIdBatch of chunk(Array.from(sheetIds), this.lookupChunkSize())) {
+				const batchRows = await database.sheet.findMany({
 					where: {
-						songIdentifier: {
-							in: Array.from(identifierCandidates),
-						},
-						chartType: {
-							in: typeSet,
-						},
-						difficulty: {
-							in: difficultySet,
+						id: {
+							in: sheetIdBatch,
 						},
 					},
 					select: {
@@ -663,6 +690,50 @@ export class ScoreService {
 						},
 					},
 				});
+				rows.push(...batchRows);
+			}
+			const byId = new Map(rows.map((row) => [row.id.toString(), row]));
+			for (const [index, locator] of locators.entries()) {
+				if (locator.sheetId === undefined) {
+					continue;
+				}
+				resolved[index] = byId.get(locator.sheetId.toString()) ?? null;
+			}
+		}
+
+		const byIdentifierKey = new Map<string, ResolvedSheet>();
+		if (identifierCandidates.size > 0) {
+			const typeSet = Array.from(new Set(Array.from(normalizedByIndex.values()).map((item) => item.type)));
+			const difficultySet = Array.from(new Set(Array.from(normalizedByIndex.values()).map((item) => item.difficulty)));
+			if (typeSet.length > 0 && difficultySet.length > 0) {
+				const rows: ResolvedSheet[] = [];
+				for (const identifierBatch of chunk(Array.from(identifierCandidates), this.lookupChunkSize())) {
+					const batchRows = await database.sheet.findMany({
+						where: {
+							songIdentifier: {
+								in: identifierBatch,
+							},
+							chartType: {
+								in: typeSet,
+							},
+							difficulty: {
+								in: difficultySet,
+							},
+						},
+						select: {
+							id: true,
+							songIdentifier: true,
+							chartType: true,
+							difficulty: true,
+							song: {
+								select: {
+									title: true,
+								},
+							},
+						},
+					});
+					rows.push(...batchRows);
+				}
 				for (const row of rows) {
 					const key = this.sheetIdentifierKey(row.songIdentifier, row.chartType, row.difficulty);
 					if (!byIdentifierKey.has(key)) {
@@ -731,36 +802,40 @@ export class ScoreService {
 				),
 			);
 			if (titles.length > 0 && typeSet.length > 0 && difficultySet.length > 0) {
-				const rows = await database.sheet.findMany({
-					where: {
-						chartType: {
-							in: typeSet,
-						},
-						difficulty: {
-							in: difficultySet,
-						},
-						song: {
-							title: {
-								in: titles,
+				const rows: ResolvedSheet[] = [];
+				for (const titleBatch of chunk(titles, this.lookupChunkSize())) {
+					const batchRows = await database.sheet.findMany({
+						where: {
+							chartType: {
+								in: typeSet,
+							},
+							difficulty: {
+								in: difficultySet,
+							},
+							song: {
+								title: {
+									in: titleBatch,
+								},
 							},
 						},
-					},
-					select: {
-						id: true,
-						songIdentifier: true,
-						chartType: true,
-						difficulty: true,
-						song: {
-							select: {
-								title: true,
+						select: {
+							id: true,
+							songIdentifier: true,
+							chartType: true,
+							difficulty: true,
+							song: {
+								select: {
+									title: true,
+								},
 							},
 						},
-					},
-					// Titles are not unique across songs and the map below keeps the first
-					// hit. Charts that vanished upstream are kept as `disabled` rather than
-					// deleted, so order them last to resolve scores onto a live chart.
-					orderBy: [{ disabled: "asc" }, { songIdentifier: "asc" }],
-				});
+						// Titles are not unique across songs and the map below keeps the first
+						// hit. Charts that vanished upstream are kept as `disabled` rather than
+						// deleted, so order them last to resolve scores onto a live chart.
+						orderBy: [{ disabled: "asc" }, { songIdentifier: "asc" }],
+					});
+					rows.push(...batchRows);
+				}
 				const byTitleKey = new Map<string, ResolvedSheet>();
 				for (const row of rows) {
 					const title = row.song?.title;
@@ -789,6 +864,10 @@ export class ScoreService {
 		}
 
 		return resolved;
+	}
+
+	private lookupChunkSize(): number {
+		return this.env.DATABASE_DIALECT === "sqlite" ? D1_LOOKUP_CHUNK_SIZE : POSTGRES_LOOKUP_CHUNK_SIZE;
 	}
 
 	private normalizeDifficulty(difficulty?: string, levelIndex?: number): string | null {

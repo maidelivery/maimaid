@@ -1,0 +1,11 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "maimaid-oauth-upstream",
+	"main": ".worker/oauth-upstream.ts",
+	"compatibility_date": "2026-08-17",
+	"workers_dev": true,
+	"preview_urls": false,
+	"observability": {
+		"enabled": true,
+	},
+}

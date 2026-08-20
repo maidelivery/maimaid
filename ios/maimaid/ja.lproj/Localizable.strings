@@ -260,15 +260,15 @@
 "import.df.username" = "現在のアカウント";
 "import.df.action.quickSync" = "クイック同期スコア";
 "import.df.rebind.header" = "再連携";
-"import.df.rebind.footer" = "アカウント/トークンを更新します。自動アップロードに必要です。";
+"import.df.rebind.footer" = "OAuth でもう一度別の Diving Fish アカウントを連携します。";
 "import.df.username.placeholder" = "QQ / ユーザー名";
 "import.df.token.placeholder" = "トークン (オプション、同期用)";
-"import.df.action.update" = "更新して連携";
-"import.df.setup.header" = "アカウントのセットアップ";
-"import.df.setup.footer" = "QQ またはユーザー名を入力してください。";
+"import.df.action.update" = "Diving Fish を再連携";
+"import.df.setup.header" = "Diving Fish OAuth";
+"import.df.setup.footer" = "ブラウザで認証を完了してから maimaid に戻ってください。";
 "import.df.token.setup.placeholder" = "トークン（同期用）";
-"import.df.action.bindImport" = "連携してインポート";
-"import.df.status.connecting" = "接続中...";
+"import.df.action.bindImport" = "Diving Fish を連携";
+"import.df.status.connecting" = "Diving Fish に接続中...";
 "import.df.summary.footer" = "このページは Diving Fish からスコアを取り込みます。";
 
 // LXNS

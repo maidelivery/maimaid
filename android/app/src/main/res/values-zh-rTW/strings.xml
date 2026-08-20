@@ -214,10 +214,9 @@
     <string name="import_account_section">匯入帳戶</string>
     <string name="import_df_summary_title">從水魚匯入</string>
     <string name="import_df_summary_description">綁定水魚帳戶，將成績匯入目前檔案。</string>
-    <string name="import_df_account">使用者名稱或 QQ</string>
-    <string name="import_df_token">匯入 Token（選填）</string>
-    <string name="import_df_token_description">填寫匯入 Token 可取得全部成績；僅填寫使用者名稱或 QQ 時取得公開 B50。</string>
-    <string name="import_df_action">綁定並匯入</string>
+    <string name="import_df_authorize">連接水魚帳號</string>
+    <string name="import_df_authorize_description">請在瀏覽器完成 OAuth 授權，然後返回 maimaid。</string>
+    <string name="import_df_action">匯入成績</string>
     <string name="import_lxns_summary_title">連接 LXNS</string>
     <string name="import_lxns_summary_description">授權 LXNS，將成績匯入目前檔案。</string>
     <string name="import_lxns_connected">已連接 LXNS</string>

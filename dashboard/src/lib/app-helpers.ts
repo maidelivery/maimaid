@@ -6,6 +6,7 @@ const PASSWORD_COMPLEXITY_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-
 const USERNAME_PATTERN = /^[\p{L}\p{N}_.-]+$/u;
 
 export const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "").trim().replace(/\/+$/u, "");
+export const DIVING_FISH_OAUTH_CLIENT_ID = (process.env.NEXT_PUBLIC_DIVING_FISH_CLIENT_ID ?? "").trim();
 export const LXNS_OAUTH_CLIENT_ID = (process.env.NEXT_PUBLIC_LXNS_CLIENT_ID ?? "").trim();
 export const COVER_BASE_URL = "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover";
 export const SONG_FAVORITE_STORAGE_KEY = "dashboard.songFavorites";

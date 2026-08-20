@@ -14,6 +14,13 @@ export const withD1TransactionCompatibility = <T extends object>(client: T): T =
 				if (typeof operation === "function") {
 					return (operation as InteractiveTransaction)(proxy);
 				}
+				if (Array.isArray(operation)) {
+					const results: unknown[] = [];
+					for (const query of operation) {
+						results.push(await query);
+					}
+					return results;
+				}
 				return Reflect.apply(value, target, [operation, ...options]) as Promise<unknown>;
 			};
 		},

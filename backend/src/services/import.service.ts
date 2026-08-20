@@ -1,10 +1,13 @@
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { inject, injectable } from "tsyringe";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
+import { randomToken, sha256Base64Url, sha256Hex } from "../lib/crypto.js";
 import { ScoreService } from "./score.service.js";
 import { SyncService } from "./sync.service.js";
+import { chunk } from "./catalog.utils.js";
 import { difficultyByLevelIndex, lxnsSongIdToLocal, normalizeChartType } from "../utils/compat.js";
+import type { Env } from "../env.js";
 
 type DivingFishRecord = {
 	achievements: number;
@@ -18,18 +21,6 @@ type DivingFishRecord = {
 	song_id?: number | null;
 };
 
-type DivingFishResponse = {
-	username?: string;
-	nickname?: string;
-	rating?: number;
-	plate?: string | null;
-	charts?: {
-		dx?: DivingFishRecord[];
-		sd?: DivingFishRecord[];
-	};
-	message?: string;
-};
-
 type DivingFishRecordsResponse = {
 	username?: string;
 	nickname?: string;
@@ -38,6 +29,85 @@ type DivingFishRecordsResponse = {
 	records?: DivingFishRecord[];
 	message?: string;
 };
+
+type DivingFishDiscovery = {
+	issuer?: string;
+	authorization_endpoint?: string;
+	token_endpoint?: string;
+	userinfo_endpoint?: string;
+};
+
+type DivingFishTokenResponse = {
+	token_type?: string;
+	access_token?: string;
+	expires_in?: number;
+	refresh_token?: string;
+	id_token?: string;
+	scope?: string;
+	error?: string;
+	error_description?: string;
+};
+
+type DivingFishToken = {
+	accessToken: string;
+	refreshToken: string;
+	expiresIn: number;
+	scope: string;
+};
+
+type DivingFishUserInfo = {
+	sub?: string;
+	preferred_username?: string;
+	name?: string;
+	nickname?: string;
+};
+
+type DivingFishCredential = {
+	version: 1;
+	accessToken?: string;
+	accessTokenExpiresAt?: string;
+	refreshToken?: string;
+	scope?: string;
+	pending?: {
+		stateHash: string;
+		codeVerifier: string;
+		nonce: string;
+		expiresAt: string;
+	};
+	exchange?: {
+		id: string;
+		expiresAt: string;
+	};
+	refreshLease?: {
+		id: string;
+		expiresAt: string;
+	};
+};
+
+const DIVING_FISH_ISSUER = "https://auth.diving-fish.com";
+const DIVING_FISH_DISCOVERY_URL = `${DIVING_FISH_ISSUER}/.well-known/openid-configuration`;
+const DIVING_FISH_RECORDS_URL = "https://www.diving-fish.com/api/maimaidxprober/player/records";
+const DIVING_FISH_SCOPE = "openid profile prober.records.read";
+const DIVING_FISH_STATE_TTL_MS = 10 * 60 * 1_000;
+const DIVING_FISH_EXCHANGE_TTL_MS = 2 * 60 * 1_000;
+const DIVING_FISH_REFRESH_LEASE_TTL_MS = 30 * 1_000;
+const DIVING_FISH_ACCESS_TOKEN_SKEW_MS = 30 * 1_000;
+
+// D1 deployments can enforce a 100-variable SQLite statement limit. Keep
+// repeated IN predicates below that ceiling, including the three song-id
+// predicates used by the catalog compatibility lookup.
+const D1_LOOKUP_CHUNK_SIZE = 25;
+const POSTGRES_LOOKUP_CHUNK_SIZE = 500;
+
+const IMPORT_UPSTREAM_ROUTES = new Map<string, string>([
+	[DIVING_FISH_DISCOVERY_URL, "diving-fish/discovery"],
+	["https://auth.diving-fish.com/oauth/token", "diving-fish/token"],
+	["https://auth.diving-fish.com/oauth/userinfo", "diving-fish/userinfo"],
+	[DIVING_FISH_RECORDS_URL, "diving-fish/records"],
+	["https://maimai.lxns.net/api/v0/oauth/token", "lxns/token"],
+	["https://maimai.lxns.net/api/v0/user/maimai/player", "lxns/player"],
+	["https://maimai.lxns.net/api/v0/user/maimai/player/scores", "lxns/scores"],
+]);
 
 type LxnsScore = {
 	id: number;
@@ -80,6 +150,8 @@ type LxnsTokenResponse = {
 	success?: boolean;
 	data?: LxnsTokenData | null;
 	message?: string;
+	error?: string;
+	error_description?: string;
 };
 
 export type TransformedImportRecord = {
@@ -144,117 +216,215 @@ export class ImportService {
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
 		@inject(ScoreService) private readonly scoreService: ScoreService,
 		@inject(SyncService) private readonly syncService: SyncService,
+		@inject(TOKENS.Env) private readonly env: Env,
 	) {}
 
-	async transformFromDivingFish(input: {
-		username?: string;
-		qq?: string;
-		importToken?: string;
-	}): Promise<TransformedImportResult> {
-		const importToken = input.importToken?.trim();
-		if (importToken) {
-			const response = await fetch("https://www.diving-fish.com/api/maimaidxprober/player/records", {
-				method: "GET",
-				headers: {
-					"Import-Token": importToken,
+	async createDivingFishAuthorization(input: { userId: string; profileId: string }) {
+		await this.scoreService.requireProfileOwnership(input.profileId, input.userId);
+		const config = this.requireDivingFishOAuthConfig();
+		const discovery = await this.getDivingFishDiscovery();
+		const state = `${input.profileId}.${randomToken(32)}`;
+		const codeVerifier = randomToken(64);
+		const nonce = randomToken(24);
+		const expiresAt = new Date(Date.now() + DIVING_FISH_STATE_TTL_MS);
+		const existing = await this.prisma.profileBinding.findUnique({
+			where: {
+				profileId_provider: {
+					profileId: input.profileId,
+					provider: "df",
 				},
-			});
-			const payload = (await response.json()) as DivingFishRecordsResponse;
-			if (!response.ok || !Array.isArray(payload.records)) {
-				throw new AppError(400, "df_import_failed", payload.message ?? "Failed to import from Diving Fish.");
-			}
+			},
+		});
+		const credentials = this.parseDivingFishCredential(existing?.credentialJson);
+		credentials.pending = {
+			stateHash: await sha256Hex(state),
+			codeVerifier,
+			nonce,
+			expiresAt: expiresAt.toISOString(),
+		};
+		delete credentials.exchange;
 
-			const normalizedRecords = payload.records.map((record) => {
-				const backendChartType = this.normalizeBackendChartType(record.type);
-				const difficulty = difficultyByLevelIndex(record.level_index) ?? "basic";
-				// DF song IDs are identical to local IDs — no conversion needed
-				const localSongId = this.parseProviderSongId(record.song_id);
-				return {
-					record,
-					backendChartType,
-					difficulty,
-					localSongId,
-				};
-			});
-			const mappings = await this.resolveCatalogMappings(
-				normalizedRecords.map((item) => ({
-					songId: item.localSongId,
-					title: item.record.title,
-					chartType: item.backendChartType,
-					difficulty: item.difficulty,
-				})),
-			);
-
-			const transformed: TransformedImportRecord[] = normalizedRecords.map((item, index) => {
-				const mapped = mappings[index] ?? {
-					songIdentifier: null,
-					songId: item.localSongId,
-					sheetKey: null,
-				};
-				return {
-					source: "df",
-					sheetKey: mapped.sheetKey,
-					songIdentifier: mapped.songIdentifier,
-					songId: mapped.songId ?? item.localSongId,
-					title: item.record.title,
-					chartType: this.toAppChartType(item.backendChartType),
-					difficulty: item.difficulty,
-					levelIndex: item.record.level_index,
-					achievements: item.record.achievements,
-					rank: this.rankByAchievements(item.record.achievements),
-					dxScore: item.record.dxScore ?? item.record.dx_score ?? 0,
-					fc: this.normalizeProgress(item.record.fc),
-					fs: this.normalizeProgress(item.record.fs),
-					playTime: null,
-				};
-			});
-
-			return {
+		await this.prisma.profileBinding.upsert({
+			where: {
+				profileId_provider: {
+					profileId: input.profileId,
+					provider: "df",
+				},
+			},
+			create: {
+				profileId: input.profileId,
 				provider: "df",
-				fetchedCount: payload.records.length,
-				mappedCount: transformed.filter((item) => item.sheetKey !== null).length,
-				player: {
-					name: payload.nickname ?? payload.username ?? input.username ?? input.qq ?? null,
-					rating: typeof payload.rating === "number" ? payload.rating : null,
-					plate: payload.plate ?? null,
+				credentialJson: this.toCredentialJson(credentials),
+			},
+			update: {
+				credentialJson: this.toCredentialJson(credentials),
+			},
+		});
+
+		const authorizationUrl = new URL(discovery.authorizationEndpoint);
+		authorizationUrl.search = new URLSearchParams({
+			response_type: "code",
+			client_id: config.clientId,
+			redirect_uri: config.redirectUri,
+			scope: DIVING_FISH_SCOPE,
+			state,
+			nonce,
+			code_challenge: await sha256Base64Url(codeVerifier),
+			code_challenge_method: "S256",
+		}).toString();
+
+		return {
+			authorizationUrl: authorizationUrl.toString(),
+			expiresAt: expiresAt.toISOString(),
+		};
+	}
+
+	async handleDivingFishCallback(input: { code: string | undefined; state: string | undefined; error: string | undefined }) {
+		const state = input.state?.trim() ?? "";
+		const separatorIndex = state.indexOf(".");
+		const profileId = separatorIndex > 0 ? state.slice(0, separatorIndex) : "";
+		if (!this.isUuid(profileId)) {
+			throw new AppError(400, "df_oauth_invalid_state", "Diving Fish authorization state is invalid.");
+		}
+
+		const binding = await this.prisma.profileBinding.findUnique({
+			where: {
+				profileId_provider: {
+					profileId,
+					provider: "df",
 				},
-				records: transformed,
+			},
+		});
+		const credentials = this.parseDivingFishCredential(binding?.credentialJson);
+		const pending = credentials.pending;
+		if (!binding || !pending || Date.parse(pending.expiresAt) <= Date.now()) {
+			throw new AppError(400, "df_oauth_invalid_state", "Diving Fish authorization state expired.");
+		}
+		const receivedStateHash = await sha256Hex(state);
+		if (!this.constantTimeEqual(receivedStateHash, pending.stateHash)) {
+			throw new AppError(400, "df_oauth_invalid_state", "Diving Fish authorization state is invalid.");
+		}
+
+		delete credentials.pending;
+		const exchangeId = randomToken(24);
+		if (input.error) {
+			delete credentials.exchange;
+		} else {
+			credentials.exchange = {
+				id: exchangeId,
+				expiresAt: new Date(Date.now() + DIVING_FISH_EXCHANGE_TTL_MS).toISOString(),
 			};
 		}
-
-		const requestBody: Record<string, unknown> = {};
-		if (input.qq) {
-			requestBody.qq = input.qq;
-		} else if (input.username) {
-			requestBody.username = input.username;
-		} else {
-			throw new AppError(400, "invalid_request", "username or qq is required.");
-		}
-		requestBody.b50 = true;
-
-		const response = await fetch("https://www.diving-fish.com/api/maimaidxprober/query/player", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(requestBody),
+		const consumed = await this.prisma.profileBinding.updateMany({
+			where: {
+				id: binding.id,
+				updatedAt: binding.updatedAt,
+			},
+			data: {
+				credentialJson: this.toCredentialJson(credentials),
+			},
 		});
-		const payload = (await response.json()) as DivingFishResponse;
-		if (!response.ok || !payload.charts) {
-			throw new AppError(400, "df_import_failed", payload.message ?? "Failed to import from Diving Fish.");
+		if (consumed.count !== 1) {
+			throw new AppError(400, "df_oauth_invalid_state", "Diving Fish authorization state was already used.");
+		}
+		if (input.error) {
+			throw new AppError(400, "df_oauth_denied", "Diving Fish authorization was denied.");
 		}
 
-		const allRecords = [...(payload.charts.dx ?? []), ...(payload.charts.sd ?? [])];
-		const normalizedRecords = allRecords.map((record) => {
+		const code = input.code?.trim() ?? "";
+		if (!code) {
+			throw new AppError(400, "df_oauth_missing_code", "Diving Fish authorization code is required.");
+		}
+
+		const config = this.requireDivingFishOAuthConfig();
+		const discovery = await this.getDivingFishDiscovery();
+		const token = await this.requestDivingFishToken(discovery.tokenEndpoint, {
+			grant_type: "authorization_code",
+			code,
+			redirect_uri: config.redirectUri,
+			client_id: config.clientId,
+			client_secret: config.clientSecret,
+			code_verifier: pending.codeVerifier,
+		});
+		const userInfo = await this.getDivingFishUserInfo(discovery.userInfoEndpoint, token.accessToken);
+		const current = await this.prisma.profileBinding.findUnique({ where: { id: binding.id } });
+		const currentCredentials = this.parseDivingFishCredential(current?.credentialJson);
+		if (!current || currentCredentials.exchange?.id !== exchangeId) {
+			throw new AppError(409, "df_oauth_superseded", "A newer Diving Fish authorization has started.");
+		}
+
+		const connectedCredentials = this.createConnectedDivingFishCredential(token, currentCredentials);
+		delete connectedCredentials.exchange;
+		delete connectedCredentials.refreshLease;
+		const saved = await this.prisma.profileBinding.updateMany({
+			where: {
+				id: current.id,
+				updatedAt: current.updatedAt,
+			},
+			data: {
+				credentialJson: this.toCredentialJson(connectedCredentials),
+				externalUserId: userInfo?.sub ?? current.externalUserId,
+				externalUsername: userInfo?.preferred_username ?? userInfo?.nickname ?? userInfo?.name ?? current.externalUsername,
+			},
+		});
+		if (saved.count !== 1) {
+			throw new AppError(409, "df_oauth_superseded", "A newer Diving Fish authorization has started.");
+		}
+
+		return {
+			profileId,
+			externalUsername: userInfo?.preferred_username ?? userInfo?.nickname ?? userInfo?.name ?? null,
+		};
+	}
+
+	async getDivingFishConnection(input: { userId: string; profileId: string }) {
+		await this.scoreService.requireProfileOwnership(input.profileId, input.userId);
+		const binding = await this.prisma.profileBinding.findUnique({
+			where: {
+				profileId_provider: {
+					profileId: input.profileId,
+					provider: "df",
+				},
+			},
+		});
+		const credentials = this.parseDivingFishCredential(binding?.credentialJson);
+		return {
+			connected: Boolean(credentials.refreshToken),
+			externalUsername: binding?.externalUsername ?? null,
+		};
+	}
+
+	async transformFromDivingFish(input: { accessToken: string }): Promise<TransformedImportResult> {
+		const response = await this.fetchImportUpstream(DIVING_FISH_RECORDS_URL, {
+			method: "GET",
+			headers: {
+				Authorization: `Bearer ${input.accessToken}`,
+			},
+		});
+		const payload = await this.readJsonResponse<DivingFishRecordsResponse>(response, "df_import_failed", "Diving Fish");
+		if (!response.ok || !Array.isArray(payload.records)) {
+			throw new AppError(
+				response.status === 401 ? 409 : 400,
+				response.status === 401 ? "df_oauth_required" : "df_import_failed",
+				payload.message ?? "Failed to import from Diving Fish.",
+				{ upstreamStatus: response.status },
+			);
+		}
+
+		const normalizedRecords = payload.records.map((record) => {
 			const backendChartType = this.normalizeBackendChartType(record.type);
 			const difficulty = difficultyByLevelIndex(record.level_index) ?? "basic";
+			const localSongId = this.parseProviderSongId(record.song_id);
 			return {
 				record,
 				backendChartType,
 				difficulty,
+				localSongId,
 			};
 		});
 		const mappings = await this.resolveCatalogMappings(
 			normalizedRecords.map((item) => ({
-				songId: null,
+				songId: item.localSongId,
 				title: item.record.title,
 				chartType: item.backendChartType,
 				difficulty: item.difficulty,
@@ -264,21 +434,21 @@ export class ImportService {
 		const transformed: TransformedImportRecord[] = normalizedRecords.map((item, index) => {
 			const mapped = mappings[index] ?? {
 				songIdentifier: null,
-				songId: null,
+				songId: item.localSongId,
 				sheetKey: null,
 			};
 			return {
 				source: "df",
 				sheetKey: mapped.sheetKey,
 				songIdentifier: mapped.songIdentifier,
-				songId: mapped.songId,
+				songId: mapped.songId ?? item.localSongId,
 				title: item.record.title,
 				chartType: this.toAppChartType(item.backendChartType),
 				difficulty: item.difficulty,
 				levelIndex: item.record.level_index,
 				achievements: item.record.achievements,
 				rank: this.rankByAchievements(item.record.achievements),
-				dxScore: item.record.dx_score ?? 0,
+				dxScore: item.record.dxScore ?? item.record.dx_score ?? 0,
 				fc: this.normalizeProgress(item.record.fc),
 				fs: this.normalizeProgress(item.record.fs),
 				playTime: null,
@@ -287,10 +457,10 @@ export class ImportService {
 
 		return {
 			provider: "df",
-			fetchedCount: allRecords.length,
+			fetchedCount: payload.records.length,
 			mappedCount: transformed.filter((item) => item.sheetKey !== null).length,
 			player: {
-				name: payload.nickname ?? payload.username ?? input.username ?? input.qq ?? null,
+				name: payload.nickname ?? payload.username ?? null,
 				rating: typeof payload.rating === "number" ? payload.rating : null,
 				plate: payload.plate ?? null,
 			},
@@ -300,13 +470,13 @@ export class ImportService {
 
 	async transformFromLxns(input: { accessToken: string }): Promise<TransformedImportResult> {
 		const [scoresResponse, playerResponse] = await Promise.all([
-			fetch("https://maimai.lxns.net/api/v0/user/maimai/player/scores", {
+			this.fetchImportUpstream("https://maimai.lxns.net/api/v0/user/maimai/player/scores", {
 				method: "GET",
 				headers: {
 					Authorization: `Bearer ${input.accessToken}`,
 				},
 			}),
-			fetch("https://maimai.lxns.net/api/v0/user/maimai/player", {
+			this.fetchImportUpstream("https://maimai.lxns.net/api/v0/user/maimai/player", {
 				method: "GET",
 				headers: {
 					Authorization: `Bearer ${input.accessToken}`,
@@ -385,14 +555,9 @@ export class ImportService {
 		};
 	}
 
-	async importFromDivingFish(input: {
-		userId: string;
-		profileId: string;
-		username?: string;
-		qq?: string;
-		importToken?: string;
-	}) {
+	async importFromDivingFish(input: { userId: string; profileId: string }) {
 		await this.scoreService.requireProfileOwnership(input.profileId, input.userId);
+		const accessToken = await this.getDivingFishAccessToken(input.profileId);
 		const run = await this.prisma.importRun.create({
 			data: {
 				profileId: input.profileId,
@@ -402,17 +567,7 @@ export class ImportService {
 		});
 
 		try {
-			const transformInput: Parameters<ImportService["transformFromDivingFish"]>[0] = {};
-			if (input.username !== undefined) {
-				transformInput.username = input.username;
-			}
-			if (input.qq !== undefined) {
-				transformInput.qq = input.qq;
-			}
-			if (input.importToken !== undefined) {
-				transformInput.importToken = input.importToken;
-			}
-			const transformed = await this.transformFromDivingFish(transformInput);
+			const transformed = await this.transformFromDivingFish({ accessToken });
 			const mapped = transformed.records.map((record) => {
 				const row: {
 					songIdentifier?: string;
@@ -553,18 +708,29 @@ export class ImportService {
 			code_verifier: codeVerifier,
 		});
 
-		const response = await fetch("https://maimai.lxns.net/api/v0/oauth/token", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/x-www-form-urlencoded",
-			},
-			body: body.toString(),
-		});
-		const payload = (await response.json()) as LxnsTokenResponse;
+		let response: Response;
+		try {
+			response = await this.fetchImportUpstream("https://maimai.lxns.net/api/v0/oauth/token", {
+				method: "POST",
+				headers: {
+					Accept: "application/json",
+					"Content-Type": "application/x-www-form-urlencoded",
+				},
+				body: body.toString(),
+			});
+		} catch {
+			throw new AppError(502, "lxns_oauth_unavailable", "LXNS authorization server is unavailable.");
+		}
+		const payload = await this.readJsonResponse<LxnsTokenResponse>(response, "lxns_oauth_unavailable", "LXNS token endpoint");
 		const accessToken = payload.data?.access_token?.trim() ?? "";
 		const refreshToken = payload.data?.refresh_token?.trim() ?? "";
 		if (!response.ok || !accessToken || !refreshToken) {
-			throw new AppError(400, "lxns_oauth_failed", payload.message ?? "Failed to exchange LXNS authorization code.");
+			throw new AppError(
+				response.status >= 500 ? 502 : 400,
+				response.status >= 500 ? "lxns_oauth_unavailable" : "lxns_oauth_failed",
+				payload.message ?? payload.error_description ?? "Failed to exchange LXNS authorization code.",
+				{ upstreamStatus: response.status },
+			);
 		}
 
 		return {
@@ -713,6 +879,345 @@ export class ImportService {
 		}
 	}
 
+	private requireDivingFishOAuthConfig() {
+		const clientId = this.env.DIVING_FISH_CLIENT_ID?.trim();
+		const clientSecret = this.env.DIVING_FISH_CLIENT_SECRET?.trim();
+		if (!clientId || !clientSecret) {
+			throw new AppError(503, "df_oauth_unconfigured", "Diving Fish OAuth is unavailable.");
+		}
+		return {
+			clientId,
+			clientSecret,
+			redirectUri: this.env.DIVING_FISH_REDIRECT_URI,
+		};
+	}
+
+	private async getDivingFishDiscovery() {
+		let response: Response;
+		try {
+			response = await this.fetchImportUpstream(DIVING_FISH_DISCOVERY_URL, {
+				headers: { Accept: "application/json" },
+			});
+		} catch {
+			throw new AppError(502, "df_oauth_unavailable", "Diving Fish authorization server is unavailable.");
+		}
+		const payload = await this.readJsonResponse<DivingFishDiscovery>(
+			response,
+			"df_oauth_unavailable",
+			"Diving Fish authorization server",
+		);
+		if (!response.ok || payload.issuer !== DIVING_FISH_ISSUER) {
+			throw new AppError(502, "df_oauth_unavailable", "Diving Fish authorization discovery failed.", {
+				upstreamStatus: response.status,
+			});
+		}
+		return {
+			authorizationEndpoint: this.requireDivingFishEndpoint(payload.authorization_endpoint, "authorization"),
+			tokenEndpoint: this.requireDivingFishEndpoint(payload.token_endpoint, "token"),
+			userInfoEndpoint: this.requireDivingFishEndpoint(payload.userinfo_endpoint, "userinfo"),
+		};
+	}
+
+	private requireDivingFishEndpoint(value: string | undefined, name: string): string {
+		if (!value) {
+			throw new AppError(502, "df_oauth_unavailable", `Diving Fish ${name} endpoint is unavailable.`);
+		}
+		try {
+			const endpoint = new URL(value);
+			if (endpoint.origin !== DIVING_FISH_ISSUER) {
+				throw new Error("unexpected_origin");
+			}
+			return endpoint.toString();
+		} catch {
+			throw new AppError(502, "df_oauth_unavailable", `Diving Fish ${name} endpoint is invalid.`);
+		}
+	}
+
+	private async requestDivingFishToken(tokenEndpoint: string, parameters: Record<string, string>): Promise<DivingFishToken> {
+		let response: Response;
+		try {
+			response = await this.fetchImportUpstream(tokenEndpoint, {
+				method: "POST",
+				headers: {
+					Accept: "application/json",
+					"Content-Type": "application/x-www-form-urlencoded",
+				},
+				body: new URLSearchParams(parameters).toString(),
+			});
+		} catch {
+			throw new AppError(502, "df_oauth_unavailable", "Diving Fish token exchange is unavailable.");
+		}
+		const payload = await this.readJsonResponse<DivingFishTokenResponse>(
+			response,
+			"df_oauth_failed",
+			"Diving Fish token endpoint",
+		);
+		const accessToken = payload.access_token?.trim() ?? "";
+		const refreshToken = payload.refresh_token?.trim() ?? "";
+		const expiresIn = payload.expires_in;
+		if (
+			!response.ok ||
+			payload.error ||
+			!accessToken ||
+			!refreshToken ||
+			typeof expiresIn !== "number" ||
+			!Number.isFinite(expiresIn) ||
+			expiresIn <= 0
+		) {
+			throw new AppError(400, "df_oauth_failed", payload.error_description ?? "Diving Fish token exchange failed.", {
+				upstreamStatus: response.status,
+				oauthError: payload.error ?? "invalid_token_response",
+			});
+		}
+		return {
+			accessToken,
+			refreshToken,
+			expiresIn,
+			scope: payload.scope?.trim() || DIVING_FISH_SCOPE,
+		};
+	}
+
+	private async getDivingFishUserInfo(endpoint: string, accessToken: string): Promise<DivingFishUserInfo | null> {
+		try {
+			const response = await this.fetchImportUpstream(endpoint, {
+				headers: {
+					Accept: "application/json",
+					Authorization: `Bearer ${accessToken}`,
+				},
+			});
+			if (!response.ok) {
+				return null;
+			}
+			return await this.readJsonResponse<DivingFishUserInfo>(response, "df_oauth_failed", "Diving Fish userinfo");
+		} catch (error) {
+			console.warn("[df_oauth_userinfo_failed]", error instanceof Error ? error.message : "unknown_error");
+			return null;
+		}
+	}
+
+	private async getDivingFishAccessToken(profileId: string, retryCount = 0): Promise<string> {
+		const binding = await this.prisma.profileBinding.findUnique({
+			where: {
+				profileId_provider: {
+					profileId,
+					provider: "df",
+				},
+			},
+		});
+		const credentials = this.parseDivingFishCredential(binding?.credentialJson);
+		if (!binding || !credentials.refreshToken) {
+			throw new AppError(409, "df_oauth_required", "Connect a Diving Fish account before importing.");
+		}
+		const accessTokenExpiresAt = credentials.accessTokenExpiresAt ? Date.parse(credentials.accessTokenExpiresAt) : 0;
+		if (credentials.accessToken && accessTokenExpiresAt > Date.now() + DIVING_FISH_ACCESS_TOKEN_SKEW_MS) {
+			return credentials.accessToken;
+		}
+		if (credentials.refreshLease && Date.parse(credentials.refreshLease.expiresAt) > Date.now()) {
+			throw new AppError(409, "df_oauth_refresh_in_progress", "Diving Fish authorization is refreshing. Retry shortly.");
+		}
+
+		const leaseId = randomToken(24);
+		credentials.refreshLease = {
+			id: leaseId,
+			expiresAt: new Date(Date.now() + DIVING_FISH_REFRESH_LEASE_TTL_MS).toISOString(),
+		};
+		const claimed = await this.prisma.profileBinding.updateMany({
+			where: {
+				id: binding.id,
+				updatedAt: binding.updatedAt,
+			},
+			data: {
+				credentialJson: this.toCredentialJson(credentials),
+			},
+		});
+		if (claimed.count !== 1) {
+			if (retryCount < 1) {
+				return this.getDivingFishAccessToken(profileId, retryCount + 1);
+			}
+			throw new AppError(409, "df_oauth_refresh_in_progress", "Diving Fish authorization changed. Retry shortly.");
+		}
+
+		const claimedBinding = await this.prisma.profileBinding.findUnique({ where: { id: binding.id } });
+		const claimedCredentials = this.parseDivingFishCredential(claimedBinding?.credentialJson);
+		if (!claimedBinding || claimedCredentials.refreshLease?.id !== leaseId || !claimedCredentials.refreshToken) {
+			throw new AppError(409, "df_oauth_refresh_in_progress", "Diving Fish authorization changed. Retry shortly.");
+		}
+
+		try {
+			const config = this.requireDivingFishOAuthConfig();
+			const discovery = await this.getDivingFishDiscovery();
+			const token = await this.requestDivingFishToken(discovery.tokenEndpoint, {
+				grant_type: "refresh_token",
+				refresh_token: claimedCredentials.refreshToken,
+				client_id: config.clientId,
+				client_secret: config.clientSecret,
+			});
+			const current = await this.prisma.profileBinding.findUnique({ where: { id: binding.id } });
+			const currentCredentials = this.parseDivingFishCredential(current?.credentialJson);
+			if (!current || currentCredentials.refreshLease?.id !== leaseId) {
+				throw new AppError(409, "df_oauth_refresh_in_progress", "Diving Fish authorization changed. Retry shortly.");
+			}
+			const refreshedCredentials = this.createConnectedDivingFishCredential(token, currentCredentials);
+			delete refreshedCredentials.refreshLease;
+			const saved = await this.prisma.profileBinding.updateMany({
+				where: {
+					id: current.id,
+					updatedAt: current.updatedAt,
+				},
+				data: {
+					credentialJson: this.toCredentialJson(refreshedCredentials),
+				},
+			});
+			if (saved.count !== 1) {
+				throw new AppError(409, "df_oauth_refresh_in_progress", "Diving Fish authorization changed. Retry shortly.");
+			}
+			return token.accessToken;
+		} catch (error) {
+			await this.releaseDivingFishRefreshLease(binding.id, leaseId, this.isInvalidDivingFishGrant(error));
+			if (this.isInvalidDivingFishGrant(error)) {
+				throw new AppError(409, "df_oauth_required", "Diving Fish authorization expired. Connect the account again.");
+			}
+			throw error;
+		}
+	}
+
+	private async releaseDivingFishRefreshLease(bindingId: string, leaseId: string, clearTokens: boolean) {
+		const current = await this.prisma.profileBinding.findUnique({ where: { id: bindingId } });
+		const credentials = this.parseDivingFishCredential(current?.credentialJson);
+		if (!current || credentials.refreshLease?.id !== leaseId) {
+			return;
+		}
+		delete credentials.refreshLease;
+		if (clearTokens) {
+			delete credentials.accessToken;
+			delete credentials.accessTokenExpiresAt;
+			delete credentials.refreshToken;
+			delete credentials.scope;
+		}
+		await this.prisma.profileBinding.updateMany({
+			where: {
+				id: current.id,
+				updatedAt: current.updatedAt,
+			},
+			data: {
+				credentialJson: this.toCredentialJson(credentials),
+			},
+		});
+	}
+
+	private isInvalidDivingFishGrant(error: unknown): boolean {
+		if (!(error instanceof AppError) || typeof error.details !== "object" || error.details === null) {
+			return false;
+		}
+		return "oauthError" in error.details && error.details.oauthError === "invalid_grant";
+	}
+
+	private createConnectedDivingFishCredential(token: DivingFishToken, current: DivingFishCredential): DivingFishCredential {
+		return {
+			...current,
+			version: 1,
+			accessToken: token.accessToken,
+			accessTokenExpiresAt: new Date(Date.now() + token.expiresIn * 1_000).toISOString(),
+			refreshToken: token.refreshToken,
+			scope: token.scope,
+		};
+	}
+
+	private parseDivingFishCredential(value: unknown): DivingFishCredential {
+		const source = this.asRecord(value);
+		const result: DivingFishCredential = { version: 1 };
+		if (!source) {
+			return result;
+		}
+		if (typeof source.accessToken === "string") result.accessToken = source.accessToken;
+		if (typeof source.accessTokenExpiresAt === "string") result.accessTokenExpiresAt = source.accessTokenExpiresAt;
+		if (typeof source.refreshToken === "string") result.refreshToken = source.refreshToken;
+		if (typeof source.scope === "string") result.scope = source.scope;
+
+		const pending = this.asRecord(source.pending);
+		if (
+			pending &&
+			typeof pending.stateHash === "string" &&
+			typeof pending.codeVerifier === "string" &&
+			typeof pending.nonce === "string" &&
+			typeof pending.expiresAt === "string"
+		) {
+			result.pending = {
+				stateHash: pending.stateHash,
+				codeVerifier: pending.codeVerifier,
+				nonce: pending.nonce,
+				expiresAt: pending.expiresAt,
+			};
+		}
+		const exchange = this.asRecord(source.exchange);
+		if (exchange && typeof exchange.id === "string" && typeof exchange.expiresAt === "string") {
+			result.exchange = { id: exchange.id, expiresAt: exchange.expiresAt };
+		}
+		const refreshLease = this.asRecord(source.refreshLease);
+		if (refreshLease && typeof refreshLease.id === "string" && typeof refreshLease.expiresAt === "string") {
+			result.refreshLease = { id: refreshLease.id, expiresAt: refreshLease.expiresAt };
+		}
+		return result;
+	}
+
+	private toCredentialJson(value: DivingFishCredential): Prisma.InputJsonObject {
+		return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonObject;
+	}
+
+	private asRecord(value: unknown): Record<string, unknown> | null {
+		return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+	}
+
+	private async readJsonResponse<T>(response: Response, code: string, provider: string): Promise<T> {
+		const text = await response.text();
+		try {
+			return JSON.parse(text) as T;
+		} catch {
+			throw new AppError(502, code, `${provider} returned an invalid response.`, {
+				upstreamStatus: response.status,
+			});
+		}
+	}
+
+	private fetchImportUpstream(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+		const upstreamUrl = new URL(input instanceof Request ? input.url : input);
+		upstreamUrl.hash = "";
+		const proxyBaseUrl = this.env.OAUTH_UPSTREAM_URL;
+		const proxyToken = this.env.OAUTH_UPSTREAM_TOKEN;
+		if (!proxyBaseUrl && !proxyToken) {
+			return fetch(input, init);
+		}
+		if (!proxyBaseUrl || !proxyToken) {
+			throw new AppError(503, "oauth_upstream_unconfigured", "OAuth upstream proxy is unavailable.");
+		}
+		const route = IMPORT_UPSTREAM_ROUTES.get(upstreamUrl.toString());
+		if (!route) {
+			throw new AppError(500, "oauth_upstream_forbidden", "OAuth upstream route is not allowed.");
+		}
+		const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+		headers.set("X-Maimaid-OAuth-Proxy-Token", proxyToken);
+		return fetch(new URL(route, proxyBaseUrl), {
+			...init,
+			method: init?.method ?? (input instanceof Request ? input.method : "GET"),
+			headers,
+		});
+	}
+
+	private isUuid(value: string): boolean {
+		return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+	}
+
+	private constantTimeEqual(left: string, right: string): boolean {
+		if (left.length !== right.length) {
+			return false;
+		}
+		let difference = 0;
+		for (let index = 0; index < left.length; index += 1) {
+			difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
+		}
+		return difference === 0;
+	}
+
 	private normalizeBackendChartType(input: string): "standard" | "dx" | "utage" {
 		const normalized = normalizeChartType(input) ?? "standard";
 		if (normalized === "dx" || normalized === "utage") {
@@ -752,38 +1257,42 @@ export class ImportService {
 
 		const bySongIdKey = new Map<string, CatalogSheetCandidate>();
 		if (songIds.length > 0) {
-			const songIdentifierCandidates = songIds.map((item) => String(item));
-			const sheetsBySongId = await this.prisma.sheet.findMany({
-				where: {
-					chartType: {
-						in: chartTypes,
+			const sheetsBySongId: CatalogSheetCandidate[] = [];
+			for (const songIdBatch of chunk(songIds, this.lookupChunkSize())) {
+				const songIdentifierCandidates = songIdBatch.map((item) => String(item));
+				const rows = await this.prisma.sheet.findMany({
+					where: {
+						chartType: {
+							in: chartTypes,
+						},
+						difficulty: {
+							in: difficulties,
+						},
+						OR: [
+							{ songId: { in: songIdBatch } },
+							{ song: { songId: { in: songIdBatch } } },
+							{ songIdentifier: { in: songIdentifierCandidates } },
+						],
 					},
-					difficulty: {
-						in: difficulties,
-					},
-					OR: [
-						{ songId: { in: songIds } },
-						{ song: { songId: { in: songIds } } },
-						{ songIdentifier: { in: songIdentifierCandidates } },
-					],
-				},
-				select: {
-					songIdentifier: true,
-					chartType: true,
-					difficulty: true,
-					songId: true,
-					song: {
-						select: {
-							songId: true,
-							title: true,
+					select: {
+						songIdentifier: true,
+						chartType: true,
+						difficulty: true,
+						songId: true,
+						song: {
+							select: {
+								songId: true,
+								title: true,
+							},
 						},
 					},
-				},
-				// Several rows can share one lookup key, and the map below keeps the
-				// first. Charts that vanished upstream are kept as `disabled` rather
-				// than deleted, so order them last to route scores to a live chart.
-				orderBy: [{ disabled: "asc" }, { songIdentifier: "asc" }],
-			});
+					// Several rows can share one lookup key, and the map below keeps the
+					// first. Charts that vanished upstream are kept as `disabled` rather
+					// than deleted, so order them last to route scores to a live chart.
+					orderBy: [{ disabled: "asc" }, { songIdentifier: "asc" }],
+				});
+				sheetsBySongId.push(...rows);
+			}
 
 			for (const sheet of sheetsBySongId) {
 				const resolvedSongId = this.extractPositiveSongIdFromCatalogSheet(sheet);
@@ -823,35 +1332,39 @@ export class ImportService {
 			const unresolvedChartTypes = Array.from(new Set(unresolvedInputs.map((item) => item.chartType)));
 			const unresolvedDifficulties = Array.from(new Set(unresolvedInputs.map((item) => item.difficulty)));
 
-			const sheetsByTitle = await this.prisma.sheet.findMany({
-				where: {
-					chartType: {
-						in: unresolvedChartTypes,
-					},
-					difficulty: {
-						in: unresolvedDifficulties,
-					},
-					song: {
-						title: {
-							in: unresolvedTitles,
+			const sheetsByTitle: CatalogSheetCandidate[] = [];
+			for (const titleBatch of chunk(unresolvedTitles, this.lookupChunkSize())) {
+				const rows = await this.prisma.sheet.findMany({
+					where: {
+						chartType: {
+							in: unresolvedChartTypes,
+						},
+						difficulty: {
+							in: unresolvedDifficulties,
+						},
+						song: {
+							title: {
+								in: titleBatch,
+							},
 						},
 					},
-				},
-				select: {
-					songIdentifier: true,
-					chartType: true,
-					difficulty: true,
-					songId: true,
-					song: {
-						select: {
-							songId: true,
-							title: true,
+					select: {
+						songIdentifier: true,
+						chartType: true,
+						difficulty: true,
+						songId: true,
+						song: {
+							select: {
+								songId: true,
+								title: true,
+							},
 						},
 					},
-				},
-				// Titles are not unique across songs, so prefer live charts here too.
-				orderBy: [{ disabled: "asc" }, { songIdentifier: "asc" }],
-			});
+					// Titles are not unique across songs, so prefer live charts here too.
+					orderBy: [{ disabled: "asc" }, { songIdentifier: "asc" }],
+				});
+				sheetsByTitle.push(...rows);
+			}
 
 			const byTitleKey = new Map<string, CatalogSheetCandidate>();
 			for (const sheet of sheetsByTitle) {
@@ -892,6 +1405,10 @@ export class ImportService {
 				sheetKey: null,
 			};
 		});
+	}
+
+	private lookupChunkSize(): number {
+		return this.env.DATABASE_DIALECT === "sqlite" ? D1_LOOKUP_CHUNK_SIZE : POSTGRES_LOOKUP_CHUNK_SIZE;
 	}
 
 	private parseProviderSongId(value: number | null | undefined): number | null {

@@ -5,16 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ExternalLinkIcon, UploadIcon } from "lucide-react";
-import { LXNS_OAUTH_CLIENT_ID } from "@/lib/app-helpers";
+import { DIVING_FISH_OAUTH_CLIENT_ID, LXNS_OAUTH_CLIENT_ID } from "@/lib/app-helpers";
 import { useTranslation } from "react-i18next";
 
 type ImportsPageProps = {
-	dfQQ: string;
-	dfImportToken: string;
 	lxnsAuthCode: string;
-	onDfQQChange: (value: string) => void;
-	onDfImportTokenChange: (value: string) => void;
 	onLxnsAuthCodeChange: (value: string) => void;
+	onAuthorizeDf: () => void | Promise<void>;
 	onImportDf: () => void | Promise<void>;
 	onImportLxns: (input: { codeVerifier: string }) => void | Promise<void>;
 };
@@ -39,19 +36,12 @@ async function generateCodeChallenge(codeVerifier: string) {
 	return base64UrlEncode(new Uint8Array(digest));
 }
 
-export function ImportsPage({
-	dfQQ,
-	dfImportToken,
-	lxnsAuthCode,
-	onDfQQChange,
-	onDfImportTokenChange,
-	onLxnsAuthCodeChange,
-	onImportDf,
-	onImportLxns,
-}: ImportsPageProps) {
+export function ImportsPage({ lxnsAuthCode, onLxnsAuthCodeChange, onAuthorizeDf, onImportDf, onImportLxns }: ImportsPageProps) {
 	const { t } = useTranslation("imports");
 	const [lxnsCodeVerifier, setLxnsCodeVerifier] = useState("");
+	const [isPreparingDfOauth, setIsPreparingDfOauth] = useState(false);
 	const [isPreparingLxnsOauth, setIsPreparingLxnsOauth] = useState(false);
+	const hasDivingFishClientId = DIVING_FISH_OAUTH_CLIENT_ID.length > 0;
 	const hasLxnsClientId = LXNS_OAUTH_CLIENT_ID.length > 0;
 
 	const handleOpenLxnsOauth = async () => {
@@ -80,6 +70,18 @@ export function ImportsPage({
 		}
 	};
 
+	const handleOpenDfOauth = async () => {
+		if (!hasDivingFishClientId) {
+			return;
+		}
+		try {
+			setIsPreparingDfOauth(true);
+			await onAuthorizeDf();
+		} finally {
+			setIsPreparingDfOauth(false);
+		}
+	};
+
 	return (
 		<div className="flex min-w-0 flex-col gap-4">
 			<p className="text-sm text-muted-foreground">{t("pageDesc")}</p>
@@ -88,7 +90,7 @@ export function ImportsPage({
 				<AlertTitle>{t("alertTitleInfo")}</AlertTitle>
 				<AlertDescription>{t("alertDescInfo")}</AlertDescription>
 			</Alert>
-			{!hasLxnsClientId ? (
+			{!hasDivingFishClientId || !hasLxnsClientId ? (
 				<Alert variant="destructive">
 					<AlertTitle>{t("alertTitleError")}</AlertTitle>
 					<AlertDescription>{t("alertDescError")}</AlertDescription>
@@ -100,25 +102,21 @@ export function ImportsPage({
 					<CardTitle>{t("sectionDf")}</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<FieldGroup>
-						<Field>
-							<FieldLabel htmlFor="df-qq">{t("labelQq")}</FieldLabel>
-							<Input id="df-qq" value={dfQQ} onChange={(event) => onDfQQChange(event.target.value)} />
-						</Field>
-						<Field>
-							<FieldLabel htmlFor="df-import-token">{t("labelImportToken")}</FieldLabel>
-							<Input
-								id="df-import-token"
-								type="password"
-								value={dfImportToken}
-								onChange={(event) => onDfImportTokenChange(event.target.value)}
-							/>
-						</Field>
-					</FieldGroup>
-					<Button className="mt-3" disabled={!dfQQ.trim() || !dfImportToken.trim()} onClick={() => void onImportDf()}>
-						<UploadIcon data-icon="inline-start" />
-						{t("btnImportDf")}
-					</Button>
+					<p className="text-sm text-muted-foreground">{t("dfOauthDesc")}</p>
+					<div className="mt-3 flex flex-wrap gap-2">
+						<Button
+							variant="outline"
+							disabled={isPreparingDfOauth || !hasDivingFishClientId}
+							onClick={() => void handleOpenDfOauth()}
+						>
+							<ExternalLinkIcon data-icon="inline-start" />
+							{t("btnAuthorizeDf")}
+						</Button>
+						<Button onClick={() => void onImportDf()}>
+							<UploadIcon data-icon="inline-start" />
+							{t("btnImportDf")}
+						</Button>
+					</div>
 				</CardContent>
 			</Card>
 

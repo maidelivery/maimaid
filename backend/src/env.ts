@@ -71,6 +71,13 @@ const EnvSchema = z.object({
 	INTERNAL_JOB_TOKEN: optionalString.refine((value) => value === undefined || value.length >= 32, {
 		message: "INTERNAL_JOB_TOKEN must be at least 32 characters.",
 	}),
+	DIVING_FISH_CLIENT_ID: optionalString,
+	DIVING_FISH_CLIENT_SECRET: optionalString,
+	DIVING_FISH_REDIRECT_URI: z.url().default("https://api.rhythmeta.org/v1/imports:divingFishCallback"),
+	OAUTH_UPSTREAM_URL: z.url().optional(),
+	OAUTH_UPSTREAM_TOKEN: optionalString.refine((value) => value === undefined || value.length >= 32, {
+		message: "OAUTH_UPSTREAM_TOKEN must be at least 32 characters.",
+	}),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

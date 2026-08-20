@@ -47,6 +47,7 @@ pnpm run build
 必填：
 
 - `NEXT_PUBLIC_BACKEND_URL`（例如 `http://localhost:8787`）
+- `NEXT_PUBLIC_DIVING_FISH_CLIENT_ID`（Diving Fish OAuth public client_id）
 - `NEXT_PUBLIC_LXNS_CLIENT_ID`（LXNS OAuth public client_id）
 
 可使用以下命令校验：

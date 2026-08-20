@@ -25,6 +25,12 @@ data class BackendImportRunResponse(
     val latestRevision: String? = null,
 )
 
+@Serializable
+data class DivingFishAuthorizationResponse(
+    val authorizationUrl: String,
+    val expiresAt: String,
+)
+
 data class LxnsTokenPair(
     val accessToken: String,
     val refreshToken: String,
@@ -38,15 +44,9 @@ class BackendImportService(
 ) {
     suspend fun importDivingFish(
         profileId: String,
-        username: String?,
-        qq: String?,
-        importToken: String?,
     ): BackendImportRunResponse {
         val payload = buildJsonObject {
             put("profileId", profileId)
-            username?.trim()?.takeIf(String::isNotEmpty)?.let { put("username", it) }
-            qq?.trim()?.takeIf(String::isNotEmpty)?.let { put("qq", it) }
-            importToken?.trim()?.takeIf(String::isNotEmpty)?.let { put("importToken", it) }
         }
         val response = sessionManager.authorizedRequest(
             path = "v1/imports:importDf",
@@ -54,6 +54,15 @@ class BackendImportService(
             body = payload,
         )
         return json.decodeFromJsonElement(BackendImportRunResponse.serializer(), response)
+    }
+
+    suspend fun authorizeDivingFish(profileId: String): DivingFishAuthorizationResponse {
+        val response = sessionManager.authorizedRequest(
+            path = "v1/imports:authorizeDivingFish",
+            method = "POST",
+            body = buildJsonObject { put("profileId", profileId) },
+        )
+        return json.decodeFromJsonElement(DivingFishAuthorizationResponse.serializer(), response)
     }
 
     suspend fun importLxns(profileId: String, accessToken: String): BackendImportRunResponse {

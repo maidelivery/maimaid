@@ -3,10 +3,12 @@ import SwiftData
 
 struct DivingFishImportView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
     
-    @State private var username: String = ""
-    @State private var importToken: String = ""
+    @State private var isConnected = false
+    @State private var connectedUsername: String?
     @State private var isImporting = false
     @State private var importStatus: String = ""
     @State private var progress: Double = 0
@@ -16,7 +18,7 @@ struct DivingFishImportView: View {
     @State private var pendingUpsertedCount: Int = 0
     
     private var activeProfile: UserProfile? { activeProfiles.first }
-    private var hasBoundAccount: Bool { !(activeProfile?.dfUsername.isEmpty ?? true) }
+    private var hasBoundAccount: Bool { isConnected }
     
     private var statusTint: Color {
         let failedText = String(localized: "import.status.failed")
@@ -43,10 +45,13 @@ struct DivingFishImportView: View {
         }
         .navigationTitle("import.df.title")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            if let profile = activeProfile {
-                username = profile.dfUsername
-                importToken = ProfileCredentialStore.shared.credentials(for: profile.id).dfImportToken
+        .task(id: activeProfile?.id) {
+            await refreshConnection()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task {
+                await refreshConnection()
             }
         }
         .sheet(item: $importConflictPreview) { preview in
@@ -70,7 +75,7 @@ struct DivingFishImportView: View {
                 iconTint: hasBoundAccount ? .blue : .orange,
                 title: String(localized: hasBoundAccount ? "import.df.bound.header" : "import.df.setup.header"),
                 subtitle: hasBoundAccount
-                    ? (activeProfile?.dfUsername ?? String(localized: "common.unknown"))
+                    ? (connectedUsername ?? String(localized: "common.unknown"))
                     : String(localized: "import.df.setup.footer")
             )
         }
@@ -87,7 +92,7 @@ struct DivingFishImportView: View {
                     settingsIcon(icon: "person.text.rectangle.fill", color: .blue)
                     Text("import.df.username")
                     Spacer()
-                    Text(activeProfile?.dfUsername ?? String(localized: "common.unknown"))
+                    Text(connectedUsername ?? String(localized: "common.unknown"))
                         .foregroundStyle(.secondary)
                 }
                 
@@ -97,81 +102,33 @@ struct DivingFishImportView: View {
                     tint: .blue
                 ) {
                     Task {
-                        if let name = activeProfile?.dfUsername {
-                            await importData(userName: name)
-                        }
+                        await importData()
                     }
                 }
                 .disabled(isImporting || isResolvingImportConflict)
                 .opacity(isImporting || isResolvingImportConflict ? 0.6 : 1.0)
             }
             
-            Section {
-                credentialField(
-                    title: "import.df.username.placeholder",
-                    text: $username,
-                    icon: "person.fill"
-                )
-                
-                credentialField(
-                    title: "import.df.token.placeholder",
-                    text: $importToken,
-                    icon: "key.fill",
-                    isSecure: true
-                )
-                
-                Button("import.df.action.update") {
-                    updateConfig()
+            Section("import.df.rebind.header") {
+                Button("import.df.action.update", systemImage: "person.badge.key") {
+                    Task {
+                        await authorizeDivingFish()
+                    }
                 }
-                .disabled(username.isEmpty)
-            } header: {
-                Text("import.df.rebind.header")
             } footer: {
                 Text("import.df.rebind.footer")
             }
         } else {
             Section {
-                credentialField(
-                    title: "import.df.username.placeholder",
-                    text: $username,
-                    icon: "person.fill"
-                )
-                
-                credentialField(
-                    title: "import.df.token.setup.placeholder",
-                    text: $importToken,
-                    icon: "key.fill",
-                    isSecure: true
-                )
+                Button("import.df.action.bindImport", systemImage: "person.badge.key") {
+                    Task {
+                        await authorizeDivingFish()
+                    }
+                }
+                .disabled(isImporting || isResolvingImportConflict)
             } footer: {
                 Text("import.df.setup.footer")
             }
-            
-            Section {
-                Button {
-                    updateConfig()
-                    Task {
-                        await importData(userName: username)
-                    }
-                } label: {
-                    HStack {
-                        Spacer()
-                        if isImporting {
-                            ProgressView()
-                                .tint(.white)
-                        } else {
-                            Text("import.df.action.bindImport")
-                                .fontWeight(.semibold)
-                        }
-                        Spacer()
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(username.isEmpty || isImporting || isResolvingImportConflict)
-                .listRowBackground(Color.clear)
-            }
-            .listSectionSeparator(.hidden)
         }
     }
     
@@ -210,18 +167,64 @@ struct DivingFishImportView: View {
         }
     }
     
-    private func updateConfig() {
-        if let profile = activeProfile {
-            profile.dfUsername = username
-            ProfileCredentialStore.shared.setDfImportToken(importToken, for: profile.id)
-        }
-        try? modelContext.save()
-    }
-    
     @MainActor
-    private func importData(userName: String? = nil) async {
-        let targetUser = userName ?? username
-        guard !targetUser.isEmpty else { return }
+    private func refreshConnection() async {
+        guard let profile = activeProfile else {
+            isConnected = false
+            connectedUsername = nil
+            return
+        }
+        await BackendSessionManager.shared.checkSession()
+        guard BackendSessionManager.shared.isAuthenticated else {
+            isConnected = false
+            connectedUsername = nil
+            return
+        }
+        do {
+            let connection = try await BackendImportService.divingFishConnection(
+                profileId: profile.id.uuidString.lowercased()
+            )
+            isConnected = connection.connected
+            connectedUsername = connection.externalUsername
+        } catch {
+            isConnected = false
+            connectedUsername = nil
+        }
+    }
+
+    @MainActor
+    private func authorizeDivingFish() async {
+        guard let profile = activeProfile else {
+            importStatus = String(localized: "import.status.error.unknown")
+            return
+        }
+        isImporting = true
+        importStatus = String(localized: "import.df.status.connecting")
+        defer { isImporting = false }
+
+        do {
+            await BackendSessionManager.shared.checkSession()
+            guard BackendSessionManager.shared.isAuthenticated else {
+                importStatus = String(localized: "community.alias.submit.loginRequired")
+                return
+            }
+            try await BackendScoreSyncService.ensureProfileExists(profile: profile)
+            let authorization = try await BackendImportService.authorizeDivingFish(
+                profileId: profile.id.uuidString.lowercased()
+            )
+            guard let authorizationURL = URL(string: authorization.authorizationUrl),
+                  authorizationURL.scheme == "https" else {
+                throw BackendAPIError.badResponse
+            }
+            openURL(authorizationURL)
+            importStatus = String(localized: "import.df.setup.footer")
+        } catch {
+            importStatus = String(localized: "import.status.error.message \(error.localizedDescription)")
+        }
+    }
+
+    @MainActor
+    private func importData() async {
         guard let profile = activeProfile else {
             importStatus = String(localized: "import.status.error.unknown")
             return
@@ -242,18 +245,15 @@ struct DivingFishImportView: View {
 
             try await BackendScoreSyncService.ensureProfileExists(profile: profile)
 
-            let isQQ = Int(targetUser) != nil && targetUser.count > 5
             let result = try await BackendImportService.importDivingFish(
-                profileId: profile.id.uuidString.lowercased(),
-                username: isQQ ? nil : targetUser,
-                qq: isQQ ? targetUser : nil
+                profileId: profile.id.uuidString.lowercased()
             )
             totalRecords = result.fetchedCount
             progress = Double(result.fetchedCount)
 
             if result.upsertedCount == 0 {
                 try await BackendCloudSyncService.restoreFromCloud(context: modelContext)
-                profile.lastImportDateDF = Date()
+                profile.lastImportDateDF = .now
                 try modelContext.save()
                 pendingUpsertedCount = 0
                 importStatus = String(localized: "import.status.noChanges")
@@ -281,7 +281,7 @@ struct DivingFishImportView: View {
                 context: modelContext
             )
             try await BackendCloudSyncService.restoreFromCloud(context: modelContext)
-            profile.lastImportDateDF = Date()
+            profile.lastImportDateDF = .now
             try modelContext.save()
 
             importStatus = String(localized: "import.status.success \(result.upsertedCount)")
@@ -324,7 +324,7 @@ struct DivingFishImportView: View {
             if let profile = try modelContext.fetch(
                 FetchDescriptor<UserProfile>(predicate: #Predicate<UserProfile> { $0.id == targetProfileId })
             ).first {
-                profile.lastImportDateDF = Date()
+                profile.lastImportDateDF = .now
             }
             try modelContext.save()
             importStatus = String(localized: "import.status.success \(pendingUpsertedCount)")
@@ -394,20 +394,4 @@ private extension DivingFishImportView {
         .buttonStyle(.plain)
     }
     
-    func credentialField(title: String, text: Binding<String>, icon: String, isSecure: Bool = false) -> some View {
-        HStack(spacing: 12) {
-            settingsIcon(icon: icon, color: .gray)
-            Group {
-                if isSecure {
-                    SecureField(LocalizedStringKey(title), text: text)
-                        .textInputAutocapitalization(.never)
-                } else {
-                    TextField(LocalizedStringKey(title), text: text)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                }
-            }
-        }
-        .padding(.vertical, 2)
-    }
 }

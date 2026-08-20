@@ -214,10 +214,9 @@
     <string name="import_account_section">インポートアカウント</string>
     <string name="import_df_summary_title">Diving-Fish からインポート</string>
     <string name="import_df_summary_description">Diving-Fish アカウントを接続し、現在のプロフィールへスコアを取り込みます。</string>
-    <string name="import_df_account">ユーザー名または QQ</string>
-    <string name="import_df_token">インポート Token（任意）</string>
-    <string name="import_df_token_description">Token を入力すると全記録を取得します。ユーザー名または QQ のみの場合は公開 B50 を取得します。</string>
-    <string name="import_df_action">接続してインポート</string>
+    <string name="import_df_authorize">Diving Fish を連携</string>
+    <string name="import_df_authorize_description">ブラウザで OAuth 認証を完了してから maimaid に戻ってください。</string>
+    <string name="import_df_action">スコアをインポート</string>
     <string name="import_lxns_summary_title">LXNS に接続</string>
     <string name="import_lxns_summary_description">LXNS を認証し、現在のプロフィールへスコアを取り込みます。</string>
     <string name="import_lxns_connected">LXNS 接続済み</string>

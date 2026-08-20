@@ -260,15 +260,15 @@
 "import.df.username" = "目前帳號";
 "import.df.action.quickSync" = "一鍵快速同步成績";
 "import.df.rebind.header" = "重新綁定";
-"import.df.rebind.footer" = "如果你更換了帳號或 Token，請在此處更新。成績上傳功能需要填寫正確。";
+"import.df.rebind.footer" = "透過 OAuth 重新連接其他水魚帳號。";
 "import.df.username.placeholder" = "QQ號 / 使用者名";
 "import.df.token.placeholder" = "匯入令牌 (可選，用於同步上傳)";
-"import.df.action.update" = "更新並綁定";
-"import.df.setup.header" = "帳號設定";
-"import.df.setup.footer" = "請輸入你的 Diving Fish (查分器) QQ號或使用者名。";
+"import.df.action.update" = "重新連接水魚";
+"import.df.setup.header" = "水魚 OAuth";
+"import.df.setup.footer" = "請在瀏覽器完成授權，然後返回 maimaid。";
 "import.df.token.setup.placeholder" = "匯入令牌 (在查分器設定頁取得，用於上傳功能)";
-"import.df.action.bindImport" = "綁定並匯入";
-"import.df.status.connecting" = "正在連接到 Diving Fish...";
+"import.df.action.bindImport" = "連接水魚帳號";
+"import.df.status.connecting" = "正在連接水魚...";
 "import.df.summary.footer" = "用於從 Diving Fish 拉取並匯入成績。";
 
 // LXNS

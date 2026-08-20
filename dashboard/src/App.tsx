@@ -191,10 +191,6 @@ function App() {
 		setScoreDifficulty,
 		scoreAchievements,
 		setScoreAchievements,
-		dfQQ,
-		setDfQQ,
-		dfImportToken,
-		setDfImportToken,
 		lxnsAuthCode,
 		setLxnsAuthCode,
 		communityRows,
@@ -1263,8 +1259,6 @@ function App() {
 		scoreAchievements,
 		resolveSongByName,
 		loadScores,
-		dfQQ,
-		dfImportToken,
 		lxnsAuthCode,
 		communitySongName,
 		communityAliasText,
@@ -1305,6 +1299,7 @@ function App() {
 		handleSaveScoreEdit,
 		handleDeleteScore,
 		handleDeletePlayRecord,
+		handleAuthorizeDf,
 		handleImportDf,
 		handleImportLxns,
 		handleCommunitySubmit,
@@ -1559,12 +1554,9 @@ function App() {
 			openScoreEditDialog={openScoreEditDialog}
 			handleDeleteScore={handleDeleteScore}
 			handleDeletePlayRecord={handleDeletePlayRecord}
-			dfQQ={dfQQ}
-			dfImportToken={dfImportToken}
 			lxnsAuthCode={lxnsAuthCode}
-			setDfQQ={setDfQQ}
-			setDfImportToken={setDfImportToken}
 			setLxnsAuthCode={setLxnsAuthCode}
+			handleAuthorizeDf={handleAuthorizeDf}
 			handleImportDf={handleImportDf}
 			handleImportLxns={handleImportLxns}
 			communityDailyCount={communityDailyCount}

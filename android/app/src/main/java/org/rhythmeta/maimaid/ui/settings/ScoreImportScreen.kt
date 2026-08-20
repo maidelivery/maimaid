@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.OpenInBrowser
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,7 +36,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -64,8 +64,17 @@ fun DivingFishImportScreen(
     container: AppContainer,
     contentTopPadding: Dp,
 ) {
+    val context = LocalContext.current
     val viewModel = viewModel<ScoreImportViewModel>(factory = ScoreImportViewModel.Factory(container))
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(state.divingFishAuthorizationUrl) {
+        val authorizationUrl = state.divingFishAuthorizationUrl ?: return@LaunchedEffect
+        if (!context.openInAppBrowser(authorizationUrl)) {
+            Toast.makeText(context, R.string.cloud_browser_unavailable, Toast.LENGTH_SHORT).show()
+        }
+        viewModel.consumeDivingFishAuthorizationUrl()
+    }
 
     ScoreImportPage(contentTopPadding = contentTopPadding) {
         item {
@@ -76,32 +85,18 @@ fun DivingFishImportScreen(
             )
         }
         item {
-            ImportSection(stringResource(R.string.import_account_section)) {
-                TextField(
-                    value = state.divingFishAccount,
-                    onValueChange = viewModel::setDivingFishAccount,
-                    colors = appTextFieldColors(),
-                    label = stringResource(R.string.import_df_account),
-                    useLabelAsPlaceholder = true,
-                    singleLine = true,
+            ImportSection(stringResource(R.string.import_df_authorize)) {
+                Button(
+                    onClick = viewModel::authorizeDivingFish,
                     modifier = Modifier.fillMaxWidth(),
-                    cornerRadius = 14.dp,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                )
-                TextField(
-                    value = state.divingFishToken,
-                    onValueChange = viewModel::setDivingFishToken,
-                    colors = appTextFieldColors(),
-                    label = stringResource(R.string.import_df_token),
-                    useLabelAsPlaceholder = true,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    cornerRadius = 14.dp,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                )
+                    enabled = !state.isBusy,
+                ) {
+                    Icon(Icons.Rounded.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.import_df_authorize))
+                }
                 Text(
-                    text = stringResource(R.string.import_df_token_description),
+                    text = stringResource(R.string.import_df_authorize_description),
                     style = MiuixTheme.textStyles.footnote1,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
@@ -111,8 +106,7 @@ fun DivingFishImportScreen(
             ImportPrimaryButton(
                 title = stringResource(R.string.import_df_action),
                 busy = state.isBusy,
-                enabled = state.profile != null &&
-                    (state.divingFishAccount.isNotBlank() || state.divingFishToken.isNotBlank()),
+                enabled = state.profile != null,
                 onClick = viewModel::importDivingFish,
             )
         }

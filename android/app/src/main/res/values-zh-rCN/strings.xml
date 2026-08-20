@@ -214,10 +214,9 @@
     <string name="import_account_section">导入账户</string>
     <string name="import_df_summary_title">从水鱼导入</string>
     <string name="import_df_summary_description">绑定水鱼账户，将成绩导入当前档案。</string>
-    <string name="import_df_account">用户名或 QQ</string>
-    <string name="import_df_token">导入 Token（可选）</string>
-    <string name="import_df_token_description">填写导入 Token 可获取全部成绩；仅填写用户名或 QQ 时获取公开 B50。</string>
-    <string name="import_df_action">绑定并导入</string>
+    <string name="import_df_authorize">连接水鱼账号</string>
+    <string name="import_df_authorize_description">请在浏览器完成 OAuth 授权，然后返回 maimaid。</string>
+    <string name="import_df_action">导入成绩</string>
     <string name="import_lxns_summary_title">连接 LXNS</string>
     <string name="import_lxns_summary_description">授权 LXNS，将成绩导入当前档案。</string>
     <string name="import_lxns_connected">已连接 LXNS</string>

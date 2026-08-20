@@ -214,10 +214,9 @@
     <string name="import_account_section">Import account</string>
     <string name="import_df_summary_title">Import from Diving-Fish</string>
     <string name="import_df_summary_description">Connect a Diving-Fish account and import scores into the active profile.</string>
-    <string name="import_df_account">Username or QQ</string>
-    <string name="import_df_token">Import token (optional)</string>
-    <string name="import_df_token_description">An import token retrieves all records. Username or QQ retrieves public B50 records.</string>
-    <string name="import_df_action">Bind and import</string>
+    <string name="import_df_authorize">Connect Diving Fish</string>
+    <string name="import_df_authorize_description">Complete OAuth authorization in the browser, then return to maimaid.</string>
+    <string name="import_df_action">Import scores</string>
     <string name="import_lxns_summary_title">Connect LXNS</string>
     <string name="import_lxns_summary_description">Authorize LXNS to import scores into the active profile.</string>
     <string name="import_lxns_connected">LXNS connected</string>

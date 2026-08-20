@@ -37,8 +37,7 @@ enum class ScoreImportResult {
 
 data class ScoreImportUiState(
     val profile: UserProfileEntity? = null,
-    val divingFishAccount: String = "",
-    val divingFishToken: String = "",
+    val divingFishAuthorizationUrl: String? = null,
     val lxnsRefreshToken: String = "",
     val lxnsAuthorizationCode: String = "",
     val phase: ScoreImportPhase = ScoreImportPhase.Idle,
@@ -69,8 +68,6 @@ class ScoreImportViewModel(
                 mutableState.update {
                     it.copy(
                         profile = profile,
-                        divingFishAccount = profile?.dfUsername.orEmpty(),
-                        divingFishToken = credentials.divingFishToken,
                         lxnsRefreshToken = credentials.lxnsToken,
                         result = null,
                         resultDetails = null,
@@ -79,14 +76,6 @@ class ScoreImportViewModel(
                 }
             }
         }
-    }
-
-    fun setDivingFishAccount(value: String) {
-        mutableState.update { it.copy(divingFishAccount = value) }
-    }
-
-    fun setDivingFishToken(value: String) {
-        mutableState.update { it.copy(divingFishToken = value) }
     }
 
     fun setLxnsAuthorizationCode(value: String) {
@@ -103,28 +92,42 @@ class ScoreImportViewModel(
     fun importDivingFish() {
         val state = mutableState.value
         val profile = state.profile ?: return
-        val account = state.divingFishAccount.trim()
-        val token = state.divingFishToken.trim()
-        if (account.isEmpty() && token.isEmpty() || state.isBusy) return
+        if (state.isBusy) return
         viewModelScope.launch {
             startOperation()
             runCatching {
                 requireAuthenticated()
                 mutableState.update { it.copy(phase = ScoreImportPhase.Connecting) }
-                saveDivingFishCredentials(profile, account, token)
-                container.backendSyncCoordinator.ensureProfileExists(
-                    profile.copy(dfUsername = account),
-                )
-                val isQq = account.length > 5 && account.all(Char::isDigit)
-                val response = container.backendImportService.importDivingFish(
-                    profileId = profile.id,
-                    username = account.takeUnless { isQq || it.isEmpty() },
-                    qq = account.takeIf { isQq },
-                    importToken = token.takeIf(String::isNotEmpty),
-                )
+                container.backendSyncCoordinator.ensureProfileExists(profile)
+                val response = container.backendImportService.importDivingFish(profile.id)
                 finishRemoteImport(profile, response, isDivingFish = true)
             }.onFailure(::finishFailure)
         }
+    }
+
+    fun authorizeDivingFish() {
+        val profile = mutableState.value.profile ?: return
+        if (mutableState.value.isBusy) return
+        viewModelScope.launch {
+            startOperation()
+            runCatching {
+                requireAuthenticated()
+                container.backendSyncCoordinator.ensureProfileExists(profile)
+                mutableState.update { it.copy(phase = ScoreImportPhase.Connecting) }
+                container.backendImportService.authorizeDivingFish(profile.id)
+            }.onSuccess { authorization ->
+                mutableState.update {
+                    it.copy(
+                        phase = ScoreImportPhase.Idle,
+                        divingFishAuthorizationUrl = authorization.authorizationUrl,
+                    )
+                }
+            }.onFailure(::finishFailure)
+        }
+    }
+
+    fun consumeDivingFishAuthorizationUrl() {
+        mutableState.update { it.copy(divingFishAuthorizationUrl = null) }
     }
 
     fun exchangeLxnsCodeAndImport() {
@@ -255,19 +258,6 @@ class ScoreImportViewModel(
         if (!container.backendSessionManager.state.value.isAuthenticated) {
             throw ImportLoginRequiredException()
         }
-    }
-
-    private suspend fun saveDivingFishCredentials(
-        profile: UserProfileEntity,
-        account: String,
-        token: String,
-    ) {
-        container.profileRepository.save(profile.copy(dfUsername = account))
-        val current = container.profileCredentialStore.credentials(profile.id)
-        container.profileCredentialStore.save(
-            profile.id,
-            current.copy(divingFishToken = token),
-        )
     }
 
     private fun saveLxnsRefreshToken(profileId: String, token: String) {

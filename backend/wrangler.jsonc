@@ -17,13 +17,19 @@
 		},
 	],
 	"placement": {
-		"mode": "smart",
+		"mode": "targeted",
+		"region": "gcp:asia-east1",
 	},
 	"observability": {
 		"enabled": true,
 	},
 	"limits": {
 		"cpu_ms": 300000,
+	},
+	"vars": {
+		"DIVING_FISH_CLIENT_ID": "5b79b87f22855b80ee35243eeec07916",
+		"DIVING_FISH_REDIRECT_URI": "https://api.rhythmeta.org/v1/imports:divingFishCallback",
+		"OAUTH_UPSTREAM_URL": "https://maimaid-oauth-upstream.cqbe.workers.dev/",
 	},
 	"d1_databases": [
 		{

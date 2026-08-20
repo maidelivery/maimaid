@@ -13,7 +13,7 @@ describe("ProfileService", () => {
 			},
 		};
 		const storage = { deleteAvatar: vi.fn().mockResolvedValue(undefined) };
-		const service = new ProfileService(database as never, storage as never);
+		const service = new ProfileService(database as never, storage as never, { DATABASE_DIALECT: "postgresql" } as never);
 
 		await service.remove("user", profileId);
 
@@ -39,7 +39,7 @@ describe("ProfileService", () => {
 				updateManyAndReturn,
 			},
 		};
-		const service = new ProfileService(database as never, {} as never);
+		const service = new ProfileService(database as never, {} as never, { DATABASE_DIALECT: "postgresql" } as never);
 
 		await service.upsertByClientId(
 			"018f05e0-8674-7d98-a678-8fd69a4a2d64",
@@ -66,6 +66,72 @@ describe("ProfileService", () => {
 		});
 	});
 
+	it("uses single-row writes for optimistic locking on D1", async () => {
+		const userId = "018f05e0-8674-7d98-a678-8fd69a4a2d64";
+		const profileId = "018f05e0-8674-7d98-a678-8fd69a4a2d63";
+		const expectedUpdatedAt = new Date("2026-08-13T10:20:30.123Z");
+		const updated = { id: profileId, userId, name: "Test", server: "jp", isActive: false };
+		const database = {
+			profile: {
+				findUnique: vi.fn().mockResolvedValue({ id: profileId, userId }),
+				findFirst: vi.fn().mockResolvedValue({ id: profileId }),
+				update: vi.fn().mockResolvedValue(updated),
+				updateManyAndReturn: vi.fn(),
+			},
+		};
+		const service = new ProfileService(database as never, {} as never, { DATABASE_DIALECT: "sqlite" } as never);
+
+		const result = await service.upsertByClientId(
+			userId,
+			profileId,
+			{ name: "Test", server: "jp" },
+			expectedUpdatedAt,
+			false,
+			database as never,
+		);
+
+		expect(result).toBe(updated);
+		expect(database.profile.findFirst).toHaveBeenCalledWith({
+			where: {
+				id: profileId,
+				userId,
+				updatedAt: {
+					gte: expectedUpdatedAt,
+					lt: new Date("2026-08-13T10:20:30.124Z"),
+				},
+			},
+			select: { id: true },
+		});
+		expect(database.profile.update).toHaveBeenCalledWith({
+			where: { id: profileId },
+			data: { name: "Test", server: "jp" },
+		});
+		expect(database.profile.updateManyAndReturn).not.toHaveBeenCalled();
+	});
+
+	it("deactivates D1 profiles with single-row updates", async () => {
+		const userId = "018f05e0-8674-7d98-a678-8fd69a4a2d64";
+		const activeProfileId = "018f05e0-8674-7d98-a678-8fd69a4a2d63";
+		const otherProfileId = "018f05e0-8674-7d98-a678-8fd69a4a2d65";
+		const database = {
+			profile: {
+				findMany: vi.fn().mockResolvedValue([{ id: otherProfileId }]),
+				update: vi.fn().mockResolvedValue({ id: otherProfileId, isActive: false }),
+				updateManyAndReturn: vi.fn(),
+			},
+		};
+		const service = new ProfileService(database as never, {} as never, { DATABASE_DIALECT: "sqlite" } as never);
+
+		const result = await service.deactivateOtherProfiles(userId, activeProfileId, database as never);
+
+		expect(result).toEqual([{ id: otherProfileId, isActive: false }]);
+		expect(database.profile.update).toHaveBeenCalledWith({
+			where: { id: otherProfileId },
+			data: { isActive: false },
+		});
+		expect(database.profile.updateManyAndReturn).not.toHaveBeenCalled();
+	});
+
 	it("matches avatar upload profile versions at API millisecond precision", async () => {
 		const userId = "018f05e0-8674-7d98-a678-8fd69a4a2d64";
 		const profileId = "018f05e0-8674-7d98-a678-8fd69a4a2d63";
@@ -88,7 +154,7 @@ describe("ProfileService", () => {
 				uploadUrl: "https://storage.example/avatar",
 			}),
 		};
-		const service = new ProfileService(database as never, storage as never);
+		const service = new ProfileService(database as never, storage as never, { DATABASE_DIALECT: "postgresql" } as never);
 
 		const result = await service.createAvatarUploadUrl(userId, profileId, "image/png", expectedUpdatedAt);
 

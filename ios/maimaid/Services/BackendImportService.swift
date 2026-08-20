@@ -8,10 +8,18 @@ struct BackendImportRunResponse: Decodable {
     let latestRevision: String?
 }
 
-private struct DivingFishImportRequest: Encodable {
+struct DivingFishAuthorizationResponse: Decodable {
+    let authorizationUrl: String
+    let expiresAt: String
+}
+
+struct DivingFishConnectionResponse: Decodable {
+    let connected: Bool
+    let externalUsername: String?
+}
+
+private struct DivingFishProfileRequest: Encodable {
     let profileId: String
-    let username: String?
-    let qq: String?
 }
 
 private struct LxnsImportRequest: Encodable {
@@ -20,16 +28,27 @@ private struct LxnsImportRequest: Encodable {
 }
 
 enum BackendImportService {
-    static func importDivingFish(
-        profileId: String,
-        username: String?,
-        qq: String?
-    ) async throws -> BackendImportRunResponse {
-        let request = DivingFishImportRequest(profileId: profileId, username: username, qq: qq)
+    static func authorizeDivingFish(profileId: String) async throws -> DivingFishAuthorizationResponse {
+        try await BackendAPIClient.request(
+            path: "v1/imports:authorizeDivingFish",
+            method: "POST",
+            body: DivingFishProfileRequest(profileId: profileId),
+            authentication: .required
+        )
+    }
+
+    static func divingFishConnection(profileId: String) async throws -> DivingFishConnectionResponse {
+        try await BackendAPIClient.request(
+            path: "v1/imports:divingFishConnection?profileId=\(profileId)",
+            authentication: .required
+        )
+    }
+
+    static func importDivingFish(profileId: String) async throws -> BackendImportRunResponse {
         return try await BackendAPIClient.request(
             path: "v1/imports:importDf",
             method: "POST",
-            body: request,
+            body: DivingFishProfileRequest(profileId: profileId),
             authentication: .required
         )
     }

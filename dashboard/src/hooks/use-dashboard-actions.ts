@@ -45,8 +45,6 @@ type UseDashboardActionsInput = {
 	scoreAchievements: string;
 	resolveSongByName: (songName: string) => Song | null;
 	loadScores: () => Promise<void>;
-	dfQQ: string;
-	dfImportToken: string;
 	lxnsAuthCode: string;
 	communitySongName: string;
 	communityAliasText: string;
@@ -92,8 +90,6 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		scoreAchievements,
 		resolveSongByName,
 		loadScores,
-		dfQQ,
-		dfImportToken,
 		lxnsAuthCode,
 		communitySongName,
 		communityAliasText,
@@ -260,19 +256,40 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		}
 	};
 
+	const handleAuthorizeDf = async () => {
+		if (!activeProfileId) {
+			showToast(t("actionDfReq"), "warning");
+			return;
+		}
+		const authorizationWindow = window.open("about:blank", "_blank");
+		if (authorizationWindow) {
+			authorizationWindow.opener = null;
+		}
+		try {
+			const payload = await request<{ authorizationUrl: string }>("v1/imports:authorizeDivingFish", {
+				method: "POST",
+				body: { profileId: activeProfileId },
+			});
+			if (authorizationWindow) {
+				authorizationWindow.location.replace(payload.authorizationUrl);
+			} else {
+				window.location.assign(payload.authorizationUrl);
+			}
+		} catch (error) {
+			authorizationWindow?.close();
+			showToast((error as Error).message, "error");
+		}
+	};
+
 	const handleImportDf = async () => {
-		if (!activeProfileId || !dfQQ.trim() || !dfImportToken.trim()) {
+		if (!activeProfileId) {
 			showToast(t("actionDfReq"), "warning");
 			return;
 		}
 		try {
 			const payload = await request<{ upsertedCount: number }>("v1/imports:importDf", {
 				method: "POST",
-				body: {
-					profileId: activeProfileId,
-					qq: dfQQ.trim() || undefined,
-					importToken: dfImportToken.trim(),
-				},
+				body: { profileId: activeProfileId },
 			});
 			await loadScores();
 			showToast(t("actionDfSuccess", { count: payload.upsertedCount }), "success");
@@ -810,6 +827,7 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		handleSaveScoreEdit,
 		handleDeleteScore,
 		handleDeletePlayRecord,
+		handleAuthorizeDf,
 		handleImportDf,
 		handleImportLxns,
 		handleCommunitySubmit,

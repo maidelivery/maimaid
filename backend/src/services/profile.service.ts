@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { inject, injectable } from "tsyringe";
 import { TOKENS } from "../di/tokens.js";
+import type { Env } from "../env.js";
 import { AppError } from "../lib/errors.js";
 import { StorageService } from "./storage.service.js";
 
@@ -14,7 +15,49 @@ export class ProfileService {
 	constructor(
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
 		@inject(StorageService) private readonly storageService: StorageService,
+		@inject(TOKENS.Env) private readonly env: Env,
 	) {}
+
+	private async updateWithVersion(
+		database: PrismaClient | Prisma.TransactionClient,
+		where: Prisma.ProfileWhereInput,
+		data: Prisma.ProfileUpdateInput,
+	) {
+		if (this.env.DATABASE_DIALECT === "postgresql") {
+			return database.profile.updateManyAndReturn({ where, data }).then((profiles) => profiles[0] ?? null);
+		}
+
+		const existing = await database.profile.findFirst({ where, select: { id: true } });
+		if (!existing) return null;
+		return database.profile.update({ where: { id: existing.id }, data });
+	}
+
+	async deactivateOtherProfiles(
+		userId: string,
+		activeProfileId: string,
+		database: PrismaClient | Prisma.TransactionClient = this.prisma,
+	) {
+		const where: Prisma.ProfileWhereInput = {
+			userId,
+			id: { not: activeProfileId },
+			isActive: true,
+		};
+		if (this.env.DATABASE_DIALECT === "postgresql") {
+			return database.profile.updateManyAndReturn({ where, data: { isActive: false } });
+		}
+
+		const profiles = await database.profile.findMany({ where, select: { id: true } });
+		const updated = [];
+		for (const profile of profiles) {
+			updated.push(
+				await database.profile.update({
+					where: { id: profile.id },
+					data: { isActive: false },
+				}),
+			);
+		}
+		return updated;
+	}
 
 	async list(userId: string) {
 		return this.prisma.profile.findMany({
@@ -89,14 +132,7 @@ export class ProfileService {
 			});
 
 			if (shouldActivate && manageActiveProfile) {
-				await database.profile.updateMany({
-					where: {
-						userId,
-						id: { not: created.id },
-						isActive: true,
-					},
-					data: { isActive: false },
-				});
+				await this.deactivateOtherProfiles(userId, created.id, database);
 			}
 
 			return created;
@@ -118,16 +154,15 @@ export class ProfileService {
 
 		const expectedUpdatedAtRange = expectedUpdatedAt ? updatedAtPrecisionWindow(expectedUpdatedAt) : undefined;
 		const updated = expectedUpdatedAtRange
-			? await database.profile
-					.updateManyAndReturn({
-						where: {
-							id: profileId,
-							userId,
-							updatedAt: expectedUpdatedAtRange,
-						},
-						data,
-					})
-					.then((profiles) => profiles[0] ?? null)
+			? await this.updateWithVersion(
+					database,
+					{
+						id: profileId,
+						userId,
+						updatedAt: expectedUpdatedAtRange,
+					},
+					data,
+				)
 			: await database.profile.update({
 					where: { id: profileId },
 					data,
@@ -138,14 +173,7 @@ export class ProfileService {
 		}
 
 		if (input.isActive && manageActiveProfile) {
-			await database.profile.updateMany({
-				where: {
-					userId,
-					id: { not: profileId },
-					isActive: true,
-				},
-				data: { isActive: false },
-			});
+			await this.deactivateOtherProfiles(userId, profileId, database);
 		}
 
 		return updated;
@@ -192,13 +220,7 @@ export class ProfileService {
 		});
 
 		if (input.isActive) {
-			await this.prisma.profile.updateMany({
-				where: {
-					userId,
-					id: { not: profileId },
-				},
-				data: { isActive: false },
-			});
+			await this.deactivateOtherProfiles(userId, profileId);
 		}
 
 		return updated;
@@ -250,12 +272,11 @@ export class ProfileService {
 		const { key, uploadUrl } = await this.storageService.createAvatarUploadUrl(profileId, contentType);
 		const expectedUpdatedAtRange = expectedUpdatedAt ? updatedAtPrecisionWindow(expectedUpdatedAt) : undefined;
 		const updated = expectedUpdatedAtRange
-			? await this.prisma.profile
-					.updateManyAndReturn({
-						where: { id: profileId, userId, updatedAt: expectedUpdatedAtRange },
-						data: { avatarObjectKey: key },
-					})
-					.then((profiles) => profiles[0] ?? null)
+			? await this.updateWithVersion(
+					this.prisma,
+					{ id: profileId, userId, updatedAt: expectedUpdatedAtRange },
+					{ avatarObjectKey: key },
+				)
 			: await this.prisma.profile.update({
 					where: { id: profileId },
 					data: { avatarObjectKey: key },

@@ -15,12 +15,12 @@ describe("withD1TransactionCompatibility", () => {
 		expect(unsupportedTransaction).not.toHaveBeenCalled();
 	});
 
-	it("passes batch transactions to Prisma", async () => {
+	it("runs batch transactions sequentially without Prisma's D1 transaction hook", async () => {
 		const batch = [Promise.resolve(1), Promise.resolve(2)];
 		const transaction = vi.fn().mockResolvedValue([1, 2]);
 		const client = withD1TransactionCompatibility({ $transaction: transaction });
 
 		expect(await client.$transaction(batch)).toEqual([1, 2]);
-		expect(transaction).toHaveBeenCalledWith(batch);
+		expect(transaction).not.toHaveBeenCalled();
 	});
 });

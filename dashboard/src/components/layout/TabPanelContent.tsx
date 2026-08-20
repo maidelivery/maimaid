@@ -91,12 +91,9 @@ type TabPanelContentProps = {
 	handleDeleteScore: (scoreId: string) => Promise<void>;
 	handleDeletePlayRecord: (recordId: string) => Promise<void>;
 
-	dfQQ: string;
-	dfImportToken: string;
 	lxnsAuthCode: string;
-	setDfQQ: Dispatch<SetStateAction<string>>;
-	setDfImportToken: Dispatch<SetStateAction<string>>;
 	setLxnsAuthCode: Dispatch<SetStateAction<string>>;
+	handleAuthorizeDf: () => Promise<void>;
 	handleImportDf: () => Promise<void>;
 	handleImportLxns: (input: { codeVerifier: string }) => Promise<void>;
 
@@ -205,12 +202,9 @@ export function TabPanelContent(props: TabPanelContentProps) {
 		openScoreEditDialog,
 		handleDeleteScore,
 		handleDeletePlayRecord,
-		dfQQ,
-		dfImportToken,
 		lxnsAuthCode,
-		setDfQQ,
-		setDfImportToken,
 		setLxnsAuthCode,
+		handleAuthorizeDf,
 		handleImportDf,
 		handleImportLxns,
 		communityDailyCount,
@@ -338,12 +332,9 @@ export function TabPanelContent(props: TabPanelContentProps) {
 	if (tab === "import") {
 		return (
 			<ImportsPage
-				dfQQ={dfQQ}
-				dfImportToken={dfImportToken}
 				lxnsAuthCode={lxnsAuthCode}
-				onDfQQChange={setDfQQ}
-				onDfImportTokenChange={setDfImportToken}
 				onLxnsAuthCodeChange={setLxnsAuthCode}
+				onAuthorizeDf={handleAuthorizeDf}
 				onImportDf={handleImportDf}
 				onImportLxns={handleImportLxns}
 			/>
