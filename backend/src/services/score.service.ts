@@ -53,6 +53,7 @@ const FS_ORDER = ["sync", "fs", "fsp", "fsd", "fsdp"];
 // A score import can contain hundreds of sheets and records.
 const D1_LOOKUP_CHUNK_SIZE = 25;
 const POSTGRES_LOOKUP_CHUNK_SIZE = 500;
+const D1_WRITE_CONCURRENCY = 16;
 
 type ResolvedSheet = {
 	id: bigint;
@@ -386,8 +387,8 @@ export class ScoreService {
 
 		if (createRows.length > 0) {
 			if (this.env.DATABASE_DIALECT === "sqlite") {
-				for (const data of createRows) {
-					await database.bestScore.create({ data });
+				for (const batch of chunk(createRows, D1_WRITE_CONCURRENCY)) {
+					await Promise.all(batch.map((data) => database.bestScore.create({ data })));
 				}
 			} else {
 				await database.bestScore.createMany({ data: createRows });
@@ -395,8 +396,8 @@ export class ScoreService {
 		}
 		if (updateOps.length > 0) {
 			if (this.env.DATABASE_DIALECT === "sqlite") {
-				for (const update of updateOps) {
-					await update;
+				for (const batch of chunk(updateOps, D1_WRITE_CONCURRENCY)) {
+					await Promise.all(batch);
 				}
 			} else {
 				await Promise.all(updateOps);
@@ -588,8 +589,8 @@ export class ScoreService {
 
 		if (createRows.length > 0) {
 			if (this.env.DATABASE_DIALECT === "sqlite") {
-				for (const data of createRows) {
-					await database.playRecord.create({ data });
+				for (const batch of chunk(createRows, D1_WRITE_CONCURRENCY)) {
+					await Promise.all(batch.map((data) => database.playRecord.create({ data })));
 				}
 			} else {
 				await database.playRecord.createMany({ data: createRows });

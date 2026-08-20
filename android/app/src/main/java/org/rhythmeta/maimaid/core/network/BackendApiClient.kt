@@ -102,7 +102,7 @@ class BackendApiClient(
 
     private companion object {
         const val ConnectTimeoutMillis = 15_000
-        const val ReadTimeoutMillis = 45_000
+        const val ReadTimeoutMillis = 120_000
     }
 }
 
