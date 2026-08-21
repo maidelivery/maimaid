@@ -41,17 +41,35 @@ struct DivingFishImportView: View {
 
             Section {
                 if isConnected {
-                    Button("import.df.action.quickSync", systemImage: "arrow.triangle.2.circlepath", action: startImport)
-                        .disabled(isImporting || isResolvingImportConflict)
-                    Button("import.df.oauth.reconnect", systemImage: "person.badge.key", action: startAuthorization)
-                        .disabled(isImporting || isResolvingImportConflict)
-                    Button(role: .destructive, action: startDisconnect) {
-                        Label("import.df.oauth.disconnect", systemImage: "link.badge.minus")
-                    }
-                        .disabled(isImporting || isResolvingImportConflict)
+                    actionRow(
+                        title: String(localized: "import.df.action.quickSync"),
+                        icon: "arrow.triangle.2.circlepath",
+                        tint: .blue,
+                        disabled: isImporting || isResolvingImportConflict,
+                        action: startImport
+                    )
+                    actionRow(
+                        title: String(localized: "import.df.oauth.reconnect"),
+                        icon: "person.badge.key",
+                        tint: .orange,
+                        disabled: isImporting || isResolvingImportConflict,
+                        action: startAuthorization
+                    )
+                    actionRow(
+                        title: String(localized: "import.df.oauth.disconnect"),
+                        icon: "personalhotspot.slash",
+                        tint: .red,
+                        disabled: isImporting || isResolvingImportConflict,
+                        action: startDisconnect
+                    )
                 } else {
-                    Button("import.df.oauth.connectImport", systemImage: "person.badge.key", action: startAuthorization)
-                        .disabled(isImporting || isResolvingImportConflict || activeProfile == nil)
+                    actionRow(
+                        title: String(localized: "import.df.oauth.connectImport"),
+                        icon: "person.badge.key",
+                        tint: .blue,
+                        disabled: isImporting || isResolvingImportConflict || activeProfile == nil,
+                        action: startAuthorization
+                    )
                 }
             } header: {
                 Text("import.df.oauth.actions")
@@ -112,6 +130,36 @@ struct DivingFishImportView: View {
     private func startDisconnect() {
         operationTask?.cancel()
         operationTask = Task { await disconnect() }
+    }
+
+    private func actionRow(
+        title: String,
+        icon: String,
+        tint: Color,
+        disabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 28, height: 28)
+                    .background(tint, in: .rect(cornerRadius: 8))
+
+                Text(title)
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Image(systemName: "arrow.up.forward.app")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(tint)
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .opacity(disabled ? 0.6 : 1)
     }
 
     @MainActor
