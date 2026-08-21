@@ -8,7 +8,7 @@ services:
       POSTGRES_DB: maimaid
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    command: postgres -c shared_preload_libraries=pg_cron -c cron.database_name=maimaid
+    command: postgres -c shared_preload_libraries=pg_cron -c cron.database_name=$$POSTGRES_DB
     ports:
       # Loopback-only on purpose. Publishing a port makes Docker write its own
       # iptables rules ahead of the host firewall, so a bare "54329:5432" on a
@@ -19,7 +19,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d maimaid"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -43,8 +43,13 @@ services:
     ports:
       # Also loopback-only: on a server this sits behind a TLS reverse proxy, and
       # the app must not be reachable on http://<public-ip>:8787 alongside it.
-      - "127.0.0.1:8787:8787"
+      - "127.0.0.1:53287:8787"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787').then(it=>it.json()).then(it=>process.exit(it.status==='ok'?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
 volumes:
   postgres-data:
