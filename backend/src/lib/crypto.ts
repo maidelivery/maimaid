@@ -6,5 +6,5 @@ export const sha256Hex = async (value: string): Promise<string> => {
 };
 
 export const randomToken = (bytes = 48): string => {
-	return crypto.getRandomValues(new Uint8Array(bytes)).toBase64({ alphabet: "base64url" });
+	return crypto.getRandomValues(new Uint8Array(bytes)).toBase64({ alphabet: "base64url", omitPadding: true });
 };

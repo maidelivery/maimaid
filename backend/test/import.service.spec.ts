@@ -41,6 +41,11 @@ describe("ImportService Diving Fish OAuth", () => {
 			profileId: "22222222-2222-4222-8222-222222222222",
 		});
 		const url = new URL(result.authorizationUrl);
+		const createCall = prisma.divingFishOAuthSession.create.mock.calls[0]?.[0];
+		const codeVerifier = createCall?.data.codeVerifier;
+		const expectedChallenge = new Uint8Array(
+			await crypto.subtle.digest("SHA-256", new TextEncoder().encode(codeVerifier)),
+		).toBase64({ alphabet: "base64url", omitPadding: true });
 
 		expect(url.origin).toBe("https://auth.diving-fish.com");
 		expect(url.pathname).toBe("/oauth/authorize");
@@ -48,7 +53,9 @@ describe("ImportService Diving Fish OAuth", () => {
 		expect(url.searchParams.get("redirect_uri")).toBe("https://api.rhythmeta.org/v1/imports:divingFishCallback");
 		expect(url.searchParams.get("scope")).toBe("prober.records.read prober.records.write");
 		expect(url.searchParams.get("code_challenge_method")).toBe("S256");
-		expect(url.searchParams.get("code_challenge")).toMatch(/^[A-Za-z0-9_-]{43}$/u);
+		expect(codeVerifier).toMatch(/^[A-Za-z0-9_-]{43,128}$/u);
+		expect(codeVerifier).not.toContain("=");
+		expect(url.searchParams.get("code_challenge")).toBe(expectedChallenge);
 		expect(url.searchParams.get("state")).toBeTruthy();
 		expect(prisma.divingFishOAuthSession.create).toHaveBeenCalledWith({
 			data: expect.objectContaining({
