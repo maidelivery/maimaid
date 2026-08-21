@@ -24,7 +24,7 @@ class CoverImageStore(context: Context) {
         onProgress: (completedItems: Int, totalItems: Int) -> Unit = { _, _ -> },
         download: suspend (imageName: String, destination: File) -> Unit,
     ) = coroutineScope {
-        val dispatcher = Dispatchers.IO.limitedParallelism(6)
+        val dispatcher = Dispatchers.IO.limitedParallelism(MaxConcurrentDownloads)
         val pendingNames = imageNames
             .mapNotNull { name -> normalizedName(name) }
             .distinct()
@@ -54,5 +54,9 @@ class CoverImageStore(context: Context) {
         if (name.isEmpty() || name.equals("n/a", ignoreCase = true)) return null
         if (File(name).name != name) return null
         return name
+    }
+
+    private companion object {
+        const val MaxConcurrentDownloads = 12
     }
 }

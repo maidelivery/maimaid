@@ -4,13 +4,15 @@ import android.graphics.BitmapFactory
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromStream
 import org.rhythmeta.maimaid.core.data.StaticBundleResponse
 import org.rhythmeta.maimaid.core.data.StaticAssetConfiguration
 import org.rhythmeta.maimaid.core.data.StaticAssetUrls
 import org.rhythmeta.maimaid.core.data.StaticManifest
-import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FilterInputStream
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -124,6 +126,7 @@ class StaticBundleClient(
         noinline onTransfer: ((downloadedBytes: Long, totalBytes: Long?) -> Unit)? = null,
     ): T = getUrl("${baseUrl.trimEnd('/')}$path", onTransfer)
 
+    @OptIn(ExperimentalSerializationApi::class)
     private suspend inline fun <reified T> getUrl(
         url: String,
         noinline onTransfer: ((downloadedBytes: Long, totalBytes: Long?) -> Unit)? = null,
@@ -142,13 +145,19 @@ class StaticBundleClient(
             if (status in 200..299) {
                 onTransfer?.invoke(0L, connection.contentLengthLong.takeIf { it > 0L })
             }
-            val body = if (status in 200..299 && onTransfer != null) {
-                stream?.use { readBody(it, onTransfer) }.orEmpty()
-            } else {
-                stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (status !in 200..299) {
+                val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                error("HTTP $status: ${body.take(200)}")
             }
-            check(status in 200..299) { "HTTP $status: ${body.take(200)}" }
-            json.decodeFromString<T>(body)
+            val responseStream = stream ?: error("Empty HTTP response")
+            responseStream.use { input ->
+                val progressStream = if (onTransfer != null) {
+                    TransferInputStream(input, onTransfer)
+                } else {
+                    input
+                }
+                json.decodeFromStream<T>(progressStream)
+            }
         } finally {
             connection.disconnect()
         }
@@ -159,24 +168,26 @@ class StaticBundleClient(
         return this
     }
 
-    private fun readBody(
-        input: InputStream,
-        onTransfer: (downloadedBytes: Long, totalBytes: Long?) -> Unit,
-    ): String {
-        val output = ByteArrayOutputStream()
-        val buffer = ByteArray(TransferBufferSize)
-        while (true) {
-            val byteCount = input.read(buffer)
-            if (byteCount < 0) break
-            output.write(buffer, 0, byteCount)
-            onTransfer(byteCount.toLong(), null)
-        }
-        return output.toByteArray().toString(Charsets.UTF_8)
-    }
-
     private companion object {
         const val CONNECT_TIMEOUT_MILLIS = 15_000
         const val READ_TIMEOUT_MILLIS = 60_000
         const val TransferBufferSize = 64 * 1_024
+    }
+
+    private class TransferInputStream(
+        input: InputStream,
+        private val onTransfer: (downloadedBytes: Long, totalBytes: Long?) -> Unit,
+    ) : FilterInputStream(input) {
+        override fun read(): Int {
+            val value = super.read()
+            if (value >= 0) onTransfer(1L, null)
+            return value
+        }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+            val count = super.read(buffer, offset, length)
+            if (count > 0) onTransfer(count.toLong(), null)
+            return count
+        }
     }
 }

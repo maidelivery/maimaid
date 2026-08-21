@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.2.4.1
+
+### 中文
+
+#### 修复
+
+- 修复 Android 10 静态资源 URL 编码兼容性问题。
+- 修复静态数据包同步和 ONNX 模型初始化的内存溢出问题。
+- Android 曲绘下载并发数从 6 提升至 12。
+- 提升 48 MB 应用堆设备上的启动稳定性。
+
+### English
+
+#### Fixed
+
+- Fixed Android 10 compatibility for static asset URL encoding.
+- Fixed out-of-memory failures during static bundle synchronization and ONNX model initialization.
+- Increased concurrent Android cover downloads from 6 to 12.
+- Improved startup stability on devices with a 48 MB application heap limit.
+
 ## 1.2.4
 
 ### 中文

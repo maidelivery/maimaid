@@ -1,5 +1,6 @@
 package org.rhythmeta.maimaid.core.data
 
+import android.os.Build
 import java.net.URI
 import java.net.URLEncoder
 
@@ -47,8 +48,16 @@ object StaticAssetUrls {
     }
 
     private fun appending(baseUrl: String, name: String): String {
-        val encodedName = URLEncoder.encode(name, Charsets.UTF_8).replace("+", "%20")
+        val encodedName = encodePathComponent(name).replace("+", "%20")
         return "${normalizeImageTransformation(baseUrl).trimEnd('/')}/$encodedName"
+    }
+
+    private fun encodePathComponent(value: String): String = if (
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    ) {
+        URLEncoder.encode(value, Charsets.UTF_8)
+    } else {
+        URLEncoder.encode(value, Charsets.UTF_8.name())
     }
 
     internal fun normalizeImageTransformation(value: String): String = value
