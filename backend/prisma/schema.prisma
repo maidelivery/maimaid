@@ -178,6 +178,7 @@ model Profile {
   updatedAt        DateTime         @updatedAt
   user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   bindings         ProfileBinding[]
+  divingFishOAuthSession DivingFishOAuthSession?
   bestScores       BestScore[]
   playRecords      PlayRecord[]
   importRuns       ImportRun[]
@@ -201,6 +202,24 @@ model ProfileBinding {
   @@unique([profileId, provider])
   @@index([provider, externalUserId])
   @@map("profile_bindings")
+}
+
+model DivingFishOAuthSession {
+  id           String    @id @default(uuid()) @db.Uuid
+  profileId    String    @unique @db.Uuid
+  stateHash    String    @unique
+  codeVerifier String
+  status       String    @default("pending")
+  errorCode    String?
+  expiresAt    DateTime
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  profile      Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, createdAt])
+  @@index([expiresAt])
+  @@map("diving_fish_oauth_sessions")
 }
 
 model CatalogSnapshot {

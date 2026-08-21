@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -64,57 +63,79 @@ fun DivingFishImportScreen(
     container: AppContainer,
     contentTopPadding: Dp,
 ) {
+    val context = LocalContext.current
     val viewModel = viewModel<ScoreImportViewModel>(factory = ScoreImportViewModel.Factory(container))
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     ScoreImportPage(contentTopPadding = contentTopPadding) {
         item {
             ImportSummaryCard(
-                icon = Icons.Rounded.AccountCircle,
-                title = stringResource(R.string.import_df_summary_title),
-                summary = stringResource(R.string.import_df_summary_description),
+                icon = if (state.hasDivingFishAccount) Icons.Rounded.CheckCircle else Icons.Rounded.AccountCircle,
+                title = stringResource(
+                    if (state.hasDivingFishAccount) R.string.import_df_connected
+                    else R.string.import_df_summary_title,
+                ),
+                summary = state.divingFishUsername ?: stringResource(
+                    if (state.hasDivingFishAccount) R.string.import_df_connected_description
+                    else R.string.import_df_summary_description,
+                ),
             )
         }
         item {
-            ImportSection(stringResource(R.string.import_account_section)) {
-                TextField(
-                    value = state.divingFishAccount,
-                    onValueChange = viewModel::setDivingFishAccount,
-                    colors = appTextFieldColors(),
-                    label = stringResource(R.string.import_df_account),
-                    useLabelAsPlaceholder = true,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    cornerRadius = 14.dp,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                )
-                TextField(
-                    value = state.divingFishToken,
-                    onValueChange = viewModel::setDivingFishToken,
-                    colors = appTextFieldColors(),
-                    label = stringResource(R.string.import_df_token),
-                    useLabelAsPlaceholder = true,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    cornerRadius = 14.dp,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                )
+            ImportSection(stringResource(R.string.import_df_oauth_section)) {
                 Text(
-                    text = stringResource(R.string.import_df_token_description),
+                    text = stringResource(R.string.import_df_oauth_description),
                     style = MiuixTheme.textStyles.footnote1,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
+                if (state.hasDivingFishAccount && !state.divingFishCanWrite) {
+                    Text(
+                        text = stringResource(R.string.import_df_write_pending),
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.primary,
+                    )
+                }
+                if (state.hasDivingFishAccount) {
+                    ImportPrimaryButton(
+                        title = stringResource(R.string.import_df_quick_sync),
+                        icon = Icons.Rounded.Refresh,
+                        busy = state.isBusy,
+                        enabled = true,
+                        onClick = viewModel::quickImportDivingFish,
+                    )
+                }
+                Button(
+                    onClick = {
+                        viewModel.authorizeAndImportDivingFish { url -> context.openInAppBrowser(url) }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isBusy && state.profile != null,
+                ) {
+                    Icon(Icons.Rounded.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(
+                            if (state.hasDivingFishAccount) R.string.import_df_reconnect
+                            else R.string.import_df_connect_import,
+                        ),
+                    )
+                }
+                if (state.hasDivingFishAccount) {
+                    Button(
+                        onClick = viewModel::disconnectDivingFish,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isBusy,
+                        colors = ButtonDefaults.buttonColors(
+                            color = MiuixTheme.colorScheme.errorContainer,
+                            contentColor = MiuixTheme.colorScheme.onErrorContainer,
+                        ),
+                    ) {
+                        Icon(Icons.Rounded.Link, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.import_df_disconnect))
+                    }
+                }
             }
-        }
-        item {
-            ImportPrimaryButton(
-                title = stringResource(R.string.import_df_action),
-                busy = state.isBusy,
-                enabled = state.profile != null &&
-                    (state.divingFishAccount.isNotBlank() || state.divingFishToken.isNotBlank()),
-                onClick = viewModel::importDivingFish,
-            )
         }
         importStatusItem(state)
     }

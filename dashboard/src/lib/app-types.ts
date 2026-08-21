@@ -218,6 +218,9 @@ export type PasskeyLoginStartResponse = {
 
 export type ScoreEditState = {
 	scoreId: string;
+	title: string;
+	chartType: string;
+	difficulty: string;
 	achievements: string;
 	rank: string;
 	dxScore: string;

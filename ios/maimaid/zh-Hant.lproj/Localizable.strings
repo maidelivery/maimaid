@@ -256,20 +256,25 @@
 
 // Diving Fish
 "import.df.title" = "從 Diving Fish 匯入";
-"import.df.bound.header" = "已綁定帳號";
-"import.df.username" = "目前帳號";
 "import.df.action.quickSync" = "一鍵快速同步成績";
-"import.df.rebind.header" = "重新綁定";
-"import.df.rebind.footer" = "如果你更換了帳號或 Token，請在此處更新。成績上傳功能需要填寫正確。";
-"import.df.username.placeholder" = "QQ號 / 使用者名";
-"import.df.token.placeholder" = "匯入令牌 (可選，用於同步上傳)";
-"import.df.action.update" = "更新並綁定";
-"import.df.setup.header" = "帳號設定";
-"import.df.setup.footer" = "請輸入你的 Diving Fish (查分器) QQ號或使用者名。";
-"import.df.token.setup.placeholder" = "匯入令牌 (在查分器設定頁取得，用於上傳功能)";
-"import.df.action.bindImport" = "綁定並匯入";
 "import.df.status.connecting" = "正在連接到 Diving Fish...";
-"import.df.summary.footer" = "用於從 Diving Fish 拉取並匯入成績。";
+"import.df.oauth.title" = "連接水魚查分器";
+"import.df.oauth.connected" = "已連接水魚查分器";
+"import.df.oauth.connectedAccount" = "已透過 OAuth 連接";
+"import.df.oauth.description" = "授權 maimaid 讀取並同步你的水魚成績。";
+"import.df.oauth.writePending" = "成績同步權限正在等待水魚審核，成績匯入仍可使用。";
+"import.df.oauth.actions" = "OAuth 授權";
+"import.df.oauth.footer" = "授權在水魚登入頁完成，maimaid 不會接觸你的密碼。";
+"import.df.oauth.connectImport" = "連接並匯入";
+"import.df.oauth.reconnect" = "重新連接帳號";
+"import.df.oauth.disconnect" = "中斷連接";
+"import.df.oauth.preparing" = "正在準備水魚授權...";
+"import.df.oauth.waiting" = "請在瀏覽器中完成授權...";
+"import.df.oauth.failed" = "水魚授權失敗。";
+"import.df.oauth.expired" = "水魚授權已過期。";
+"import.df.oauth.browserUnavailable" = "無法開啟授權頁面。";
+"import.df.oauth.disconnected" = "已中斷水魚連接。";
+"import.df.oauth.fetched %lld" = "已取得 %lld 筆成績";
 
 // LXNS
 "import.lxns.title" = "從 LXNS 匯入";
@@ -436,7 +441,6 @@
 "userProfile.section.metadata" = "標識資訊";
 "userProfile.profileId" = "Profile ID";
 "settings.sync.dfUsername" = "水魚使用者名";
-"settings.sync.dfToken" = "水魚匯入令牌";
 "settings.sync.lxnsToken" = "落雪 Refresh Token";
 
 // MARK: - Settings (User Management)

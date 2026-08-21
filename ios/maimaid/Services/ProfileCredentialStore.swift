@@ -3,10 +3,9 @@ import Security
 import SwiftData
 
 struct ProfileCredentials: Equatable {
-    var dfImportToken: String
     var lxnsRefreshToken: String
 
-    static let empty = ProfileCredentials(dfImportToken: "", lxnsRefreshToken: "")
+    static let empty = ProfileCredentials(lxnsRefreshToken: "")
 }
 
 enum LxnsOAuthConfiguration {
@@ -21,7 +20,6 @@ final class ProfileCredentialStore {
     private static let service = "in.shikoch.maimaid.profile.credentials"
 
     private struct StoredCredentials: Codable {
-        let dfImportToken: String
         let lxnsRefreshToken: String
     }
 
@@ -32,14 +30,12 @@ final class ProfileCredentialStore {
             return .empty
         }
         return ProfileCredentials(
-            dfImportToken: decoded.dfImportToken,
             lxnsRefreshToken: decoded.lxnsRefreshToken
         )
     }
 
     func setCredentials(_ credentials: ProfileCredentials, for profileId: UUID) {
         let sanitized = ProfileCredentials(
-            dfImportToken: credentials.dfImportToken.trimmingCharacters(in: .whitespacesAndNewlines),
             lxnsRefreshToken: credentials.lxnsRefreshToken.trimmingCharacters(in: .whitespacesAndNewlines)
         )
 
@@ -49,7 +45,6 @@ final class ProfileCredentialStore {
         }
 
         let payload = StoredCredentials(
-            dfImportToken: sanitized.dfImportToken,
             lxnsRefreshToken: sanitized.lxnsRefreshToken
         )
         guard let data = try? JSONEncoder().encode(payload) else {
@@ -73,12 +68,6 @@ final class ProfileCredentialStore {
         }
     }
 
-    func setDfImportToken(_ token: String, for profileId: UUID) {
-        var current = credentials(for: profileId)
-        current.dfImportToken = token
-        setCredentials(current, for: profileId)
-    }
-
     func setLxnsRefreshToken(_ token: String, for profileId: UUID) {
         var current = credentials(for: profileId)
         current.lxnsRefreshToken = token
@@ -100,16 +89,11 @@ final class ProfileCredentialStore {
         var activeProfileId = profiles.first(where: \.isActive)?.id ?? profiles.first?.id
 
         for profile in profiles {
-            let legacyDf = profile.dfImportToken.trimmingCharacters(in: .whitespacesAndNewlines)
             let legacyLxns = profile.lxnsRefreshToken.trimmingCharacters(in: .whitespacesAndNewlines)
 
-            if !legacyDf.isEmpty || !legacyLxns.isEmpty {
+            if !legacyLxns.isEmpty {
                 var merged = credentials(for: profile.id)
                 var shouldSave = false
-                if !legacyDf.isEmpty && merged.dfImportToken.isEmpty {
-                    merged.dfImportToken = legacyDf
-                    shouldSave = true
-                }
                 if !legacyLxns.isEmpty && merged.lxnsRefreshToken.isEmpty {
                     merged.lxnsRefreshToken = legacyLxns
                     shouldSave = true
@@ -119,8 +103,7 @@ final class ProfileCredentialStore {
                 }
             }
 
-            if !profile.dfImportToken.isEmpty || !profile.lxnsRefreshToken.isEmpty || !profile.lxnsClientId.isEmpty {
-                profile.dfImportToken = ""
+            if !profile.lxnsRefreshToken.isEmpty || !profile.lxnsClientId.isEmpty {
                 profile.lxnsRefreshToken = ""
                 profile.lxnsClientId = ""
                 didMutateModel = true
@@ -128,19 +111,14 @@ final class ProfileCredentialStore {
         }
 
         if let config = (try? context.fetch(FetchDescriptor<SyncConfig>()))?.first {
-            let legacyDf = config.dfImportToken.trimmingCharacters(in: .whitespacesAndNewlines)
             let legacyLxns = config.lxnsRefreshToken.trimmingCharacters(in: .whitespacesAndNewlines)
             if activeProfileId == nil {
                 activeProfileId = profiles.first?.id
             }
 
-            if let targetProfileId = activeProfileId, (!legacyDf.isEmpty || !legacyLxns.isEmpty) {
+            if let targetProfileId = activeProfileId, !legacyLxns.isEmpty {
                 var merged = credentials(for: targetProfileId)
                 var shouldSave = false
-                if !legacyDf.isEmpty && merged.dfImportToken.isEmpty {
-                    merged.dfImportToken = legacyDf
-                    shouldSave = true
-                }
                 if !legacyLxns.isEmpty && merged.lxnsRefreshToken.isEmpty {
                     merged.lxnsRefreshToken = legacyLxns
                     shouldSave = true
@@ -150,8 +128,7 @@ final class ProfileCredentialStore {
                 }
             }
 
-            if !config.dfImportToken.isEmpty || !config.lxnsRefreshToken.isEmpty || !config.lxnsClientId.isEmpty {
-                config.dfImportToken = ""
+            if !config.lxnsRefreshToken.isEmpty || !config.lxnsClientId.isEmpty {
                 config.lxnsRefreshToken = ""
                 config.lxnsClientId = ""
                 didMutateModel = true

@@ -257,20 +257,25 @@
 
 // Diving Fish
 "import.df.title" = "Import from Diving Fish";
-"import.df.bound.header" = "Bound Account";
-"import.df.username" = "Current Account";
 "import.df.action.quickSync" = "Quick Sync Scores";
-"import.df.rebind.header" = "Rebind";
-"import.df.rebind.footer" = "Update account/token. Needed for auto-upload.";
-"import.df.username.placeholder" = "QQ / Username";
-"import.df.token.placeholder" = "Token (Optional, for sync)";
-"import.df.action.update" = "Update & Bind";
-"import.df.setup.header" = "Account Setup";
-"import.df.setup.footer" = "Enter QQ or username.";
-"import.df.token.setup.placeholder" = "Token (for sync)";
-"import.df.action.bindImport" = "Bind & Import";
 "import.df.status.connecting" = "Connecting...";
-"import.df.summary.footer" = "This page imports scores from Diving Fish.";
+"import.df.oauth.title" = "Connect Diving Fish";
+"import.df.oauth.connected" = "Diving Fish Connected";
+"import.df.oauth.connectedAccount" = "Connected with OAuth";
+"import.df.oauth.description" = "Authorize maimaid to read and sync your Diving Fish records.";
+"import.df.oauth.writePending" = "Score sync access is pending Diving Fish approval. Import remains available.";
+"import.df.oauth.actions" = "OAuth";
+"import.df.oauth.footer" = "Authorization uses the Diving Fish sign-in page. maimaid never receives your password.";
+"import.df.oauth.connectImport" = "Connect and Import";
+"import.df.oauth.reconnect" = "Reconnect Account";
+"import.df.oauth.disconnect" = "Disconnect";
+"import.df.oauth.preparing" = "Preparing Diving Fish authorization...";
+"import.df.oauth.waiting" = "Complete authorization in the browser...";
+"import.df.oauth.failed" = "Diving Fish authorization failed.";
+"import.df.oauth.expired" = "Diving Fish authorization expired.";
+"import.df.oauth.browserUnavailable" = "The authorization page could not be opened.";
+"import.df.oauth.disconnected" = "Diving Fish disconnected.";
+"import.df.oauth.fetched %lld" = "Fetched %lld records";
 
 // LXNS
 "import.lxns.title" = "Import from LXNS";
@@ -437,7 +442,6 @@
 "userProfile.section.metadata" = "Metadata";
 "userProfile.profileId" = "Profile ID";
 "settings.sync.dfUsername" = "DF Username";
-"settings.sync.dfToken" = "DF Import Token";
 "settings.sync.lxnsToken" = "LXNS Refresh Token";
 
 // MARK: - Settings (User Management)

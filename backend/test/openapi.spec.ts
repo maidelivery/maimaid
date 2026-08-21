@@ -11,6 +11,8 @@ const createEnv = (): Env => ({
 	PORT: 8787,
 	APP_PUBLIC_URL: undefined,
 	CORS_ALLOWED_ORIGINS: "",
+	DIVING_FISH_OAUTH_CLIENT_ID: "diving-fish-client",
+	DIVING_FISH_OAUTH_CLIENT_SECRET: undefined,
 	DATABASE_URL: "postgres://localhost:5432/maimaid",
 	JWT_ISSUER: "maimaid-backend",
 	JWT_AUDIENCE: "maimaid-clients",

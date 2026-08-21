@@ -1,263 +1,189 @@
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct DivingFishImportView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openURL) private var openURL
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
-    
-    @State private var username: String = ""
-    @State private var importToken: String = ""
+
+    @State private var isConnected = false
+    @State private var canSyncScores = false
+    @State private var connectedUsername: String?
     @State private var isImporting = false
-    @State private var importStatus: String = ""
-    @State private var progress: Double = 0
-    @State private var totalRecords: Int = 0
+    @State private var importStatus = ""
+    @State private var totalRecords = 0
     @State private var importConflictPreview: ImportSyncConflictPreview?
     @State private var isResolvingImportConflict = false
-    @State private var pendingUpsertedCount: Int = 0
-    
+    @State private var pendingUpsertedCount = 0
+    @State private var operationTask: Task<Void, Never>?
+
     private var activeProfile: UserProfile? { activeProfiles.first }
-    private var hasBoundAccount: Bool { !(activeProfile?.dfUsername.isEmpty ?? true) }
-    
-    private var statusTint: Color {
-        let failedText = String(localized: "import.status.failed")
-        let errorText = String(localized: "import.status.error")
-        return importStatus.contains(failedText) || importStatus.contains(errorText) ? .red : .blue
-    }
-    
+
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Color(uiColor: .systemGroupedBackground)
-                .ignoresSafeArea()
-            
-            List {
-                summarySection
-                formSection
-                
-                if !importStatus.isEmpty || isImporting {
-                    statusSection
+        List {
+            Section {
+                Label {
+                    VStack(alignment: .leading) {
+                        Text(isConnected ? "import.df.oauth.connected" : "import.df.oauth.title")
+                            .bold()
+                        Text(isConnected ? (connectedUsername ?? String(localized: "import.df.oauth.connectedAccount")) : String(localized: "import.df.oauth.description"))
+                            .foregroundStyle(.secondary)
+                        if isConnected && !canSyncScores {
+                            Text("import.df.oauth.writePending")
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                } icon: {
+                    Image(systemName: isConnected ? "checkmark.shield.fill" : "person.badge.key.fill")
+                        .foregroundStyle(isConnected ? .green : .blue)
                 }
             }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
-            .scrollDismissesKeyboard(.interactively)
+
+            Section {
+                if isConnected {
+                    Button("import.df.action.quickSync", systemImage: "arrow.triangle.2.circlepath", action: startImport)
+                        .disabled(isImporting || isResolvingImportConflict)
+                    Button("import.df.oauth.reconnect", systemImage: "person.badge.key", action: startAuthorization)
+                        .disabled(isImporting || isResolvingImportConflict)
+                    Button(role: .destructive, action: startDisconnect) {
+                        Label("import.df.oauth.disconnect", systemImage: "link.badge.minus")
+                    }
+                        .disabled(isImporting || isResolvingImportConflict)
+                } else {
+                    Button("import.df.oauth.connectImport", systemImage: "person.badge.key", action: startAuthorization)
+                        .buttonStyle(.borderedProminent)
+                        .disabled(isImporting || isResolvingImportConflict || activeProfile == nil)
+                }
+            } header: {
+                Text("import.df.oauth.actions")
+            } footer: {
+                Text("import.df.oauth.footer")
+            }
+
+            if !importStatus.isEmpty || isImporting {
+                Section("import.status.header") {
+                    if isImporting {
+                        ProgressView()
+                    }
+                    if !importStatus.isEmpty {
+                        Text(importStatus)
+                            .foregroundStyle(importStatus.contains(String(localized: "import.status.error")) ? .red : .secondary)
+                    }
+                    if totalRecords > 0 {
+                        Text("import.df.oauth.fetched \(totalRecords)")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
         }
         .navigationTitle("import.df.title")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            if let profile = activeProfile {
-                username = profile.dfUsername
-                importToken = ProfileCredentialStore.shared.credentials(for: profile.id).dfImportToken
-            }
+        .task(id: activeProfile?.id) {
+            await refreshBindingStatus()
+        }
+        .onDisappear {
+            operationTask?.cancel()
         }
         .sheet(item: $importConflictPreview) { preview in
             SyncConflictResolutionSheet(
                 context: .importPreview(preview),
                 isApplying: isResolvingImportConflict
             ) { action in
-                Task {
+                operationTask = Task {
                     await applyImportConflictResolutionAction(action, preview: preview)
                 }
             }
             .interactiveDismissDisabled(true)
         }
     }
-    
-    @ViewBuilder
-    private var summarySection: some View {
-        Section {
-            accountSummaryCard(
-                icon: hasBoundAccount ? "fish.circle.fill" : "person.crop.circle.badge.plus",
-                iconTint: hasBoundAccount ? .blue : .orange,
-                title: String(localized: hasBoundAccount ? "import.df.bound.header" : "import.df.setup.header"),
-                subtitle: hasBoundAccount
-                    ? (activeProfile?.dfUsername ?? String(localized: "common.unknown"))
-                    : String(localized: "import.df.setup.footer")
-            )
-        }
-        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-        .listRowBackground(Color.clear)
-        .listSectionSeparator(.hidden)
+
+    private func startAuthorization() {
+        operationTask?.cancel()
+        operationTask = Task { await authorizeAndImport() }
     }
-    
-    @ViewBuilder
-    private var formSection: some View {
-        if hasBoundAccount {
-            Section("import.df.bound.header") {
-                HStack(spacing: 12) {
-                    settingsIcon(icon: "person.text.rectangle.fill", color: .blue)
-                    Text("import.df.username")
-                    Spacer()
-                    Text(activeProfile?.dfUsername ?? String(localized: "common.unknown"))
-                        .foregroundStyle(.secondary)
-                }
-                
-                actionRow(
-                    title: isImporting ? "import.status.syncing" : "import.df.action.quickSync",
-                    icon: "arrow.triangle.2.circlepath.circle.fill",
-                    tint: .blue
-                ) {
-                    Task {
-                        if let name = activeProfile?.dfUsername {
-                            await importData(userName: name)
-                        }
-                    }
-                }
-                .disabled(isImporting || isResolvingImportConflict)
-                .opacity(isImporting || isResolvingImportConflict ? 0.6 : 1.0)
-            }
-            
-            Section {
-                credentialField(
-                    title: "import.df.username.placeholder",
-                    text: $username,
-                    icon: "person.fill"
-                )
-                
-                credentialField(
-                    title: "import.df.token.placeholder",
-                    text: $importToken,
-                    icon: "key.fill",
-                    isSecure: true
-                )
-                
-                Button("import.df.action.update") {
-                    updateConfig()
-                }
-                .disabled(username.isEmpty)
-            } header: {
-                Text("import.df.rebind.header")
-            } footer: {
-                Text("import.df.rebind.footer")
-            }
-        } else {
-            Section {
-                credentialField(
-                    title: "import.df.username.placeholder",
-                    text: $username,
-                    icon: "person.fill"
-                )
-                
-                credentialField(
-                    title: "import.df.token.setup.placeholder",
-                    text: $importToken,
-                    icon: "key.fill",
-                    isSecure: true
-                )
-            } footer: {
-                Text("import.df.setup.footer")
-            }
-            
-            Section {
-                Button {
-                    updateConfig()
-                    Task {
-                        await importData(userName: username)
-                    }
-                } label: {
-                    HStack {
-                        Spacer()
-                        if isImporting {
-                            ProgressView()
-                                .tint(.white)
-                        } else {
-                            Text("import.df.action.bindImport")
-                                .fontWeight(.semibold)
-                        }
-                        Spacer()
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(username.isEmpty || isImporting || isResolvingImportConflict)
-                .listRowBackground(Color.clear)
-            }
-            .listSectionSeparator(.hidden)
+
+    private func startImport() {
+        operationTask?.cancel()
+        operationTask = Task {
+            guard let profile = activeProfile else { return }
+            await importAuthorizedData(profile: profile)
         }
     }
-    
-    @ViewBuilder
-    private var statusSection: some View {
-        Section("import.status.header") {
-            VStack(alignment: .leading, spacing: 14) {
-                if !importStatus.isEmpty {
-                    Label {
-                        Text(importStatus)
-                            .foregroundStyle(statusTint)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } icon: {
-                        Image(systemName: statusTint == .red ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
-                            .foregroundStyle(statusTint)
-                    }
-                }
-                
-                if totalRecords > 0 {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ProgressView(value: progress, total: Double(totalRecords))
-                            .tint(statusTint)
-                        Text("\(Int(progress)) / \(totalRecords)")
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                } else if isImporting {
-                    HStack(spacing: 10) {
-                        ProgressView()
-                        Text("import.status.importing")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .padding(.vertical, 4)
-        }
+
+    private func startDisconnect() {
+        operationTask?.cancel()
+        operationTask = Task { await disconnect() }
     }
-    
-    private func updateConfig() {
-        if let profile = activeProfile {
-            profile.dfUsername = username
-            ProfileCredentialStore.shared.setDfImportToken(importToken, for: profile.id)
-        }
-        try? modelContext.save()
-    }
-    
+
     @MainActor
-    private func importData(userName: String? = nil) async {
-        let targetUser = userName ?? username
-        guard !targetUser.isEmpty else { return }
-        guard let profile = activeProfile else {
-            importStatus = String(localized: "import.status.error.unknown")
-            return
-        }
-        
+    private func authorizeAndImport() async {
+        guard let profile = activeProfile else { return }
         isImporting = true
-        importStatus = String(localized: "import.df.status.connecting")
-        progress = 0
-        totalRecords = 0
+        importStatus = String(localized: "import.df.oauth.preparing")
+        defer { isImporting = false }
 
         do {
-            await BackendSessionManager.shared.checkSession()
-            guard BackendSessionManager.shared.isAuthenticated else {
-                importStatus = String(localized: "community.alias.submit.loginRequired")
-                isImporting = false
-                return
+            try await prepareBackend(profile: profile)
+            let authorization = try await BackendImportService.startDivingFishAuthorization(
+                profileId: profile.id.uuidString.lowercased()
+            )
+            openURL(authorization.authorizationUrl)
+
+            importStatus = String(localized: "import.df.oauth.waiting")
+            while Date() < authorization.expiresAt {
+                try Task.checkCancellation()
+                try await Task.sleep(for: .seconds(1.5))
+                let status = try await BackendImportService.divingFishAuthorizationStatus(
+                    authorizationId: authorization.authorizationId
+                )
+                if status.status == "success" {
+                    isConnected = true
+                    await importAuthorizedData(profile: profile, managesBusyState: false)
+                    return
+                }
+                if status.status == "failed" || status.status == "expired" {
+                    throw BackendAPIError(
+                        statusCode: nil,
+                        code: status.errorCode,
+                        message: String(localized: "import.df.oauth.failed")
+                    )
+                }
             }
+            throw BackendAPIError(statusCode: nil, code: "expired", message: String(localized: "import.df.oauth.expired"))
+        } catch is CancellationError {
+            return
+        } catch {
+            await refreshBindingStatus()
+            importStatus = String(localized: "import.status.error.message \(error.localizedDescription)")
+        }
+    }
 
-            try await BackendScoreSyncService.ensureProfileExists(profile: profile)
+    @MainActor
+    private func importAuthorizedData(profile: UserProfile, managesBusyState: Bool = true) async {
+        if managesBusyState {
+            isImporting = true
+        }
+        importStatus = String(localized: "import.df.status.connecting")
+        totalRecords = 0
+        defer {
+            if managesBusyState {
+                isImporting = false
+            }
+        }
 
-            let isQQ = Int(targetUser) != nil && targetUser.count > 5
+        do {
+            try await prepareBackend(profile: profile)
             let result = try await BackendImportService.importDivingFish(
-                profileId: profile.id.uuidString.lowercased(),
-                username: isQQ ? nil : targetUser,
-                qq: isQQ ? targetUser : nil
+                profileId: profile.id.uuidString.lowercased()
             )
             totalRecords = result.fetchedCount
-            progress = Double(result.fetchedCount)
 
             if result.upsertedCount == 0 {
                 try await BackendCloudSyncService.restoreFromCloud(context: modelContext)
                 profile.lastImportDateDF = Date()
                 try modelContext.save()
-                pendingUpsertedCount = 0
                 importStatus = String(localized: "import.status.noChanges")
-                isImporting = false
+                await refreshBindingStatus()
                 return
             }
 
@@ -270,7 +196,6 @@ struct DivingFishImportView: View {
                 pendingUpsertedCount = result.upsertedCount
                 importConflictPreview = preview
                 importStatus = String(localized: "import.status.conflict.detected \(preview.conflicts.count)")
-                isImporting = false
                 return
             }
 
@@ -283,13 +208,57 @@ struct DivingFishImportView: View {
             try await BackendCloudSyncService.restoreFromCloud(context: modelContext)
             profile.lastImportDateDF = Date()
             try modelContext.save()
-
             importStatus = String(localized: "import.status.success \(result.upsertedCount)")
+            await refreshBindingStatus()
+        } catch is CancellationError {
+            return
+        } catch {
+            await refreshBindingStatus()
+            importStatus = String(localized: "import.status.error.message \(error.localizedDescription)")
+        }
+    }
+
+    @MainActor
+    private func prepareBackend(profile: UserProfile) async throws {
+        await BackendSessionManager.shared.checkSession()
+        guard BackendSessionManager.shared.isAuthenticated else {
+            throw BackendAPIError.unauthorized
+        }
+        try await BackendScoreSyncService.ensureProfileExists(profile: profile)
+    }
+
+    @MainActor
+    private func refreshBindingStatus() async {
+        guard let profile = activeProfile, BackendSessionManager.shared.isAuthenticated else {
+            isConnected = false
+            canSyncScores = false
+            connectedUsername = nil
+            return
+        }
+        guard let status = try? await BackendImportService.divingFishBindingStatus(
+            profileId: profile.id.uuidString.lowercased()
+        ) else { return }
+        isConnected = status.connected
+        canSyncScores = status.canWrite
+        connectedUsername = status.externalUsername
+    }
+
+    @MainActor
+    private func disconnect() async {
+        guard let profile = activeProfile else { return }
+        isImporting = true
+        defer { isImporting = false }
+        do {
+            _ = try await BackendImportService.disconnectDivingFish(
+                profileId: profile.id.uuidString.lowercased()
+            )
+            isConnected = false
+            canSyncScores = false
+            connectedUsername = nil
+            importStatus = String(localized: "import.df.oauth.disconnected")
         } catch {
             importStatus = String(localized: "import.status.error.message \(error.localizedDescription)")
         }
-        
-        isImporting = false
     }
 
     @MainActor
@@ -319,11 +288,7 @@ struct DivingFishImportView: View {
                 context: modelContext
             )
             try await BackendCloudSyncService.restoreFromCloud(context: modelContext)
-
-            let targetProfileId = preview.profileId
-            if let profile = try modelContext.fetch(
-                FetchDescriptor<UserProfile>(predicate: #Predicate<UserProfile> { $0.id == targetProfileId })
-            ).first {
+            if let profile = activeProfile {
                 profile.lastImportDateDF = Date()
             }
             try modelContext.save()
@@ -333,81 +298,5 @@ struct DivingFishImportView: View {
         } catch {
             importStatus = String(localized: "import.status.error.message \(error.localizedDescription)")
         }
-    }
-}
-
-private extension DivingFishImportView {
-    func settingsIcon(icon: String, color: Color) -> some View {
-        Image(systemName: icon)
-            .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: 32, height: 32)
-            .background(color.gradient, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-    
-    func accountSummaryCard(icon: String, iconTint: Color, title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 14) {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(iconTint.gradient)
-                    .frame(width: 72, height: 72)
-                    .overlay {
-                        Image(systemName: icon)
-                            .font(.system(size: 30, weight: .semibold))
-                            .foregroundStyle(.white)
-                    }
-                
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(title)
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                    Text(subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                
-                Spacer(minLength: 0)
-            }
-            
-            Divider()
-            
-            Label("import.df.summary.footer", systemImage: "square.and.arrow.down")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
-        .padding(20)
-        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-    }
-    
-    func actionRow(title: String, icon: String, tint: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                settingsIcon(icon: icon, color: tint)
-                Text(LocalizedStringKey(title))
-                    .foregroundStyle(.primary)
-                Spacer()
-                Image(systemName: "arrow.up.forward.app")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(tint)
-            }
-        }
-        .buttonStyle(.plain)
-    }
-    
-    func credentialField(title: String, text: Binding<String>, icon: String, isSecure: Bool = false) -> some View {
-        HStack(spacing: 12) {
-            settingsIcon(icon: icon, color: .gray)
-            Group {
-                if isSecure {
-                    SecureField(LocalizedStringKey(title), text: text)
-                        .textInputAutocapitalization(.never)
-                } else {
-                    TextField(LocalizedStringKey(title), text: text)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                }
-            }
-        }
-        .padding(.vertical, 2)
     }
 }

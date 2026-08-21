@@ -4,18 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { ExternalLinkIcon, UploadIcon } from "lucide-react";
+import { ExternalLinkIcon, UnlinkIcon, UploadIcon } from "lucide-react";
 import { LXNS_OAUTH_CLIENT_ID } from "@/lib/app-helpers";
 import { useTranslation } from "react-i18next";
 
 type ImportsPageProps = {
-	dfQQ: string;
-	dfImportToken: string;
 	lxnsAuthCode: string;
-	onDfQQChange: (value: string) => void;
-	onDfImportTokenChange: (value: string) => void;
 	onLxnsAuthCodeChange: (value: string) => void;
 	onImportDf: () => void | Promise<void>;
+	onAuthorizeDf: () => void | Promise<void>;
+	onDisconnectDf: () => void | Promise<void>;
 	onImportLxns: (input: { codeVerifier: string }) => void | Promise<void>;
 };
 
@@ -40,13 +38,11 @@ async function generateCodeChallenge(codeVerifier: string) {
 }
 
 export function ImportsPage({
-	dfQQ,
-	dfImportToken,
 	lxnsAuthCode,
-	onDfQQChange,
-	onDfImportTokenChange,
 	onLxnsAuthCodeChange,
 	onImportDf,
+	onAuthorizeDf,
+	onDisconnectDf,
 	onImportLxns,
 }: ImportsPageProps) {
 	const { t } = useTranslation("imports");
@@ -100,25 +96,21 @@ export function ImportsPage({
 					<CardTitle>{t("sectionDf")}</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<FieldGroup>
-						<Field>
-							<FieldLabel htmlFor="df-qq">{t("labelQq")}</FieldLabel>
-							<Input id="df-qq" value={dfQQ} onChange={(event) => onDfQQChange(event.target.value)} />
-						</Field>
-						<Field>
-							<FieldLabel htmlFor="df-import-token">{t("labelImportToken")}</FieldLabel>
-							<Input
-								id="df-import-token"
-								type="password"
-								value={dfImportToken}
-								onChange={(event) => onDfImportTokenChange(event.target.value)}
-							/>
-						</Field>
-					</FieldGroup>
-					<Button className="mt-3" disabled={!dfQQ.trim() || !dfImportToken.trim()} onClick={() => void onImportDf()}>
-						<UploadIcon data-icon="inline-start" />
-						{t("btnImportDf")}
-					</Button>
+					<p className="text-sm text-muted-foreground">{t("dfOauthDescription")}</p>
+					<div className="mt-3 flex flex-wrap gap-2">
+						<Button variant="outline" onClick={() => void onAuthorizeDf()}>
+							<ExternalLinkIcon data-icon="inline-start" />
+							{t("btnAuthorizeDf")}
+						</Button>
+						<Button onClick={() => void onImportDf()}>
+							<UploadIcon data-icon="inline-start" />
+							{t("btnImportDf")}
+						</Button>
+						<Button variant="destructive" onClick={() => void onDisconnectDf()}>
+							<UnlinkIcon data-icon="inline-start" />
+							{t("btnDisconnectDf")}
+						</Button>
+					</div>
 				</CardContent>
 			</Card>
 

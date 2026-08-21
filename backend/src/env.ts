@@ -17,6 +17,8 @@ const EnvSchema = z.object({
 	PORT: z.coerce.number().int().positive().default(8787),
 	APP_PUBLIC_URL: z.url().optional(),
 	CORS_ALLOWED_ORIGINS: z.string().default(""),
+	DIVING_FISH_OAUTH_CLIENT_ID: z.string().min(1).default("5b79b87f22855b80ee35243eeec07916"),
+	DIVING_FISH_OAUTH_CLIENT_SECRET: optionalString,
 	DATABASE_URL: z.string().min(1),
 	JWT_ISSUER: z.string().min(1).default("maimaid-backend"),
 	JWT_AUDIENCE: z.string().min(1).default("maimaid-clients"),

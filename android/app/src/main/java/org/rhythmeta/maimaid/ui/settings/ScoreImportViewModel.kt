@@ -3,6 +3,8 @@ package org.rhythmeta.maimaid.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import java.time.Instant
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -15,6 +17,7 @@ import org.rhythmeta.maimaid.core.data.ImportSyncResolution
 import org.rhythmeta.maimaid.core.data.LxnsTokenExpiredException
 import org.rhythmeta.maimaid.core.data.ProfileCredentials
 import org.rhythmeta.maimaid.core.database.UserProfileEntity
+import org.rhythmeta.maimaid.core.network.BackendApiException
 
 enum class ScoreImportPhase {
     Idle,
@@ -37,8 +40,9 @@ enum class ScoreImportResult {
 
 data class ScoreImportUiState(
     val profile: UserProfileEntity? = null,
-    val divingFishAccount: String = "",
-    val divingFishToken: String = "",
+    val divingFishConnected: Boolean = false,
+    val divingFishCanWrite: Boolean = false,
+    val divingFishUsername: String? = null,
     val lxnsRefreshToken: String = "",
     val lxnsAuthorizationCode: String = "",
     val phase: ScoreImportPhase = ScoreImportPhase.Idle,
@@ -51,6 +55,7 @@ data class ScoreImportUiState(
     val isResolvingConflict: Boolean = false,
 ) {
     val isBusy: Boolean get() = phase != ScoreImportPhase.Idle || isResolvingConflict
+    val hasDivingFishAccount: Boolean get() = divingFishConnected
     val hasLxnsAccount: Boolean get() = lxnsRefreshToken.isNotBlank()
 }
 
@@ -69,24 +74,29 @@ class ScoreImportViewModel(
                 mutableState.update {
                     it.copy(
                         profile = profile,
-                        divingFishAccount = profile?.dfUsername.orEmpty(),
-                        divingFishToken = credentials.divingFishToken,
+                        divingFishConnected = false,
+                        divingFishCanWrite = false,
+                        divingFishUsername = null,
                         lxnsRefreshToken = credentials.lxnsToken,
                         result = null,
                         resultDetails = null,
                         conflictPreview = null,
                     )
                 }
+                if (profile != null && container.backendSessionManager.state.value.isAuthenticated) {
+                    runCatching { container.backendImportService.divingFishBindingStatus(profile.id) }
+                        .onSuccess { binding ->
+                            mutableState.update {
+                                it.copy(
+                                    divingFishConnected = binding.connected,
+                                    divingFishCanWrite = binding.canWrite,
+                                    divingFishUsername = binding.externalUsername,
+                                )
+                            }
+                        }
+                }
             }
         }
-    }
-
-    fun setDivingFishAccount(value: String) {
-        mutableState.update { it.copy(divingFishAccount = value) }
-    }
-
-    fun setDivingFishToken(value: String) {
-        mutableState.update { it.copy(divingFishToken = value) }
     }
 
     fun setLxnsAuthorizationCode(value: String) {
@@ -100,29 +110,78 @@ class ScoreImportViewModel(
         return authorization.url
     }
 
-    fun importDivingFish() {
+    fun authorizeAndImportDivingFish(openAuthorization: (String) -> Boolean) {
         val state = mutableState.value
         val profile = state.profile ?: return
-        val account = state.divingFishAccount.trim()
-        val token = state.divingFishToken.trim()
-        if (account.isEmpty() && token.isEmpty() || state.isBusy) return
+        if (state.isBusy) return
         viewModelScope.launch {
             startOperation()
             runCatching {
                 requireAuthenticated()
                 mutableState.update { it.copy(phase = ScoreImportPhase.Connecting) }
-                saveDivingFishCredentials(profile, account, token)
-                container.backendSyncCoordinator.ensureProfileExists(
-                    profile.copy(dfUsername = account),
-                )
-                val isQq = account.length > 5 && account.all(Char::isDigit)
-                val response = container.backendImportService.importDivingFish(
-                    profileId = profile.id,
-                    username = account.takeUnless { isQq || it.isEmpty() },
-                    qq = account.takeIf { isQq },
-                    importToken = token.takeIf(String::isNotEmpty),
-                )
-                finishRemoteImport(profile, response, isDivingFish = true)
+                container.backendSyncCoordinator.ensureProfileExists(profile)
+                val authorization = container.backendImportService.startDivingFishAuthorization(profile.id)
+                if (!openAuthorization(authorization.authorizationUrl)) throw ImportBrowserUnavailableException()
+                val expiresAt = Instant.parse(authorization.expiresAt).toEpochMilli()
+                while (System.currentTimeMillis() < expiresAt) {
+                    delay(1_500)
+                    val status = container.backendImportService.divingFishAuthorizationStatus(
+                        authorization.authorizationId,
+                    )
+                    when (status.status) {
+                        "success" -> {
+                            val binding = runCatching {
+                                container.backendImportService.divingFishBindingStatus(profile.id)
+                            }.getOrNull()
+                            mutableState.update {
+                                it.copy(
+                                    divingFishConnected = true,
+                                    divingFishCanWrite = binding?.canWrite ?: false,
+                                    divingFishUsername = binding?.externalUsername,
+                                )
+                            }
+                            importDivingFish(profile)
+                            return@runCatching
+                        }
+                        "failed", "expired" -> throw DivingFishAuthorizationException(status.errorCode)
+                    }
+                }
+                throw DivingFishAuthorizationException("expired")
+            }.onFailure(::finishFailure)
+        }
+    }
+
+    fun quickImportDivingFish() {
+        val state = mutableState.value
+        val profile = state.profile ?: return
+        if (!state.divingFishConnected || state.isBusy) return
+        viewModelScope.launch {
+            startOperation()
+            runCatching {
+                requireAuthenticated()
+                container.backendSyncCoordinator.ensureProfileExists(profile)
+                importDivingFish(profile)
+            }.onFailure(::finishFailure)
+        }
+    }
+
+    fun disconnectDivingFish() {
+        val profile = mutableState.value.profile ?: return
+        if (mutableState.value.isBusy) return
+        viewModelScope.launch {
+            startOperation()
+            runCatching {
+                requireAuthenticated()
+                container.backendImportService.disconnectDivingFish(profile.id)
+            }.onSuccess {
+                mutableState.update {
+                    it.copy(
+                        phase = ScoreImportPhase.Idle,
+                        divingFishConnected = false,
+                        divingFishCanWrite = false,
+                        divingFishUsername = null,
+                    )
+                }
             }.onFailure(::finishFailure)
         }
     }
@@ -209,6 +268,12 @@ class ScoreImportViewModel(
 
     private var pendingImportIsDivingFish = false
 
+    private suspend fun importDivingFish(profile: UserProfileEntity) {
+        mutableState.update { it.copy(phase = ScoreImportPhase.Fetching) }
+        val response = container.backendImportService.importDivingFish(profile.id)
+        finishRemoteImport(profile, response, isDivingFish = true)
+    }
+
     private suspend fun importLxns(profile: UserProfileEntity, accessToken: String) {
         mutableState.update { it.copy(phase = ScoreImportPhase.Connecting) }
         container.backendSyncCoordinator.ensureProfileExists(profile)
@@ -257,19 +322,6 @@ class ScoreImportViewModel(
         }
     }
 
-    private suspend fun saveDivingFishCredentials(
-        profile: UserProfileEntity,
-        account: String,
-        token: String,
-    ) {
-        container.profileRepository.save(profile.copy(dfUsername = account))
-        val current = container.profileCredentialStore.credentials(profile.id)
-        container.profileCredentialStore.save(
-            profile.id,
-            current.copy(divingFishToken = token),
-        )
-    }
-
     private fun saveLxnsRefreshToken(profileId: String, token: String) {
         val current = container.profileCredentialStore.credentials(profileId)
         container.profileCredentialStore.save(profileId, current.copy(lxnsToken = token.trim()))
@@ -306,6 +358,21 @@ class ScoreImportViewModel(
         mutableState.update {
             it.copy(
                 phase = ScoreImportPhase.Idle,
+                divingFishConnected = if (error is BackendApiException && error.code == "df_authorization_required") {
+                    false
+                } else {
+                    it.divingFishConnected
+                },
+                divingFishUsername = if (error is BackendApiException && error.code == "df_authorization_required") {
+                    null
+                } else {
+                    it.divingFishUsername
+                },
+                divingFishCanWrite = if (error is BackendApiException && error.code == "df_authorization_required") {
+                    false
+                } else {
+                    it.divingFishCanWrite
+                },
                 result = when (error) {
                     is ImportLoginRequiredException -> ScoreImportResult.LoginRequired
                     is LxnsTokenExpiredException -> ScoreImportResult.TokenExpired
@@ -326,3 +393,6 @@ class ScoreImportViewModel(
 }
 
 private class ImportLoginRequiredException : Exception("Authentication required.")
+private class ImportBrowserUnavailableException : Exception("Unable to open the authorization page.")
+private class DivingFishAuthorizationException(code: String?) :
+    Exception("Diving Fish authorization failed${code?.let { ": $it" }.orEmpty()}.")

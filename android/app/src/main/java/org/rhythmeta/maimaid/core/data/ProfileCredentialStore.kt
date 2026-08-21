@@ -11,7 +11,6 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 data class ProfileCredentials(
-    val divingFishToken: String = "",
     val lxnsToken: String = "",
 )
 
@@ -22,14 +21,13 @@ class ProfileCredentialStore(context: Context) {
     )
 
     fun credentials(profileId: String): ProfileCredentials = ProfileCredentials(
-        divingFishToken = decrypt(preferences.getString("$profileId.df", null)),
         lxnsToken = decrypt(preferences.getString("$profileId.lxns", null)),
     )
 
     fun save(profileId: String, credentials: ProfileCredentials) {
         preferences.edit()
-            .putString("$profileId.df", encrypt(credentials.divingFishToken))
             .putString("$profileId.lxns", encrypt(credentials.lxnsToken))
+            .remove("$profileId.df")
             .apply()
     }
 

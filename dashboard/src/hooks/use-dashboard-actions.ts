@@ -33,6 +33,40 @@ type RequestOptions = {
 
 type RequestFn = <T>(path: string, options?: RequestOptions) => Promise<T>;
 
+type DivingFishScoreSyncRecord = {
+	title: string;
+	chartType: "standard" | "dx";
+	levelIndex: number;
+	achievements: number;
+	dxScore: number;
+	fc: string | null;
+	fs: string | null;
+};
+
+const divingFishChartType = (value: string): "standard" | "dx" | null => {
+	const normalized = value.trim().toLowerCase();
+	if (normalized === "utage") return null;
+	return normalized === "dx" || normalized === "deluxe" ? "dx" : "standard";
+};
+
+const difficultyLevelIndex = (value: string) => {
+	switch (value.trim().toLowerCase()) {
+		case "basic":
+			return 0;
+		case "advanced":
+			return 1;
+		case "expert":
+			return 2;
+		case "master":
+			return 3;
+		case "remaster":
+		case "re:master":
+			return 4;
+		default:
+			return 3;
+	}
+};
+
 type UseDashboardActionsInput = {
 	request: RequestFn;
 	showToast: (message: string, severity?: ToastSeverity) => void;
@@ -45,8 +79,6 @@ type UseDashboardActionsInput = {
 	scoreAchievements: string;
 	resolveSongByName: (songName: string) => Song | null;
 	loadScores: () => Promise<void>;
-	dfQQ: string;
-	dfImportToken: string;
 	lxnsAuthCode: string;
 	communitySongName: string;
 	communityAliasText: string;
@@ -92,8 +124,6 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		scoreAchievements,
 		resolveSongByName,
 		loadScores,
-		dfQQ,
-		dfImportToken,
 		lxnsAuthCode,
 		communitySongName,
 		communityAliasText,
@@ -135,6 +165,18 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		quotaRemaining?: number;
 	};
 
+	const syncScoreToConnectedDivingFish = async (record: DivingFishScoreSyncRecord) => {
+		if (!activeProfileId) return;
+		const binding = await request<{ connected: boolean }>(
+			`v1/imports:divingFishBinding?profileId=${encodeURIComponent(activeProfileId)}`,
+		);
+		if (!binding.connected) return;
+		await request("v1/imports:syncDivingFishScores", {
+			method: "POST",
+			body: { profileId: activeProfileId, records: [record] },
+		});
+	};
+
 	const handleSubmitScore = async () => {
 		if (!activeProfileId || !scoreSongName.trim()) {
 			showToast(t("actionReqProfileSong"), "warning");
@@ -169,8 +211,28 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 					],
 				},
 			});
+			const chartType = divingFishChartType(scoreType);
+			let divingFishSyncError: Error | null = null;
+			if (chartType) {
+				try {
+					await syncScoreToConnectedDivingFish({
+						title: matchedSong.title,
+						chartType,
+						levelIndex: difficultyLevelIndex(scoreDifficulty),
+						achievements,
+						dxScore: 0,
+						fc: null,
+						fs: null,
+					});
+				} catch (error) {
+					divingFishSyncError = error as Error;
+				}
+			}
 			await loadScores();
-			showToast(t("actionScoreSubmit"), "success");
+			showToast(
+				divingFishSyncError ? t("actionScoreDfSyncFailed", { message: divingFishSyncError.message }) : t("actionScoreSubmit"),
+				divingFishSyncError ? "warning" : "success",
+			);
 		} catch (error) {
 			showToast((error as Error).message, "error");
 		}
@@ -179,6 +241,9 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 	const openScoreEditDialog = (row: ScoreRow) => {
 		setScoreEdit({
 			scoreId: row.id,
+			title: row.sheet?.song?.title ?? "",
+			chartType: row.sheet?.chartType ?? "standard",
+			difficulty: row.sheet?.difficulty ?? "master",
 			achievements: String(row.achievements),
 			rank: row.rank ?? "",
 			dxScore: String(row.dxScore ?? 0),
@@ -209,10 +274,30 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 					fs: scoreEdit.fs.trim() || null,
 				},
 			});
+			const chartType = divingFishChartType(scoreEdit.chartType);
+			let divingFishSyncError: Error | null = null;
+			if (chartType && scoreEdit.title) {
+				try {
+					await syncScoreToConnectedDivingFish({
+						title: scoreEdit.title,
+						chartType,
+						levelIndex: difficultyLevelIndex(scoreEdit.difficulty),
+						achievements,
+						dxScore,
+						fc: scoreEdit.fc.trim() || null,
+						fs: scoreEdit.fs.trim() || null,
+					});
+				} catch (error) {
+					divingFishSyncError = error as Error;
+				}
+			}
 			setScoreEditOpen(false);
 			setScoreEdit(null);
 			await loadScores();
-			showToast(t("actionScoreUpdate"), "success");
+			showToast(
+				divingFishSyncError ? t("actionScoreDfSyncFailed", { message: divingFishSyncError.message }) : t("actionScoreUpdate"),
+				divingFishSyncError ? "warning" : "success",
+			);
 		} catch (error) {
 			showToast((error as Error).message, "error");
 		}
@@ -261,21 +346,77 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 	};
 
 	const handleImportDf = async () => {
-		if (!activeProfileId || !dfQQ.trim() || !dfImportToken.trim()) {
+		if (!activeProfileId) {
 			showToast(t("actionDfReq"), "warning");
 			return;
 		}
 		try {
 			const payload = await request<{ upsertedCount: number }>("v1/imports:importDf", {
 				method: "POST",
-				body: {
-					profileId: activeProfileId,
-					qq: dfQQ.trim() || undefined,
-					importToken: dfImportToken.trim(),
-				},
+				body: { profileId: activeProfileId },
 			});
 			await loadScores();
 			showToast(t("actionDfSuccess", { count: payload.upsertedCount }), "success");
+		} catch (error) {
+			showToast((error as Error).message, "error");
+		}
+	};
+
+	const handleAuthorizeDf = async () => {
+		if (!activeProfileId) {
+			showToast(t("actionDfReq"), "warning");
+			return;
+		}
+
+		const authorizationWindow = window.open("about:blank", "_blank");
+		if (!authorizationWindow) {
+			showToast(t("actionDfPopupBlocked"), "warning");
+			return;
+		}
+
+		try {
+			const authorization = await request<{
+				authorizationId: string;
+				authorizationUrl: string;
+				expiresAt: string;
+			}>("v1/imports:authorizeDivingFish", {
+				method: "POST",
+				body: { profileId: activeProfileId },
+			});
+			authorizationWindow.location.replace(authorization.authorizationUrl);
+
+			while (Date.now() < new Date(authorization.expiresAt).getTime()) {
+				await new Promise((resolve) => window.setTimeout(resolve, 1_500));
+				const status = await request<{ status: string; errorCode: string | null }>(
+					`v1/imports:divingFishAuthorizationStatus?authorizationId=${encodeURIComponent(authorization.authorizationId)}`,
+				);
+				if (status.status === "success") {
+					authorizationWindow.close();
+					await handleImportDf();
+					return;
+				}
+				if (status.status === "failed" || status.status === "expired") {
+					throw new Error(status.errorCode || t("actionDfOauthFailed"));
+				}
+			}
+			throw new Error(t("actionDfOauthExpired"));
+		} catch (error) {
+			authorizationWindow.close();
+			showToast((error as Error).message, "error");
+		}
+	};
+
+	const handleDisconnectDf = async () => {
+		if (!activeProfileId) {
+			showToast(t("actionDfReq"), "warning");
+			return;
+		}
+		try {
+			await request("v1/imports:divingFishBinding", {
+				method: "DELETE",
+				body: { profileId: activeProfileId },
+			});
+			showToast(t("actionDfDisconnected"), "success");
 		} catch (error) {
 			showToast((error as Error).message, "error");
 		}
@@ -811,6 +952,8 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		handleDeleteScore,
 		handleDeletePlayRecord,
 		handleImportDf,
+		handleAuthorizeDf,
+		handleDisconnectDf,
 		handleImportLxns,
 		handleCommunitySubmit,
 		handleCommunityVote,

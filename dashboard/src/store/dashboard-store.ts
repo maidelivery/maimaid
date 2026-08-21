@@ -109,8 +109,6 @@ type DashboardStore = {
 	scoreType: string;
 	scoreDifficulty: string;
 	scoreAchievements: string;
-	dfQQ: string;
-	dfImportToken: string;
 	lxnsAuthCode: string;
 	communityRows: CommunityCandidate[];
 	communitySongName: string;
@@ -167,8 +165,6 @@ type DashboardStore = {
 	setScoreType: (next: StateUpdater<string>) => void;
 	setScoreDifficulty: (next: StateUpdater<string>) => void;
 	setScoreAchievements: (next: StateUpdater<string>) => void;
-	setDfQQ: (next: StateUpdater<string>) => void;
-	setDfImportToken: (next: StateUpdater<string>) => void;
 	setLxnsAuthCode: (next: StateUpdater<string>) => void;
 	setCommunityRows: (next: StateUpdater<CommunityCandidate[]>) => void;
 	setCommunitySongName: (next: StateUpdater<string>) => void;
@@ -231,8 +227,6 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
 	scoreType: "standard",
 	scoreDifficulty: "expert",
 	scoreAchievements: "100.0000",
-	dfQQ: "",
-	dfImportToken: "",
 	lxnsAuthCode: "",
 	communityRows: [],
 	communitySongName: "",
@@ -292,8 +286,6 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
 	setScoreType: (next) => set((state) => ({ scoreType: resolveStateUpdate(next, state.scoreType) })),
 	setScoreDifficulty: (next) => set((state) => ({ scoreDifficulty: resolveStateUpdate(next, state.scoreDifficulty) })),
 	setScoreAchievements: (next) => set((state) => ({ scoreAchievements: resolveStateUpdate(next, state.scoreAchievements) })),
-	setDfQQ: (next) => set((state) => ({ dfQQ: resolveStateUpdate(next, state.dfQQ) })),
-	setDfImportToken: (next) => set((state) => ({ dfImportToken: resolveStateUpdate(next, state.dfImportToken) })),
 	setLxnsAuthCode: (next) => set((state) => ({ lxnsAuthCode: resolveStateUpdate(next, state.lxnsAuthCode) })),
 	setCommunityRows: (next) => set((state) => ({ communityRows: resolveStateUpdate(next, state.communityRows) })),
 	setCommunitySongName: (next) => set((state) => ({ communitySongName: resolveStateUpdate(next, state.communitySongName) })),

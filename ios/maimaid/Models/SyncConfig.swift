@@ -32,7 +32,6 @@ final class SyncConfig {
     var playerRating: Int = 0
     var plate: String?
     var dfUsername: String = ""
-    var dfImportToken: String = ""
     var lxnsRefreshToken: String = ""
     var lxnsClientId: String = ""
     var b35Count: Int = 35

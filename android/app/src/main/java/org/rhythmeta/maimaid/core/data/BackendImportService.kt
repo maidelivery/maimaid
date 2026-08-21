@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.rhythmeta.maimaid.core.network.BackendApiException
@@ -30,6 +31,27 @@ data class LxnsTokenPair(
     val refreshToken: String,
 )
 
+@Serializable
+data class DivingFishAuthorization(
+    val authorizationId: String,
+    val authorizationUrl: String,
+    val expiresAt: String,
+)
+
+@Serializable
+data class DivingFishAuthorizationStatus(
+    val status: String,
+    val errorCode: String? = null,
+    val expiresAt: String,
+)
+
+@Serializable
+data class DivingFishBindingStatus(
+    val connected: Boolean,
+    val canWrite: Boolean = false,
+    val externalUsername: String? = null,
+)
+
 class LxnsTokenExpiredException : Exception("LXNS authorization expired.")
 
 class BackendImportService(
@@ -38,15 +60,9 @@ class BackendImportService(
 ) {
     suspend fun importDivingFish(
         profileId: String,
-        username: String?,
-        qq: String?,
-        importToken: String?,
     ): BackendImportRunResponse {
         val payload = buildJsonObject {
             put("profileId", profileId)
-            username?.trim()?.takeIf(String::isNotEmpty)?.let { put("username", it) }
-            qq?.trim()?.takeIf(String::isNotEmpty)?.let { put("qq", it) }
-            importToken?.trim()?.takeIf(String::isNotEmpty)?.let { put("importToken", it) }
         }
         val response = sessionManager.authorizedRequest(
             path = "v1/imports:importDf",
@@ -54,6 +70,73 @@ class BackendImportService(
             body = payload,
         )
         return json.decodeFromJsonElement(BackendImportRunResponse.serializer(), response)
+    }
+
+    suspend fun startDivingFishAuthorization(profileId: String): DivingFishAuthorization {
+        val response = sessionManager.authorizedRequest(
+            path = "v1/imports:authorizeDivingFish",
+            method = "POST",
+            body = buildJsonObject { put("profileId", profileId) },
+        )
+        return json.decodeFromJsonElement(DivingFishAuthorization.serializer(), response)
+    }
+
+    suspend fun divingFishAuthorizationStatus(authorizationId: String): DivingFishAuthorizationStatus {
+        val response = sessionManager.authorizedRequest(
+            path = "v1/imports:divingFishAuthorizationStatus?authorizationId=${encode(authorizationId)}",
+        )
+        return json.decodeFromJsonElement(DivingFishAuthorizationStatus.serializer(), response)
+    }
+
+    suspend fun divingFishBindingStatus(profileId: String): DivingFishBindingStatus {
+        val response = sessionManager.authorizedRequest(
+            path = "v1/imports:divingFishBinding?profileId=${encode(profileId)}",
+        )
+        return json.decodeFromJsonElement(DivingFishBindingStatus.serializer(), response)
+    }
+
+    suspend fun disconnectDivingFish(profileId: String): DivingFishBindingStatus {
+        val response = sessionManager.authorizedRequest(
+            path = "v1/imports:divingFishBinding",
+            method = "DELETE",
+            body = buildJsonObject { put("profileId", profileId) },
+        )
+        return json.decodeFromJsonElement(DivingFishBindingStatus.serializer(), response)
+    }
+
+    suspend fun syncDivingFishScore(
+        profileId: String,
+        title: String,
+        chartType: String,
+        levelIndex: Int,
+        achievements: Double,
+        dxScore: Int,
+        fc: String?,
+        fs: String?,
+    ) {
+        sessionManager.authorizedRequest(
+            path = "v1/imports:syncDivingFishScores",
+            method = "POST",
+            body = buildJsonObject {
+                put("profileId", profileId)
+                put(
+                    "records",
+                    buildJsonArray {
+                        add(
+                            buildJsonObject {
+                                put("title", title)
+                                put("chartType", chartType)
+                                put("levelIndex", levelIndex)
+                                put("achievements", achievements)
+                                put("dxScore", dxScore)
+                                put("fc", fc)
+                                put("fs", fs)
+                            },
+                        )
+                    },
+                )
+            },
+        )
     }
 
     suspend fun importLxns(profileId: String, accessToken: String): BackendImportRunResponse {

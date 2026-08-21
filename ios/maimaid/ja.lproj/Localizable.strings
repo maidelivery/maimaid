@@ -256,20 +256,25 @@
 
 // Diving Fish
 "import.df.title" = "Diving Fish からインポート";
-"import.df.bound.header" = "連携アカウント";
-"import.df.username" = "現在のアカウント";
 "import.df.action.quickSync" = "クイック同期スコア";
-"import.df.rebind.header" = "再連携";
-"import.df.rebind.footer" = "アカウント/トークンを更新します。自動アップロードに必要です。";
-"import.df.username.placeholder" = "QQ / ユーザー名";
-"import.df.token.placeholder" = "トークン (オプション、同期用)";
-"import.df.action.update" = "更新して連携";
-"import.df.setup.header" = "アカウントのセットアップ";
-"import.df.setup.footer" = "QQ またはユーザー名を入力してください。";
-"import.df.token.setup.placeholder" = "トークン（同期用）";
-"import.df.action.bindImport" = "連携してインポート";
 "import.df.status.connecting" = "接続中...";
-"import.df.summary.footer" = "このページは Diving Fish からスコアを取り込みます。";
+"import.df.oauth.title" = "Diving Fish に接続";
+"import.df.oauth.connected" = "Diving Fish 接続済み";
+"import.df.oauth.connectedAccount" = "OAuth で接続済み";
+"import.df.oauth.description" = "maimaid に Diving Fish の記録を読み取り、同期する権限を付与します。";
+"import.df.oauth.writePending" = "スコア同期権限は Diving Fish の審査待ちです。インポートは引き続き利用できます。";
+"import.df.oauth.actions" = "OAuth 認証";
+"import.df.oauth.footer" = "認証は Diving Fish のログインページで行われ、maimaid がパスワードを受け取ることはありません。";
+"import.df.oauth.connectImport" = "接続してインポート";
+"import.df.oauth.reconnect" = "アカウントを再接続";
+"import.df.oauth.disconnect" = "接続解除";
+"import.df.oauth.preparing" = "Diving Fish 認証を準備中...";
+"import.df.oauth.waiting" = "ブラウザで認証を完了してください...";
+"import.df.oauth.failed" = "Diving Fish の認証に失敗しました。";
+"import.df.oauth.expired" = "Diving Fish の認証期限が切れました。";
+"import.df.oauth.browserUnavailable" = "認証ページを開けませんでした。";
+"import.df.oauth.disconnected" = "Diving Fish の接続を解除しました。";
+"import.df.oauth.fetched %lld" = "%lld 件の記録を取得しました";
 
 // LXNS
 "import.lxns.title" = "LXNS からインポート";
@@ -436,7 +441,6 @@
 "userProfile.section.metadata" = "メタデータ";
 "userProfile.profileId" = "プロフィールID";
 "settings.sync.dfUsername" = "DF ユーザー名";
-"settings.sync.dfToken" = "DFインポートトークン";
 "settings.sync.lxnsToken" = "LXNS リフレッシュ トークン";
 
 // MARK: - Settings (User Management)

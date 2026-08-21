@@ -11,9 +11,8 @@ final class UserProfile {
     var isActive: Bool
     var createdAt: Date
     
-    // Credentials (per-user)
+    // Provider account metadata and local LXNS credentials
     var dfUsername: String = ""
-    var dfImportToken: String = ""
     var lxnsRefreshToken: String = ""
     var lxnsClientId: String = ""
     
@@ -40,7 +39,6 @@ final class UserProfile {
         isActive: Bool = false,
         createdAt: Date = Date(),
         dfUsername: String = "",
-        dfImportToken: String = "",
         lxnsRefreshToken: String = "",
         playerRating: Int = 0,
         plate: String? = nil,
@@ -59,7 +57,6 @@ final class UserProfile {
         self.isActive = isActive
         self.createdAt = createdAt
         self.dfUsername = dfUsername
-        self.dfImportToken = dfImportToken
         self.lxnsRefreshToken = lxnsRefreshToken
         self.playerRating = playerRating
         self.plate = plate

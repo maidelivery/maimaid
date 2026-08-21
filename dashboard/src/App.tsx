@@ -191,10 +191,6 @@ function App() {
 		setScoreDifficulty,
 		scoreAchievements,
 		setScoreAchievements,
-		dfQQ,
-		setDfQQ,
-		dfImportToken,
-		setDfImportToken,
 		lxnsAuthCode,
 		setLxnsAuthCode,
 		communityRows,
@@ -304,10 +300,6 @@ function App() {
 			setScoreDifficulty: state.setScoreDifficulty,
 			scoreAchievements: state.scoreAchievements,
 			setScoreAchievements: state.setScoreAchievements,
-			dfQQ: state.dfQQ,
-			setDfQQ: state.setDfQQ,
-			dfImportToken: state.dfImportToken,
-			setDfImportToken: state.setDfImportToken,
 			lxnsAuthCode: state.lxnsAuthCode,
 			setLxnsAuthCode: state.setLxnsAuthCode,
 			communityRows: state.communityRows,
@@ -1263,8 +1255,6 @@ function App() {
 		scoreAchievements,
 		resolveSongByName,
 		loadScores,
-		dfQQ,
-		dfImportToken,
 		lxnsAuthCode,
 		communitySongName,
 		communityAliasText,
@@ -1306,6 +1296,8 @@ function App() {
 		handleDeleteScore,
 		handleDeletePlayRecord,
 		handleImportDf,
+		handleAuthorizeDf,
+		handleDisconnectDf,
 		handleImportLxns,
 		handleCommunitySubmit,
 		handleCommunityVote,
@@ -1559,13 +1551,11 @@ function App() {
 			openScoreEditDialog={openScoreEditDialog}
 			handleDeleteScore={handleDeleteScore}
 			handleDeletePlayRecord={handleDeletePlayRecord}
-			dfQQ={dfQQ}
-			dfImportToken={dfImportToken}
 			lxnsAuthCode={lxnsAuthCode}
-			setDfQQ={setDfQQ}
-			setDfImportToken={setDfImportToken}
 			setLxnsAuthCode={setLxnsAuthCode}
 			handleImportDf={handleImportDf}
+			handleAuthorizeDf={handleAuthorizeDf}
+			handleDisconnectDf={handleDisconnectDf}
 			handleImportLxns={handleImportLxns}
 			communityDailyCount={communityDailyCount}
 			communityRows={communityRows}

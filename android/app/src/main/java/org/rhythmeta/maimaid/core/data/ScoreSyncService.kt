@@ -42,13 +42,17 @@ class ScoreSyncService(
         val profileCredentials = credentials.credentials(profile.id)
         coroutineScope {
             launch {
+                if (sheet.isUtage()) return@launch
                 runCatching {
-                    uploadToDivingFish(
+                    backendImportService.syncDivingFishScore(
+                        profileId = profile.id,
                         title = title,
-                        sheet = sheet,
-                        score = score,
-                        profile = profile,
-                        importToken = profileCredentials.divingFishToken,
+                        chartType = if (sheet.isDx()) "dx" else "standard",
+                        levelIndex = ThirdPartyScoreSyncPolicy.difficultyIndex(sheet.difficulty),
+                        achievements = score.achievement,
+                        dxScore = score.dxScore,
+                        fc = score.fc,
+                        fs = score.fs,
                     )
                 }
             }
@@ -64,34 +68,6 @@ class ScoreSyncService(
                 }
             }
         }
-    }
-
-    private suspend fun uploadToDivingFish(
-        title: String,
-        sheet: SheetEntity,
-        score: ScoreEntity,
-        profile: UserProfileEntity,
-        importToken: String,
-    ) {
-        val token = importToken.trim()
-        if (profile.dfUsername.isBlank() || token.isEmpty() || sheet.isUtage()) return
-        postJson(
-            url = DivingFishScoreUploadUrl,
-            headers = mapOf("Import-Token" to token),
-            body = json.encodeToString(
-                listOf(
-                    DivingFishScoreUploadRecord(
-                    title = title,
-                    levelIndex = ThirdPartyScoreSyncPolicy.difficultyIndex(sheet.difficulty),
-                    achievements = score.achievement,
-                    type = if (sheet.isDx()) "DX" else "SD",
-                    dxScore = score.dxScore,
-                    fc = score.fc,
-                    fs = score.fs,
-                    ),
-                ),
-            ),
-        )
     }
 
     private suspend fun uploadToLxns(
@@ -162,8 +138,6 @@ class ScoreSyncService(
     }
 
     private companion object {
-        const val DivingFishScoreUploadUrl =
-            "https://www.diving-fish.com/api/maimaidxprober/player/update_records"
         const val LxnsScoreUploadUrl = "https://maimai.lxns.net/api/v0/user/maimai/player/scores"
         const val NetworkTimeoutMillis = 30_000
     }
@@ -191,17 +165,6 @@ internal object ThirdPartyScoreSyncPolicy {
         else -> providerSongId
     }
 }
-
-@Serializable
-private data class DivingFishScoreUploadRecord(
-    val title: String,
-    @SerialName("level_index") val levelIndex: Int,
-    val achievements: Double,
-    val type: String,
-    @SerialName("dxScore") val dxScore: Int,
-    val fc: String? = null,
-    val fs: String? = null,
-)
 
 @Serializable
 private data class LxnsScoreUploadRecord(

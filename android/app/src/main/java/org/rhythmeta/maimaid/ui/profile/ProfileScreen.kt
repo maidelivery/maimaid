@@ -328,8 +328,6 @@ internal fun ProfileEditorSheet(
     var name by remember { mutableStateOf("") }
     var plate by remember { mutableStateOf("") }
     var server by remember { mutableStateOf("jp") }
-    var dfUsername by remember { mutableStateOf("") }
-    var dfToken by remember { mutableStateOf("") }
     var lxnsToken by remember { mutableStateOf("") }
     var b35Text by remember { mutableStateOf("35") }
     var b15Text by remember { mutableStateOf("15") }
@@ -371,8 +369,6 @@ internal fun ProfileEditorSheet(
         name = profile?.name.orEmpty()
         plate = profile?.plate.orEmpty()
         server = profile?.server ?: "jp"
-        dfUsername = profile?.dfUsername.orEmpty()
-        dfToken = credentials?.divingFishToken.orEmpty()
         lxnsToken = credentials?.lxnsToken.orEmpty()
         b35Text = (profile?.b35Count ?: 35).toString()
         b15Text = (profile?.b15Count ?: 15).toString()
@@ -395,7 +391,7 @@ internal fun ProfileEditorSheet(
                 name = name,
                 server = server,
                 avatarPath = null,
-                dfUsername = dfUsername,
+                dfUsername = "",
                 plate = plate,
             )
             val committedAvatar = stagedAvatarPath?.let {
@@ -407,7 +403,7 @@ internal fun ProfileEditorSheet(
                     name = name,
                     plate = plate,
                     server = server,
-                    dfUsername = dfUsername,
+                    dfUsername = targetProfile.dfUsername,
                     avatarPath = when {
                         clearAvatar -> null
                         committedAvatar != null -> committedAvatar
@@ -426,7 +422,7 @@ internal fun ProfileEditorSheet(
             }
             container.profileCredentialStore.save(
                 targetProfile.id,
-                ProfileCredentials(dfToken.trim(), lxnsToken.trim()),
+                ProfileCredentials(lxnsToken.trim()),
             )
             stagedAvatarPath = null
             onDismiss()
@@ -552,27 +548,6 @@ internal fun ProfileEditorSheet(
                 }
                 item {
                     ProfileEditorSection(stringResource(R.string.profile_section_credentials)) {
-                        TextField(
-                            value = dfUsername,
-                            onValueChange = { dfUsername = it },
-                            colors = appTextFieldColors(),
-                            label = stringResource(R.string.profile_df_username),
-                            useLabelAsPlaceholder = true,
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            cornerRadius = 14.dp,
-                        )
-                        TextField(
-                            value = dfToken,
-                            onValueChange = { dfToken = it },
-                            colors = appTextFieldColors(),
-                            label = stringResource(R.string.profile_df_token),
-                            useLabelAsPlaceholder = true,
-                            singleLine = true,
-                            visualTransformation = PasswordVisualTransformation(),
-                            modifier = Modifier.fillMaxWidth(),
-                            cornerRadius = 14.dp,
-                        )
                         TextField(
                             value = lxnsToken,
                             onValueChange = { lxnsToken = it },
