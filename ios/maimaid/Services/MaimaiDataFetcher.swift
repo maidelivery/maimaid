@@ -48,20 +48,16 @@ struct RemoteDataResponse: Decodable {
     let versions: [RemoteVersion]
 }
 
-private struct BackendStaticManifestResponse: Decodable {
+private struct StaticManifestResponse: Decodable {
+    let schemaVersion: Int
     let version: String
     let md5: String
     let createdAt: Date?
-    let downloadURL: URL?
+    let bundle: String
     let assets: StaticAssetConfiguration?
-
-    enum CodingKeys: String, CodingKey {
-        case version, md5, createdAt, assets
-        case downloadURL = "downloadUrl"
-    }
 }
 
-private struct BackendStaticBundleResponse: Decodable {
+private struct StaticBundleResponse: Decodable {
     let version: String
     let md5: String
     let payload: BackendStaticBundlePayload
@@ -265,16 +261,17 @@ class MaimaiDataFetcher {
         await CommunityAliasService.shared.syncApprovedAliasesIntoSongs(modelContext: modelContext, force: true)
     }
 
-    private func fetchBackendStaticBundleIfNeeded(forceApply: Bool = false) async throws -> (bundle: BackendStaticBundleResponse?, isUpToDate: Bool) {
-        guard BackendSessionManager.shared.isConfigured else {
+    private func fetchBackendStaticBundleIfNeeded(forceApply: Bool = false) async throws -> (bundle: StaticBundleResponse?, isUpToDate: Bool) {
+        guard let manifestURL = BackendConfig.staticAssetsEndpoint("manifest.json") else {
             return (nil, false)
         }
 
-        let manifest: BackendStaticManifestResponse = try await BackendAPIClient.request(
-            path: "v1/static/manifest",
-            method: "GET",
-            authentication: .none
-        )
+        let (manifestData, manifestResponse) = try await URLSession.shared.data(from: manifestURL)
+        guard let manifestHTTPResponse = manifestResponse as? HTTPURLResponse,
+              (200...299).contains(manifestHTTPResponse.statusCode) else {
+            throw BackendAPIError.badResponse
+        }
+        let manifest = try BackendAPIClient.decoder.decode(StaticManifestResponse.self, from: manifestData)
         StaticAssetURL.update(manifest.assets)
 
         if !forceApply,
@@ -287,37 +284,25 @@ class MaimaiDataFetcher {
         return (bundle, false)
     }
 
-    private func fetchStaticBundle(manifest: BackendStaticManifestResponse) async throws -> BackendStaticBundleResponse {
-        if let downloadURL = manifest.downloadURL {
-            do {
-                var request = URLRequest(url: downloadURL)
-                request.setValue("application/json", forHTTPHeaderField: "Accept")
-                request.setValue("maimaid-ios", forHTTPHeaderField: "User-Agent")
-                let (data, response) = try await URLSession.shared.data(for: request)
-                guard let httpResponse = response as? HTTPURLResponse,
-                      (200...299).contains(httpResponse.statusCode) else {
-                    throw BackendAPIError.badResponse
-                }
-                let bundle = try BackendAPIClient.decoder.decode(BackendStaticBundleResponse.self, from: data)
-                try validate(bundle: bundle, manifest: manifest)
-                return bundle
-            } catch {
-                try Task.checkCancellation()
-                logger.warning("R2 static bundle download failed; using API fallback: \(error.localizedDescription, privacy: .public)")
-            }
+    private func fetchStaticBundle(manifest: StaticManifestResponse) async throws -> StaticBundleResponse {
+        guard let baseURL = BackendConfig.staticAssetsBaseURL,
+              let bundleURL = URL(string: manifest.bundle, relativeTo: baseURL)?.absoluteURL else {
+            throw URLError(.badURL)
         }
-
-        let encodedVersion = manifest.version.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? manifest.version
-        let bundle: BackendStaticBundleResponse = try await BackendAPIClient.request(
-            path: "v1/static/bundle/\(encodedVersion)",
-            method: "GET",
-            authentication: .none
-        )
+        var request = URLRequest(url: bundleURL)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("maimaid-ios", forHTTPHeaderField: "User-Agent")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw BackendAPIError.badResponse
+        }
+        let bundle = try BackendAPIClient.decoder.decode(StaticBundleResponse.self, from: data)
         try validate(bundle: bundle, manifest: manifest)
         return bundle
     }
 
-    private func validate(bundle: BackendStaticBundleResponse, manifest: BackendStaticManifestResponse) throws {
+    private func validate(bundle: StaticBundleResponse, manifest: StaticManifestResponse) throws {
         guard bundle.version == manifest.version, bundle.md5 == manifest.md5 else {
             throw BackendAPIError.badResponse
         }

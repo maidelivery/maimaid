@@ -32,7 +32,6 @@ const createEnv = (): Env => ({
 	S3_ACCESS_KEY_ID: undefined,
 	S3_SECRET_ACCESS_KEY: undefined,
 	CATALOG_SOURCE_URL: "https://example.com/catalog.json",
-	STATIC_SYNC_INTERVAL_HOURS: 6,
 	OPAQUE_SERVER_SETUP: "opaque-server-setup",
 });
 

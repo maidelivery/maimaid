@@ -525,37 +525,15 @@ model StaticBundle {
   id          BigInt   @id @default(autoincrement())
   version     String   @unique
   md5         String
-  objectKey   String?
-  payloadJson Json
   sourceMeta  Json?
+  manifestUrl String?
+  bundleUrl   String?
   active      Boolean  @default(false)
   createdAt   DateTime @default(now())
   activatedAt DateTime?
 
   @@index([active, createdAt])
   @@map("static_bundles")
-}
-
-model StaticBundleScheduleConfig {
-  id            Int      @id @default(1)
-  enabled       Boolean  @default(true)
-  intervalHours Int      @default(6)
-  lastEnqueuedAt DateTime?
-  nextEnqueueAt DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@map("static_bundle_schedule_config")
-}
-
-model ChartFitSnapshot {
-  id         BigInt   @id @default(autoincrement())
-  payloadJson Json
-  metaJson   Json?
-  createdAt  DateTime @default(now())
-
-  @@index([createdAt])
-  @@map("chart_fit_snapshots")
 }
 
 model ImportRun {

@@ -102,7 +102,7 @@ class AppContainer(context: Context) {
 
     val catalogRepository = CatalogRepository(
         database = database,
-        client = StaticBundleClient(BuildConfig.BACKEND_URL, json),
+        client = StaticBundleClient(BuildConfig.STATIC_ASSETS_URL, json),
         syncStateStore = CatalogSyncStateStore(applicationContext),
         coverImageStore = coverImageStore,
         presetAvatarRepository = presetAvatarRepository,

@@ -22,28 +22,12 @@ const songIdMappingSchema = z.object({
 	byTitle: z.record(z.string(), z.array(z.number())),
 });
 
-const prepareBundleUploadSchema = z.object({
-	md5: z.string(),
-	force: z.boolean().default(false),
-});
-
-const publishBundleSchema = z.object({
+const generatedBundleSchema = z.object({
 	version: z.string(),
 	md5: z.string(),
-	objectKey: z.string(),
-	force: z.boolean().default(false),
-});
-
-const staticAssetUploadSchema = z.object({
-	assets: z
-		.array(
-			z.object({
-				kind: z.enum(["cover", "presetAvatar"]),
-				name: z.string().min(1).max(200),
-			}),
-		)
-		.min(1)
-		.max(100),
+	createdAt: z.string(),
+	manifestUrl: z.url(),
+	bundleUrl: z.url(),
 });
 
 export const jobsInternalRoute = new Hono<AppEnv>();
@@ -64,28 +48,17 @@ jobsInternalRoute.post("/enqueue", standardValidator("json", enqueueSchema, vali
 });
 
 /**
- * Step 1 of the GitHub Actions bundle build: which upstreams to fetch. Served from
+ * The GitHub Actions builder only reads source configuration from the API. Served from
  * the database so the dashboard's static-source editor still drives CI builds.
  */
 jobsInternalRoute.get("/static-bundle/sources", async (c) => {
 	const staticBundleService = c.var.resolve(StaticBundleService);
 	const sources = await staticBundleService.listEnabledSourceTargets();
-	return ok(c, { sources, assets: staticBundleService.staticAssetConfiguration() });
+	return ok(c, { sources });
 });
 
-/** Checks a bounded asset batch and signs uploads only for objects missing from R2. */
-jobsInternalRoute.post(
-	"/static-bundle/assets/uploads",
-	standardValidator("json", staticAssetUploadSchema, validationHook),
-	async (c) => {
-		const body = c.req.valid("json");
-		const staticBundleService = c.var.resolve(StaticBundleService);
-		return ok(c, await staticBundleService.prepareStaticAssetUploads(body.assets));
-	},
-);
-
 /**
- * Step 2: the one part of a build that needs the database. CI derives the song-id
+ * The one generated resource that needs private database data. CI derives the song-id
  * mapping from the multi-MB source files and posts just the mapping; the server
  * aggregates `best_scores` against it and returns the resulting chart stats.
  */
@@ -95,49 +68,33 @@ jobsInternalRoute.post(
 	async (c) => {
 		const body = c.req.valid("json");
 		const chartFitService = c.var.resolve(ChartFitService);
-		const result = await chartFitService.refreshSnapshotWithMapping(deserializeSongIdMapping(body));
+		const result = await chartFitService.generateWithMapping(deserializeSongIdMapping(body));
 		return ok(c, { payload: result.payload, meta: result.meta });
 	},
 );
 
-/** Step 3: reserve an immutable R2 key and issue a short-lived upload URL. */
+/** Records an already deployed Worker publication and applies its catalog to backend business tables. */
 jobsInternalRoute.post(
-	"/static-bundle/upload",
-	standardValidator("json", prepareBundleUploadSchema, validationHook),
+	"/static-bundle/generated",
+	standardValidator("json", generatedBundleSchema, validationHook),
 	async (c) => {
 		const body = c.req.valid("json");
 		const staticBundleService = c.var.resolve(StaticBundleService);
-		const result = await staticBundleService.prepareBundleUpload(body.md5, body.force);
-		if (!result.uploadRequired) {
-			return ok(c, {
-				uploadRequired: false,
-				bundle: {
-					version: result.bundle.version,
-					md5: result.bundle.md5,
-					createdAt: result.bundle.createdAt,
-				},
-			});
-		}
-		return ok(c, result);
+		const result = await staticBundleService.recordGeneration({
+			version: body.version,
+			md5: body.md5,
+			createdAt: body.createdAt,
+			manifestUrl: body.manifestUrl,
+			bundleUrl: body.bundleUrl,
+		});
+		return ok(c, {
+			created: result.created,
+			catalogApplied: result.catalogApplied,
+			bundle: {
+				version: result.bundle.version,
+				md5: result.bundle.md5,
+				createdAt: result.bundle.createdAt,
+			},
+		});
 	},
 );
-
-/** Step 4: read the uploaded artifact from R2, persist it, activate it, and apply its catalog. */
-jobsInternalRoute.post("/static-bundle/publish", standardValidator("json", publishBundleSchema, validationHook), async (c) => {
-	const body = c.req.valid("json");
-	const staticBundleService = c.var.resolve(StaticBundleService);
-	const result = await staticBundleService.publishUploadedBundle({
-		version: body.version,
-		md5: body.md5,
-		objectKey: body.objectKey,
-		force: body.force,
-	});
-	return ok(c, {
-		created: result.created,
-		bundle: {
-			version: result.bundle.version,
-			md5: result.bundle.md5,
-			createdAt: result.bundle.createdAt,
-		},
-	});
-});

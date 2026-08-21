@@ -1,26 +1,10 @@
 name: Build static bundle
 
-# Assembling a static bundle fetches every upstream source (data.json alone is
-# several MB), merges chart stats, and hashes the result — parsing and
-# re-serializing well over 10 MB of JSON. That used to run inside the API process
-# on a 1 vCPU / 1 GB host, where it was by far the heaviest thing the server did
-# and a plausible OOM. Here it runs on a runner, uploads the artifact directly to
-# R2 through a pre-signed URL, and asks the API to validate and activate it.
-
 "on":
   schedule:
-    # Every 6 hours, matching the STATIC_SYNC_INTERVAL_HOURS default. Off the hour
-    # so this does not pile onto the top-of-hour spike on GitHub's schedulers.
-    - cron: "0 0 */1 * *"
+    - cron: "17 */6 * * *"
   workflow_dispatch:
-    inputs:
-      force:
-        description: "Publish even when the bundle contents are unchanged"
-        type: boolean
-        default: false
 
-# A build ends in a write that flips which bundle is active. Two overlapping runs
-# could interleave those writes, so let one finish rather than cancelling it.
 concurrency:
   group: build-static-bundle
   cancel-in-progress: false
@@ -45,22 +29,39 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build and publish bundle
+      - name: Generate static assets
         working-directory: backend
         env:
           MAIMAID_API_URL: ${{ secrets.MAIMAID_API_URL }}
           MAIMAID_INTERNAL_JOB_TOKEN: ${{ secrets.MAIMAID_INTERNAL_JOB_TOKEN }}
-          # The composed payload is held in memory as parsed JSON, several times
-          # over during hashing. The default heap is enough today but leaves little
-          # margin as the catalog grows.
+          MAIMAID_STATIC_ASSETS_URL: ${{ secrets.MAIMAID_STATIC_ASSETS_URL }}
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
           set -euo pipefail
           : "${MAIMAID_API_URL:?Missing GitHub Secret MAIMAID_API_URL}"
           : "${MAIMAID_INTERNAL_JOB_TOKEN:?Missing GitHub Secret MAIMAID_INTERNAL_JOB_TOKEN}"
-          # `force` is only ever set by workflow_dispatch; on a schedule it is empty.
-          if [ "${{ inputs.force }}" = "true" ]; then
-            pnpm run static-bundle:build -- --force
-          else
-            pnpm run static-bundle:build
-          fi
+          : "${MAIMAID_STATIC_ASSETS_URL:?Missing GitHub Secret MAIMAID_STATIC_ASSETS_URL}"
+          pnpm run static-bundle:build
+
+      - name: Deploy static assets Worker
+        working-directory: backend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          : "${CLOUDFLARE_API_TOKEN:?Missing GitHub Secret CLOUDFLARE_API_TOKEN}"
+          : "${CLOUDFLARE_ACCOUNT_ID:?Missing GitHub Secret CLOUDFLARE_ACCOUNT_ID}"
+          pnpm exec wrangler deploy --config ../static-worker/wrangler.jsonc
+
+      - name: Verify and notify API
+        working-directory: backend
+        env:
+          MAIMAID_API_URL: ${{ secrets.MAIMAID_API_URL }}
+          MAIMAID_INTERNAL_JOB_TOKEN: ${{ secrets.MAIMAID_INTERNAL_JOB_TOKEN }}
+          MAIMAID_STATIC_ASSETS_URL: ${{ secrets.MAIMAID_STATIC_ASSETS_URL }}
+        run: |
+          set -euo pipefail
+          curl --fail --retry 5 --retry-all-errors "${MAIMAID_STATIC_ASSETS_URL%/}/manifest.json" -o /tmp/maimaid-manifest.json
+          node -e 'const fs=require("fs"); const local=JSON.parse(fs.readFileSync("../static-worker/public/manifest.json")); const remote=JSON.parse(fs.readFileSync("/tmp/maimaid-manifest.json")); if (local.version !== remote.version || local.md5 !== remote.md5) process.exit(1)'
+          pnpm run static-bundle:build -- --notify

@@ -22,7 +22,6 @@ import type {
 	Profile,
 	ScoreRow,
 	StaticBundle,
-	StaticBundleSchedule,
 	StaticSource,
 } from "@/lib/app-types";
 import type { Session } from "@/lib/session";
@@ -137,9 +136,6 @@ type TabPanelContentProps = {
 
 	staticSources: StaticSource[];
 	staticBundles: StaticBundle[];
-	staticBundleSchedule: StaticBundleSchedule | null;
-	handleBuildBundle: () => Promise<boolean>;
-	handleUpdateStaticBundleSchedule: (input: { enabled: boolean; intervalHours: number }) => Promise<void>;
 	loadStaticAdmin: () => Promise<void>;
 	handleToggleSource: (source: StaticSource) => Promise<void>;
 	handleEditSourceUrl: (source: StaticSource, nextUrl: string, nextExtraUrl?: string) => Promise<void>;
@@ -245,9 +241,6 @@ export function TabPanelContent(props: TabPanelContentProps) {
 		handleDeleteUser,
 		staticSources,
 		staticBundles,
-		staticBundleSchedule,
-		handleBuildBundle,
-		handleUpdateStaticBundleSchedule,
 		loadStaticAdmin,
 		handleToggleSource,
 		handleEditSourceUrl,
@@ -424,9 +417,6 @@ export function TabPanelContent(props: TabPanelContentProps) {
 			<AdminStaticPage
 				staticSources={staticSources}
 				staticBundles={staticBundles}
-				staticBundleSchedule={staticBundleSchedule}
-				onBuildBundle={handleBuildBundle}
-				onUpdateBundleSchedule={handleUpdateStaticBundleSchedule}
 				onReloadStatic={loadStaticAdmin}
 				onToggleSource={handleToggleSource}
 				onEditSourceUrl={handleEditSourceUrl}

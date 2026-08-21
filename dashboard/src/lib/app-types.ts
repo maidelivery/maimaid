@@ -142,12 +142,8 @@ export type StaticBundle = {
 	md5: string;
 	active: boolean;
 	createdAt: string;
-};
-
-export type StaticBundleSchedule = {
-	enabled: boolean;
-	intervalHours: number;
-	cronExpression: string;
+	manifestUrl?: string | null;
+	bundleUrl?: string | null;
 };
 
 export type MfaStatus = {

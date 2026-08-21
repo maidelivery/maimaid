@@ -8,7 +8,7 @@
 		"lint": "eslint .",
 		"format": "prettier . --ignore-path ../.prettierignore --write",
 		"format:check": "prettier . --ignore-path ../.prettierignore --check",
-		"check:env": "node -e \"for (const name of ['NEXT_PUBLIC_BACKEND_URL', 'NEXT_PUBLIC_LXNS_CLIENT_ID']) { if (!process.env[name]) { console.error('Missing ' + name); process.exitCode = 1; } }\"",
+		"check:env": "node -e \"for (const name of ['NEXT_PUBLIC_BACKEND_URL', 'NEXT_PUBLIC_STATIC_ASSETS_URL', 'NEXT_PUBLIC_LXNS_CLIENT_ID']) { if (!process.env[name]) { console.error('Missing ' + name); process.exitCode = 1; } }\"",
 		"generate:headers": "node ./scripts/generate-security-headers.mjs",
 		"build": "pnpm run generate:headers && next build",
 		"start": "next start",

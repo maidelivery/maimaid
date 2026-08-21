@@ -47,6 +47,7 @@ pnpm run build
 必填：
 
 - `NEXT_PUBLIC_BACKEND_URL`（例如 `http://localhost:8787`）
+- `NEXT_PUBLIC_STATIC_ASSETS_URL`（例如 `https://maimaid-assets.rhythmeta.org`）
 - `NEXT_PUBLIC_LXNS_CLIENT_ID`（LXNS OAuth public client_id）
 
 可使用以下命令校验：
@@ -60,7 +61,7 @@ pnpm run check:env
 ## 安全响应头（CSP）
 
 - 构建时会自动执行 `pnpm run generate:headers`，生成 `/public/_headers`
-- `connect-src` 会基于 `NEXT_PUBLIC_BACKEND_URL` 自动收敛到白名单
+- `connect-src` 会基于 `NEXT_PUBLIC_BACKEND_URL` 和 `NEXT_PUBLIC_STATIC_ASSETS_URL` 自动收敛到白名单
 - 为兼容 Next.js 静态导出，当前 `script-src` / `style-src` 保留 `'unsafe-inline'`
 
 ## Cloudflare Pages

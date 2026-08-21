@@ -38,7 +38,7 @@ const listUsersQuerySchema = z.object({
 			const parsed = Number(value ?? 0);
 			if (!Number.isFinite(parsed)) return 0;
 			return Math.max(0, Math.trunc(parsed));
-	}),
+		}),
 });
 
 const opaquePayloadSchema = z
@@ -72,17 +72,6 @@ const staticSourcePatchSchema = z
 		fallbackUrls: z.array(z.url()).optional(),
 		enabled: z.boolean().optional(),
 		metadata: z.record(z.string(), z.unknown()).nullable().optional(),
-	})
-	.refine((value) => Object.keys(value).length > 0, "No field to update.");
-
-const bundleBuildSchema = z.object({
-	force: z.boolean().default(false),
-});
-
-const staticBundleSchedulePatchSchema = z
-	.object({
-		enabled: z.boolean().optional(),
-		intervalHours: z.coerce.number().int().positive().optional(),
 	})
 	.refine((value) => Object.keys(value).length > 0, "No field to update.");
 
@@ -225,19 +214,29 @@ adminV1Route.get("/admin/users", adminRequired, standardValidator("query", listU
 	return ok(c, result);
 });
 
-adminV1Route.post("/admin/users:start", adminRequired, standardValidator("json", startCreateUserSchema, validationHook), async (c) => {
-	const adminUserService = c.var.resolve(AdminUserService);
-	const body = c.req.valid("json");
-	const payload = await adminUserService.startOpaqueCreateUser(body);
-	return ok(c, payload);
-});
+adminV1Route.post(
+	"/admin/users:start",
+	adminRequired,
+	standardValidator("json", startCreateUserSchema, validationHook),
+	async (c) => {
+		const adminUserService = c.var.resolve(AdminUserService);
+		const body = c.req.valid("json");
+		const payload = await adminUserService.startOpaqueCreateUser(body);
+		return ok(c, payload);
+	},
+);
 
-adminV1Route.post("/admin/users:finish", adminRequired, standardValidator("json", finishCreateUserSchema, validationHook), async (c) => {
-	const adminUserService = c.var.resolve(AdminUserService);
-	const body = c.req.valid("json");
-	const user = await adminUserService.finishOpaqueCreateUser(body);
-	return ok(c, { user }, 201);
-});
+adminV1Route.post(
+	"/admin/users:finish",
+	adminRequired,
+	standardValidator("json", finishCreateUserSchema, validationHook),
+	async (c) => {
+		const adminUserService = c.var.resolve(AdminUserService);
+		const body = c.req.valid("json");
+		const user = await adminUserService.finishOpaqueCreateUser(body);
+		return ok(c, { user }, 201);
+	},
+);
 
 adminV1Route.delete(
 	"/admin/users/:userId",
@@ -302,45 +301,8 @@ adminV1Route.patch(
 	},
 );
 
-adminV1Route.post(
-	"/admin/static-bundles:build",
-	adminRequired,
-	standardValidator("json", bundleBuildSchema, validationHook),
-	async (c) => {
-		const staticBundleService = c.var.resolve(StaticBundleService);
-		const body = c.req.valid("json");
-		const result = await staticBundleService.buildBundle(body.force);
-		return ok(c, result);
-	},
-);
-
 adminV1Route.get("/admin/static-bundles", adminRequired, async (c) => {
 	const staticBundleService = c.var.resolve(StaticBundleService);
 	const bundles = await staticBundleService.listBundles();
 	return ok(c, { bundles });
 });
-
-adminV1Route.get("/admin/static-bundle-schedule", adminRequired, async (c) => {
-	const staticBundleService = c.var.resolve(StaticBundleService);
-	const schedule = await staticBundleService.getPeriodicBuildSchedule();
-	return ok(c, { schedule });
-});
-
-adminV1Route.patch(
-	"/admin/static-bundle-schedule",
-	adminRequired,
-	standardValidator("json", staticBundleSchedulePatchSchema, validationHook),
-	async (c) => {
-		const staticBundleService = c.var.resolve(StaticBundleService);
-		const body = c.req.valid("json");
-		const patch: Parameters<StaticBundleService["updatePeriodicBuildSchedule"]>[0] = {};
-		if (body.enabled !== undefined) {
-			patch.enabled = body.enabled;
-		}
-		if (body.intervalHours !== undefined) {
-			patch.intervalHours = body.intervalHours;
-		}
-		const schedule = await staticBundleService.updatePeriodicBuildSchedule(patch);
-		return ok(c, { schedule });
-	},
-);

@@ -3,7 +3,6 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import { CatalogService } from "./catalog.service.js";
 import { CommunityAliasService } from "./community-alias.service.js";
-import { StaticBundleService } from "./static-bundle.service.js";
 
 // Finished rows are only useful for reading recent history from the dashboard.
 // Keeping them forever grows a table that is written to on a schedule.
@@ -11,10 +10,9 @@ const FINISHED_JOB_RETENTION_DAYS = 14;
 
 // A row left in 'running' blocks its job type forever, because `enqueue_job`
 // treats pending-or-running as "already queued". That happens whenever the
-// process dies mid-job — an OOM kill during a bundle build is the likely case on
-// a small host. Anything running longer than this lease is treated as abandoned.
-// Well above the catalog apply transaction timeout (120s) plus the upstream
-// fetches a bundle build makes, so a slow-but-alive job is never stolen.
+// process dies mid-job. Anything running longer than this lease is treated as
+// abandoned. The lease exceeds the catalog apply transaction timeout (120s)
+// and leaves enough room for upstream requests.
 const RUNNING_JOB_LEASE_MS = 30 * 60_000;
 
 type ClaimedJob = {
@@ -35,7 +33,6 @@ export class JobService {
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
 		@inject(CatalogService) private readonly catalogService: CatalogService,
 		@inject(CommunityAliasService) private readonly communityAliasService: CommunityAliasService,
-		@inject(StaticBundleService) private readonly staticBundleService: StaticBundleService,
 	) {}
 
 	async enqueue(jobType: string, payload: Record<string, unknown> = {}) {
@@ -52,8 +49,7 @@ export class JobService {
 	/**
 	 * Claim one due job, atomically. `FOR UPDATE SKIP LOCKED` means a second
 	 * dispatcher running concurrently takes a different row instead of the same
-	 * one: a select-then-update pair would let both claim it and run an expensive
-	 * bundle build twice.
+	 * one: a select-then-update pair would let both claim and execute it twice.
 	 */
 	private async claimNextJob(): Promise<ClaimedJob | null> {
 		const rows = await this.prisma.$queryRaw<ClaimedJob[]>(Prisma.sql`
@@ -82,10 +78,6 @@ export class JobService {
 				return;
 			case "community_alias_roll_cycle":
 				await this.communityAliasService.rollCycle();
-				return;
-			case "static_bundle_build":
-				// buildBundle also refreshes Song/Sheet catalog from bundle data_json.
-				await this.staticBundleService.buildBundle(false);
 				return;
 			default:
 				// Previously an unrecognised type fell through the if/else chain and was

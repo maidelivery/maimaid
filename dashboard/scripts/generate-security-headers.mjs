@@ -21,9 +21,19 @@ function resolveBackendOrigin() {
 }
 
 const backendOrigin = resolveBackendOrigin();
+const staticAssetsOrigin = (() => {
+	try {
+		return new URL(process.env.NEXT_PUBLIC_STATIC_ASSETS_URL ?? "").origin;
+	} catch {
+		return null;
+	}
+})();
 const connectSources = ["'self'"];
 if (backendOrigin) {
 	connectSources.push(backendOrigin);
+}
+if (staticAssetsOrigin) {
+	connectSources.push(staticAssetsOrigin);
 }
 
 // Profile avatars are streamed by the backend from R2 via
@@ -32,6 +42,9 @@ if (backendOrigin) {
 const imageSources = ["'self'", "data:", "https://dp4p6x0xfi5o9.cloudfront.net", "https://assets2.lxns.net"];
 if (backendOrigin) {
 	imageSources.push(backendOrigin);
+}
+if (staticAssetsOrigin) {
+	imageSources.push(staticAssetsOrigin);
 }
 
 const contentSecurityPolicy = [

@@ -35,6 +35,7 @@ import {
 	SONG_HIDE_DELETED_STORAGE_KEY,
 	SONG_SORT_ASC_STORAGE_KEY,
 	SONG_SORT_OPTION_STORAGE_KEY,
+	STATIC_ASSETS_URL,
 	localizedStandardContains,
 	normalizeSearchText,
 	parseBundleLxnsAliases,
@@ -51,7 +52,6 @@ import type {
 	AdminUserRow,
 	ApprovedAliasSyncRow,
 	BackupCodeStatus,
-	CatalogVersionItem,
 	CommunityCandidate,
 	MfaStatus,
 	NavigationTabItem,
@@ -61,14 +61,12 @@ import type {
 	Profile,
 	ScoreRow,
 	StaticBundle,
-	StaticBundleSchedule,
 	StaticSource,
-	SongIdItem,
 	ToastSeverity,
 } from "@/lib/app-types";
 import { buildSongCatalogIndex, normalizeDifficulty, normalizeSheetType } from "@/lib/song-index";
 import { SongDetailDialog } from "./components/songs/SongDetailDialog";
-import type { Alias, Sheet as SongSheet, Song } from "./components/songs/types";
+import type { Song } from "./components/songs/types";
 import { requestJson } from "./lib/backend-client";
 import {
 	clearStoredSessionArtifacts,
@@ -221,8 +219,6 @@ function App() {
 		setStaticSources,
 		staticBundles,
 		setStaticBundles,
-		staticBundleSchedule,
-		setStaticBundleSchedule,
 		newStaticCategory,
 		setNewStaticCategory,
 		newStaticActiveUrl,
@@ -330,8 +326,6 @@ function App() {
 			setStaticSources: state.setStaticSources,
 			staticBundles: state.staticBundles,
 			setStaticBundles: state.setStaticBundles,
-			staticBundleSchedule: state.staticBundleSchedule,
-			setStaticBundleSchedule: state.setStaticBundleSchedule,
 			newStaticCategory: state.newStaticCategory,
 			setNewStaticCategory: state.setNewStaticCategory,
 			newStaticActiveUrl: state.newStaticActiveUrl,
@@ -829,44 +823,15 @@ function App() {
 	}, [request, session, setActiveProfileId, setProfiles]);
 
 	const loadSongCatalog = useCallback(async () => {
-		try {
-			const [songsPayload, sheetsPayload, aliasesPayload, versionsPayload, songIdItemsPayload] = await Promise.all([
-				request<{ songs: Song[] }>("v1/catalog/songs", { auth: false }),
-				request<{ sheets: SongSheet[] }>("v1/catalog/sheets", { auth: false }),
-				request<{ aliases: Alias[] }>("v1/catalog/aliases", { auth: false }),
-				request<{ versions: CatalogVersionItem[] }>("v1/catalog/versions", { auth: false }),
-				request<{ items: SongIdItem[] }>("v1/static/songid-items", { auth: false }),
-			]);
-
-			const nextSongs = songsPayload.songs;
-			const nextSheets = sheetsPayload.sheets.map((sheet) => ({
-				...sheet,
-				id: String(sheet.id),
-			}));
-			if (nextSongs.length > 0 && nextSheets.length > 0) {
-				const nextAliases = aliasesPayload.aliases.map((alias) => ({
-					id: String(alias.id),
-					songIdentifier: alias.songIdentifier,
-					aliasText: alias.aliasText,
-					source: alias.source,
-				}));
-				const nextSongIdItems = parseSongIdItems(songIdItemsPayload.items);
-				const nextVersionItems = parseCatalogVersionItems(versionsPayload.versions);
-
-				setSongCatalog(nextSongs);
-				setCatalogSheets(nextSheets);
-				setCatalogAliases(nextAliases);
-				setSongIdItems(nextSongIdItems);
-				setCatalogVersionItems(nextVersionItems);
-				return;
-			}
-		} catch (error) {
-			console.warn("[catalog] catalog API load failed, falling back to static bundle payload.", error);
-		}
-
-		const bundlePayload = await request<{ payload?: { resources?: Record<string, unknown> } }>("v1/static/bundle/latest", {
-			auth: false,
-		});
+		if (!STATIC_ASSETS_URL) throw new Error("Missing NEXT_PUBLIC_STATIC_ASSETS_URL.");
+		const manifestResponse = await fetch(`${STATIC_ASSETS_URL}/manifest.json`, { cache: "no-store" });
+		if (!manifestResponse.ok) throw new Error(`Static manifest HTTP ${manifestResponse.status}`);
+		const manifest = (await manifestResponse.json()) as { bundle?: string };
+		if (!manifest.bundle) throw new Error("Static manifest has no bundle path.");
+		const bundleURL = new URL(manifest.bundle, `${STATIC_ASSETS_URL}/`);
+		const bundleResponse = await fetch(bundleURL);
+		if (!bundleResponse.ok) throw new Error(`Static bundle HTTP ${bundleResponse.status}`);
+		const bundlePayload = (await bundleResponse.json()) as { payload?: { resources?: Record<string, unknown> } };
 		const resources = bundlePayload.payload?.resources;
 		const dataJsonResource = resources?.data_json;
 		const songidResource = resources?.songid_json;
@@ -889,7 +854,7 @@ function App() {
 		setCatalogAliases(nextAliases);
 		setSongIdItems(nextSongIdItems);
 		setCatalogVersionItems(parseCatalogVersionItems(dataJsonResource));
-	}, [request, setCatalogAliases, setCatalogSheets, setCatalogVersionItems, setSongCatalog, setSongIdItems, t]);
+	}, [setCatalogAliases, setCatalogSheets, setCatalogVersionItems, setSongCatalog, setSongIdItems, t]);
 
 	const loadSongDetail = useCallback(
 		async (songIdentifier: string) => {
@@ -1042,15 +1007,13 @@ function App() {
 
 	const loadStaticAdmin = useCallback(async () => {
 		if (!isAdmin) return;
-		const [sourcePayload, bundlePayload, schedulePayload] = await Promise.all([
+		const [sourcePayload, bundlePayload] = await Promise.all([
 			request<{ sources: StaticSource[] }>("v1/admin/static-sources"),
 			request<{ bundles: StaticBundle[] }>("v1/admin/static-bundles"),
-			request<{ schedule: StaticBundleSchedule }>("v1/admin/static-bundle-schedule"),
 		]);
 		setStaticSources(sourcePayload.sources);
 		setStaticBundles(bundlePayload.bundles);
-		setStaticBundleSchedule(schedulePayload.schedule);
-	}, [isAdmin, request, setStaticBundleSchedule, setStaticBundles, setStaticSources]);
+	}, [isAdmin, request, setStaticBundles, setStaticSources]);
 
 	const loadMfaStatus = useCallback(async () => {
 		if (!session) {
@@ -1309,8 +1272,6 @@ function App() {
 		handleDeleteUser,
 		handleToggleSource,
 		handleEditSourceUrl,
-		handleBuildBundle,
-		handleUpdateStaticBundleSchedule,
 		handleStartTotpSetup,
 		handleConfirmTotpSetup,
 		handleDisableTotp,
@@ -1593,9 +1554,6 @@ function App() {
 			handleDeleteUser={handleDeleteUser}
 			staticSources={staticSources}
 			staticBundles={staticBundles}
-			staticBundleSchedule={staticBundleSchedule}
-			handleBuildBundle={handleBuildBundle}
-			handleUpdateStaticBundleSchedule={handleUpdateStaticBundleSchedule}
 			loadStaticAdmin={loadStaticAdmin}
 			handleToggleSource={handleToggleSource}
 			handleEditSourceUrl={handleEditSourceUrl}

@@ -26,7 +26,6 @@ import type {
 	ScoreRow,
 	SongIdItem,
 	StaticBundle,
-	StaticBundleSchedule,
 	StaticSource,
 } from "@/lib/app-types";
 import type { Session } from "@/lib/session";
@@ -126,7 +125,6 @@ type DashboardStore = {
 	newUserPassword: string;
 	staticSources: StaticSource[];
 	staticBundles: StaticBundle[];
-	staticBundleSchedule: StaticBundleSchedule | null;
 	newStaticCategory: string;
 	newStaticActiveUrl: string;
 	newStaticFallbackUrls: string;
@@ -182,7 +180,6 @@ type DashboardStore = {
 	setNewUserPassword: (next: StateUpdater<string>) => void;
 	setStaticSources: (next: StateUpdater<StaticSource[]>) => void;
 	setStaticBundles: (next: StateUpdater<StaticBundle[]>) => void;
-	setStaticBundleSchedule: (next: StateUpdater<StaticBundleSchedule | null>) => void;
 	setNewStaticCategory: (next: StateUpdater<string>) => void;
 	setNewStaticActiveUrl: (next: StateUpdater<string>) => void;
 	setNewStaticFallbackUrls: (next: StateUpdater<string>) => void;
@@ -244,7 +241,6 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
 	newUserPassword: "",
 	staticSources: [],
 	staticBundles: [],
-	staticBundleSchedule: null,
 	newStaticCategory: "",
 	newStaticActiveUrl: "",
 	newStaticFallbackUrls: "",
@@ -307,8 +303,6 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
 	setNewUserPassword: (next) => set((state) => ({ newUserPassword: resolveStateUpdate(next, state.newUserPassword) })),
 	setStaticSources: (next) => set((state) => ({ staticSources: resolveStateUpdate(next, state.staticSources) })),
 	setStaticBundles: (next) => set((state) => ({ staticBundles: resolveStateUpdate(next, state.staticBundles) })),
-	setStaticBundleSchedule: (next) =>
-		set((state) => ({ staticBundleSchedule: resolveStateUpdate(next, state.staticBundleSchedule) })),
 	setNewStaticCategory: (next) => set((state) => ({ newStaticCategory: resolveStateUpdate(next, state.newStaticCategory) })),
 	setNewStaticActiveUrl: (next) => set((state) => ({ newStaticActiveUrl: resolveStateUpdate(next, state.newStaticActiveUrl) })),
 	setNewStaticFallbackUrls: (next) =>
@@ -324,7 +318,6 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
 			adminUsers: [],
 			staticSources: [],
 			staticBundles: [],
-			staticBundleSchedule: null,
 			mfaStatus: null,
 			passkeys: [],
 			backupCodeStatus: {

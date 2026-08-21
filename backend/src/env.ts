@@ -9,8 +9,6 @@ const optionalString = z
 		return trimmed ? trimmed : undefined;
 	});
 
-const optionalUrl = optionalString.pipe(z.url().optional());
-
 const EnvSchema = z.object({
 	NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 	HOST: z.string().min(1).default("0.0.0.0"),
@@ -49,16 +47,9 @@ const EnvSchema = z.object({
 	S3_BUCKET: z.string().min(1).default("maimaid-assets"),
 	S3_ACCESS_KEY_ID: optionalString,
 	S3_SECRET_ACCESS_KEY: optionalString,
-	// Static bundles use a separate public bucket so avatar objects can remain private.
-	S3_STATIC_BUNDLE_BUCKET: optionalString,
-	S3_STATIC_BUNDLE_PUBLIC_BASE_URL: optionalUrl,
 	CATALOG_SOURCE_URL: z.url().optional(),
-	STATIC_SYNC_INTERVAL_HOURS: z.coerce.number().int().positive().default(6),
-	// pg_cron enqueues into "job_queue" but nothing consumed it, so scheduled
-	// catalog syncs and bundle builds never ran. This runs a consumer inside the
-	// API process. Off by default: a bundle build fetches every upstream source
-	// and recomputes chart stats, which is the heaviest thing this server does,
-	// so enabling it is a deliberate choice about the host's capacity.
+	// Runs the consumer for catalog and community maintenance jobs enqueued by
+	// pg_cron. Off by default so deployments can use a dedicated dispatcher.
 	JOB_DISPATCHER_ENABLED: z
 		.enum(["true", "false"])
 		.default("false")

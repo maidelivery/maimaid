@@ -18,7 +18,6 @@ import type {
 	ScoreEditState,
 	ScoreRow,
 	StaticSource,
-	StaticBundleSchedule,
 	ToastSeverity,
 } from "@/lib/app-types";
 import { finishOpaqueRegistration, startOpaqueRegistration } from "@/lib/opaque-password";
@@ -762,43 +761,6 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		}
 	};
 
-	const handleBuildBundle = async (): Promise<boolean> => {
-		try {
-			await request("v1/admin/static-bundles:build", {
-				method: "POST",
-				body: {
-					force: true,
-				},
-			});
-			await loadStaticAdmin();
-			showToast(t("actionSrcBundle"), "success");
-			return true;
-		} catch (error) {
-			showToast((error as Error).message, "error");
-			return false;
-		}
-	};
-
-	const handleUpdateStaticBundleSchedule = async (input: { enabled: boolean; intervalHours: number }) => {
-		try {
-			const payload = await request<{ schedule: StaticBundleSchedule }>("v1/admin/static-bundle-schedule", {
-				method: "PATCH",
-				body: {
-					enabled: input.enabled,
-					intervalHours: input.intervalHours,
-				},
-			});
-			await loadStaticAdmin();
-			if (payload.schedule.enabled) {
-				showToast(t("actionSrcAuto", { hours: payload.schedule.intervalHours }), "success");
-			} else {
-				showToast(t("actionSrcAutoOff"), "success");
-			}
-		} catch (error) {
-			showToast((error as Error).message, "error");
-		}
-	};
-
 	const handleStartTotpSetup = async () => {
 		try {
 			const payload = await request<MfaSetup>("v1/auth/mfa/totp:startSetup", {
@@ -966,8 +928,6 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		handleToggleSource,
 		handleCreateSource,
 		handleEditSourceUrl,
-		handleBuildBundle,
-		handleUpdateStaticBundleSchedule,
 		handleStartTotpSetup,
 		handleConfirmTotpSetup,
 		handleDisableTotp,

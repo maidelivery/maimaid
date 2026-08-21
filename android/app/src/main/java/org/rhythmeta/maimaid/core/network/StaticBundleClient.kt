@@ -1,6 +1,5 @@
 package org.rhythmeta.maimaid.core.network
 
-import android.net.Uri
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -19,7 +18,7 @@ class StaticBundleClient(
     private val baseUrl: String,
     private val json: Json,
 ) {
-    suspend fun fetchManifest(): StaticManifest = get<StaticManifest>("/v1/static/manifest").also {
+    suspend fun fetchManifest(): StaticManifest = get<StaticManifest>("/manifest.json").also {
         StaticAssetUrls.configure(it.assets)
     }
 
@@ -27,19 +26,8 @@ class StaticBundleClient(
         manifest: StaticManifest,
         onTransfer: (downloadedBytes: Long, totalBytes: Long?) -> Unit = { _, _ -> },
     ): StaticBundleResponse {
-        manifest.downloadUrl?.takeIf(String::isNotBlank)?.let { downloadUrl ->
-            try {
-                return getUrl<StaticBundleResponse>(downloadUrl, onTransfer).validatedAgainst(manifest)
-            } catch (error: CancellationException) {
-                throw error
-            } catch (_: Exception) {
-                // The API route preserves downloads while R2 or its public domain is unavailable.
-            }
-        }
-        return get<StaticBundleResponse>(
-            "/v1/static/bundle/${Uri.encode(manifest.version)}",
-            onTransfer,
-        ).validatedAgainst(manifest)
+        val bundleUrl = URL(URL("${baseUrl.trimEnd('/')}/"), manifest.bundle).toString()
+        return getUrl<StaticBundleResponse>(bundleUrl, onTransfer).validatedAgainst(manifest)
     }
 
     suspend fun downloadCover(

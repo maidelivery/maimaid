@@ -10,27 +10,6 @@ const syncSchema = z.object({
 	force: z.boolean().default(false),
 });
 
-const songsQuerySchema = z.object({
-	includeDisabled: z
-		.enum(["true", "false"])
-		.optional()
-		.transform((value) => value === "true"),
-	keyword: z.string().optional(),
-});
-
-const sheetsQuerySchema = z.object({
-	includeDisabled: z
-		.enum(["true", "false"])
-		.optional()
-		.transform((value) => value === "true"),
-	songIdentifier: z.string().optional(),
-});
-
-const aliasesQuerySchema = z.object({
-	songIdentifier: z.string().optional(),
-	source: z.string().optional(),
-});
-
 const snapshotRollbackParamSchema = z.object({
 	snapshotId: z
 		.string()
@@ -39,39 +18,6 @@ const snapshotRollbackParamSchema = z.object({
 });
 
 export const catalogV1Route = new Hono<AppEnv>();
-
-catalogV1Route.get("/songs", standardValidator("query", songsQuerySchema, validationHook), async (c) => {
-	const catalogService = c.var.resolve(CatalogService);
-	const query = c.req.valid("query");
-	const songs = await catalogService.listSongs(query.includeDisabled, query.keyword);
-	return ok(c, { songs });
-});
-
-catalogV1Route.get("/sheets", standardValidator("query", sheetsQuerySchema, validationHook), async (c) => {
-	const catalogService = c.var.resolve(CatalogService);
-	const query = c.req.valid("query");
-	const sheets = await catalogService.listSheets(query.songIdentifier, query.includeDisabled);
-	return ok(c, { sheets });
-});
-
-catalogV1Route.get("/aliases", standardValidator("query", aliasesQuerySchema, validationHook), async (c) => {
-	const catalogService = c.var.resolve(CatalogService);
-	const query = c.req.valid("query");
-	const aliases = await catalogService.listAliases(query.songIdentifier, query.source);
-	return ok(c, { aliases });
-});
-
-catalogV1Route.get("/versions", async (c) => {
-	const catalogService = c.var.resolve(CatalogService);
-	const versions = await catalogService.listVersions();
-	return ok(c, { versions });
-});
-
-catalogV1Route.get("/icons", async (c) => {
-	const catalogService = c.var.resolve(CatalogService);
-	const icons = await catalogService.listIcons();
-	return ok(c, { icons });
-});
 
 catalogV1Route.get("/snapshots", authRequired, async (c) => {
 	const catalogService = c.var.resolve(CatalogService);

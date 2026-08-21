@@ -9,6 +9,8 @@ val maimaidBackendUrl = providers.gradleProperty("MAIMAID_BACKEND_URL")
     .orElse("https://api.rhythmeta.org")
 val maimaidBackendAuthUrl = providers.gradleProperty("MAIMAID_BACKEND_AUTH_URL")
     .orElse("https://maimaid.rhythmeta.org")
+val maimaidStaticAssetsUrl = providers.gradleProperty("MAIMAID_STATIC_ASSETS_URL")
+    .orElse("https://maimaid-assets.rhythmeta.org")
 val maimaidBuildNumber = providers.environmentVariable("MAIMAID_BUILD_NUMBER")
     .orElse(
         providers.exec {
@@ -50,6 +52,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "BACKEND_URL", "\"${maimaidBackendUrl.get()}\"")
         buildConfigField("String", "BACKEND_AUTH_URL", "\"${maimaidBackendAuthUrl.get()}\"")
+        buildConfigField("String", "STATIC_ASSETS_URL", "\"${maimaidStaticAssetsUrl.get()}\"")
     }
 
     signingConfigs {

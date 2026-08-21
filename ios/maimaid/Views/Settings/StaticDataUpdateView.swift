@@ -117,17 +117,18 @@ struct StaticDataUpdateView: View {
         syncErrorMessage = nil
         updateState = .checking
 
-        guard BackendSessionManager.shared.isConfigured else {
+        guard let manifestURL = BackendConfig.staticAssetsEndpoint("manifest.json") else {
             updateState = .backendUnconfigured
             return
         }
 
         do {
-            let manifest: StaticManifestSummary = try await BackendAPIClient.request(
-                path: "v1/static/manifest",
-                method: "GET",
-                authentication: .none
-            )
+            let (data, response) = try await URLSession.shared.data(from: manifestURL)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                throw BackendAPIError.badResponse
+            }
+            let manifest = try BackendAPIClient.decoder.decode(StaticManifestSummary.self, from: data)
 
             if UserDefaults.app.staticBundleMd5 == manifest.md5 {
                 updateState = .upToDate(manifest: manifest)

@@ -1,13 +1,10 @@
 import { inject, injectable } from "tsyringe";
-import { Prisma, type PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 
 const CHART_SLOT_COUNT = 5;
 const DIST_BUCKET_COUNT = 14;
 const FC_BUCKET_COUNT = 5;
-const DEFAULT_DATA_JSON_URL =
-	"https://raw.githubusercontent.com/gekichumai/dxrating/refs/heads/main/packages/dxdata/dxdata.json";
-const DEFAULT_SONGID_JSON_URL = "https://static.shikoch.in/songid.json";
 
 const DIFFICULTY_INDEX_MAP: Record<string, number> = {
 	basic: 0,
@@ -63,11 +60,6 @@ type DiffAccumulator = {
 	sumAchievements: number;
 	distCounts: number[];
 	fcCounts: number[];
-};
-
-type ChartFitSourceInput = {
-	dataJson?: unknown;
-	songidJson?: unknown;
 };
 
 export const CHART_FIT_DIFF_WEIGHTS: Record<string, [number, number, number, number]> = {
@@ -383,8 +375,6 @@ const safeRelativeDiff = (value: number, baseline: number) => {
 	return (value - baseline) / baseline;
 };
 
-const toJsonValue = (value: unknown): Prisma.InputJsonValue => JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
-
 const toChartArrayOutput = (entries: Array<ChartFitChartEntry | null>) => {
 	const maxLength = Math.max(CHART_SLOT_COUNT, entries.length);
 	const output: Array<ChartFitChartEntry | Record<string, never>> = Array.from({ length: maxLength }, () => ({}));
@@ -662,87 +652,13 @@ export const resolveSongIdFromMapping = (
 	return preferred ?? candidates[0] ?? null;
 };
 
-// Only the newest snapshot is ever read (`getLatestSnapshotOrRefresh`). A few are
-// kept so a bad refresh can be inspected, but each payload holds stats for every
-// chart in the game, so unbounded history is the single largest avoidable
-// consumer of disk on a small host.
-const CHART_FIT_SNAPSHOT_RETENTION = 5;
-
 @injectable()
 export class ChartFitService {
 	constructor(@inject(TOKENS.Prisma) private readonly prisma: PrismaClient) {}
 
-	async refreshSnapshot(input?: ChartFitSourceInput) {
-		return this.refreshSnapshotWithMapping(buildSongIdMapping(input?.dataJson, input?.songidJson));
-	}
-
-	/**
-	 * Same as {@link refreshSnapshot}, but takes the song-id mapping instead of the
-	 * multi-MB source JSON it is derived from. Lets the bundle build run the parse
-	 * elsewhere (CI) and leave only the `best_scores` aggregate on the server.
-	 */
-	async refreshSnapshotWithMapping(mapping: ChartFitSongIdMapping) {
-		const computed = await this.computeSelfChartStats(mapping);
-		await this.prisma.chartFitSnapshot.create({
-			data: {
-				payloadJson: toJsonValue(computed.payload),
-				metaJson: toJsonValue(computed.meta),
-			},
-		});
-		await this.pruneSnapshots();
-		return computed;
-	}
-
-	/**
-	 * Drop snapshots older than the newest `CHART_FIT_SNAPSHOT_RETENTION`. Runs
-	 * after the insert so a prune failure cannot lose the fresh snapshot.
-	 */
-	private async pruneSnapshots() {
-		const keep = await this.prisma.chartFitSnapshot.findMany({
-			orderBy: { createdAt: "desc" },
-			take: CHART_FIT_SNAPSHOT_RETENTION,
-			select: { id: true },
-		});
-		if (keep.length < CHART_FIT_SNAPSHOT_RETENTION) {
-			return;
-		}
-		await this.prisma.chartFitSnapshot.deleteMany({
-			where: { id: { notIn: keep.map((row) => row.id) } },
-		});
-	}
-
-	async getLatestSnapshotOrRefresh(input?: ChartFitSourceInput) {
-		const latest = await this.prisma.chartFitSnapshot.findFirst({
-			orderBy: { createdAt: "desc" },
-		});
-
-		if (latest) {
-			const normalized = normalizeChartStatsPayload(latest.payloadJson);
-			const payload: ChartFitPayload = {
-				charts: Object.fromEntries(
-					Object.entries(normalized.charts).map(([songId, entries]) => [songId, toChartArrayOutput(entries)]),
-				),
-				diff_data: buildDiffDataFromCharts(normalized.charts),
-			};
-			return {
-				payload,
-				meta: toRecord(latest.metaJson) ?? {},
-				createdAt: latest.createdAt,
-			};
-		}
-
-		const refreshed = await this.refreshSnapshot(input ?? (await this.fetchDefaultSourceInput()));
-		return {
-			payload: refreshed.payload,
-			meta: refreshed.meta,
-			createdAt: new Date(),
-		};
-	}
-
-	mergePayloads(primaryRaw: unknown, secondaryRaw: unknown, secondaryMinCnt = 1000) {
-		return mergeChartStatsPayloads(primaryRaw, secondaryRaw, {
-			secondaryMinCnt,
-		});
+	/** Aggregates private best-score rows against the compact mapping supplied by the generator. */
+	async generateWithMapping(mapping: ChartFitSongIdMapping) {
+		return this.computeSelfChartStats(mapping);
 	}
 
 	private async computeSelfChartStats(mapping: ChartFitSongIdMapping) {
@@ -936,35 +852,5 @@ export class ChartFitService {
 			payload,
 			meta,
 		};
-	}
-
-	private async fetchDefaultSourceInput(): Promise<ChartFitSourceInput> {
-		const [dataJson, songidJson] = await Promise.all([
-			this.fetchJson(DEFAULT_DATA_JSON_URL),
-			this.fetchJson(DEFAULT_SONGID_JSON_URL),
-		]);
-		return {
-			dataJson,
-			songidJson,
-		};
-	}
-
-	private async fetchJson(url: string): Promise<unknown | undefined> {
-		try {
-			const response = await fetch(url, { method: "GET" });
-			if (!response.ok) {
-				return undefined;
-			}
-			const contentType = response.headers.get("content-type") ?? "";
-			const raw = await response.text();
-			const looksJson =
-				contentType.toLowerCase().includes("json") || raw.trimStart().startsWith("{") || raw.trimStart().startsWith("[");
-			if (!looksJson) {
-				return undefined;
-			}
-			return JSON.parse(raw) as unknown;
-		} catch {
-			return undefined;
-		}
 	}
 }

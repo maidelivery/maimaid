@@ -6,6 +6,8 @@
 	<string>$(BACKEND_AUTH_URL)</string>
 	<key>BACKEND_URL</key>
 	<string>$(BACKEND_URL)</string>
+	<key>STATIC_ASSETS_URL</key>
+	<string>$(STATIC_ASSETS_URL)</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>en</string>

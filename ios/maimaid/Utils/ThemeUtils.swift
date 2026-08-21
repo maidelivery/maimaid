@@ -44,6 +44,7 @@ enum BundleInfoKeys {
     static let buildNumber = "CFBundleVersion"
     static let backendURL = "BACKEND_URL"
     static let backendAuthURL = "BACKEND_AUTH_URL"
+    static let staticAssetsURL = "STATIC_ASSETS_URL"
 }
 
 enum AppInfo {

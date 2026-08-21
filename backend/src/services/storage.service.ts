@@ -1,31 +1,12 @@
-import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { inject, injectable } from "tsyringe";
 import type { Env } from "../env.js";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
 
-export type StaticAssetKind = "cover" | "presetAvatar";
-
-export type StaticAssetReference = {
-	kind: StaticAssetKind;
-	name: string;
-};
-
-export type StaticAssetConfiguration = {
-	coverBaseUrl: string;
-	coverFallbackBaseUrl: string;
-	presetAvatarBaseUrl: string;
-	presetAvatarFallbackBaseUrl: string;
-};
-
 @injectable()
 export class StorageService {
-	private static readonly STATIC_BUNDLE_CONTENT_TYPE = "application/json";
-	private static readonly STATIC_BUNDLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
-	private static readonly STATIC_ASSET_CONTENT_TYPE = "image/png";
-	private static readonly STATIC_ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable";
-	private static readonly STATIC_ASSET_UPLOAD_CONCURRENCY = 12;
 	private readonly client: S3Client | null;
 	private readonly signingClient: S3Client | null;
 
@@ -83,163 +64,6 @@ export class StorageService {
 		return { key, uploadUrl };
 	}
 
-	isStaticBundleStorageConfigured() {
-		return Boolean(
-			this.client && this.signingClient && this.env.S3_STATIC_BUNDLE_BUCKET && this.env.S3_STATIC_BUNDLE_PUBLIC_BASE_URL,
-		);
-	}
-
-	staticBundleObjectKey(version: string, md5: string) {
-		return `static-bundles/${version}-${md5}.json`;
-	}
-
-	staticAssetObjectKey(asset: StaticAssetReference) {
-		const name = asset.name.trim();
-		if (!name || name.length > 200 || name === "." || name === ".." || name.includes("/") || name.includes("\\")) {
-			throw new AppError(400, "static_asset_invalid_name", "Static asset name is invalid.");
-		}
-		if (asset.kind === "presetAvatar" && !/^\d+\.png$/u.test(name)) {
-			throw new AppError(400, "static_asset_invalid_name", "Preset avatar name must be a numeric PNG filename.");
-		}
-		if (asset.kind === "cover" && !name.toLocaleLowerCase().endsWith(".png")) {
-			throw new AppError(400, "static_asset_invalid_name", "Cover name must be a PNG filename.");
-		}
-
-		const directory = asset.kind === "cover" ? "covers" : "lxns-icons";
-		return `static-assets/${directory}/${name}`;
-	}
-
-	staticAssetConfiguration(): StaticAssetConfiguration | null {
-		if (!this.isStaticBundleStorageConfigured()) {
-			return null;
-		}
-		const coverFallbackBaseUrl = this.staticAssetPublicBaseUrl("covers");
-		const presetAvatarFallbackBaseUrl = this.staticAssetPublicBaseUrl("lxns-icons");
-		const coverBaseUrl = this.transformedStaticAssetBaseUrl("covers");
-		const presetAvatarBaseUrl = this.transformedStaticAssetBaseUrl("lxns-icons");
-		if (!coverBaseUrl || !coverFallbackBaseUrl || !presetAvatarBaseUrl || !presetAvatarFallbackBaseUrl) {
-			return null;
-		}
-		return {
-			coverBaseUrl,
-			coverFallbackBaseUrl,
-			presetAvatarBaseUrl,
-			presetAvatarFallbackBaseUrl,
-		};
-	}
-
-	async prepareStaticAssetUploads(assets: StaticAssetReference[]) {
-		const { client, signingClient, bucket } = this.requireStaticBundleStorage();
-		const uploads = await this.mapWithConcurrency(assets, StorageService.STATIC_ASSET_UPLOAD_CONCURRENCY, async (asset) => {
-			const key = this.staticAssetObjectKey(asset);
-			if (await this.objectExists(client, bucket, key)) {
-				return null;
-			}
-
-			const command = new PutObjectCommand({
-				Bucket: bucket,
-				Key: key,
-				ContentType: StorageService.STATIC_ASSET_CONTENT_TYPE,
-				CacheControl: StorageService.STATIC_ASSET_CACHE_CONTROL,
-			});
-			const uploadUrl = await getSignedUrl(signingClient, command, { expiresIn: 900 });
-			return {
-				...asset,
-				key,
-				uploadUrl,
-				contentType: StorageService.STATIC_ASSET_CONTENT_TYPE,
-				cacheControl: StorageService.STATIC_ASSET_CACHE_CONTROL,
-			};
-		});
-		return uploads.filter((upload): upload is NonNullable<typeof upload> => upload !== null);
-	}
-
-	async createStaticBundleUploadUrl(
-		version: string,
-		md5: string,
-	): Promise<{ key: string; uploadUrl: string; contentType: string; cacheControl: string }> {
-		const { signingClient, bucket } = this.requireStaticBundleStorage();
-		const key = this.staticBundleObjectKey(version, md5);
-		const command = new PutObjectCommand({
-			Bucket: bucket,
-			Key: key,
-			ContentType: StorageService.STATIC_BUNDLE_CONTENT_TYPE,
-			CacheControl: StorageService.STATIC_BUNDLE_CACHE_CONTROL,
-		});
-		const uploadUrl = await getSignedUrl(signingClient, command, { expiresIn: 600 });
-		return {
-			key,
-			uploadUrl,
-			contentType: StorageService.STATIC_BUNDLE_CONTENT_TYPE,
-			cacheControl: StorageService.STATIC_BUNDLE_CACHE_CONTROL,
-		};
-	}
-
-	async putStaticBundleArtifact(key: string, body: string) {
-		const { client, bucket } = this.requireStaticBundleStorage();
-		await client.send(
-			new PutObjectCommand({
-				Bucket: bucket,
-				Key: key,
-				Body: body,
-				ContentType: StorageService.STATIC_BUNDLE_CONTENT_TYPE,
-				CacheControl: StorageService.STATIC_BUNDLE_CACHE_CONTROL,
-			}),
-		);
-	}
-
-	async getStaticBundleArtifact(key: string) {
-		const { client, bucket } = this.requireStaticBundleStorage();
-		const object = await this.getObjectFromBucket(
-			client,
-			bucket,
-			key,
-			"static_bundle_object_not_found",
-			"Static bundle object not found.",
-		);
-		return new Response(object.body).text();
-	}
-
-	async deleteStaticBundleArtifact(key: string) {
-		const { client, bucket } = this.requireStaticBundleStorage();
-		await client.send(
-			new DeleteObjectCommand({
-				Bucket: bucket,
-				Key: key,
-			}),
-		);
-	}
-
-	staticBundlePublicUrl(key: string): string | null {
-		const baseUrl = this.env.S3_STATIC_BUNDLE_PUBLIC_BASE_URL;
-		if (!baseUrl) {
-			return null;
-		}
-		const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-		const encodedKey = key
-			.split("/")
-			.map((segment) => encodeURIComponent(segment))
-			.join("/");
-		return new URL(encodedKey, normalizedBaseUrl).toString();
-	}
-
-	private staticAssetPublicBaseUrl(directory: "covers" | "lxns-icons") {
-		return this.staticBundlePublicUrl(`static-assets/${directory}/`);
-	}
-
-	private transformedStaticAssetBaseUrl(directory: "covers" | "lxns-icons") {
-		const publicBaseUrl = this.env.S3_STATIC_BUNDLE_PUBLIC_BASE_URL;
-		if (!publicBaseUrl) {
-			return null;
-		}
-		const publicBase = new URL(publicBaseUrl.endsWith("/") ? publicBaseUrl : `${publicBaseUrl}/`);
-		const sourcePrefix = `${publicBase.pathname.replace(/^\/+|\/+$/gu, "")}/static-assets/${directory}/`.replace(/^\//u, "");
-		return new URL(
-			`cdn-cgi/image/format=avif,quality=95,fit=scale-down/${sourcePrefix}`,
-			publicBase.origin,
-		).toString();
-	}
-
 	async deleteAvatar(profileId: string) {
 		if (!this.client) {
 			throw new AppError(500, "storage_not_configured", "S3 storage is not configured.");
@@ -295,30 +119,6 @@ export class StorageService {
 			}
 			throw error;
 		}
-	}
-
-	private async objectExists(client: S3Client, bucket: string, key: string) {
-		try {
-			await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
-			return true;
-		} catch (error) {
-			if (this.readHttpStatus(error) === 404) {
-				return false;
-			}
-			throw error;
-		}
-	}
-
-	private requireStaticBundleStorage() {
-		const bucket = this.env.S3_STATIC_BUNDLE_BUCKET;
-		if (!this.client || !this.signingClient || !bucket || !this.env.S3_STATIC_BUNDLE_PUBLIC_BASE_URL) {
-			throw new AppError(500, "static_bundle_storage_not_configured", "Static bundle R2 storage is not configured.");
-		}
-		return {
-			client: this.client,
-			signingClient: this.signingClient,
-			bucket,
-		};
 	}
 
 	private async toBodyInit(body: unknown): Promise<BodyInit> {
@@ -400,20 +200,6 @@ export class StorageService {
 
 	private isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
 		return typeof value === "object" && value !== null && Symbol.asyncIterator in value;
-	}
-
-	private async mapWithConcurrency<T, R>(items: T[], limit: number, operation: (item: T) => Promise<R>): Promise<R[]> {
-		const results = new Array<R>(items.length);
-		let nextIndex = 0;
-		const worker = async () => {
-			while (nextIndex < items.length) {
-				const index = nextIndex;
-				nextIndex += 1;
-				results[index] = await operation(items[index] as T);
-			}
-		};
-		await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-		return results;
 	}
 
 	private readHttpStatus(error: unknown): number | null {

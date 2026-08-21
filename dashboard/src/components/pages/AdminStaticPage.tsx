@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
@@ -27,20 +26,13 @@ type StaticBundle = {
 	md5: string;
 	active: boolean;
 	createdAt: string;
-};
-
-type StaticBundleSchedule = {
-	enabled: boolean;
-	intervalHours: number;
-	cronExpression: string;
+	manifestUrl?: string | null;
+	bundleUrl?: string | null;
 };
 
 type AdminStaticPageProps = {
 	staticSources: StaticSource[];
 	staticBundles: StaticBundle[];
-	staticBundleSchedule: StaticBundleSchedule | null;
-	onBuildBundle: () => Promise<boolean>;
-	onUpdateBundleSchedule: (input: { enabled: boolean; intervalHours: number }) => void | Promise<void>;
 	onReloadStatic: () => void | Promise<void>;
 	onToggleSource: (source: StaticSource) => void | Promise<void>;
 	onEditSourceUrl: (source: StaticSource, nextUrl: string, nextExtraUrl?: string) => void | Promise<void>;
@@ -49,9 +41,6 @@ type AdminStaticPageProps = {
 export function AdminStaticPage({
 	staticSources,
 	staticBundles,
-	staticBundleSchedule,
-	onBuildBundle,
-	onUpdateBundleSchedule,
 	onReloadStatic,
 	onToggleSource,
 	onEditSourceUrl,
@@ -59,67 +48,10 @@ export function AdminStaticPage({
 	const { t } = useTranslation("adminStatic");
 	const sourcesPagination = useTablePagination(staticSources);
 	const bundlesPagination = useTablePagination(staticBundles);
-	const [buildState, setBuildState] = useState<"idle" | "running" | "succeeded" | "failed">("idle");
-	const [buildProgress, setBuildProgress] = useState(0);
 	const [editingSource, setEditingSource] = useState<StaticSource | null>(null);
 	const [editingSourceUrl, setEditingSourceUrl] = useState("");
 	const [editingSourceExtraUrl, setEditingSourceExtraUrl] = useState("");
-	const [scheduleEnabledDraft, setScheduleEnabledDraft] = useState(staticBundleSchedule?.enabled ?? true);
-	const [scheduleIntervalDraft, setScheduleIntervalDraft] = useState(String(staticBundleSchedule?.intervalHours ?? 6));
 	const { confirm, confirmDialogNode } = useConfirmDialog();
-
-	useEffect(() => {
-		if (!staticBundleSchedule) {
-			return;
-		}
-		setScheduleEnabledDraft(staticBundleSchedule.enabled);
-		setScheduleIntervalDraft(String(staticBundleSchedule.intervalHours));
-	}, [staticBundleSchedule]);
-
-	const normalizedScheduleInterval = Math.trunc(Number(scheduleIntervalDraft));
-	const scheduleIntervalValid = Number.isFinite(normalizedScheduleInterval) && normalizedScheduleInterval >= 1;
-	const scheduleReady = staticBundleSchedule !== null;
-	const scheduleDirty = staticBundleSchedule
-		? scheduleEnabledDraft !== staticBundleSchedule.enabled || normalizedScheduleInterval !== staticBundleSchedule.intervalHours
-		: true;
-	const buildRunning = buildState === "running";
-
-	useEffect(() => {
-		if (!buildRunning) {
-			return;
-		}
-		const timer = window.setInterval(() => {
-			setBuildProgress((previous) => {
-				const next =
-					previous < 70 ? previous + 6 : previous < 85 ? previous + 3 : previous < 93 ? previous + 1.2 : previous + 0.4;
-				return Math.min(95, next);
-			});
-		}, 400);
-
-		return () => {
-			window.clearInterval(timer);
-		};
-	}, [buildRunning]);
-
-	const handleBuildBundle = async () => {
-		if (buildRunning) {
-			return;
-		}
-		const confirmed = await confirm({
-			title: t("btnForceBuild"),
-			description: t("descForceBuild"),
-			confirmText: t("confirmBuild"),
-		});
-		if (!confirmed) {
-			return;
-		}
-		setBuildState("running");
-		setBuildProgress(8);
-
-		const success = await onBuildBundle();
-		setBuildProgress(100);
-		setBuildState(success ? "succeeded" : "failed");
-	};
 
 	const handleToggleSource = async (source: StaticSource) => {
 		const enableAction = source.enabled ? t("actionDisable") : t("actionEnable");
@@ -161,113 +93,14 @@ export function AdminStaticPage({
 		setEditingSource(null);
 	};
 
-	const handleUpdateBundleSchedule = async () => {
-		if (!scheduleIntervalValid) {
-			return;
-		}
-		const confirmed = await confirm({
-			title: t("updateScheduleTitle"),
-			description: scheduleEnabledDraft
-				? t("enableScheduleDesc", { intervalHours: normalizedScheduleInterval })
-				: t("disableScheduleDesc"),
-			confirmText: t("confirmUpdate"),
-			tone: scheduleEnabledDraft ? "default" : "destructive",
-		});
-		if (!confirmed) {
-			return;
-		}
-		await onUpdateBundleSchedule({
-			enabled: scheduleEnabledDraft,
-			intervalHours: normalizedScheduleInterval,
-		});
-	};
-
 	return (
 		<div className="flex min-w-0 flex-col gap-4">
 			<div className="flex flex-wrap gap-2">
-				<Button className="h-9 w-full sm:w-auto" onClick={() => void handleBuildBundle()} disabled={buildRunning}>
-					{buildRunning ? t("btnBuilding") : t("btnForceBuild")}
-				</Button>
-				<Button
-					className="h-9 w-full sm:w-auto"
-					variant="outline"
-					onClick={() => void onReloadStatic()}
-					disabled={buildRunning}
-				>
+				<Button className="h-9 w-full sm:w-auto" variant="outline" onClick={() => void onReloadStatic()}>
 					<RefreshCwIcon data-icon="inline-start" />
 					{t("btnRefresh")}
 				</Button>
 			</div>
-
-			{buildState !== "idle" ? (
-				<section className="flex flex-col gap-2">
-					<div className="flex items-center justify-between">
-						<p className="text-xs font-medium">{t("buildProgressTitle")}</p>
-						<p className="text-xs tabular-nums text-muted-foreground">
-							{t("buildProgressPercent", { value: Math.round(buildProgress) })}
-						</p>
-					</div>
-					<div
-						className="h-2 w-full overflow-hidden rounded-full bg-muted"
-						role="progressbar"
-						aria-valuemin={0}
-						aria-valuemax={100}
-						aria-valuenow={Math.round(buildProgress)}
-					>
-						<div
-							className={`h-full transition-[width] duration-300 ${buildState === "failed" ? "bg-destructive" : "bg-primary"}`}
-							style={{ width: `${Math.max(0, Math.min(100, buildProgress))}%` }}
-						/>
-					</div>
-					<p className={`text-xs ${buildState === "failed" ? "text-destructive" : "text-muted-foreground"}`}>
-						{buildState === "running"
-							? t("buildProgressRunning")
-							: buildState === "succeeded"
-								? t("buildProgressSuccess")
-								: t("buildProgressFailed")}
-					</p>
-				</section>
-			) : null}
-
-			<Card size="sm">
-				<CardHeader>
-					<CardTitle>{t("scheduleSectionTitle")}</CardTitle>
-					<CardDescription>{t("scheduleSectionDesc")}</CardDescription>
-				</CardHeader>
-				<CardContent className="flex flex-col gap-3">
-					<div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_176px_auto] md:items-end">
-						<div className="flex h-9 items-center justify-between gap-3">
-							<span className="text-sm">{t("enableAutoBuild")}</span>
-							<Switch checked={scheduleEnabledDraft} onCheckedChange={setScheduleEnabledDraft} disabled={!scheduleReady} />
-						</div>
-						<Field>
-							<FieldLabel htmlFor="static-bundle-interval-hours">{t("intervalHours")}</FieldLabel>
-							<Input
-								id="static-bundle-interval-hours"
-								type="number"
-								min={1}
-								step={1}
-								value={scheduleIntervalDraft}
-								onChange={(event) => setScheduleIntervalDraft(event.target.value)}
-								disabled={!scheduleReady}
-							/>
-						</Field>
-						<Button
-							className="h-9 w-full md:w-auto"
-							onClick={() => void handleUpdateBundleSchedule()}
-							disabled={!scheduleReady || !scheduleDirty || !scheduleIntervalValid}
-						>
-							{t("saveSchedule")}
-						</Button>
-					</div>
-					<p className="text-xs text-muted-foreground">
-						{t("currentConfig")}
-						{staticBundleSchedule
-							? `${staticBundleSchedule.enabled ? t("enabled") : t("disabled")}${t("scheduleTemplate", { intervalHours: staticBundleSchedule.intervalHours, cronExpression: staticBundleSchedule.cronExpression })}`
-							: t("loading")}
-					</p>
-				</CardContent>
-			</Card>
 
 			<Card size="sm">
 				<CardHeader>
@@ -362,7 +195,20 @@ export function AdminStaticPage({
 							<div className="-mt-1 divide-y divide-border/60 md:hidden">
 								{bundlesPagination.pagedItems.map((bundle) => (
 									<article key={bundle.id} className="py-3">
-										<p className="text-sm font-medium">{bundle.version}</p>
+										<p className="text-sm font-medium">
+											{bundle.manifestUrl ? (
+												<a
+													className="underline-offset-4 hover:underline"
+													href={bundle.manifestUrl}
+													target="_blank"
+													rel="noreferrer"
+												>
+													{bundle.version}
+												</a>
+											) : (
+												bundle.version
+											)}
+										</p>
 										<p className="mt-1 break-all text-xs text-muted-foreground">MD5：{bundle.md5}</p>
 										<div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
 											<span>{bundle.active ? t("statusActive") : t("statusInactive")}</span>
@@ -385,8 +231,34 @@ export function AdminStaticPage({
 									<TableBody>
 										{bundlesPagination.pagedItems.map((bundle) => (
 											<TableRow key={bundle.id}>
-												<TableCell>{bundle.version}</TableCell>
-												<TableCell className="max-w-[260px] truncate">{bundle.md5}</TableCell>
+												<TableCell>
+													{bundle.manifestUrl ? (
+														<a
+															className="underline-offset-4 hover:underline"
+															href={bundle.manifestUrl}
+															target="_blank"
+															rel="noreferrer"
+														>
+															{bundle.version}
+														</a>
+													) : (
+														bundle.version
+													)}
+												</TableCell>
+												<TableCell className="max-w-[260px] truncate">
+													{bundle.bundleUrl ? (
+														<a
+															className="underline-offset-4 hover:underline"
+															href={bundle.bundleUrl}
+															target="_blank"
+															rel="noreferrer"
+														>
+															{bundle.md5}
+														</a>
+													) : (
+														bundle.md5
+													)}
+												</TableCell>
 												<TableCell>{bundle.active ? t("yes") : t("no")}</TableCell>
 												<TableCell>{new Date(bundle.createdAt).toLocaleString()}</TableCell>
 											</TableRow>

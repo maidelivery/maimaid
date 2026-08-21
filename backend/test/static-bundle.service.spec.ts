@@ -1,121 +1,123 @@
 import "reflect-metadata";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { StaticBundleService } from "../src/services/static-bundle.service.js";
 import { createStaticBundleArtifact } from "../src/services/static-bundle.utils.js";
 
 const md5 = "0123456789abcdef0123456789abcdef";
+const version = "bundle-1786852800000";
+const createdAt = new Date("2026-08-16T04:00:00.000Z");
+const manifestUrl = "https://static.example.com/manifest.json";
+const bundleUrl = `https://static.example.com/bundles/${md5}.json`;
 
-const makeService = (database: object, storage: object) =>
-	new StaticBundleService(database as never, {} as never, {} as never, {} as never, storage as never);
+afterEach(() => {
+	vi.unstubAllGlobals();
+});
 
-describe("StaticBundleService R2 publishing", () => {
-	it("includes the active bundle R2 URL in the manifest", async () => {
-		const bundle = {
-			version: "bundle-1786852800000",
-			md5,
-			objectKey: `static-bundles/bundle-1786852800000-${md5}.json`,
-			createdAt: new Date("2026-08-16T04:00:00.000Z"),
+describe("StaticBundleService Worker publications", () => {
+	it("verifies the public artifact, applies its catalog, and records the publication", async () => {
+		const payload = { resources: { data_json: { songs: [] } } };
+		const artifact = createStaticBundleArtifact(version, md5, createdAt, payload, { data_json: { url: "source" } });
+		const manifest = { schemaVersion: 1, version, md5, createdAt: createdAt.toISOString(), bundle: `/bundles/${md5}.json` };
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValueOnce(Response.json(manifest)).mockResolvedValueOnce(Response.json(artifact)),
+		);
+
+		const stored = { id: 1n, version, md5, manifestUrl, bundleUrl, active: true, createdAt };
+		const transaction = {
+			staticBundle: {
+				updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+				upsert: vi.fn().mockResolvedValue(stored),
+			},
 		};
 		const database = {
 			staticBundle: {
-				findFirst: vi.fn().mockResolvedValue(bundle),
+				findUnique: vi.fn().mockResolvedValue(null),
+				findMany: vi.fn().mockResolvedValue([]),
 			},
+			$transaction: vi.fn().mockImplementation((operation: (tx: typeof transaction) => unknown) => operation(transaction)),
 		};
-		const storage = {
-			staticBundlePublicUrl: vi.fn().mockReturnValue("https://static.example.com/static-bundles/bundle.json"),
-			staticAssetConfiguration: vi.fn().mockReturnValue({
-				coverBaseUrl:
-					"https://static.example.com/cdn-cgi/image/format=avif,quality=95,fit=scale-down/static-assets/covers/",
-				coverFallbackBaseUrl: "https://static.example.com/static-assets/covers/",
-				presetAvatarBaseUrl:
-					"https://static.example.com/cdn-cgi/image/format=avif,quality=95,fit=scale-down/static-assets/lxns-icons/",
-				presetAvatarFallbackBaseUrl: "https://static.example.com/static-assets/lxns-icons/",
+		const catalog = {
+			applyCatalogData: vi.fn().mockResolvedValue({ applied: true }),
+		};
+
+		const result = await new StaticBundleService(database as never, catalog as never).recordGeneration({
+			version,
+			md5,
+			createdAt: createdAt.toISOString(),
+			manifestUrl,
+			bundleUrl,
+		});
+
+		expect(result).toEqual({ bundle: stored, created: true, catalogApplied: true });
+		expect(fetch).toHaveBeenCalledWith(
+			manifestUrl,
+			expect.objectContaining({ headers: expect.objectContaining({ accept: "application/json" }) }),
+		);
+		expect(fetch).toHaveBeenCalledWith(bundleUrl, expect.any(Object));
+		expect(catalog.applyCatalogData).toHaveBeenCalledWith(
+			payload.resources.data_json,
+			expect.objectContaining({
+				source: `static_bundle:${version}`,
+				sourceUrl: bundleUrl,
 			}),
-		};
-
-		const result = await makeService(database, storage).manifest();
-
-		expect(result).toEqual({
-			version: bundle.version,
-			md5: bundle.md5,
-			createdAt: bundle.createdAt,
-			downloadUrl: "https://static.example.com/static-bundles/bundle.json",
-			assets: storage.staticAssetConfiguration(),
-		});
+		);
+		expect(transaction.staticBundle.upsert).toHaveBeenCalledWith(
+			expect.objectContaining({
+				create: expect.objectContaining({ version, md5, manifestUrl, bundleUrl, active: true }),
+			}),
+		);
 	});
 
-	it("skips an upload when an R2-backed bundle already has the same md5", async () => {
-		const bundle = {
-			id: 1n,
-			version: "bundle-1786852800000",
+	it("rejects a public artifact whose metadata differs from the notification", async () => {
+		const artifact = createStaticBundleArtifact(
+			"bundle-1786852800001",
 			md5,
-			objectKey: `static-bundles/bundle-1786852800000-${md5}.json`,
-			createdAt: new Date("2026-08-16T04:00:00.000Z"),
-		};
-		const database = {
-			staticBundle: {
-				findFirst: vi.fn().mockResolvedValue(bundle),
-			},
-		};
-		const storage = {
-			createStaticBundleUploadUrl: vi.fn(),
-		};
+			createdAt,
+			{ resources: { data_json: { songs: [] } } },
+			{},
+		);
+		const manifest = { schemaVersion: 1, version, md5, createdAt: createdAt.toISOString(), bundle: `/bundles/${md5}.json` };
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValueOnce(Response.json(manifest)).mockResolvedValueOnce(Response.json(artifact)),
+		);
+		const database = { staticBundle: {} };
+		const catalog = { applyCatalogData: vi.fn() };
 
-		const result = await makeService(database, storage).prepareBundleUpload(md5);
-
-		expect(result).toEqual({ uploadRequired: false, bundle });
-		expect(storage.createStaticBundleUploadUrl).not.toHaveBeenCalled();
+		await expect(
+			new StaticBundleService(database as never, catalog as never).recordGeneration({
+				version,
+				md5,
+				createdAt: createdAt.toISOString(),
+				manifestUrl,
+				bundleUrl,
+			}),
+		).rejects.toMatchObject({ code: "static_bundle_artifact_mismatch" });
+		expect(catalog.applyCatalogData).not.toHaveBeenCalled();
 	});
 
-	it("issues an upload URL for a new bundle", async () => {
-		const database = {
-			staticBundle: {
-				findFirst: vi.fn().mockResolvedValue(null),
-			},
+	it("rejects a manifest whose bundle URL differs from the notification", async () => {
+		const manifest = {
+			schemaVersion: 1,
+			version,
+			md5,
+			createdAt: createdAt.toISOString(),
+			bundle: "/bundles/other.json",
 		};
-		const storage = {
-			createStaticBundleUploadUrl: vi.fn().mockImplementation((version: string, hash: string) => ({
-				key: `static-bundles/${version}-${hash}.json`,
-				uploadUrl: "https://r2.example/upload",
-				contentType: "application/json",
-				cacheControl: "public, max-age=31536000, immutable",
-			})),
-		};
+		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(manifest)));
+		const catalog = { applyCatalogData: vi.fn() };
 
-		const result = await makeService(database, storage).prepareBundleUpload(md5);
-
-		expect(result.uploadRequired).toBe(true);
-		if (result.uploadRequired) {
-			expect(result.version).toMatch(/^bundle-\d+$/u);
-			expect(result.objectKey).toBe(`static-bundles/${result.version}-${md5}.json`);
-			expect(result.uploadUrl).toBe("https://r2.example/upload");
-		}
-	});
-
-	it("backfills the R2 object key on an existing database-only bundle", async () => {
-		const version = "bundle-1786852800000";
-		const objectKey = `static-bundles/${version}-${md5}.json`;
-		const createdAt = new Date("2026-08-16T04:00:00.000Z");
-		const existing = { id: 1n, version, md5, objectKey: null, createdAt };
-		const updated = { ...existing, objectKey };
-		const artifact = createStaticBundleArtifact(version, md5, createdAt, { resources: { data_json: { songs: [] } } }, {});
-		const database = {
-			staticBundle: {
-				findFirst: vi.fn().mockResolvedValue(existing),
-				update: vi.fn().mockResolvedValue(updated),
-			},
-		};
-		const storage = {
-			staticBundleObjectKey: vi.fn().mockReturnValue(objectKey),
-			getStaticBundleArtifact: vi.fn().mockResolvedValue(JSON.stringify(artifact)),
-		};
-
-		const result = await makeService(database, storage).publishUploadedBundle({ version, md5, objectKey });
-
-		expect(result).toEqual({ bundle: updated, created: false });
-		expect(database.staticBundle.update).toHaveBeenCalledWith({
-			where: { id: existing.id },
-			data: { objectKey },
-		});
+		await expect(
+			new StaticBundleService({} as never, catalog as never).recordGeneration({
+				version,
+				md5,
+				createdAt: createdAt.toISOString(),
+				manifestUrl,
+				bundleUrl,
+			}),
+		).rejects.toMatchObject({ code: "static_bundle_manifest_mismatch" });
+		expect(fetch).toHaveBeenCalledTimes(1);
+		expect(catalog.applyCatalogData).not.toHaveBeenCalled();
 	});
 });

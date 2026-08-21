@@ -15,6 +15,13 @@ function resolveBackendOrigin() {
 }
 
 const backendOrigin = resolveBackendOrigin();
+const staticAssetsOrigin = (() => {
+	try {
+		return new URL(process.env.NEXT_PUBLIC_STATIC_ASSETS_URL ?? "").origin;
+	} catch {
+		return null;
+	}
+})();
 const connectSources = ["'self'"];
 // Profile avatars are streamed from the backend (`GET /v1/profiles/:id/avatar`),
 // so the backend origin has to be an allowed image source too.
@@ -22,6 +29,10 @@ const imageSources = ["'self'", "data:", "https://dp4p6x0xfi5o9.cloudfront.net",
 if (backendOrigin) {
 	connectSources.push(backendOrigin);
 	imageSources.push(backendOrigin);
+}
+if (staticAssetsOrigin) {
+	connectSources.push(staticAssetsOrigin);
+	imageSources.push(staticAssetsOrigin);
 }
 
 const contentSecurityPolicy = [

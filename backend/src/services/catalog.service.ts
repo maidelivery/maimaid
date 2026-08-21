@@ -312,11 +312,7 @@ export class CatalogService {
 		}
 
 		const songIdentifierByNameMap = await this.getSongIdentifierByNameMap();
-		const lxnsRowsFromBundle = await this.listLxnsAliasesFromBundle(songIdentifier, songIdentifierByNameMap);
-		const lxnsRows =
-			lxnsRowsFromBundle.length > 0
-				? lxnsRowsFromBundle
-				: await this.listLxnsAliasesFromRemote(songIdentifier, songIdentifierByNameMap);
+		const lxnsRows = await this.listLxnsAliasesFromRemote(songIdentifier, songIdentifierByNameMap);
 		if (lxnsRows.length === 0) {
 			return baseRows;
 		}
@@ -363,14 +359,7 @@ export class CatalogService {
 			return versionsFromSnapshot;
 		}
 
-		const activeBundle = await this.prisma.staticBundle.findFirst({
-			where: { active: true },
-			orderBy: { createdAt: "desc" },
-			select: { payloadJson: true },
-		});
-		const bundlePayload = this.toRecord(activeBundle?.payloadJson);
-		const resources = this.toRecord(bundlePayload?.resources);
-		return this.extractCatalogVersionItems(resources?.data_json);
+		return [];
 	}
 
 	async applyCatalogData(
@@ -662,61 +651,6 @@ export class CatalogService {
 		return lowercased;
 	}
 
-	private async listLxnsAliasesFromBundle(songIdentifier: string | undefined, songIdentifierByNameMap: Map<string, string>) {
-		const activeBundle = await this.prisma.staticBundle.findFirst({
-			where: { active: true },
-			orderBy: { createdAt: "desc" },
-			select: { payloadJson: true },
-		});
-		if (!activeBundle) {
-			return [];
-		}
-
-		const payload = activeBundle.payloadJson as Record<string, unknown>;
-		const resources = this.toRecord(payload.resources);
-		const lxnsPayload = resources ? (resources.lxns_aliases as unknown) : null;
-		const songIdNameMap = this.extractSongIdNameMap(resources ? resources.songid_json : null);
-		const rawItems = this.extractLxnsItems(lxnsPayload);
-		if (rawItems.length === 0) {
-			return [];
-		}
-		const knownSongIdentifiers = new Set(songIdentifierByNameMap.values());
-
-		const now = new Date();
-		const rows: CatalogAliasRow[] = [];
-		for (const item of rawItems) {
-			const candidateIdentifiers = this.resolveLxnsSongIdentifiers(item.song_id, songIdNameMap, songIdentifierByNameMap);
-			if (candidateIdentifiers.length === 0) {
-				continue;
-			}
-			const matchedIdentifier = songIdentifier
-				? candidateIdentifiers.find((value) => value === songIdentifier)
-				: (candidateIdentifiers.find((value) => knownSongIdentifiers.has(value)) ?? candidateIdentifiers[0]);
-			if (!matchedIdentifier) {
-				continue;
-			}
-			const aliasList = Array.isArray(item.aliases) ? item.aliases : [];
-			for (const aliasTextRaw of aliasList) {
-				const aliasText = aliasTextRaw.trim();
-				const aliasNorm = this.normalizeAlias(aliasText);
-				if (!aliasText || !aliasNorm) {
-					continue;
-				}
-				rows.push({
-					id: `lxns:${matchedIdentifier}:${aliasNorm}`,
-					songIdentifier: matchedIdentifier,
-					aliasText,
-					aliasNorm,
-					source: "lxns",
-					status: "approved",
-					createdAt: now,
-					updatedAt: now,
-				});
-			}
-		}
-		return rows;
-	}
-
 	private async listLxnsAliasesFromRemote(songIdentifier: string | undefined, songIdentifierByNameMap: Map<string, string>) {
 		try {
 			const source = await this.prisma.staticSource.findUnique({
@@ -916,18 +850,6 @@ export class CatalogService {
 	}
 
 	private async loadSongIdNameMap() {
-		const activeBundle = await this.prisma.staticBundle.findFirst({
-			where: { active: true },
-			orderBy: { createdAt: "desc" },
-			select: { payloadJson: true },
-		});
-		const payload = activeBundle?.payloadJson as Record<string, unknown> | undefined;
-		const resources = payload ? this.toRecord(payload.resources) : null;
-		const fromBundle = this.extractSongIdNameMap(resources ? resources.songid_json : null);
-		if (fromBundle.size > 0) {
-			return fromBundle;
-		}
-
 		try {
 			const source = await this.prisma.staticSource.findUnique({
 				where: { category: "songid_json" },

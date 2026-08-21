@@ -60,13 +60,8 @@ class PresetAvatarRepository(
     ) = imageStore.downloadMissing(avatars, onProgress, download)
 
     private suspend fun fetchRemoteAvatars(): List<PresetAvatar> {
-        val primary = runCatching {
-            apiClient.requestAbsolute(LxnsIconListUrl).toAvatars()
-        }.getOrDefault(emptyList())
-        if (primary.isNotEmpty()) return primary
-
         return runCatching {
-            apiClient.request("v1/catalog/icons").toAvatars()
+            apiClient.requestAbsolute(LxnsIconListUrl).toAvatars()
         }.getOrDefault(emptyList())
     }
 
