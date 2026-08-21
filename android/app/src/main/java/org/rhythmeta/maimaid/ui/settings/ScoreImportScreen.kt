@@ -16,13 +16,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.Login
 import androidx.compose.material.icons.rounded.Merge
 import androidx.compose.material.icons.rounded.OpenInBrowser
 import androidx.compose.material.icons.rounded.Refresh
@@ -229,7 +229,7 @@ fun LxnsImportScreen(
                     )
                     ImportPrimaryButton(
                         title = stringResource(R.string.import_lxns_connect_import),
-                        icon = Icons.Rounded.Login,
+                        icon = Icons.AutoMirrored.Rounded.Login,
                         busy = state.isBusy,
                         enabled = state.profile != null && state.lxnsAuthorizationCode.isNotBlank(),
                         onClick = viewModel::exchangeLxnsCodeAndImport,

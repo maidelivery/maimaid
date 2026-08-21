@@ -15,14 +15,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Login
+import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.AddCircleOutline
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.Login
-import androidx.compose.material.icons.rounded.Logout
 import androidx.compose.material.icons.rounded.Merge
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Sync
@@ -169,7 +169,7 @@ fun BackendAuthScreen(container: AppContainer) {
                 item {
                     CloudSection(stringResource(R.string.cloud_sign_in_section)) {
                         CloudActionRow(
-                            icon = Icons.Rounded.Login,
+                            icon = Icons.AutoMirrored.Rounded.Login,
                             title = stringResource(R.string.cloud_login),
                             enabled = operation == null,
                             onClick = { openWebAuth(context, container, BackendWebAuthMode.Login, ::showMessage) },
@@ -250,7 +250,7 @@ fun BackendAuthScreen(container: AppContainer) {
                             contentColor = MiuixTheme.colorScheme.onErrorContainer,
                         ),
                     ) {
-                        Icon(Icons.Rounded.Logout, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.cloud_logout))
                     }
