@@ -3,6 +3,10 @@
 `backend/scripts/build-static-bundle.ts` generates this Worker's `public/` tree.
 The deployment is atomic: clients read `manifest.json`, then download its
 content-addressed bundle and image assets from the same Worker origin.
+Image URLs use Cloudflare's `/cdn-cgi/image/f=auto/` transformation and retain
+the original Worker paths as fallbacks. Native clients advertise only formats
+their platform image decoder supports; browsers provide their own image Accept
+header.
 
 Required build environment:
 

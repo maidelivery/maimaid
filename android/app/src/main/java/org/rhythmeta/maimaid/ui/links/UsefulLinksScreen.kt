@@ -154,7 +154,7 @@ private fun UsefulLinkRow(link: UsefulLink, onClick: () -> Unit) {
 private fun usefulLinks(): List<UsefulLink> = listOf(
     UsefulLink(R.string.links_nearcade_title, R.string.links_nearcade_subtitle, "https://nearcade.phizone.cn", Icons.Rounded.LocationOn, Color(0xFFE64A4A)),
     UsefulLink(R.string.links_dx_jp_title, R.string.links_dx_jp_subtitle, "https://maimai.sega.jp/", Icons.Rounded.Language, Color(0xFF2F78D0)),
-    UsefulLink(R.string.links_df_title, R.string.links_df_subtitle, "https://www.maimai.diving-fish.com/", Icons.Rounded.Insights, Color(0xFFE87500)),
+    UsefulLink(R.string.links_df_title, R.string.links_df_subtitle, "https://maimai.diving-fish.com/", Icons.Rounded.Insights, Color(0xFFE87500)),
     UsefulLink(R.string.links_lxns_title, R.string.links_lxns_subtitle, "https://maimai.lxns.net/", Icons.Rounded.Insights, Color(0xFF8A4FB8)),
     UsefulLink(R.string.links_gamerch_title, R.string.links_gamerch_subtitle, "https://maimai.gamerch.com/", Icons.Rounded.Book, Color(0xFF2E9D61)),
     UsefulLink(R.string.links_dxrating_title, R.string.links_dxrating_subtitle, "https://dxrating.net/", Icons.Rounded.Book, Color(0xFF168E9A)),

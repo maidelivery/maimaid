@@ -8,7 +8,7 @@ const USERNAME_PATTERN = /^[\p{L}\p{N}_.-]+$/u;
 export const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "").trim().replace(/\/+$/u, "");
 export const STATIC_ASSETS_URL = (process.env.NEXT_PUBLIC_STATIC_ASSETS_URL ?? "").trim().replace(/\/+$/u, "");
 export const LXNS_OAUTH_CLIENT_ID = (process.env.NEXT_PUBLIC_LXNS_CLIENT_ID ?? "").trim();
-export const COVER_BASE_URL = `${STATIC_ASSETS_URL}/covers`;
+export const COVER_BASE_URL = `${STATIC_ASSETS_URL}/cdn-cgi/image/f=auto/covers`;
 export const SONG_FAVORITE_STORAGE_KEY = "dashboard.songFavorites";
 export const SONG_SORT_OPTION_STORAGE_KEY = "dashboard.songSortOption";
 export const SONG_SORT_ASC_STORAGE_KEY = "dashboard.songSortAscending";

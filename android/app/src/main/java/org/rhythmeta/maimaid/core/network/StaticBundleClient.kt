@@ -1,5 +1,6 @@
 package org.rhythmeta.maimaid.core.network
 
+import android.graphics.BitmapFactory
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -108,6 +109,9 @@ class StaticBundleClient(
                 }
             }
             check(temporary.length() > 0L) { emptyResponseMessage }
+            val imageBounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(temporary.path, imageBounds)
+            check(imageBounds.outWidth > 0 && imageBounds.outHeight > 0) { "Unsupported image response" }
             check(temporary.renameTo(destination)) { "Unable to cache cover" }
         } finally {
             connection.disconnect()

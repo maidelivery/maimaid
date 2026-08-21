@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 private struct BackendScoreSyncEntry: Encodable {
     let songIdentifier: String?
@@ -49,7 +50,18 @@ enum BackendScoreSyncService {
             throw URLError(.badURL)
         }
 
-        try await BackendIncrementalSyncService.pushProfileUpdate(profile: profile, clientUpdatedAt: nil)
+        do {
+            try await BackendIncrementalSyncService.pushProfileUpdate(profile: profile, clientUpdatedAt: nil)
+        } catch let error as BackendAPIError where error.code == "server_newer" {
+            guard let context = profile.modelContext else {
+                throw error
+            }
+            try await BackendIncrementalSyncService.pullUpdates(
+                context: context,
+                profileId: profile.id,
+                force: true
+            )
+        }
     }
 
     static func uploadScore(profile: UserProfile, sheet: Sheet, score: Score) async throws {

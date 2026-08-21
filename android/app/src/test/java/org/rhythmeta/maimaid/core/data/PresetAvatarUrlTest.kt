@@ -24,7 +24,7 @@ class PresetAvatarUrlTest {
     }
 
     @Test
-    fun `uses manifest R2 AVIF urls with raw R2 and upstream fallbacks`() {
+    fun `uses automatic image negotiation with raw and upstream fallbacks`() {
         val assets = StaticAssetConfiguration(
             coverBaseUrl = "https://static.example.com/cdn-cgi/image/format=avif/static-assets/covers/",
             coverFallbackBaseUrl = "https://static.example.com/static-assets/covers/",
@@ -35,7 +35,7 @@ class PresetAvatarUrlTest {
         try {
             assertEquals(
                 listOf(
-                    "https://static.example.com/cdn-cgi/image/format=avif/static-assets/covers/cover.png",
+                    "https://static.example.com/cdn-cgi/image/f=auto/static-assets/covers/cover.png",
                     "https://static.example.com/static-assets/covers/cover.png",
                     "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/cover.png",
                 ),
@@ -43,7 +43,7 @@ class PresetAvatarUrlTest {
             )
             val avatarUrl = PresetAvatarUrl.forIcon(123)
             assertEquals(
-                "https://static.example.com/cdn-cgi/image/format=avif/static-assets/lxns-icons/123.png",
+                "https://static.example.com/cdn-cgi/image/f=auto/static-assets/lxns-icons/123.png",
                 avatarUrl,
             )
             assertTrue(PresetAvatarUrl.isPreset(avatarUrl))

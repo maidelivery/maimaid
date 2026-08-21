@@ -46,8 +46,8 @@ enum StaticAssetURL {
             return nil
         }
         let isLXNS = url.host == "assets2.lxns.net" && url.path.hasPrefix("/maimai/icon/")
-        let isR2 = url.path.contains("/static-assets/lxns-icons/")
-        guard isLXNS || isR2 else { return nil }
+        let isStaticWorker = url.path.contains("/lxns-icons/")
+        guard isLXNS || isStaticWorker else { return nil }
         let fileName = url.lastPathComponent
         guard fileName.hasSuffix(".png") else { return nil }
         return Int(fileName.dropLast(4))
@@ -70,14 +70,20 @@ enum StaticAssetURL {
 
     nonisolated private static func configuredURL(for key: String) -> URL? {
         guard let value = UserDefaults.standard.string(forKey: key) else { return nil }
-        return URL(string: value)
+        return URL(string: normalizedImageTransformation(value))
     }
 
     nonisolated private static func update(_ value: String?, for key: String) {
         if let value {
-            UserDefaults.standard.set(value, forKey: key)
+            UserDefaults.standard.set(normalizedImageTransformation(value), forKey: key)
         } else {
             UserDefaults.standard.removeObject(forKey: key)
         }
+    }
+
+    nonisolated private static func normalizedImageTransformation(_ value: String) -> String {
+        value
+            .replacing("/cdn-cgi/image/format=avif/", with: "/cdn-cgi/image/f=auto/")
+            .replacing("/cdn-cgi/image/f=avif/", with: "/cdn-cgi/image/f=auto/")
     }
 }

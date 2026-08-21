@@ -51,7 +51,6 @@ struct DivingFishImportView: View {
                         .disabled(isImporting || isResolvingImportConflict)
                 } else {
                     Button("import.df.oauth.connectImport", systemImage: "person.badge.key", action: startAuthorization)
-                        .buttonStyle(.borderedProminent)
                         .disabled(isImporting || isResolvingImportConflict || activeProfile == nil)
                 }
             } header: {

@@ -41,15 +41,19 @@ object StaticAssetUrls {
         val path = uri.path.orEmpty()
         val isKnownSource =
             (uri.host == "assets2.lxns.net" && path.startsWith("/maimai/icon/")) ||
-                path.contains("/static-assets/lxns-icons/")
+                path.contains("/lxns-icons/")
         if (!isKnownSource) return null
         return path.substringAfterLast('/').removeSuffix(".png").toIntOrNull()
     }
 
     private fun appending(baseUrl: String, name: String): String {
         val encodedName = URLEncoder.encode(name, Charsets.UTF_8).replace("+", "%20")
-        return "${baseUrl.trimEnd('/')}/$encodedName"
+        return "${normalizeImageTransformation(baseUrl).trimEnd('/')}/$encodedName"
     }
+
+    internal fun normalizeImageTransformation(value: String): String = value
+        .replace("/cdn-cgi/image/format=avif/", "/cdn-cgi/image/f=auto/")
+        .replace("/cdn-cgi/image/f=avif/", "/cdn-cgi/image/f=auto/")
 
     private const val LegacyCoverBaseUrl = "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/"
     private const val LegacyPresetAvatarBaseUrl = "https://assets2.lxns.net/maimai/icon/"

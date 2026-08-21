@@ -24,6 +24,8 @@ type StaticManifest = {
 	assets: {
 		coverBaseUrl: string;
 		presetAvatarBaseUrl: string;
+		coverFallbackBaseUrl: string;
+		presetAvatarFallbackBaseUrl: string;
 	};
 };
 
@@ -129,8 +131,10 @@ const writeStaticTree = async () => {
 		createdAt,
 		bundle: bundlePath,
 		assets: {
-			coverBaseUrl: `${staticAssetsBaseUrl}/covers/`,
-			presetAvatarBaseUrl: `${staticAssetsBaseUrl}/lxns-icons/`,
+			coverBaseUrl: `${staticAssetsBaseUrl}/cdn-cgi/image/f=auto/covers/`,
+			presetAvatarBaseUrl: `${staticAssetsBaseUrl}/cdn-cgi/image/f=auto/lxns-icons/`,
+			coverFallbackBaseUrl: `${staticAssetsBaseUrl}/covers/`,
+			presetAvatarFallbackBaseUrl: `${staticAssetsBaseUrl}/lxns-icons/`,
 		},
 	};
 	const bundle = { version, md5: composed.md5, createdAt, payload: composed.payload, sourceMeta: composed.sourceMeta };

@@ -1,10 +1,24 @@
 import Foundation
+import ImageIO
 import UIKit
 
 @MainActor
 class ImageDownloader {
     static let shared = ImageDownloader()
     private let fileManager = FileManager.default
+
+    nonisolated private static let imageAcceptHeader: String = {
+        let supportedTypes = Set(CGImageSourceCopyTypeIdentifiers() as? [String] ?? [])
+        var mediaTypes: [String] = []
+        if supportedTypes.contains("public.avif") {
+            mediaTypes.append("image/avif")
+        }
+        if supportedTypes.contains("org.webmproject.webp") {
+            mediaTypes.append("image/webp")
+        }
+        mediaTypes.append(contentsOf: ["image/png", "image/jpeg"])
+        return mediaTypes.joined(separator: ",")
+    }()
     
     private lazy var coversDirectory: URL = {
         let dir = URL.documentsDirectory.appending(path: "Covers", directoryHint: .isDirectory)
@@ -94,7 +108,7 @@ class ImageDownloader {
 
     private func fetchImageData(from url: URL) async throws -> (Data, UIImage) {
         var request = URLRequest(url: url)
-        request.setValue("image/avif,image/*", forHTTPHeaderField: "Accept")
+        request.setValue(Self.imageAcceptHeader, forHTTPHeaderField: "Accept")
         request.setValue(AppKeys.userAgent, forHTTPHeaderField: "User-Agent")
 
         let (data, response) = try await URLSession.shared.data(for: request)
