@@ -51,6 +51,14 @@ private struct BackendProfileDeleteResponse: Decodable {
     let profileId: String
 }
 
+private struct BackendProfileActivityPayload: Encodable {
+    let isActive: Bool
+}
+
+private struct BackendProfilePatchResponse: Decodable {
+    let profile: BackendSyncRemoteProfile
+}
+
 private struct BackendSyncPullResponse: Decodable {
     let events: [BackendSyncEvent]
     let latestRevision: String
@@ -140,6 +148,38 @@ private struct BackendSyncProfileUpsertPayload: Encodable {
     let b15RecLimit: Int
     let createdAt: Date
     let clientUpdatedAt: Date?
+}
+
+private struct BackendSyncProfileSnapshot {
+    let id: UUID
+    let name: String
+    let server: String
+    let isActive: Bool
+    let playerRating: Int
+    let plate: String?
+    let avatarUrl: String?
+    let dfUsername: String
+    let b35Count: Int
+    let b15Count: Int
+    let b35RecLimit: Int
+    let b15RecLimit: Int
+    let createdAt: Date
+
+    init(profile: UserProfile) {
+        id = profile.id
+        name = profile.name
+        server = profile.server
+        isActive = profile.isActive
+        playerRating = profile.playerRating
+        plate = profile.plate
+        avatarUrl = profile.avatarUrl
+        dfUsername = profile.dfUsername
+        b35Count = profile.b35Count
+        b15Count = profile.b15Count
+        b35RecLimit = profile.b35RecLimit
+        b15RecLimit = profile.b15RecLimit
+        createdAt = profile.createdAt
+    }
 }
 
 private struct BackendSyncScoreEntry: Encodable {
@@ -318,57 +358,107 @@ enum BackendIncrementalSyncService {
         }
     }
 
-    private static func pushProfileUpdateUnlocked(profile: UserProfile, clientUpdatedAt: Date?) async throws {
+    static func pushProfileUpdateUnlocked(profile: UserProfile, clientUpdatedAt: Date?) async throws {
         guard BackendSessionManager.shared.isAuthenticated else {
             throw BackendAPIError.unauthorized
         }
+        let profileSnapshot = BackendSyncProfileSnapshot(profile: profile)
         let profileId = profile.id.uuidString.lowercased()
         let context = profile.modelContext
         let config = context.map(ensureSyncConfig(context:))
         let knownVersion = clientUpdatedAt ?? config?.remoteProfileVersion(for: profile.id)
+        let pendingUpdateToken = config?.pendingProfileUpdateToken(for: profile.id)
 
-        var response: BackendSyncPushResponse = try await BackendAPIClient.request(
-            path: "v1/sync:push",
-            method: "POST",
-            body: BackendSyncPushPayload(
-                idempotencyKey: UUID().uuidString.lowercased(),
-                forceProfileOverwrite: false,
-                profileUpserts: [profileUpsert(profile, avatarURL: profile.avatarUrl, clientUpdatedAt: knownVersion)],
-                scoreUpserts: [],
-                playRecordUpserts: []
-            ),
-            authentication: .required
+        var response = try await pushProfileSnapshot(
+            profileSnapshot,
+            avatarURL: profileSnapshot.avatarUrl,
+            clientUpdatedAt: knownVersion
         )
         config?.setRemoteProfileVersions(response.profileVersions ?? [:])
         if let context { try context.save() }
-        try throwIfProfileConflict(response)
 
         let avatarUpload = try await BackendCloudSyncService.uploadAvatarIfNeeded(
             for: profile,
             clientUpdatedAt: response.profileVersions?[profileId] ?? knownVersion
         )
         if let avatarVersion = avatarUpload.updatedAt {
-            response = try await BackendAPIClient.request(
-                path: "v1/sync:push",
-                method: "POST",
-                body: BackendSyncPushPayload(
-                    idempotencyKey: UUID().uuidString.lowercased(),
-                    forceProfileOverwrite: false,
-                    profileUpserts: [
-                        profileUpsert(profile, avatarURL: avatarUpload.avatarURL, clientUpdatedAt: avatarVersion)
-                    ],
-                    scoreUpserts: [],
-                    playRecordUpserts: []
-                ),
-                authentication: .required
+            response = try await pushProfileSnapshot(
+                profileSnapshot,
+                avatarURL: avatarUpload.avatarURL,
+                clientUpdatedAt: avatarVersion
             )
-            try throwIfProfileConflict(response)
         }
 
         guard let context, let config else { return }
         config.setRemoteProfileVersions(response.profileVersions ?? [:])
+        if let pendingUpdateToken {
+            config.clearPendingProfileUpdate(profile.id, matching: pendingUpdateToken)
+        }
         try context.save()
+        guard config.pendingUpdatedProfileIds.isEmpty else { return }
         try await pullUpdatesUnlocked(context: context, force: false)
+    }
+
+    static func pushPendingProfileUpdateUnlocked(profileId: UUID, context: ModelContext) async throws {
+        let descriptor = FetchDescriptor<UserProfile>(
+            predicate: #Predicate<UserProfile> { $0.id == profileId }
+        )
+        guard let profile = try context.fetch(descriptor).first else {
+            let config = ensureSyncConfig(context: context)
+            config.clearPendingProfileUpdate(profileId)
+            try context.save()
+            return
+        }
+        try await pushProfileUpdateUnlocked(profile: profile, clientUpdatedAt: nil)
+    }
+
+    private static func pushProfileSnapshot(
+        _ profile: BackendSyncProfileSnapshot,
+        avatarURL: String?,
+        clientUpdatedAt: Date?
+    ) async throws -> BackendSyncPushResponse {
+        var response: BackendSyncPushResponse = try await BackendAPIClient.request(
+            path: "v1/sync:push",
+            method: "POST",
+            body: profilePushPayload(
+                profile,
+                avatarURL: avatarURL,
+                clientUpdatedAt: clientUpdatedAt
+            ),
+            authentication: .required
+        )
+
+        if let conflict = response.conflicts?.first,
+           conflict.reason == "server_newer",
+           let serverVersion = conflict.serverProfile?.updatedAt {
+            response = try await BackendAPIClient.request(
+                path: "v1/sync:push",
+                method: "POST",
+                body: profilePushPayload(
+                    profile,
+                    avatarURL: avatarURL,
+                    clientUpdatedAt: serverVersion
+                ),
+                authentication: .required
+            )
+        }
+
+        try throwIfProfileConflict(response)
+        return response
+    }
+
+    private static func profilePushPayload(
+        _ profile: BackendSyncProfileSnapshot,
+        avatarURL: String?,
+        clientUpdatedAt: Date?
+    ) -> BackendSyncPushPayload {
+        BackendSyncPushPayload(
+            idempotencyKey: UUID().uuidString.lowercased(),
+            forceProfileOverwrite: false,
+            profileUpserts: [profileUpsert(profile, avatarURL: avatarURL, clientUpdatedAt: clientUpdatedAt)],
+            scoreUpserts: [],
+            playRecordUpserts: []
+        )
     }
 
     static func pushAllLocalData(
@@ -503,6 +593,29 @@ enum BackendIncrementalSyncService {
         )
     }
 
+    private static func profileUpsert(
+        _ profile: BackendSyncProfileSnapshot,
+        avatarURL: String?,
+        clientUpdatedAt: Date?
+    ) -> BackendSyncProfileUpsertPayload {
+        BackendSyncProfileUpsertPayload(
+            profileId: profile.id.uuidString.lowercased(),
+            name: profile.name,
+            server: profile.server,
+            isActive: profile.isActive,
+            playerRating: profile.playerRating,
+            plate: profile.plate,
+            avatarUrl: avatarURL,
+            dfUsername: profile.dfUsername,
+            b35Count: profile.b35Count,
+            b15Count: profile.b15Count,
+            b35RecLimit: profile.b35RecLimit,
+            b15RecLimit: profile.b15RecLimit,
+            createdAt: profile.createdAt,
+            clientUpdatedAt: clientUpdatedAt
+        )
+    }
+
     static func pullUpdates(
         context: ModelContext,
         profileId: UUID? = nil,
@@ -529,10 +642,18 @@ enum BackendIncrementalSyncService {
             throw BackendAPIError.unauthorized
         }
         let config = ensureSyncConfig(context: context)
+        try await flushPendingProfileDeletionsUnlocked(context: context, config: config)
+        try await flushPendingProfileUpdatesUnlocked(context: context, config: config)
+        guard config.pendingUpdatedProfileIds.isEmpty else { return }
         let sinceRevision = force ? "0" : config.lastSyncRevision
         let response = try await fetchPullResponse(
             sinceRevision: sinceRevision,
             profileId: profileId
+        )
+        guard config.pendingUpdatedProfileIds.isEmpty else { return }
+        let snapshot = snapshotByRemovingProfiles(
+            response.snapshot,
+            profileIds: config.pendingDeletedProfileIds
         )
 
         let shouldRemoveLocalProfiles = removeLocalProfilesAbsentFromSnapshot && profileId == nil
@@ -540,14 +661,14 @@ enum BackendIncrementalSyncService {
             try applyProfileDeleteEvents(response.events, context: context)
         }
         try await applySnapshot(
-            response.snapshot,
+            snapshot,
             context: context,
             removeLocalProfilesAbsentFromSnapshot: shouldRemoveLocalProfiles
         )
         ScoreService.shared.repairDetachedRecordsIfNeeded(context: context, force: true)
         config.lastSyncRevision = response.latestRevision
         config.setRemoteProfileVersions(
-            Dictionary(uniqueKeysWithValues: response.snapshot.profiles.map { ($0.id.lowercased(), $0.updatedAt) })
+            Dictionary(uniqueKeysWithValues: snapshot.profiles.map { ($0.id.lowercased(), $0.updatedAt) })
         )
         try context.save()
         ScoreService.shared.invalidateAllCaches()
@@ -660,24 +781,96 @@ enum BackendIncrementalSyncService {
         ScoreService.shared.notifyScoresChanged(for: preview.profileId)
     }
 
-    static func deleteProfile(profileId: UUID, context: ModelContext) async throws {
-        try await BackendSyncOperationGate.shared.withLock {
-            try await deleteProfileUnlocked(profileId: profileId, context: context)
-        }
-    }
-
-    private static func deleteProfileUnlocked(profileId: UUID, context: ModelContext) async throws {
+    static func deleteProfileUnlocked(profileId: UUID, context: ModelContext) async throws {
         guard BackendSessionManager.shared.isAuthenticated else {
             throw BackendAPIError.unauthorized
         }
+        try await deleteRemoteProfileUnlocked(profileId: profileId)
+        let config = ensureSyncConfig(context: context)
+        config.clearPendingProfileDeletion(profileId)
+        try context.save()
+        try? await pullUpdatesUnlocked(context: context, force: false)
+    }
+
+    static func deleteRemoteProfileUnlocked(profileId: UUID) async throws {
         let escapedProfileId = profileId.uuidString.lowercased().addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
             ?? profileId.uuidString.lowercased()
+        do {
+            try await requestRemoteProfileDeletion(escapedProfileId: escapedProfileId)
+        } catch let error as BackendAPIError where error.statusCode == 404 {
+            return
+        } catch let error as BackendAPIError where error.code == "active_profile_delete_forbidden" {
+            let _: BackendProfilePatchResponse = try await BackendAPIClient.request(
+                path: "v1/profiles/\(escapedProfileId)",
+                method: "PATCH",
+                body: BackendProfileActivityPayload(isActive: false),
+                authentication: .required
+            )
+            try await requestRemoteProfileDeletion(escapedProfileId: escapedProfileId)
+        }
+    }
+
+    private static func requestRemoteProfileDeletion(escapedProfileId: String) async throws {
         let _: BackendProfileDeleteResponse = try await BackendAPIClient.request(
             path: "v1/profiles/\(escapedProfileId)",
             method: "DELETE",
             authentication: .required
         )
-        try? await pullUpdatesUnlocked(context: context, force: false)
+    }
+
+    private static func flushPendingProfileDeletionsUnlocked(
+        context: ModelContext,
+        config: SyncConfig
+    ) async throws {
+        for profileId in config.pendingDeletedProfileIds {
+            try await deleteRemoteProfileUnlocked(profileId: profileId)
+            config.clearPendingProfileDeletion(profileId)
+        }
+        try context.save()
+    }
+
+    private static func flushPendingProfileUpdatesUnlocked(
+        context: ModelContext,
+        config: SyncConfig
+    ) async throws {
+        let pendingProfileIds = config.pendingUpdatedProfileIds
+        guard !pendingProfileIds.isEmpty else { return }
+        let profiles = try context.fetch(FetchDescriptor<UserProfile>())
+        let existingProfileIds = Set(profiles.map(\.id))
+        for profileId in pendingProfileIds.subtracting(existingProfileIds) {
+            config.clearPendingProfileUpdate(profileId)
+        }
+        for profile in profiles where pendingProfileIds.contains(profile.id) {
+            let token = config.pendingProfileUpdateToken(for: profile.id)
+                ?? config.markProfilePendingUpdate(profile.id)
+            try await pushProfileUpdateWithoutPull(profile: profile, config: config)
+            config.clearPendingProfileUpdate(profile.id, matching: token)
+        }
+        try context.save()
+    }
+
+    private static func pushProfileUpdateWithoutPull(profile: UserProfile, config: SyncConfig) async throws {
+        let snapshot = BackendSyncProfileSnapshot(profile: profile)
+        let profileId = profile.id.uuidString.lowercased()
+        let response = try await pushProfileSnapshot(
+            snapshot,
+            avatarURL: snapshot.avatarUrl,
+            clientUpdatedAt: config.remoteProfileVersion(for: profile.id)
+        )
+        config.setRemoteProfileVersions(response.profileVersions ?? [:])
+
+        let avatarUpload = try await BackendCloudSyncService.uploadAvatarIfNeeded(
+            for: profile,
+            clientUpdatedAt: response.profileVersions?[profileId] ?? config.remoteProfileVersion(for: profile.id)
+        )
+        if let avatarVersion = avatarUpload.updatedAt {
+            let avatarResponse = try await pushProfileSnapshot(
+                snapshot,
+                avatarURL: avatarUpload.avatarURL,
+                clientUpdatedAt: avatarVersion
+            )
+            config.setRemoteProfileVersions(avatarResponse.profileVersions ?? [:])
+        }
     }
 
     private static func fetchPullResponse(
@@ -713,6 +906,19 @@ enum BackendIncrementalSyncService {
             statusCode: 409,
             code: conflict.reason,
             message: String(localized: "settings.cloud.error.profileConflict")
+        )
+    }
+
+    private static func snapshotByRemovingProfiles(
+        _ snapshot: BackendSyncSnapshot,
+        profileIds: Set<UUID>
+    ) -> BackendSyncSnapshot {
+        guard !profileIds.isEmpty else { return snapshot }
+        let tokens = Set(profileIds.map { $0.uuidString.lowercased() })
+        return BackendSyncSnapshot(
+            profiles: snapshot.profiles.filter { !tokens.contains($0.id.lowercased()) },
+            scores: snapshot.scores.filter { !tokens.contains($0.profileId.lowercased()) },
+            records: snapshot.records.filter { !tokens.contains($0.profileId.lowercased()) }
         )
     }
 

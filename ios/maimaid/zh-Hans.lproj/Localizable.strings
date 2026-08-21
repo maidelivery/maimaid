@@ -433,6 +433,9 @@
 "userProfile.editTitle" = "编辑档案";
 "userProfile.cancel" = "取消";
 "userProfile.save" = "保存";
+"userProfile.error.title" = "档案错误";
+"userProfile.error.profileNotFound" = "此档案已不存在。";
+"userProfile.error.activeDelete" = "请先切换到其他档案，再删除此档案。";
 "userProfile.name" = "名字";
 "userProfile.server" = "服务器";
 "userProfile.latestVersion" = "当前最新版本";

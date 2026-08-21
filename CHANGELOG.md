@@ -1,5 +1,49 @@
 # Changelog
 
+## 1.2.4
+
+### 中文
+
+#### 新增
+
+- iOS、Android 和 Dashboard 的 Diving Fish 导入改用 OAuth 授权，支持读取成绩并通过 `prober.records.write` 权限将成绩同步回 Diving Fish。
+- 后端新增 Diving Fish OAuth 凭证管理、刷新和导入会话支持。
+
+#### 变更
+
+- 静态数据包改由独立静态资源服务提供，客户端根据设备解码能力请求合适的图片格式，并保留原图回退。
+- iOS 与 Android 的档案编辑页面移除 B50 容量和凭证设置，已有配置与凭证继续保留。
+- 调整 iOS Diving Fish 导入操作的按钮样式，使其与设置页其他更新操作保持一致。
+- iOS 与 Android 版本升级至 1.2.4，构建号继续使用 Git 仓库提交数。
+
+#### 修复
+
+- 修复 Diving Fish OAuth 回调可能报告 `invalid code_verifier` 的问题。
+- 修复 iOS 新建档案的服务器设置可能回退、档案删除延迟以及操作档案时跳转到其他档案的问题。
+- 修复 iOS 新建档案时网络同步阻塞编辑界面的问题；档案现在先在本地提交，再于后台同步。
+- 修复 Android 登录和退出图标的自动镜像构建警告。
+
+### English
+
+#### Added
+
+- Replaced Diving Fish imports on iOS, Android, and Dashboard with OAuth authorization, including score reads and score synchronization through the `prober.records.write` scope.
+- Added backend support for Diving Fish OAuth credential storage, refresh, and import sessions.
+
+#### Changed
+
+- Moved static bundles to the dedicated static-asset service, with clients requesting image formats supported by each device and retaining original-image fallback.
+- Removed B50 capacity and credential settings from profile editors on iOS and Android while preserving existing values.
+- Updated the iOS Diving Fish import actions to match other update controls in Settings.
+- Updated iOS and Android to version 1.2.4 while continuing to derive build numbers from the Git commit count.
+
+#### Fixed
+
+- Fixed Diving Fish OAuth callbacks reporting `invalid code_verifier`.
+- Fixed iOS profile server settings reverting, delayed profile deletion, and operations unexpectedly switching to another profile.
+- Fixed network synchronization blocking the iOS editor while creating a profile; profiles now commit locally before background synchronization.
+- Fixed Android build warnings for login and logout icons by using auto-mirrored variants.
+
 ## 1.2.0
 
 ### 中文

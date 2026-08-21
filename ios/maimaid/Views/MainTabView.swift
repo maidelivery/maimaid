@@ -124,13 +124,21 @@ struct MainTabView: View {
     private func ensureActiveProfileAndRepairScopedData() {
         let profileDescriptor = FetchDescriptor<UserProfile>()
         let allProfiles = (try? modelContext.fetch(profileDescriptor)) ?? []
-        
+        let orderedProfiles = allProfiles.sorted {
+            if $0.createdAt == $1.createdAt {
+                return $0.id.uuidString < $1.id.uuidString
+            }
+            return $0.createdAt < $1.createdAt
+        }
+        var didChange = false
+
         let activeProfile: UserProfile
-        if let existingActive = allProfiles.first(where: { $0.isActive }) {
+        if let existingActive = orderedProfiles.first(where: { $0.isActive }) {
             activeProfile = existingActive
-        } else if let firstProfile = allProfiles.sorted(by: { $0.createdAt < $1.createdAt }).first {
+        } else if let firstProfile = orderedProfiles.first {
             firstProfile.isActive = true
             activeProfile = firstProfile
+            didChange = true
         } else {
             let defaultProfile = UserProfile(
                 name: String(localized: "userProfile.defaultName"),
@@ -139,9 +147,13 @@ struct MainTabView: View {
             )
             modelContext.insert(defaultProfile)
             activeProfile = defaultProfile
+            didChange = true
         }
-        
-        var didChange = false
+
+        for profile in allProfiles where profile.isActive != (profile.id == activeProfile.id) {
+            profile.isActive = profile.id == activeProfile.id
+            didChange = true
+        }
         
         let scoreDescriptor = FetchDescriptor<Score>(predicate: #Predicate { $0.userProfileId == nil })
         if let orphanedScores = try? modelContext.fetch(scoreDescriptor), !orphanedScores.isEmpty {
@@ -159,7 +171,7 @@ struct MainTabView: View {
             didChange = true
         }
         
-        if didChange || allProfiles.isEmpty || !allProfiles.contains(where: { $0.isActive }) {
+        if didChange {
             try? modelContext.save()
             ScoreService.shared.notifyActiveProfileChanged()
             ScoreService.shared.notifyScoresChanged(for: activeProfile.id)

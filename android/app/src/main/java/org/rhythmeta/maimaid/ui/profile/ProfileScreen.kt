@@ -14,14 +14,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Check
@@ -46,9 +44,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -60,7 +55,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.AppContainer
-import org.rhythmeta.maimaid.core.data.ProfileCredentials
 import org.rhythmeta.maimaid.core.data.PresetAvatarRepository
 import org.rhythmeta.maimaid.core.data.RatingUtils
 import org.rhythmeta.maimaid.core.database.GameVersionEntity
@@ -328,9 +322,6 @@ internal fun ProfileEditorSheet(
     var name by remember { mutableStateOf("") }
     var plate by remember { mutableStateOf("") }
     var server by remember { mutableStateOf("jp") }
-    var lxnsToken by remember { mutableStateOf("") }
-    var b35Text by remember { mutableStateOf("35") }
-    var b15Text by remember { mutableStateOf("15") }
     var avatarPath by remember { mutableStateOf<String?>(null) }
     var stagedAvatarPath by remember { mutableStateOf<String?>(null) }
     var avatarUrl by remember { mutableStateOf<String?>(null) }
@@ -365,13 +356,9 @@ internal fun ProfileEditorSheet(
 
     LaunchedEffect(visible, profile?.id) {
         if (!visible) return@LaunchedEffect
-        val credentials = profile?.let { container.profileCredentialStore.credentials(it.id) }
         name = profile?.name.orEmpty()
         plate = profile?.plate.orEmpty()
         server = profile?.server ?: "jp"
-        lxnsToken = credentials?.lxnsToken.orEmpty()
-        b35Text = (profile?.b35Count ?: 35).toString()
-        b15Text = (profile?.b15Count ?: 15).toString()
         avatarPath = profile?.avatarPath
         avatarUrl = profile?.avatarUrl
         stagedAvatarPath = null
@@ -413,17 +400,11 @@ internal fun ProfileEditorSheet(
                         clearAvatar || committedAvatar != null -> null
                         else -> avatarUrl
                     },
-                    b35Count = b35Text.toIntOrNull()?.coerceAtLeast(1) ?: targetProfile.b35Count,
-                    b15Count = b15Text.toIntOrNull()?.coerceAtLeast(1) ?: targetProfile.b15Count,
                 ),
             )
             if (replacesStoredAvatar) {
                 container.profileAvatarStore.deleteStored(targetProfile.avatarPath)
             }
-            container.profileCredentialStore.save(
-                targetProfile.id,
-                ProfileCredentials(lxnsToken.trim()),
-            )
             stagedAvatarPath = null
             onDismiss()
         }
@@ -525,41 +506,6 @@ internal fun ProfileEditorSheet(
                         insideMargin = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
                         onSelectedIndexChange = { index -> server = ServerValues[index] },
                     )
-                }
-            }
-            if (editing) {
-                item {
-                    ProfileEditorSection(stringResource(R.string.profile_section_b50)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            ProfileNumberField(
-                                value = b35Text,
-                                onValueChange = { b35Text = it },
-                                label = stringResource(R.string.best50_capacity_old),
-                                modifier = Modifier.weight(1f),
-                            )
-                            ProfileNumberField(
-                                value = b15Text,
-                                onValueChange = { b15Text = it },
-                                label = stringResource(R.string.best50_capacity_new),
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                    }
-                }
-                item {
-                    ProfileEditorSection(stringResource(R.string.profile_section_credentials)) {
-                        TextField(
-                            value = lxnsToken,
-                            onValueChange = { lxnsToken = it },
-                            colors = appTextFieldColors(),
-                            label = stringResource(R.string.profile_lxns_token),
-                            useLabelAsPlaceholder = true,
-                            singleLine = true,
-                            visualTransformation = PasswordVisualTransformation(),
-                            modifier = Modifier.fillMaxWidth(),
-                            cornerRadius = 14.dp,
-                        )
-                    }
                 }
             }
         }
@@ -733,29 +679,6 @@ private fun ProfileEditorSection(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
         }
     }
-}
-
-@Composable
-private fun ProfileNumberField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    modifier: Modifier = Modifier,
-) {
-    TextField(
-        value = value,
-        onValueChange = { input ->
-            if (input.length <= 2 && input.all(Char::isDigit)) onValueChange(input)
-        },
-        colors = appTextFieldColors(),
-        label = label,
-        useLabelAsPlaceholder = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-        singleLine = true,
-        insideMargin = DpSize(width = 14.dp, height = 12.dp),
-        cornerRadius = 14.dp,
-        modifier = modifier.heightIn(min = 52.dp),
-    )
 }
 
 private val ServerValues = listOf("jp", "intl", "cn")

@@ -432,6 +432,9 @@
 "userProfile.editTitle" = "プロフィールの編集";
 "userProfile.cancel" = "キャンセル";
 "userProfile.save" = "保存";
+"userProfile.error.title" = "プロフィールエラー";
+"userProfile.error.profileNotFound" = "このプロフィールは存在しません。";
+"userProfile.error.activeDelete" = "別のプロフィールに切り替えてから削除してください。";
 "userProfile.name" = "名前";
 "userProfile.server" = "サーバ";
 "userProfile.latestVersion" = "最新バージョン";

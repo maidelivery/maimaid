@@ -5,40 +5,38 @@ import PhotosUI
 struct UserProfileEditView: View {
     enum Mode: Identifiable {
         case create
-        case edit(UserProfile)
+        case edit(UUID)
         
         var id: String {
             switch self {
             case .create: return "create"
-            case .edit(let p): return p.id.uuidString
+            case .edit(let profileId): return profileId.uuidString
             }
         }
     }
-    
+
     let mode: Mode
     
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Query private var profiles: [UserProfile]
     
     @State private var name: String = ""
     @State private var plate: String = ""
     @State private var selectedServer: GameServer = .jp
-    @State private var lxnsRefreshToken: String = ""
-    @State private var b35Count: Int = 35
-    @State private var b15Count: Int = 15
     
     @State private var avatarUrl: String?
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImageData: Data?
+    @State private var isSaving = false
+    @State private var errorMessage: String?
     
     private var isEditing: Bool {
         if case .edit = mode { return true }
         return false
     }
     
-    private var existingProfile: UserProfile? {
-        if case .edit(let p) = mode { return p }
+    private var profileId: UUID? {
+        if case .edit(let profileId) = mode { return profileId }
         return nil
     }
     
@@ -59,33 +57,6 @@ struct UserProfileEditView: View {
                     ForEach(GameServer.allCases) { server in
                         Text(server.displayName).tag(server)
                     }
-                }
-                
-            }
-            
-            if isEditing {
-                Section("userProfile.section.b50") {
-                    HStack {
-                        Text("bestTable.settings.old")
-                        Spacer()
-                        TextField("", value: $b35Count, format: .number)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 60)
-                    }
-                    
-                    HStack {
-                        Text("bestTable.settings.new")
-                        Spacer()
-                        TextField("", value: $b15Count, format: .number)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 60)
-                    }
-                }
-                
-                Section("userProfile.section.credentials") {
-                    SecureField("settings.sync.lxnsToken", text: $lxnsRefreshToken)
                 }
                 
             }
@@ -120,65 +91,67 @@ struct UserProfileEditView: View {
             ToolbarItem(placement: .confirmationAction) {
                 Button("userProfile.save") {
                     save()
-                    dismiss()
                 }
-                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
             }
         }
         .task {
-            if let p = existingProfile {
-                name = p.name
-                plate = p.plate ?? ""
-                selectedServer = GameServer(rawValue: p.server) ?? .jp
-                let credentials = ProfileCredentialStore.shared.credentials(for: p.id)
-                lxnsRefreshToken = credentials.lxnsRefreshToken
-                b35Count = p.b35Count
-                b15Count = p.b15Count
-                selectedImageData = p.avatarData
-                avatarUrl = p.avatarUrl
+            if let profileId, let profile = fetchProfile(profileId) {
+                name = profile.name
+                plate = profile.plate ?? ""
+                selectedServer = GameServer(rawValue: profile.server) ?? .jp
+                selectedImageData = profile.avatarData
+                avatarUrl = profile.avatarUrl
             }
+        }
+        .interactiveDismissDisabled(isSaving)
+        .alert(
+            "userProfile.error.title",
+            isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )
+        ) {
+            Button("common.ok", role: .cancel) {}
+        } message: {
+            Text(errorMessage ?? "")
         }
     }
-    
-    private func save() {
-        let targetProfile: UserProfile
-        if let profile = existingProfile {
-            // Update existing
-            profile.name = name.trimmingCharacters(in: .whitespaces)
-            profile.plate = plate.trimmingCharacters(in: .whitespaces)
-            profile.server = selectedServer.rawValue
-            profile.b35Count = max(1, b35Count)
-            profile.b15Count = max(1, b15Count)
-            profile.avatarData = selectedImageData
-            profile.avatarUrl = avatarUrl
-            targetProfile = profile
-        } else {
-            // Create new
-            let isFirstProfile = profiles.isEmpty
-            let profile = UserProfile(
-                name: name.trimmingCharacters(in: .whitespaces),
-                server: selectedServer.rawValue,
-                avatarData: selectedImageData,
-                avatarUrl: avatarUrl,
-                isActive: isFirstProfile,
-                playerRating: 0,
-                plate: plate.trimmingCharacters(in: .whitespaces),
-                b35Count: max(1, b35Count),
-                b15Count: max(1, b15Count)
-            )
-            modelContext.insert(profile)
-            targetProfile = profile
-        }
-        ProfileCredentialStore.shared.setCredentials(
-            ProfileCredentials(lxnsRefreshToken: lxnsRefreshToken),
-            for: targetProfile.id
-        )
-        try? modelContext.save()
 
-        if BackendSessionManager.shared.isAuthenticated {
+    private func fetchProfile(_ profileId: UUID) -> UserProfile? {
+        let descriptor = FetchDescriptor<UserProfile>(
+            predicate: #Predicate<UserProfile> { $0.id == profileId }
+        )
+        return try? modelContext.fetch(descriptor).first
+    }
+
+    private func save() {
+        isSaving = true
+
+        let values = UserProfileFormValues(
+            name: name,
+            plate: plate,
+            server: selectedServer,
+            avatarData: selectedImageData,
+            avatarURL: avatarUrl
+        )
+        do {
+            let savedProfileId = try UserProfileMutationService.save(
+                profileId: profileId,
+                values: values,
+                context: modelContext
+            )
+            isSaving = false
+            dismiss()
             Task {
-                try? await BackendIncrementalSyncService.pushProfileUpdate(profile: targetProfile, clientUpdatedAt: nil)
+                await UserProfileMutationService.synchronizeProfileUpdate(
+                    profileId: savedProfileId,
+                    context: modelContext
+                )
             }
+        } catch {
+            isSaving = false
+            errorMessage = error.localizedDescription
         }
     }
 }

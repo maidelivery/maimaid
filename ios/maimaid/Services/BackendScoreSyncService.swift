@@ -50,18 +50,7 @@ enum BackendScoreSyncService {
             throw URLError(.badURL)
         }
 
-        do {
-            try await BackendIncrementalSyncService.pushProfileUpdate(profile: profile, clientUpdatedAt: nil)
-        } catch let error as BackendAPIError where error.code == "server_newer" {
-            guard let context = profile.modelContext else {
-                throw error
-            }
-            try await BackendIncrementalSyncService.pullUpdates(
-                context: context,
-                profileId: profile.id,
-                force: true
-            )
-        }
+        try await BackendIncrementalSyncService.pushProfileUpdate(profile: profile, clientUpdatedAt: nil)
     }
 
     static func uploadScore(profile: UserProfile, sheet: Sheet, score: Score) async throws {

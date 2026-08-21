@@ -5,8 +5,9 @@ struct UserProfileListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \UserProfile.createdAt) private var profiles: [UserProfile]
     @State private var showingCreateProfile = false
-    @State private var editingProfile: UserProfile?
-    @State private var deletingProfile: UserProfile?
+    @State private var editingMode: UserProfileEditView.Mode?
+    @State private var deletingProfileId: UUID?
+    @State private var errorMessage: String?
     
     // Cache server versions to avoid recomputing per-row
     @State private var serverVersionCache: [GameServer: String] = [:]
@@ -32,7 +33,7 @@ struct UserProfileListView: View {
             } else {
                 ForEach(profiles) { profile in
                     Button {
-                        switchToProfile(profile)
+                        switchToProfile(profile.id)
                     } label: {
                         profileRow(profile)
                             .contentShape(.rect)
@@ -41,14 +42,14 @@ struct UserProfileListView: View {
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         if !profile.isActive {
                             Button(role: .destructive) {
-                                deletingProfile = profile
+                                deletingProfileId = profile.id
                             } label: {
                                 Label("userProfile.delete", systemImage: "trash")
                             }
                         }
 
                         Button {
-                            editingProfile = profile
+                            editingMode = .edit(profile.id)
                         } label: {
                             Label("userProfile.edit", systemImage: "pencil")
                         }
@@ -61,28 +62,26 @@ struct UserProfileListView: View {
         .confirmationDialog(
             "userProfile.delete.confirm.title",
             isPresented: Binding(
-                get: { deletingProfile != nil },
-                set: { if !$0 { deletingProfile = nil } }
+                get: { deletingProfileId != nil },
+                set: { if !$0 { deletingProfileId = nil } }
             ),
             titleVisibility: .visible,
-            presenting: deletingProfile
-        ) { profile in
+            presenting: deletingProfileId
+        ) { profileId in
             Button("userProfile.delete", role: .destructive) {
-                deleteProfile(profile)
-                deletingProfile = nil
+                deletingProfileId = nil
+                deleteProfile(profileId)
             }
             Button("userProfile.cancel", role: .cancel) {
-                deletingProfile = nil
+                deletingProfileId = nil
             }
         } message: { _ in
             Text("userProfile.delete.confirm.message")
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
+                Button("userProfile.createTitle", systemImage: "plus") {
                     showingCreateProfile = true
-                } label: {
-                    Image(systemName: "plus")
                 }
             }
         }
@@ -91,10 +90,21 @@ struct UserProfileListView: View {
                 UserProfileEditView(mode: .create)
             }
         }
-        .sheet(item: $editingProfile) { profile in
+        .sheet(item: $editingMode) { mode in
             NavigationStack {
-                UserProfileEditView(mode: .edit(profile))
+                UserProfileEditView(mode: mode)
             }
+        }
+        .alert(
+            "userProfile.error.title",
+            isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )
+        ) {
+            Button("common.ok", role: .cancel) {}
+        } message: {
+            Text(errorMessage ?? "")
         }
         .task {
             await buildServerVersionCache()
@@ -248,64 +258,42 @@ struct UserProfileListView: View {
         .padding(.vertical, 4)
     }
     
-    private func switchToProfile(_ profile: UserProfile) {
-        guard !profile.isActive else { return }
-        for p in profiles {
-            p.isActive = (p.id == profile.id)
-        }
-        try? modelContext.save()
-        ScoreService.shared.notifyActiveProfileChanged()
-
-        if BackendSessionManager.shared.isAuthenticated {
-            Task {
-                try? await BackendIncrementalSyncService.pushProfileUpdate(profile: profile, clientUpdatedAt: nil)
+    private func switchToProfile(_ profileId: UUID) {
+        do {
+            let didActivate = try UserProfileMutationService.activate(
+                profileId: profileId,
+                context: modelContext
+            )
+            if didActivate {
+                Task {
+                    await UserProfileMutationService.synchronizeProfileUpdate(
+                        profileId: profileId,
+                        context: modelContext
+                    )
+                }
             }
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
     
-    private func deleteProfile(_ profile: UserProfile) {
-        guard !profile.isActive else { return }
-
-        let profileId = profile.id
-        if BackendSessionManager.shared.isAuthenticated {
-            Task {
-                do {
-                    try await BackendIncrementalSyncService.deleteProfile(profileId: profileId, context: modelContext)
-                } catch {
-                    return
+    private func deleteProfile(_ profileId: UUID) {
+        do {
+            let didDelete = try UserProfileMutationService.delete(
+                profileId: profileId,
+                context: modelContext
+            )
+            if didDelete {
+                Task {
+                    await UserProfileMutationService.synchronizeProfileDeletion(
+                        profileId: profileId,
+                        context: modelContext
+                    )
                 }
-                removeProfileLocally(profileId)
             }
-            return
+        } catch {
+            errorMessage = error.localizedDescription
         }
-
-        removeProfileLocally(profileId)
-    }
-
-    private func removeProfileLocally(_ profileId: UUID) {
-        // Delete associated scores
-        let scoreDescriptor = FetchDescriptor<Score>(predicate: #Predicate { $0.userProfileId == profileId })
-        if let scores = try? modelContext.fetch(scoreDescriptor) {
-            for score in scores {
-                modelContext.delete(score)
-            }
-        }
-
-        let recordDescriptor = FetchDescriptor<PlayRecord>(predicate: #Predicate { $0.userProfileId == profileId })
-        if let records = try? modelContext.fetch(recordDescriptor) {
-            for record in records {
-                modelContext.delete(record)
-            }
-        }
-
-        let profileDescriptor = FetchDescriptor<UserProfile>(predicate: #Predicate { $0.id == profileId })
-        if let targetProfile = (try? modelContext.fetch(profileDescriptor))?.first {
-            modelContext.delete(targetProfile)
-        }
-        try? modelContext.save()
-
-        ScoreService.shared.notifyScoresChanged(for: profileId)
-        ScoreService.shared.notifyActiveProfileChanged()
     }
     
     private func serverColor(_ server: GameServer) -> Color {

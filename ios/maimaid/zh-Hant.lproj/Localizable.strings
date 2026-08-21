@@ -432,6 +432,9 @@
 "userProfile.editTitle" = "編輯檔案";
 "userProfile.cancel" = "取消";
 "userProfile.save" = "儲存";
+"userProfile.error.title" = "檔案錯誤";
+"userProfile.error.profileNotFound" = "此檔案已不存在。";
+"userProfile.error.activeDelete" = "請先切換到其他檔案，再刪除此檔案。";
 "userProfile.name" = "名字";
 "userProfile.server" = "伺服器";
 "userProfile.latestVersion" = "目前最新版本";

@@ -433,6 +433,9 @@
 "userProfile.editTitle" = "Edit Profile";
 "userProfile.cancel" = "Cancel";
 "userProfile.save" = "Save";
+"userProfile.error.title" = "Profile Error";
+"userProfile.error.profileNotFound" = "This profile no longer exists.";
+"userProfile.error.activeDelete" = "Switch to another profile before deleting this one.";
 "userProfile.name" = "Name";
 "userProfile.server" = "Server";
 "userProfile.latestVersion" = "Latest Version";

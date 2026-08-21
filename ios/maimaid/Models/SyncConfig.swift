@@ -20,6 +20,9 @@ final class SyncConfig {
     var lastCloudBackupDate: Date?
     var lastSyncRevision: String = "0"
     var remoteProfileVersionsData: Data?
+    var pendingUpdatedProfileIdsData: Data?
+    var pendingUpdatedProfileTokensData: Data?
+    var pendingDeletedProfileIdsData: Data?
     var localDataOwnerUserId: String?
     var pendingResolutionForUserId: String?
     var pendingResolutionDetectedAt: Date?
@@ -69,8 +72,82 @@ final class SyncConfig {
         remoteProfileVersionsData = nil
     }
 
+    var pendingUpdatedProfileIds: Set<UUID> {
+        get { decodeProfileIds(from: pendingUpdatedProfileIdsData) }
+        set { pendingUpdatedProfileIdsData = encodeProfileIds(newValue) }
+    }
+
+    var pendingDeletedProfileIds: Set<UUID> {
+        get { decodeProfileIds(from: pendingDeletedProfileIdsData) }
+        set { pendingDeletedProfileIdsData = encodeProfileIds(newValue) }
+    }
+
+    @discardableResult
+    func markProfilePendingUpdate(_ profileId: UUID) -> UUID {
+        var profileIds = pendingUpdatedProfileIds
+        profileIds.insert(profileId)
+        pendingUpdatedProfileIds = profileIds
+        let token = UUID()
+        var tokens = pendingUpdatedProfileTokens
+        tokens[profileId.uuidString.lowercased()] = token.uuidString.lowercased()
+        pendingUpdatedProfileTokensData = try? JSONEncoder().encode(tokens)
+        return token
+    }
+
+    func clearPendingProfileUpdate(_ profileId: UUID) {
+        var profileIds = pendingUpdatedProfileIds
+        profileIds.remove(profileId)
+        pendingUpdatedProfileIds = profileIds
+        var tokens = pendingUpdatedProfileTokens
+        tokens.removeValue(forKey: profileId.uuidString.lowercased())
+        pendingUpdatedProfileTokensData = tokens.isEmpty ? nil : try? JSONEncoder().encode(tokens)
+    }
+
+    func pendingProfileUpdateToken(for profileId: UUID) -> UUID? {
+        let value = pendingUpdatedProfileTokens[profileId.uuidString.lowercased()]
+        return value.flatMap(UUID.init(uuidString:))
+    }
+
+    @discardableResult
+    func clearPendingProfileUpdate(_ profileId: UUID, matching token: UUID) -> Bool {
+        guard pendingProfileUpdateToken(for: profileId) == token else {
+            return false
+        }
+        clearPendingProfileUpdate(profileId)
+        return true
+    }
+
+    func markProfilePendingDeletion(_ profileId: UUID) {
+        clearPendingProfileUpdate(profileId)
+        var profileIds = pendingDeletedProfileIds
+        profileIds.insert(profileId)
+        pendingDeletedProfileIds = profileIds
+    }
+
+    func clearPendingProfileDeletion(_ profileId: UUID) {
+        var profileIds = pendingDeletedProfileIds
+        profileIds.remove(profileId)
+        pendingDeletedProfileIds = profileIds
+    }
+
     private var remoteProfileVersions: [String: Date] {
         guard let remoteProfileVersionsData else { return [:] }
         return (try? JSONDecoder().decode([String: Date].self, from: remoteProfileVersionsData)) ?? [:]
+    }
+
+    private var pendingUpdatedProfileTokens: [String: String] {
+        guard let pendingUpdatedProfileTokensData else { return [:] }
+        return (try? JSONDecoder().decode([String: String].self, from: pendingUpdatedProfileTokensData)) ?? [:]
+    }
+
+    private func decodeProfileIds(from data: Data?) -> Set<UUID> {
+        guard let data else { return [] }
+        let values = (try? JSONDecoder().decode([String].self, from: data)) ?? []
+        return Set(values.compactMap(UUID.init(uuidString:)))
+    }
+
+    private func encodeProfileIds(_ profileIds: Set<UUID>) -> Data? {
+        let values = profileIds.map { $0.uuidString.lowercased() }.sorted()
+        return values.isEmpty ? nil : try? JSONEncoder().encode(values)
     }
 }

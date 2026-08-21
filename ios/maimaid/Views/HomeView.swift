@@ -391,7 +391,7 @@ struct HomeView: View {
 
     private var profileHeader: some View {
         Button {
-            profileEditMode = activeProfile.map(UserProfileEditView.Mode.edit) ?? .create
+            profileEditMode = activeProfile.map { .edit($0.id) } ?? .create
         } label: {
             HStack(spacing: 16) {
                 // Avatar

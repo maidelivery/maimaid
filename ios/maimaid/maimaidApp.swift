@@ -49,7 +49,7 @@ struct maimaidApp: App {
                     return
                 }
 
-                let context = ModelContext(sharedModelContainer)
+                let context = sharedModelContainer.mainContext
                 let conflictState = AccountDataResolutionCoordinator.shared.detectConflictAfterAuth(
                     context: context,
                     currentUserId: userId
