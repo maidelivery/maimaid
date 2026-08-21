@@ -46,8 +46,7 @@ services:
       - "127.0.0.1:53287:8787"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"fetch('http://localhostt:8787').then(it=>it.json()).then(it=>process.exit(it.status==='ok'?0:1)).
-catch(()=>process.exit(1))\""]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787').then(it=>it.json()).then(it=>process.exit(it.status==='ok'?0:1)).catch(()=>process.exit(1))"]
       interval: 5s
       timeout: 3s
       retries: 20
