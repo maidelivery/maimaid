@@ -151,7 +151,7 @@ private suspend fun Context.cameraProvider(): ProcessCameraProvider =
         future.addListener(
             {
                 runCatching(future::get).fold(
-                    onSuccess = { continuation.resume(it) {} },
+                    onSuccess = { continuation.resume(it) { _, _, _ -> } },
                     onFailure = { continuation.resumeWith(Result.failure(it)) },
                 )
             },
