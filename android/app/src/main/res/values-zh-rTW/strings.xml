@@ -154,6 +154,10 @@
     <string name="settings_about">關於</string>
     <string name="settings_version_label">版本</string>
     <string name="settings_version">版本 %1$s</string>
+    <string name="settings_send_logs">傳送日誌</string>
+    <string name="settings_send_logs_description">收集應用程式診斷資訊並分享，用於排查問題</string>
+    <string name="logs_share_title">分享 maimaid 日誌</string>
+    <string name="logs_export_failed">無法建立日誌檔案</string>
     <string name="theme_system">跟隨系統</string>
     <string name="theme_light">淺色</string>
     <string name="theme_dark">深色</string>

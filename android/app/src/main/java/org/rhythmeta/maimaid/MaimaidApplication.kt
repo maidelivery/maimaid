@@ -5,10 +5,18 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import okhttp3.OkHttpClient
 import org.rhythmeta.maimaid.core.AppContainer
+import org.rhythmeta.maimaid.core.CrashLogStore
 import org.rhythmeta.maimaid.core.network.ImageRequestHeaders
 
 class MaimaidApplication : Application(), ImageLoaderFactory {
     val container: AppContainer by lazy { AppContainer(this) }
+
+    internal val crashLogStore by lazy { CrashLogStore(this) }
+
+    override fun onCreate() {
+        super.onCreate()
+        crashLogStore.install()
+    }
 
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
         .okHttpClient {

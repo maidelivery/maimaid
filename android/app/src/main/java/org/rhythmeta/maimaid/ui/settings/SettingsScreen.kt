@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.People
@@ -62,6 +63,7 @@ fun SettingsScreen(
     canImportOtogame: Boolean,
     onThirdPartyScoreSyncEnabledChange: (Boolean) -> Unit,
     onOpenDetail: (AppDetail) -> Unit,
+    onSendLogs: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -201,6 +203,12 @@ fun SettingsScreen(
         }
         item {
             SettingsSection(title = stringResource(R.string.settings_about)) {
+							SettingsRow(
+								icon = Icons.Rounded.BugReport,
+								title = stringResource(R.string.settings_send_logs),
+								summary = stringResource(R.string.settings_send_logs_description),
+								onClick = onSendLogs,
+							)
                 SettingsValueRow(
                     icon = Icons.Rounded.Info,
                     title = stringResource(R.string.settings_version_label),

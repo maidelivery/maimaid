@@ -2,6 +2,7 @@ package org.rhythmeta.maimaid
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -10,6 +11,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
+import org.rhythmeta.maimaid.core.LogReportExporter
 import org.rhythmeta.maimaid.ui.MaimaidApp
 import org.rhythmeta.maimaid.ui.theme.MaimaidTheme
 
@@ -40,6 +42,7 @@ class MainActivity : ComponentActivity() {
                     onThemeModeChange = mainViewModel::setThemeMode,
                     onThemeColorSourceChange = mainViewModel::setThemeColorSource,
                     onThemeCustomColorChange = mainViewModel::setThemeCustomColorArgb,
+                    onSendLogs = ::sendLogs,
                 )
             }
         }
@@ -49,6 +52,24 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         dispatchAuthIntent(intent)
+    }
+
+    private fun sendLogs() {
+        lifecycleScope.launch {
+            val application = application as MaimaidApplication
+            runCatching { LogReportExporter.export(applicationContext, application.crashLogStore) }
+                .onSuccess { uri ->
+                    startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        clipData = android.content.ClipData.newRawUri("maimaid logs", uri)
+                    }, getString(R.string.logs_share_title)))
+                }
+                .onFailure {
+                    Toast.makeText(this@MainActivity, R.string.logs_export_failed, Toast.LENGTH_LONG).show()
+                }
+        }
     }
 
     private fun dispatchAuthIntent(intent: Intent?) {

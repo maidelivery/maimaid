@@ -154,6 +154,10 @@
     <string name="settings_about">情報</string>
     <string name="settings_version_label">バージョン</string>
     <string name="settings_version">バージョン %1$s</string>
+    <string name="settings_send_logs">ログを送信</string>
+    <string name="settings_send_logs_description">トラブルシューティング用の診断情報を収集して共有します</string>
+    <string name="logs_share_title">maimaid のログを共有</string>
+    <string name="logs_export_failed">ログファイルを作成できませんでした</string>
     <string name="theme_system">システム</string>
     <string name="theme_light">ライト</string>
     <string name="theme_dark">ダーク</string>

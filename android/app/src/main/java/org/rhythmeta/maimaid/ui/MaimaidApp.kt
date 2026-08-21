@@ -127,6 +127,7 @@ fun MaimaidApp(
     onThemeModeChange: (AppThemeMode) -> Unit,
     onThemeColorSourceChange: (AppThemeColorSource) -> Unit,
     onThemeCustomColorChange: (Int) -> Unit,
+    onSendLogs: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val initialCatalogState by viewModel.initialCatalogState.collectAsStateWithLifecycle()
@@ -636,6 +637,7 @@ fun MaimaidApp(
                     ?.equals("jp", ignoreCase = true) == true,
                 onThirdPartyScoreSyncEnabledChange = viewModel::setThirdPartyScoreSyncEnabled,
                 onOpenDetail = openDetail,
+                onSendLogs = onSendLogs,
             )
         }
     }
