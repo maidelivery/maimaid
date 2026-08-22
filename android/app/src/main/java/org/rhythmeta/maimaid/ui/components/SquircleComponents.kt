@@ -24,10 +24,7 @@ fun squircleShape(cornerRadius: Dp): Shape = FixedRadiusSquircleShape(cornerRadi
 
 val SquircleCapsule: Shape = RoundedCornerShape(percent = 50)
 
-val TopBarBottomShape: Shape = RoundedCornerShape(
-    bottomStart = 18.dp,
-    bottomEnd = 18.dp,
-)
+val TopBarBottomShape: Shape = RoundedCornerShape(0.dp)
 
 fun Modifier.dashedSquircleBorder(
     width: Dp,

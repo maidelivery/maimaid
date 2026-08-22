@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -108,6 +109,7 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -158,6 +160,10 @@ fun MaimaidApp(
     var selectedSongId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedDanCategoryId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedDanCategoryTitle by rememberSaveable { mutableStateOf<String?>(null) }
+    val communityAliasListState = rememberSaveable(saver = LazyListState.Saver) {
+        LazyListState()
+    }
+    val communityAliasScrollBehavior = MiuixScrollBehavior()
     var songDetailBackground by remember { mutableStateOf<Pair<String, Color>?>(null) }
     var songDetailTitle by remember { mutableStateOf<Pair<String, String>?>(null) }
     var catalogDisplayMode by rememberSaveable { mutableStateOf(CatalogDisplayMode.List) }
@@ -1017,6 +1023,7 @@ fun MaimaidApp(
                             selectedDanCategoryId = selectedDanCategoryId,
                             container = container,
                             songContentTopPadding = paddingValues.calculateTopPadding(),
+                            communityAliasListState = communityAliasListState,
                             recommendationSelectedPage = recommendationSelectedPage,
                             danSelectedPage = danSelectedPage,
                             scoreQueryViewModel = null,
@@ -1302,6 +1309,9 @@ fun MaimaidApp(
                 DetailNavigationLayer(
                     title = detailTitle(sourceDetail),
                     onBack = closeDetail,
+                    scrollBehavior = communityAliasScrollBehavior.takeIf {
+                        sourceDetail == AppDetail.CommunityAliases
+                    },
                     actions = {
                         if (sourceDetail == AppDetail.BestTable) {
                             detailActions(AppDetail.BestTable)
@@ -1359,6 +1369,7 @@ fun MaimaidApp(
                         selectedDanCategoryId = selectedDanCategoryId,
                         container = container,
                         songContentTopPadding = contentTopPadding,
+                        communityAliasListState = communityAliasListState,
                         recommendationSelectedPage = recommendationSelectedPage,
                         danSelectedPage = danSelectedPage,
                         scoreQueryViewModel = scoreQueryViewModel,
@@ -1432,6 +1443,7 @@ fun MaimaidApp(
                         selectedDanCategoryId = selectedDanCategoryId,
                         container = container,
                         songContentTopPadding = contentTopPadding,
+                        communityAliasListState = communityAliasListState,
                         recommendationSelectedPage = recommendationSelectedPage,
                         danSelectedPage = danSelectedPage,
                         scoreQueryViewModel = null,
@@ -1483,7 +1495,11 @@ fun MaimaidApp(
                 it == AppDetail.OtogameLogin ||
                 it == AppDetail.Song
         }?.let { activeDetail ->
-            val detailScrollBehavior = MiuixScrollBehavior()
+            val detailScrollBehavior = if (activeDetail == AppDetail.CommunityAliases) {
+                communityAliasScrollBehavior
+            } else {
+                MiuixScrollBehavior()
+            }
             val scoreQueryViewModel = if (activeDetail == AppDetail.ScoreQuery) {
                 composeViewModel<ScoreQueryViewModel>(factory = ScoreQueryViewModel.Factory(container))
             } else {
@@ -1697,7 +1713,9 @@ fun MaimaidApp(
                                     AppDetail.LxnsImport,
                                     AppDetail.OtogameImport,
                                     AppDetail.OtogameLogin,
-                                    -> Modifier.layerBackdrop(detailBackdrop)
+                                    -> Modifier
+                                        .layerBackdrop(detailBackdrop)
+                                        .background(backgroundColor)
                                     AppDetail.StaticData -> Modifier
                                         .padding(paddingValues)
                                         .layerBackdrop(detailBackdrop)
@@ -1712,6 +1730,7 @@ fun MaimaidApp(
                             selectedDanCategoryId = selectedDanCategoryId,
                             container = container,
                             songContentTopPadding = paddingValues.calculateTopPadding(),
+                            communityAliasListState = communityAliasListState,
                             recommendationSelectedPage = recommendationSelectedPage,
                             danSelectedPage = danSelectedPage,
                             scoreQueryViewModel = scoreQueryViewModel,
@@ -1764,16 +1783,17 @@ fun MaimaidApp(
 private fun DetailNavigationLayer(
     title: String,
     onBack: () -> Unit,
+    scrollBehavior: ScrollBehavior? = null,
     actions: @Composable RowScope.() -> Unit = {},
     scrollObserver: NestedScrollConnection? = null,
     bottomContent: @Composable () -> Unit = {},
     content: @Composable (Dp) -> Unit,
 ) {
-    val scrollBehavior = MiuixScrollBehavior()
+    val resolvedScrollBehavior = scrollBehavior ?: MiuixScrollBehavior()
     val backgroundColor = MiuixTheme.colorScheme.background
     val pageBackdrop = rememberLayerBackdrop()
-    val scrollConnection = remember(scrollBehavior, scrollObserver) {
-        val topBarConnection = scrollBehavior.nestedScrollConnection
+    val scrollConnection = remember(resolvedScrollBehavior, scrollObserver) {
+        val topBarConnection = resolvedScrollBehavior.nestedScrollConnection
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 scrollObserver?.onPreScroll(available, source)
@@ -1826,7 +1846,7 @@ private fun DetailNavigationLayer(
                     }
                 },
                 actions = actions,
-                scrollBehavior = scrollBehavior,
+                scrollBehavior = resolvedScrollBehavior,
                 defaultWindowInsetsPadding = true,
                 bottomContent = bottomContent,
             )

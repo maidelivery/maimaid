@@ -14,8 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.ThumbDown
@@ -66,13 +66,13 @@ internal fun CommunityAliasScreen(
     container: AppContainer,
     songs: List<SongEntity>,
     contentTopPadding: Dp,
+    listState: LazyListState,
     onOpenSong: (String) -> Unit,
 ) {
     val viewModel = viewModel<CommunityAliasBoardViewModel>(
         factory = CommunityAliasBoardViewModel.Factory(container),
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val listState = rememberLazyListState()
     val songsById = remember(songs) { songs.associateBy(SongEntity::songIdentifier) }
     val groups = remember(state.items) {
         state.items
