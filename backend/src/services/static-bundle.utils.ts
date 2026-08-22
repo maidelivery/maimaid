@@ -348,7 +348,7 @@ export const mergeSongIdPayload = (catalogPayload: unknown, existingPayload: unk
 	for (const item of existingRows) {
 		const record = toRecord(item);
 		const id = Number(record?.id);
-		const name = typeof record?.name === "string" ? record.name.trim() : "";
+		const name = preserveNonEmptyText(record?.name);
 		if (Number.isFinite(id) && id > 0 && name) {
 			rows.set(Math.trunc(id), name);
 		}
@@ -358,7 +358,7 @@ export const mergeSongIdPayload = (catalogPayload: unknown, existingPayload: unk
 	const songs = Array.isArray(catalog?.songs) ? catalog.songs : [];
 	for (const rawSong of songs) {
 		const song = toRecord(rawSong);
-		const name = typeof song?.title === "string" ? song.title.trim() : "";
+		const name = preserveNonEmptyText(song?.title);
 		if (!name || !Array.isArray(song?.sheets)) {
 			continue;
 		}
@@ -488,8 +488,24 @@ export type LxnsCnRegionMergeStats = {
 	matchedChartCount: number;
 };
 
-const normalizeCatalogIdentity = (value: unknown) =>
-	typeof value === "string" ? value.normalize("NFKC").trim().toLocaleLowerCase().replace(/\s+/gu, " ") : "";
+const normalizeCatalogIdentity = (value: unknown) => {
+	if (typeof value !== "string") {
+		return "";
+	}
+
+	const normalized = value.normalize("NFKC").replace(/\s+/gu, " ").trim().toLocaleLowerCase();
+	// A single full-width space is a valid maimai title. Keep a stable key for
+	// whitespace-only titles so LXNS and dxdata can still match it.
+	return normalized || (value.length > 0 ? " " : "");
+};
+
+const preserveNonEmptyText = (value: unknown) => {
+	if (typeof value !== "string") {
+		return "";
+	}
+	const trimmed = value.trim();
+	return trimmed || (value.length > 0 ? value : "");
+};
 
 const lxnsChartKey = (chartType: string, difficulty: string) => `${chartType}|${difficulty}`;
 

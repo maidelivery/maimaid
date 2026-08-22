@@ -184,6 +184,34 @@ describe("mergeLxnsCnRegions", () => {
 		expect(songs[0]?.sheets[0]?.regions.cn).toBe(true);
 	});
 
+	it("matches the LXNS song whose title is a full-width space", () => {
+		const result = mergeLxnsCnRegions(
+			{
+				songs: [
+					{
+						title: "\u3000",
+						artist: "x0o0x_",
+						sheets: [sheet("dx", "basic", false), sheet("dx", "master", false)],
+					},
+				],
+			},
+			{
+				songs: [
+					{
+						id: 1422,
+						title: "\u3000",
+						artist: "x0o0x_",
+						difficulties: { standard: [], dx: [lxnsChart("dx", 0), lxnsChart("dx", 3)] },
+					},
+				],
+			},
+		);
+
+		const songs = result.dataJson.songs as Array<{ sheets: Array<{ regions: Record<string, boolean> }> }>;
+		expect(songs[0]?.sheets.map((item) => item.regions.cn)).toEqual([true, true]);
+		expect(result.stats.matchedChartCount).toBe(2);
+	});
+
 	it("matches dxdata utage variants to LXNS kanji markers", () => {
 		const result = mergeLxnsCnRegions(
 			{
@@ -499,6 +527,14 @@ describe("normalizeDxDataCatalog", () => {
 		});
 		expect(song.sheets[1]?.internalLevelValue).toBe(12.5);
 		expect(song.sheets[1]?.regionOverrides).toBeUndefined();
+	});
+});
+
+describe("mergeSongIdPayload", () => {
+	it("retains provider IDs for whitespace-only song titles", () => {
+		expect(mergeSongIdPayload({ songs: [{ title: "\u3000", sheets: [{ type: "dx", internalId: 1422 }] }] }, [])).toEqual([
+			{ id: 11422, name: "\u3000" },
+		]);
 	});
 });
 

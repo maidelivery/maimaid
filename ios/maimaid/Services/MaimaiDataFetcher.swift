@@ -402,7 +402,7 @@ class MaimaiDataFetcher {
                         let rawName = item.name
                         let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
                         let trimmedName = trimmed.isEmpty ? rawName : trimmed
-                        guard !trimmedName.isEmpty else { continue }
+                        guard !rawName.isEmpty else { continue }
                         nameToProviderIds[trimmedName, default: []].append(item.id)
                         let normalizedName = Self.normalizeSongLookupTitle(trimmedName)
                         var normalizedIds = nameToProviderIdsByNormalized[normalizedName] ?? []
@@ -457,7 +457,7 @@ class MaimaiDataFetcher {
                                 let rawName = item.name
                                 let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
                                 let trimmedName = trimmed.isEmpty ? rawName : trimmed
-                                guard !trimmedName.isEmpty else { continue }
+                                guard !rawName.isEmpty else { continue }
                                 nameToProviderIds[trimmedName, default: []].append(item.id)
                                 let normalizedName = Self.normalizeSongLookupTitle(trimmedName)
                                 var normalizedIds = nameToProviderIdsByNormalized[normalizedName] ?? []
@@ -1199,11 +1199,12 @@ class MaimaiDataFetcher {
     }
 
     private static func normalizeSongLookupTitle(_ raw: String) -> String {
-        raw
+        let normalized = raw
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
             .lowercased()
             .replacingOccurrences(of: #"\s+"#, with: "", options: .regularExpression)
+        return normalized.isEmpty && !raw.isEmpty ? " " : normalized
     }
 
     private static func mergingAliases(_ aliases: [String], into existing: [String]) -> [String] {

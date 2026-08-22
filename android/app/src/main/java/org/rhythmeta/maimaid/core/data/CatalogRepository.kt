@@ -202,7 +202,7 @@ class CatalogRepository(
             SongEntity(
                 songIdentifier = remote.songId,
                 category = remote.category.orEmpty(),
-                title = remote.title?.trim().orEmpty(),
+                title = preserveNonEmptyText(remote.title),
                 artist = remote.artist.orEmpty(),
                 imageName = remote.imageName?.trim().orEmpty(),
                 version = remote.version,
@@ -334,10 +334,19 @@ class CatalogRepository(
         else -> null
     } ?: 0
 
-    private fun normalizeTitle(value: String): String = Normalizer.normalize(value, Normalizer.Form.NFKC)
-        .trim()
-        .lowercase()
-        .replace(WhitespaceRegex, " ")
+    private fun normalizeTitle(value: String): String {
+        val normalized = Normalizer.normalize(value, Normalizer.Form.NFKC)
+            .replace(WhitespaceRegex, " ")
+            .trim()
+            .lowercase()
+        return normalized.ifEmpty { if (value.isNotEmpty()) " " else "" }
+    }
+
+    private fun preserveNonEmptyText(value: String?): String {
+        if (value == null) return ""
+        val trimmed = value.trim()
+        return trimmed.ifEmpty { if (value.isNotEmpty()) value else "" }
+    }
 
     private inner class StageProgressReporter(
         private val version: String,
