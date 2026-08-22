@@ -267,4 +267,4 @@ private fun gridCornerRadius(columns: Int): Dp = when (columns) {
 }
 
 private const val MinGridColumns = 3
-private const val MaxGridColumns = 9
+private const val MaxGridColumns = 7

@@ -35,7 +35,7 @@ struct ScoreQueryView: View {
     @State private var navigationDisabled: Bool = false
     
     private let minColumns: CGFloat = 3
-    private let maxColumns: CGFloat = 9
+    private let maxColumns: CGFloat = 7
     
     // Stats
     @State private var stats = PlayerStats()

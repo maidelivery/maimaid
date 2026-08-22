@@ -78,7 +78,7 @@ struct SongsView: View {
     }
     
     private let minColumns: CGFloat = 3
-    private let maxColumns: CGFloat = 9
+    private let maxColumns: CGFloat = 7
     
     private struct SongFilterSnapshot: Sendable {
         struct SheetSnapshot: Sendable {
