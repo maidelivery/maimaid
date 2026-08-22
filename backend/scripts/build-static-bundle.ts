@@ -4,7 +4,7 @@
  * in source configuration, private chart aggregation, and publication records.
  */
 import "reflect-metadata";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -139,7 +139,11 @@ const writeStaticTree = async () => {
 	};
 	const bundle = { version, md5: composed.md5, createdAt, payload: composed.payload, sourceMeta: composed.sourceMeta };
 
-	await rm(outputDirectory, { recursive: true, force: true });
+	await Promise.all([
+		rm(path.join(outputDirectory, "manifest.json"), { force: true }),
+		rm(path.join(outputDirectory, "bundles"), { recursive: true, force: true }),
+		rm(path.join(outputDirectory, "_headers"), { force: true }),
+	]);
 	await Promise.all([
 		mkdir(path.join(outputDirectory, "bundles"), { recursive: true }),
 		mkdir(path.join(outputDirectory, "covers"), { recursive: true }),
@@ -155,9 +159,24 @@ const writeStaticTree = async () => {
 	]);
 
 	const candidates = collectStaticAssetCandidates(composed.payload);
+	const existingAssets = new Set<string>();
+	for (const candidate of candidates) {
+		const destination = path.join(outputDirectory, candidate.kind === "cover" ? "covers" : "lxns-icons", candidate.name);
+		try {
+			const metadata = await stat(destination);
+			if (metadata.isFile() && metadata.size > 0) {
+				existingAssets.add(`${candidate.kind}|${candidate.name}`);
+			}
+		} catch {
+			// The cache may be empty or may not contain this newly referenced asset.
+		}
+	}
+	const missingCandidates = candidates.filter((candidate) => !existingAssets.has(`${candidate.kind}|${candidate.name}`));
 	let completed = 0;
-	console.log(`[assets] downloading ${candidates.length} object(s)`);
-	await mapWithConcurrency(candidates, assetConcurrency, async (candidate) => {
+	console.log(
+		`[assets] reusing ${existingAssets.size}, downloading ${missingCandidates.length} of ${candidates.length} object(s)`,
+	);
+	await mapWithConcurrency(missingCandidates, assetConcurrency, async (candidate) => {
 		await downloadAsset(candidate);
 		completed += 1;
 		if (completed % 100 === 0) console.log(`[assets] downloaded ${completed}/${candidates.length}`);

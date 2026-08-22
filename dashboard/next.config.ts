@@ -34,6 +34,8 @@ if (staticAssetsOrigin) {
 	connectSources.push(staticAssetsOrigin);
 	imageSources.push(staticAssetsOrigin);
 }
+connectSources.push("https://assets.rhythmeta.org");
+imageSources.push("https://assets.rhythmeta.org");
 
 const contentSecurityPolicy = [
 	"default-src 'self'",

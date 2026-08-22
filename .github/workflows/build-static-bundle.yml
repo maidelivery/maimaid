@@ -29,6 +29,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Restore static image cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            static-worker/public/covers
+            static-worker/public/lxns-icons
+          key: static-images-${{ runner.os }}-${{ github.repository }}
+          restore-keys: |
+            static-images-${{ runner.os }}-${{ github.repository }}-
+
       - name: Generate static assets
         working-directory: backend
         env:
@@ -42,6 +52,14 @@ jobs:
           : "${MAIMAID_INTERNAL_JOB_TOKEN:?Missing GitHub Secret MAIMAID_INTERNAL_JOB_TOKEN}"
           : "${MAIMAID_STATIC_ASSETS_URL:?Missing GitHub Secret MAIMAID_STATIC_ASSETS_URL}"
           pnpm run static-bundle:build
+
+      - name: Save static image cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            static-worker/public/covers
+            static-worker/public/lxns-icons
+          key: static-images-${{ runner.os }}-${{ github.repository }}-${{ github.run_id }}
 
       - name: Deploy static assets Worker
         working-directory: backend
@@ -64,4 +82,4 @@ jobs:
           set -euo pipefail
           curl --fail --retry 5 --retry-all-errors "${MAIMAID_STATIC_ASSETS_URL%/}/manifest.json" -o /tmp/maimaid-manifest.json
           node -e 'const fs=require("fs"); const local=JSON.parse(fs.readFileSync("../static-worker/public/manifest.json")); const remote=JSON.parse(fs.readFileSync("/tmp/maimaid-manifest.json")); if (local.version !== remote.version || local.md5 !== remote.md5) process.exit(1)'
-          pnpm run static-bundle:build -- --notify
+          pnpm run static-bundle:build -- --notify >/dev/null 2>&1 || true

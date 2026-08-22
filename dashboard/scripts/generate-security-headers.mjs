@@ -35,6 +35,7 @@ if (backendOrigin) {
 if (staticAssetsOrigin) {
 	connectSources.push(staticAssetsOrigin);
 }
+connectSources.push("https://assets.rhythmeta.org");
 
 // Profile avatars are streamed by the backend from R2 via
 // GET /v1/profiles/:profileId/avatar, so the backend origin must be an
@@ -46,6 +47,7 @@ if (backendOrigin) {
 if (staticAssetsOrigin) {
 	imageSources.push(staticAssetsOrigin);
 }
+imageSources.push("https://assets.rhythmeta.org");
 
 const contentSecurityPolicy = [
 	"default-src 'self'",
