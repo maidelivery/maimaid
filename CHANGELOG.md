@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.2.5
+
+### 中文
+
+#### 新增
+
+- Android 现在有三种大小的小组件，分别是 2x2, 2x4, 3x4。
+
+#### 修复
+
+- 修复 Android 备份到云端时因一次性构造超大同步请求和全量回拉云端数据导致的内存溢出。
+- 修复 DivingFish 导入将成绩快照错误写入游玩历史的问题。
+- 清理旧版 DivingFish 导入产生的批量伪游玩记录。
+
+#### 变更
+
+- Android 云端备份改为按档案分批上传，避免大档案占用过多内存。
+- iOS 与 Android 云端同步过滤旧版批量伪游玩记录。
+
+### English
+
+#### Added
+
+- Android now offers three sizes of widgets: 2x2, 2x4, and 3x4.
+
+#### Fixed
+
+- Fixed Android cloud backups running out of memory while constructing large sync requests and pulling the entire cloud dataset.
+- Fixed Diving Fish imports incorrectly creating play-history records from score snapshots.
+- Removed batched fake play records created by legacy Diving Fish imports.
+
+#### Changed
+
+- Changed Android cloud backup to upload profile data in bounded batches.
+- Added legacy batched play-record filtering to iOS and Android cloud synchronization.
+
 ## 1.2.4.1
 
 ### 中文
