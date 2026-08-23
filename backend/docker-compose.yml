@@ -8,7 +8,7 @@ services:
       POSTGRES_DB: maimaid
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    command: postgres -c shared_preload_libraries=pg_cron -c cron.database_name=$$POSTGRES_DB
+    command: postgres -c shared_preload_libraries=pg_cron -c cron.database_name=maimaid
     ports:
       # Loopback-only on purpose. Publishing a port makes Docker write its own
       # iptables rules ahead of the host firewall, so a bare "54329:5432" on a

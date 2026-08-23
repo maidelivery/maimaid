@@ -67,6 +67,9 @@ interface ScoreDao {
     @Delete
     suspend fun deletePlayRecord(record: PlayRecordEntity)
 
+    @Delete
+    suspend fun deletePlayRecords(records: List<PlayRecordEntity>)
+
     @Query("DELETE FROM scores WHERE profileId = :profileId AND sheetKey = :sheetKey")
     suspend fun deleteScore(profileId: String, sheetKey: String)
 

@@ -678,15 +678,9 @@ export class ImportService {
 				return row;
 			});
 
+			// Diving Fish exposes best-score rows without play timestamps. They are
+			// score snapshots, so importing them as play history would fabricate records.
 			const upsertResult = await this.scoreService.bulkUpsertBestScores(input.profileId, mapped, "df_import");
-			const recordResult = await this.scoreService.bulkInsertPlayRecords(
-				input.profileId,
-				mapped.map((item) => ({
-					...item,
-					playTime: new Date(),
-				})),
-				"df_import",
-			);
 
 			await this.prisma.importRawPayload.create({
 				data: {
@@ -709,7 +703,7 @@ export class ImportService {
 						fetched: transformed.fetchedCount,
 						upserted: upsertResult.applied.length,
 						skipped: upsertResult.skipped.length,
-						recordsInserted: recordResult.created.length,
+						recordsInserted: 0,
 					},
 				},
 			});
@@ -723,7 +717,7 @@ export class ImportService {
 					provider: "df",
 					fetched: transformed.fetchedCount,
 					upserted: upsertResult.applied.length,
-					recordsInserted: recordResult.created.length,
+					recordsInserted: 0,
 				},
 			});
 			await this.syncService.recordEvent({
@@ -737,18 +731,6 @@ export class ImportService {
 					count: upsertResult.applied.length,
 				},
 			});
-			await this.syncService.recordEvent({
-				userId: input.userId,
-				profileId: input.profileId,
-				entityType: "play_records",
-				entityId: input.profileId,
-				op: "bulk_upsert",
-				payload: {
-					source: "df_import",
-					count: recordResult.created.length,
-				},
-			});
-
 			return {
 				importRunId: run.id,
 				fetchedCount: transformed.fetchedCount,

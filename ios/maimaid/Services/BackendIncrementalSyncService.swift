@@ -481,6 +481,11 @@ enum BackendIncrementalSyncService {
             throw BackendAPIError.unauthorized
         }
 
+        let removedLegacyRecordCount = try LegacyDivingFishRecordCleanup.removeRecords(context: context)
+        if removedLegacyRecordCount > 0 {
+            ScoreService.shared.notifyScoresChanged()
+        }
+
         let profiles = try context.fetch(FetchDescriptor<UserProfile>())
         guard !profiles.isEmpty else { return }
         let sheets = try context.fetch(FetchDescriptor<Sheet>())

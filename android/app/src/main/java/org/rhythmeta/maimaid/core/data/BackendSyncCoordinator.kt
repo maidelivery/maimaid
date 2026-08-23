@@ -58,6 +58,17 @@ internal fun localProfilesAbsentFromCloud(
     cloudProfileIds: Set<String>,
 ): List<UserProfileEntity> = localProfiles.filter { it.id !in cloudProfileIds }
 
+internal fun legacyDivingFishPlayRecords(
+    records: List<PlayRecordEntity>,
+    minimumBatchSize: Int = 100,
+): List<PlayRecordEntity> {
+    val legacyTimestamps = records.groupingBy(PlayRecordEntity::playedAt)
+        .eachCount()
+        .filterValues { it >= minimumBatchSize }
+        .keys
+    return records.filter { it.playedAt in legacyTimestamps }
+}
+
 class BackendSyncCoordinator(
     private val database: MaimaidDatabase,
     private val profileRepository: ProfileRepository,
@@ -690,6 +701,13 @@ class BackendSyncCoordinator(
         overwriteProfileMetadata: Boolean,
     ): BackendPendingSyncMutation {
         val sheets = database.catalogDao().sheets().associateBy(SheetEntity::sheetKey)
+        val playRecordsByProfile = profiles.associate { profile ->
+            val records = database.scoreDao().playRecords(profile.id)
+            val legacyRecords = legacyDivingFishPlayRecords(records)
+            if (legacyRecords.isNotEmpty()) database.scoreDao().deletePlayRecords(legacyRecords)
+            val legacyRecordIds = legacyRecords.mapTo(mutableSetOf(), PlayRecordEntity::id)
+            profile.id to records.filterNot { it.id in legacyRecordIds }
+        }
         val profileFingerprints = mutableMapOf<String, String>()
         val profileUpserts = profiles.mapNotNull profileMap@{ profile ->
             val fingerprint = BackendSyncStateStore.profileFingerprint(profile)
@@ -720,7 +738,7 @@ class BackendSyncCoordinator(
                 }.takeIf(List<BackendScoreEntry>::isNotEmpty)?.let { BackendScoreSet(profile.id, it) }
             },
             playRecordUpserts = profiles.mapNotNull recordSetMap@{ profile ->
-                database.scoreDao().playRecords(profile.id).mapNotNull recordMap@{ record ->
+                playRecordsByProfile.getValue(profile.id).mapNotNull recordMap@{ record ->
                     val sheet = sheets[record.sheetKey] ?: return@recordMap null
                     record.toEntry(sheet)
                 }.takeIf(List<BackendPlayRecordEntry>::isNotEmpty)?.let { BackendRecordSet(profile.id, it) }

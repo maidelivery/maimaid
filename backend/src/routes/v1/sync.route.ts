@@ -8,9 +8,12 @@ import type { AppEnv } from "../../types/hono.js";
 import { SyncService } from "../../services/sync.service.js";
 import { ProfileService } from "../../services/profile.service.js";
 import { ScoreService } from "../../services/score.service.js";
+import { removeLegacyDivingFishPlayRecords } from "../../services/legacy-play-record-cleanup.js";
 import { PrismaClient } from "@prisma/client";
 
-const BULK_ARRAY_MAX = 10_000;
+// Full-profile backups can contain tens of thousands of play records. Keep a
+// bounded payload while allowing existing profiles to synchronize atomically.
+const BULK_ARRAY_MAX = 50_000;
 
 const scoreEntrySchema = z.object({
 	sheetId: z
@@ -382,7 +385,8 @@ syncV1Route.post("/sync:push", authRequired, standardValidator("json", pushSchem
 
 			for (const recordSet of body.playRecordUpserts) {
 				await scoreService.requireProfileOwnership(recordSet.profileId, auth.userId, transaction);
-				const mapped = mapPlayRecords(recordSet.records);
+				const mapped = mapPlayRecords(removeLegacyDivingFishPlayRecords(recordSet.records));
+				if (mapped.length === 0) continue;
 				const response = await scoreService.bulkInsertPlayRecords(recordSet.profileId, mapped, "sync_push", transaction);
 				result.applied.records += response.created.length;
 				if (response.created.length > 0) {
