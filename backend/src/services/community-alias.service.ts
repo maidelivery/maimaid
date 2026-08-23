@@ -108,7 +108,7 @@ export class CommunityAliasService {
 		}
 
 		const voteOpenAt = new Date();
-		const voteCloseAt = this.computeCycleEnd(voteOpenAt);
+		const voteCloseAt = this.computeVoteCloseAt(voteOpenAt);
 
 		const candidate = await this.prisma.communityAliasCandidate.create({
 			data: {
@@ -127,7 +127,7 @@ export class CommunityAliasService {
 
 		return {
 			status: "created",
-			message: "Alias submitted and is now public in the current voting cycle.",
+			message: "Alias submitted and is now public for the next 72 hours.",
 			candidate,
 			quotaRemaining: Math.max(0, 5 - (dailyCount + 1)),
 		} as const;
@@ -491,7 +491,7 @@ export class CommunityAliasService {
 				submitterId: input.submitterId,
 				status: input.status,
 				voteOpenAt: now,
-				voteCloseAt: input.status === "voting" ? this.computeCycleEnd(now) : now,
+				voteCloseAt: input.status === "voting" ? this.computeVoteCloseAt(now) : now,
 				approvedAt: input.status === "approved" ? now : null,
 				submittedLocalDate: now,
 				submittedTzOffsetMin: 480,
@@ -520,7 +520,7 @@ export class CommunityAliasService {
 		};
 		if (status === "voting") {
 			data.voteOpenAt = now;
-			data.voteCloseAt = this.computeCycleEnd(now);
+			data.voteCloseAt = this.computeVoteCloseAt(now);
 		}
 
 		return this.prisma.communityAliasCandidate.update({
@@ -557,16 +557,8 @@ export class CommunityAliasService {
 		}
 	}
 
-	private computeCycleEnd(from: Date): Date {
-		const beijingNow = new Date(from.toLocaleString("en-US", { timeZone: SHANGHAI_TIMEZONE }));
-		const start = new Date(beijingNow);
-		start.setHours(0, 0, 0, 0);
-
-		const epoch = new Date("1970-01-01T00:00:00+08:00");
-		const offsetDays = Math.floor((start.getTime() - epoch.getTime()) / (24 * 60 * 60 * 1000)) % 3;
-		start.setDate(start.getDate() - offsetDays + 3);
-		start.setSeconds(-1);
-		return start;
+	private computeVoteCloseAt(from: Date): Date {
+		return new Date(from.getTime() + 72 * 60 * 60 * 1000);
 	}
 
 	private buildDuplicateResponse(input: { message: string; duplicateReason: DuplicateReason; similarAliases?: string[] }) {

@@ -141,6 +141,24 @@ describe("community alias submit duplicate rules", () => {
 		expect(mocks.listAliases).toHaveBeenCalledWith("123", "lxns");
 	});
 
+	it("sets the voting deadline 72 hours after submission", async () => {
+		const { service, mocks } = createService();
+		const before = Date.now();
+
+		await service.submitAlias({
+			userId: "user-id",
+			isAdmin: false,
+			songIdentifier: "123",
+			aliasText: "72-hour alias",
+			deviceLocalDate: "2026-03-29",
+			tzOffsetMinutes: 480,
+		});
+
+		const createdData = mocks.create.mock.calls[0]?.[0].data as { voteOpenAt: Date; voteCloseAt: Date };
+		expect(createdData.voteCloseAt.getTime() - createdData.voteOpenAt.getTime()).toBe(72 * 60 * 60 * 1000);
+		expect(createdData.voteOpenAt.getTime()).toBeGreaterThanOrEqual(before);
+	});
+
 	it("serializes submitterHandle on the public voting board", async () => {
 		const prisma = {
 			communityAliasCandidate: {
