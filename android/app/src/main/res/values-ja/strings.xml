@@ -23,6 +23,14 @@
     <string name="random_ready">準備はいい？</string>
     <string name="home_greeting">おかえりなさい</string>
     <string name="home_rating">Rating</string>
+    <string name="widget_name">maimaid</string>
+    <string name="widget_description">現在のプロフィールの DX Rating と Best 50</string>
+    <string name="widget_no_profile">maimaid でプロフィールを作成してください</string>
+    <string name="widget_no_scores">Best 50 データを準備中です</string>
+    <string name="widget_dx_rating">DX Rating</string>
+    <string name="widget_b35">B35</string>
+    <string name="widget_b15">B15</string>
+    <string name="widget_personal_best">自己ベスト</string>
     <string name="home_best">Best 50</string>
     <string name="home_best_summary">Rating の構成を確認して画像を書き出します</string>
     <string name="home_tools">機能</string>

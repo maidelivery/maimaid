@@ -130,6 +130,8 @@ fun MaimaidApp(
     onThemeColorSourceChange: (AppThemeColorSource) -> Unit,
     onThemeCustomColorChange: (Int) -> Unit,
     onSendLogs: () -> Unit,
+    initialDetail: AppDetail? = null,
+    resetToHome: Boolean = false,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val initialCatalogState by viewModel.initialCatalogState.collectAsStateWithLifecycle()
@@ -178,6 +180,19 @@ fun MaimaidApp(
     var profileCreateRequested by rememberSaveable { mutableStateOf(false) }
     var bestTableExportRequested by rememberSaveable { mutableStateOf(false) }
     var randomSongFilterRequested by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(initialDetail, resetToHome) {
+        when {
+            resetToHome -> {
+                destination = RootDestination.Home
+                detail = null
+            }
+            initialDetail != null -> {
+                destination = RootDestination.Home
+                detail = initialDetail
+            }
+        }
+    }
     var randomSongFilterActive by rememberSaveable { mutableStateOf(false) }
     var recommendationSelectedPage by rememberSaveable {
         mutableIntStateOf(RecommendationNewPage)

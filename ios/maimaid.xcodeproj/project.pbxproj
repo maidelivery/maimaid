@@ -10,7 +10,6 @@
 		3728607A2F604BC70028E788 /* maimaid v1.41n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 372860792F604BC70028E788 /* maimaid v1.41n.mlpackage */; };
 		373DA3D92F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */; };
 		373DA3E52F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */; };
-		37C9CF1B2F4CE4DB002CBF7A /* maimaid.icon in Resources */ = {isa = PBXBuildFile; fileRef = 37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -19,7 +18,6 @@
 		373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaidetector v1.2n.mlpackage"; sourceTree = "<group>"; };
 		373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaidistinguish v1.2.mlpackage"; sourceTree = "<group>"; };
 		37C9C3DD2F4CDAAB002CBF7A /* maimaid.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = maimaid.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = maimaid.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -75,7 +73,6 @@
 				375868EB2F4C78EB006316F5 /* maimaid */,
 				3703C0013B00000100000003 /* Config */,
 				37C9C3DD2F4CDAAB002CBF7A /* maimaid.app */,
-				37C9CF1A2F4CE4DB002CBF7A /* maimaid.icon */,
 				372860792F604BC70028E788 /* maimaid v1.41n.mlpackage */,
 				373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */,
 				373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */,
@@ -153,7 +150,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				37C9CF1B2F4CE4DB002CBF7A /* maimaid.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -10,6 +10,7 @@ import java.util.UUID
 class ProfileRepository(
     private val profileDao: ProfileDao,
     private val defaultProfileName: String,
+    private val onProfileChanged: () -> Unit = {},
 ) {
     private val activeProfileMutex = Mutex()
 
@@ -50,6 +51,7 @@ class ProfileRepository(
                 b15Count = profile.b15Count.coerceAtLeast(1),
             ),
         )
+        onProfileChanged()
     }
 
     suspend fun create(
@@ -71,11 +73,15 @@ class ProfileRepository(
             plate = plate.trim().takeIf(String::isNotEmpty),
         )
         profileDao.upsert(profile)
+        onProfileChanged()
         return profile
     }
 
-    suspend fun activate(profile: UserProfileEntity) = activeProfileMutex.withLock {
-        profileDao.activate(profile)
+    suspend fun activate(profile: UserProfileEntity) {
+        activeProfileMutex.withLock {
+            profileDao.activate(profile)
+        }
+        onProfileChanged()
     }
 
     suspend fun delete(profile: UserProfileEntity): Boolean {
@@ -92,5 +98,6 @@ class ProfileRepository(
                 b15Count = b15Count.coerceAtLeast(1),
             ),
         )
+        onProfileChanged()
     }
 }

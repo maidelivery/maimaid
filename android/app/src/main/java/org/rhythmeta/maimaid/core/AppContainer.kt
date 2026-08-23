@@ -36,6 +36,7 @@ import org.rhythmeta.maimaid.core.database.MaimaidDatabase
 import org.rhythmeta.maimaid.core.ml.OnnxSessionFactory
 import org.rhythmeta.maimaid.core.network.BackendApiClient
 import org.rhythmeta.maimaid.core.network.StaticBundleClient
+import org.rhythmeta.maimaid.widget.WidgetUpdateCoordinator
 
 class AppContainer(context: Context) {
     val applicationContext: Context = context.applicationContext
@@ -56,6 +57,8 @@ class AppContainer(context: Context) {
     )
         .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
         .build()
+
+    val widgetUpdateCoordinator = WidgetUpdateCoordinator(applicationContext)
 
     val appPreferencesRepository = AppPreferencesRepository(applicationContext)
     val onnxSessionFactory = OnnxSessionFactory(applicationContext)
@@ -85,6 +88,7 @@ class AppContainer(context: Context) {
     val profileRepository = ProfileRepository(
         profileDao = database.profileDao(),
         defaultProfileName = applicationContext.getString(R.string.default_profile_name),
+        onProfileChanged = widgetUpdateCoordinator::requestUpdate,
     )
 
     val presetAvatarRepository = PresetAvatarRepository(

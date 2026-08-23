@@ -23,6 +23,14 @@
     <string name="random_ready">准备好了吗？</string>
     <string name="home_greeting">欢迎回来</string>
     <string name="home_rating">Rating</string>
+    <string name="widget_name">maimaid</string>
+    <string name="widget_description">当前用户的 DX Rating 和 Best 50</string>
+    <string name="widget_no_profile">请在 maimaid 中创建用户</string>
+    <string name="widget_no_scores">Best 50 数据尚未准备好</string>
+    <string name="widget_dx_rating">DX Rating</string>
+    <string name="widget_b35">B35</string>
+    <string name="widget_b15">B15</string>
+    <string name="widget_personal_best">个人最佳</string>
     <string name="home_best">Best 50</string>
     <string name="home_best_summary">查看 Rating 构成并导出图片</string>
     <string name="home_tools">功能</string>

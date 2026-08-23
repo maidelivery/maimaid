@@ -23,6 +23,14 @@
     <string name="random_ready">Ready?</string>
     <string name="home_greeting">Welcome back</string>
     <string name="home_rating">Rating</string>
+    <string name="widget_name">maimaid</string>
+    <string name="widget_description">Active profile DX Rating and Best 50</string>
+    <string name="widget_no_profile">Create a profile in maimaid</string>
+    <string name="widget_no_scores">Best 50 data is not ready</string>
+    <string name="widget_dx_rating">DX Rating</string>
+    <string name="widget_b35">B35</string>
+    <string name="widget_b15">B15</string>
+    <string name="widget_personal_best">Personal Best</string>
     <string name="home_best">Best 50</string>
     <string name="home_best_summary">View rating composition and export an image</string>
     <string name="home_tools">Tools</string>

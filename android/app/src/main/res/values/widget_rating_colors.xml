@@ -1,0 +1,20 @@
+<resources>
+    <color name="widget_rating_rainbow">#FF6100</color>
+    <color name="widget_rating_platinum">#E5E4E2</color>
+    <color name="widget_rating_gold">#FFD700</color>
+    <color name="widget_rating_silver">#C0C0C0</color>
+    <color name="widget_rating_bronze">#CD7F32</color>
+    <color name="widget_rating_purple">#D084FF</color>
+    <color name="widget_rating_red">#FF5E5E</color>
+    <color name="widget_rating_yellow">#FFD400</color>
+    <color name="widget_rating_green">#46D246</color>
+    <color name="widget_rating_blue">#56A6FF</color>
+    <color name="widget_rating_gray">#8E8E93</color>
+    <color name="widget_score_rating">#FF9500</color>
+    <color name="widget_difficulty_basic">#36BF63</color>
+    <color name="widget_difficulty_advanced">#FCA13B</color>
+    <color name="widget_difficulty_expert">#F7536A</color>
+    <color name="widget_difficulty_remaster">#E3BDFC</color>
+    <color name="widget_difficulty_master">#A34EE4</color>
+    <color name="widget_difficulty_unknown">#FF2D55</color>
+</resources>

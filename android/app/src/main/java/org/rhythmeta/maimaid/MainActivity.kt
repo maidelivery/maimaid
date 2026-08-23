@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -13,12 +14,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.core.LogReportExporter
 import org.rhythmeta.maimaid.ui.MaimaidApp
+import org.rhythmeta.maimaid.ui.navigation.AppDetail
 import org.rhythmeta.maimaid.ui.theme.MaimaidTheme
+import org.rhythmeta.maimaid.widget.WidgetDestinationExtra
 
 class MainActivity : ComponentActivity() {
+    private val widgetDetail = mutableStateOf<AppDetail?>(null)
+    private val widgetHomeRequest = mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        applyWidgetRoute(intent)
         dispatchAuthIntent(intent)
         setContent {
             val maimaidApplication = application as MaimaidApplication
@@ -43,6 +50,8 @@ class MainActivity : ComponentActivity() {
                     onThemeColorSourceChange = mainViewModel::setThemeColorSource,
                     onThemeCustomColorChange = mainViewModel::setThemeCustomColorArgb,
                     onSendLogs = ::sendLogs,
+                    initialDetail = widgetDetail.value,
+                    resetToHome = widgetHomeRequest.value,
                 )
             }
         }
@@ -51,6 +60,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        applyWidgetRoute(intent)
         dispatchAuthIntent(intent)
     }
 
@@ -78,5 +88,13 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             container.backendSessionManager.handleAuthRedirect(url)
         }
+    }
+
+    private fun applyWidgetRoute(intent: Intent?) {
+        val route = intent?.getStringExtra(WidgetDestinationExtra)
+        widgetHomeRequest.value = route == "home"
+        widgetDetail.value = route
+            ?.takeIf { it == "best50" }
+            ?.let { AppDetail.BestTable }
     }
 }
