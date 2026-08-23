@@ -19,6 +19,8 @@ import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.UserProfileEntity
 import org.rhythmeta.maimaid.core.network.BackendApiClient
 
+private const val SyncBatchSize = 250
+
 enum class BackendAccountResolution {
     Merge,
     KeepLocal,
@@ -265,7 +267,6 @@ class BackendSyncCoordinator(
         removeRemoteProfilesAbsentLocally(localProfiles.mapTo(mutableSetOf()) { it.id })
         syncStateStore.update { current -> current.copy(pendingMutation = null) }
         pushAll(forceProfiles = true, overwriteProfileMetadata = true)
-        pullAndApply(sinceRevision = "0", replace = false)
         recordSyncedState(user.id)
     }
 
@@ -612,43 +613,86 @@ class BackendSyncCoordinator(
         val profiles = database.profileDao().profiles()
         if (profiles.isEmpty()) return
         val state = syncStateStore.load()
-        val pendingMutation = state.pendingMutation ?: createPendingMutation(
-            profiles = profiles,
-            state = state,
-            forceProfiles = forceProfiles,
-            overwriteProfileMetadata = overwriteProfileMetadata,
-        ).also { mutation ->
-            syncStateStore.update { it.copy(pendingMutation = mutation) }
-        }
-        val payload = pendingMutation.payload
-        val responseElement = sessionManager.authorizedRequest(
-            path = "v1/sync:push",
-            method = "POST",
-            body = json.encodeToJsonElement(BackendSyncPushPayload.serializer(), payload),
-        )
-        val response = json.decodeFromJsonElement(BackendSyncPushResponse.serializer(), responseElement)
-        val profileConflicts = response.conflicts.filter { it.reason == "server_newer" }.map { it.profileId }
-        if (profileConflicts.isNotEmpty()) {
-            syncStateStore.update { current ->
-                current.copy(
-                    pendingMutation = null,
-                    remoteUpdatedAtByProfile = current.remoteUpdatedAtByProfile + response.conflicts
-                        .mapNotNull { conflict -> conflict.serverProfile?.updatedAt?.let { conflict.profileId to it } } +
-                        response.profileVersions,
+        val sheets = database.catalogDao().sheets().associateBy(SheetEntity::sheetKey)
+        syncStateStore.update { it.copy(pendingMutation = null) }
+
+        for (profile in profiles) {
+            val localRecords = database.scoreDao().playRecords(profile.id)
+            val legacyRecords = legacyDivingFishPlayRecords(localRecords)
+            val legacyIds = legacyRecords.mapTo(mutableSetOf(), PlayRecordEntity::id)
+            if (legacyRecords.isNotEmpty()) database.scoreDao().deletePlayRecords(legacyRecords)
+            val records = localRecords.filterNot { it.id in legacyIds }
+            val scores = database.scoreDao().scores(profile.id)
+            val profileFingerprint = BackendSyncStateStore.profileFingerprint(profile)
+            val profileChanged = profileFingerprint != state.syncedFingerprintByProfile[profile.id]
+            val profileUpsert = if (
+                forceProfiles || profileChanged || state.remoteUpdatedAtByProfile[profile.id] == null
+            ) {
+                listOf(
+                    profile.toUpsert(
+                        clientUpdatedAt = if (overwriteProfileMetadata) null else state.remoteUpdatedAtByProfile[profile.id],
+                    ),
                 )
+            } else {
+                emptyList()
             }
-            throw BackendProfileConflictException(profileConflicts)
-        }
-        syncStateStore.update { current ->
-                current.copy(
-                    pendingMutation = null,
-                    syncedFingerprintByProfile = current.syncedFingerprintByProfile +
-                        pendingMutation.profileFingerprintById,
-                    remoteUpdatedAtByProfile = current.remoteUpdatedAtByProfile + response.profileVersions +
-                        response.conflicts.mapNotNull { conflict ->
-                            conflict.serverProfile?.updatedAt?.let { conflict.profileId to it }
-                        },
+            val batchCount = maxOf(
+                1,
+                (scores.size + SyncBatchSize - 1) / SyncBatchSize,
+                (records.size + SyncBatchSize - 1) / SyncBatchSize,
+            )
+
+            repeat(batchCount) { batchIndex ->
+                val batchStart = batchIndex * SyncBatchSize
+                val scoreEntries = if (batchStart < scores.size) {
+                    scores.subList(batchStart, minOf(batchStart + SyncBatchSize, scores.size))
+                        .mapNotNull { score -> sheets[score.sheetKey]?.let { score.toEntry(it) } }
+                } else {
+                    emptyList()
+                }
+                val recordEntries = if (batchStart < records.size) {
+                    records.subList(batchStart, minOf(batchStart + SyncBatchSize, records.size))
+                        .mapNotNull { record -> sheets[record.sheetKey]?.let { record.toEntry(it) } }
+                } else {
+                    emptyList()
+                }
+                val payload = BackendSyncPushPayload(
+                    idempotencyKey = UUID.randomUUID().toString(),
+                    forceProfileOverwrite = overwriteProfileMetadata,
+                    profileUpserts = profileUpsert.takeIf { batchIndex == 0 }.orEmpty(),
+                    scoreUpserts = scoreEntries.takeIf(List<BackendScoreEntry>::isNotEmpty)
+                        ?.let { listOf(BackendScoreSet(profile.id, it)) }.orEmpty(),
+                    playRecordUpserts = recordEntries.takeIf(List<BackendPlayRecordEntry>::isNotEmpty)
+                        ?.let { listOf(BackendRecordSet(profile.id, it)) }.orEmpty(),
                 )
+                val responseElement = sessionManager.authorizedRequest(
+                    path = "v1/sync:push",
+                    method = "POST",
+                    body = json.encodeToJsonElement(BackendSyncPushPayload.serializer(), payload),
+                )
+                val response = json.decodeFromJsonElement(BackendSyncPushResponse.serializer(), responseElement)
+                val profileConflicts = response.conflicts.filter { it.reason == "server_newer" }.map { it.profileId }
+                if (profileConflicts.isNotEmpty()) {
+                    syncStateStore.update { current ->
+                        current.copy(
+                            pendingMutation = null,
+                            remoteUpdatedAtByProfile = current.remoteUpdatedAtByProfile + response.profileVersions,
+                        )
+                    }
+                    throw BackendProfileConflictException(profileConflicts)
+                }
+                syncStateStore.update { current ->
+                    current.copy(
+                        pendingMutation = null,
+                        lastRevision = response.latestRevision,
+                        remoteUpdatedAtByProfile = current.remoteUpdatedAtByProfile + response.profileVersions,
+                    )
+                }
+            }
+            syncStateStore.update { current ->
+                current.copy(syncedFingerprintByProfile = current.syncedFingerprintByProfile +
+                    (profile.id to profileFingerprint))
+            }
         }
         val remoteProfiles = fetchRemoteProfiles()
         syncStateStore.update { current ->
@@ -692,59 +736,6 @@ class BackendSyncCoordinator(
                 pendingMutation = null,
             )
         }
-    }
-
-    private suspend fun createPendingMutation(
-        profiles: List<UserProfileEntity>,
-        state: BackendSyncPersistentState,
-        forceProfiles: Boolean,
-        overwriteProfileMetadata: Boolean,
-    ): BackendPendingSyncMutation {
-        val sheets = database.catalogDao().sheets().associateBy(SheetEntity::sheetKey)
-        val playRecordsByProfile = profiles.associate { profile ->
-            val records = database.scoreDao().playRecords(profile.id)
-            val legacyRecords = legacyDivingFishPlayRecords(records)
-            if (legacyRecords.isNotEmpty()) database.scoreDao().deletePlayRecords(legacyRecords)
-            val legacyRecordIds = legacyRecords.mapTo(mutableSetOf(), PlayRecordEntity::id)
-            profile.id to records.filterNot { it.id in legacyRecordIds }
-        }
-        val profileFingerprints = mutableMapOf<String, String>()
-        val profileUpserts = profiles.mapNotNull profileMap@{ profile ->
-            val fingerprint = BackendSyncStateStore.profileFingerprint(profile)
-            val lastFingerprint = state.syncedFingerprintByProfile[profile.id]
-            val localChanged = fingerprint != lastFingerprint
-            if (
-                !forceProfiles &&
-                !localChanged &&
-                state.remoteUpdatedAtByProfile[profile.id] != null
-            ) return@profileMap null
-            profileFingerprints[profile.id] = fingerprint
-            profile.toUpsert(
-                clientUpdatedAt = if (overwriteProfileMetadata) {
-                    null
-                } else {
-                    state.remoteUpdatedAtByProfile[profile.id]
-                },
-            )
-        }
-        val payload = BackendSyncPushPayload(
-            idempotencyKey = UUID.randomUUID().toString(),
-            forceProfileOverwrite = overwriteProfileMetadata,
-            profileUpserts = profileUpserts,
-            scoreUpserts = profiles.mapNotNull scoreSetMap@{ profile ->
-                database.scoreDao().scores(profile.id).mapNotNull scoreMap@{ score ->
-                    val sheet = sheets[score.sheetKey] ?: return@scoreMap null
-                    score.toEntry(sheet)
-                }.takeIf(List<BackendScoreEntry>::isNotEmpty)?.let { BackendScoreSet(profile.id, it) }
-            },
-            playRecordUpserts = profiles.mapNotNull recordSetMap@{ profile ->
-                playRecordsByProfile.getValue(profile.id).mapNotNull recordMap@{ record ->
-                    val sheet = sheets[record.sheetKey] ?: return@recordMap null
-                    record.toEntry(sheet)
-                }.takeIf(List<BackendPlayRecordEntry>::isNotEmpty)?.let { BackendRecordSet(profile.id, it) }
-            },
-        )
-        return BackendPendingSyncMutation(payload, profileFingerprints)
     }
 
     private suspend fun uploadLocalAvatars(): Boolean {
