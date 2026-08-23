@@ -181,6 +181,23 @@ class RecommendationCalculatorTest {
         })
     }
 
+    @Test
+    fun `recommendation ordering uses gain, signed fit gap, then target rank`() {
+        val candidates = listOf(
+            recommendation("gain-2", potentialGain = 2, difficultyGap = 0.9, targetAchievement = 100.5),
+            recommendation("gain-1", potentialGain = 1, difficultyGap = 0.1, targetAchievement = 97.0),
+            recommendation("gap-negative", potentialGain = 1, difficultyGap = -0.8, targetAchievement = 100.0),
+            recommendation("rank-sss-plus", potentialGain = 1, difficultyGap = 0.1, targetAchievement = 100.5),
+        )
+
+        val ordered = candidates.sortedWith(RecommendationCalculator.recommendationComparator)
+
+        assertEquals(
+            listOf("rank-sss-plus", "gain-1", "gap-negative", "gain-2"),
+            ordered.map { it.song.songIdentifier },
+        )
+    }
+
     private fun calculate(
         songs: List<SongEntity>,
         sheets: List<SheetEntity>,
@@ -257,5 +274,23 @@ class RecommendationCalculatorTest {
         fc = null,
         fs = null,
         achievedAt = 0,
+    )
+
+    private fun recommendation(
+        songId: String,
+        potentialGain: Int,
+        difficultyGap: Double,
+        targetAchievement: Double,
+    ) = RecommendationResult(
+        song = song(songId, "BUDDiES"),
+        sheet = sheet(songId, "BUDDiES", 13.0),
+        fitDifficulty = 13.0 - difficultyGap,
+        difficultyGap = difficultyGap,
+        currentAchievement = null,
+        potentialRating = potentialGain,
+        potentialGain = potentialGain,
+        targetRank = RatingUtils.rank(targetAchievement),
+        targetAchievement = targetAchievement,
+        isNew = false,
     )
 }

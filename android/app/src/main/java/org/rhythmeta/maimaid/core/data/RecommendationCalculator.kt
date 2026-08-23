@@ -1,7 +1,5 @@
 package org.rhythmeta.maimaid.core.data
 
-import kotlin.math.abs
-import kotlin.math.roundToInt
 import org.rhythmeta.maimaid.core.database.GameVersionEntity
 import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
@@ -19,7 +17,6 @@ data class RecommendationResult(
     val targetRank: String,
     val targetAchievement: Double,
     val isNew: Boolean,
-    internal val comprehensiveScore: Double,
 )
 
 data class RecommendationResponse(
@@ -85,7 +82,6 @@ object RecommendationCalculator {
         val b35 = selectedB35.sortedByDescending(SelectedEntry::rating).take(b35Capacity)
         val b15Threshold = replacementThreshold(b15, b15Capacity)
         val b35Threshold = replacementThreshold(b35, b35Capacity)
-        val averageB15Level = b15.map(SelectedEntry::level).average().takeUnless(Double::isNaN) ?: 0.0
         val selectedB15Keys = b15.mapTo(mutableSetOf(), SelectedEntry::sheetKey)
         val selectedB35Keys = b35.mapTo(mutableSetOf(), SelectedEntry::sheetKey)
         val candidateLimit = if (scoresBySheet.isEmpty()) EmptyProfileCandidateLimit else CandidateLimit
@@ -119,11 +115,6 @@ object RecommendationCalculator {
                 }
                 Target(rank, achievement, potentialRating, gain).takeIf { gain > 0 }
             } ?: return@forEach
-            val proximity = if (isNew) {
-                (1.0 - abs(level - averageB15Level) / 2.0).coerceAtLeast(0.0)
-            } else {
-                0.0
-            }
             val fitDifficulty = fitDifficulty(sheet, chartFit)
             val result = RecommendationResult(
                 song = song,
@@ -136,18 +127,16 @@ object RecommendationCalculator {
                 targetRank = target.rank,
                 targetAchievement = target.achievement,
                 isNew = isNew,
-                comprehensiveScore = target.gain + proximity * 5.0,
             )
             (if (isNew) newRecommendations else oldRecommendations).add(result)
         }
 
         return RecommendationResponse(
             b15 = newRecommendations
-                .sortedWith(compareByDescending<RecommendationResult> { it.comprehensiveScore }
-                    .thenByDescending(RecommendationResult::potentialGain))
+                .sortedWith(recommendationComparator)
                 .take(candidateLimit),
             b35 = oldRecommendations
-                .sortedWith { left, right -> compareOldRecommendations(left, right) }
+                .sortedWith(recommendationComparator)
                 .take(candidateLimit),
         )
     }
@@ -172,29 +161,10 @@ object RecommendationCalculator {
     private fun replacementThreshold(entries: List<SelectedEntry>, capacity: Int): Int =
         if (capacity > 0 && entries.size >= capacity) entries.lastOrNull()?.rating ?: 0 else 0
 
-    private fun compareOldRecommendations(
-        left: RecommendationResult,
-        right: RecommendationResult,
-    ): Int {
-        val leftGap = left.difficultyGap
-        val rightGap = right.difficultyGap
-        if (leftGap != null && rightGap != null) {
-            val gapBandComparison = gapBand(rightGap).compareTo(gapBand(leftGap))
-            if (gapBandComparison != 0) return gapBandComparison
-            return right.potentialGain.compareTo(left.potentialGain)
-                .takeIf { it != 0 }
-                ?: rightGap.compareTo(leftGap)
-                    .takeIf { it != 0 }
-                ?: left.sheet.sheetKey.compareTo(right.sheet.sheetKey)
-        }
-        if (leftGap != null) return -1
-        if (rightGap != null) return 1
-        return right.potentialGain.compareTo(left.potentialGain)
-            .takeIf { it != 0 }
-            ?: left.sheet.sheetKey.compareTo(right.sheet.sheetKey)
-    }
-
-    private fun gapBand(gap: Double): Int = (gap * 10.0).roundToInt()
+    internal val recommendationComparator: Comparator<RecommendationResult> = compareBy<RecommendationResult> { it.potentialGain }
+        .thenByDescending { it.difficultyGap ?: Double.NEGATIVE_INFINITY }
+        .thenByDescending { it.targetAchievement }
+        .thenBy { it.sheet.sheetKey }
 
     private fun fitDifficulty(
         sheet: SheetEntity,

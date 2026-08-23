@@ -13,7 +13,6 @@ struct RecommendationResult: Identifiable, Sendable {
     let targetRank: String
     let targetAchievement: Double
     let isNew: Bool
-    var comprehensiveScore: Double = 0 // Used for internal sorting
 }
 
 struct RecommendationResponse: Sendable {
@@ -61,10 +60,6 @@ class RecommendationService {
         let b50 = await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: latestVersion)
         let b15Threshold = replacementThreshold(for: b50.b15, capacity: b15Limit)
         let b35Threshold = replacementThreshold(for: b50.b35, capacity: b35Limit)
-
-        // Calculate User's B15 Average Internal Level
-        let b15Levels = b50.b15.map { $0.level }
-        let avgB15InternalLevel = b15Levels.isEmpty ? 0.0 : b15Levels.reduce(0, +) / Double(b15Levels.count)
 
         var b15Recs: [RecommendationResult] = []
         var b35Recs: [RecommendationResult] = []
@@ -154,13 +149,6 @@ class RecommendationService {
                     let fitDiff = matchingStat?.fit_diff
                     let diffGap = fitDiff.map { internalLevelValue - $0 }
 
-                    var score: Double = 0
-                    if isNew {
-                        let proximity = max(0, 1.0 - abs(internalLevelValue - avgB15InternalLevel) / 2.0)
-                        // Prioritize higher gain, then proximity
-                        score = Double(bestGain) * 1.0 + proximity * 5.0
-                    }
-
                     let result = RecommendationResult(
                         song: song,
                         sheet: sheet,
@@ -171,8 +159,7 @@ class RecommendationService {
                         potentialGain: bestGain,
                         targetRank: target.rank,
                         targetAchievement: target.achievement,
-                        isNew: isNew,
-                        comprehensiveScore: score
+                        isNew: isNew
                     )
 
                     if isNew {
@@ -180,7 +167,7 @@ class RecommendationService {
                         if b15Recs.count > candidateLimit * 2 {
                             b15Recs = Array(
                                 b15Recs
-                                    .sorted { $0.comprehensiveScore > $1.comprehensiveScore }
+                                    .sorted { prefersRecommendation($0, over: $1) }
                                     .prefix(candidateLimit)
                             )
                         }
@@ -189,7 +176,7 @@ class RecommendationService {
                         if b35Recs.count > candidateLimit * 2 {
                             b35Recs = Array(
                                 b35Recs
-                                    .sorted { prefersB35($0, over: $1) }
+                                    .sorted { prefersRecommendation($0, over: $1) }
                                     .prefix(candidateLimit)
                             )
                         }
@@ -198,14 +185,13 @@ class RecommendationService {
             }
         }
 
-        // Sort B15: Use the comprehensive score (gain + proximity)
+        // Both recommendation categories use the same user-facing priority order.
         let sortedB15 = b15Recs
-            .sorted { $0.comprehensiveScore > $1.comprehensiveScore }
+            .sorted { prefersRecommendation($0, over: $1) }
             .prefix(candidateLimit)
 
-        // Sort B35: Prioritize by Gap (fit data), else potential gain
         let sortedB35 = b35Recs
-            .sorted { prefersB35($0, over: $1) }
+            .sorted { prefersRecommendation($0, over: $1) }
             .prefix(candidateLimit)
 
         return RecommendationResponse(
@@ -222,15 +208,30 @@ class RecommendationService {
         return entries.last?.rating ?? 0
     }
 
-    private func prefersB35(_ lhs: RecommendationResult, over rhs: RecommendationResult) -> Bool {
-        if let lhsGap = lhs.diffGap, let rhsGap = rhs.diffGap {
-            if abs(lhsGap - rhsGap) < 0.1 {
-                return lhs.potentialGain > rhs.potentialGain
-            }
-            return lhsGap > rhsGap
+    private func prefersRecommendation(_ lhs: RecommendationResult, over rhs: RecommendationResult) -> Bool {
+        if lhs.potentialGain != rhs.potentialGain {
+            return lhs.potentialGain < rhs.potentialGain
         }
-        if lhs.diffGap != nil { return true }
-        if rhs.diffGap != nil { return false }
-        return lhs.potentialGain > rhs.potentialGain
+
+        switch (lhs.diffGap, rhs.diffGap) {
+        case let (lhsGap?, rhsGap?):
+            if Swift.abs(lhsGap - rhsGap) > 0.0001 {
+                return lhsGap > rhsGap
+            }
+        case (_?, nil):
+            return true
+        case (nil, _?):
+            return false
+        case (nil, nil):
+            break
+        }
+
+        if lhs.targetAchievement != rhs.targetAchievement {
+            return lhs.targetAchievement > rhs.targetAchievement
+        }
+
+        let lhsKey = "\(lhs.song.songIdentifier)|\(lhs.sheet.type)|\(lhs.sheet.difficulty)"
+        let rhsKey = "\(rhs.song.songIdentifier)|\(rhs.sheet.type)|\(rhs.sheet.difficulty)"
+        return lhsKey < rhsKey
     }
 }
