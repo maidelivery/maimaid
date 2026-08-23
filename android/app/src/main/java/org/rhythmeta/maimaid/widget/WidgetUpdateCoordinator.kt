@@ -1,6 +1,7 @@
 package org.rhythmeta.maimaid.widget
 
 import android.content.Context
+import android.util.Log
 import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,8 +17,11 @@ class WidgetUpdateCoordinator(context: Context) {
     init {
         scope.launch {
             for (request in requests) {
-                runCatching {
+                try {
                     MaimaidWidget().updateAll(applicationContext)
+                    Log.d(TAG, "Widget update requested successfully")
+                } catch (throwable: Throwable) {
+                    Log.e(TAG, "Widget update failed", throwable)
                 }
             }
         }
@@ -25,5 +29,9 @@ class WidgetUpdateCoordinator(context: Context) {
 
     fun requestUpdate() {
         requests.trySend(Unit)
+    }
+
+    private companion object {
+        const val TAG = "MaimaidWidget"
     }
 }

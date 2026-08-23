@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -68,20 +69,34 @@ class MaimaidWidget : GlanceAppWidget() {
 
     @RequiresApi(Build.VERSION_CODES.S)
 		override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val container = (context.applicationContext as MaimaidApplication).container
-        val profile = container.profileRepository.activeProfile.first()
-        val best50 = container.best50Repository.observeBest50(
-            b35CountOverride = 35,
-            b15CountOverride = 15,
-            constantMode = Best50ConstantMode.Server,
-        ).first()
-        val snapshot = WidgetSnapshotBuilder.build(profile, best50, System.currentTimeMillis())
-        val accentArgb = widgetAccentArgb(context, container)
-        val themedSnapshot = snapshot.copy(accentArgb = accentArgb)
-        val images = loadWidgetImages(container, themedSnapshot)
-        provideContent {
-            MaimaidWidgetContent(themedSnapshot, images)
+        Log.d(TAG, "provideGlance start id=$id")
+        try {
+            val container = (context.applicationContext as MaimaidApplication).container
+            val profile = container.profileRepository.activeProfile.first()
+            Log.d(TAG, "provideGlance profile=${profile?.id}")
+            val best50 = container.best50Repository.observeBest50(
+                b35CountOverride = 35,
+                b15CountOverride = 15,
+                constantMode = Best50ConstantMode.Server,
+            ).first()
+            Log.d(TAG, "provideGlance best50=${best50.b35.size + best50.b15.size}")
+            val snapshot = WidgetSnapshotBuilder.build(profile, best50, System.currentTimeMillis())
+            val accentArgb = widgetAccentArgb(context, container)
+            val themedSnapshot = snapshot.copy(accentArgb = accentArgb)
+            val images = loadWidgetImages(container, themedSnapshot)
+            Log.d(TAG, "provideGlance images avatar=${images.avatar != null} covers=${images.covers.size}")
+            provideContent {
+                MaimaidWidgetContent(themedSnapshot, images)
+            }
+            Log.d(TAG, "provideGlance content provided id=$id")
+        } catch (throwable: Throwable) {
+            Log.e(TAG, "provideGlance failed id=$id", throwable)
+            throw throwable
         }
+    }
+
+    private companion object {
+        const val TAG = "MaimaidWidget"
     }
 }
 
