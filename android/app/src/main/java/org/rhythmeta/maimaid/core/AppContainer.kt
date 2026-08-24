@@ -54,6 +54,7 @@ class AppContainer(context: Context) {
         MaimaidDatabase.Migration1To2,
         MaimaidDatabase.Migration2To3,
         MaimaidDatabase.Migration3To4,
+        MaimaidDatabase.Migration4To5,
     )
         .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
         .build()

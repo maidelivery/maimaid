@@ -55,6 +55,9 @@ interface ScoreDao {
     @Query("SELECT * FROM play_records WHERE profileId = :profileId AND sheetKey = :sheetKey ORDER BY playedAt DESC")
     suspend fun playRecords(profileId: String, sheetKey: String): List<PlayRecordEntity>
 
+    @Query("SELECT * FROM play_records WHERE profileId = :profileId AND sheetKey IN (:sheetKeys) ORDER BY playedAt DESC")
+    suspend fun playRecordsForSheets(profileId: String, sheetKeys: List<String>): List<PlayRecordEntity>
+
     @Query("SELECT * FROM play_records WHERE id = :recordId LIMIT 1")
     suspend fun playRecord(recordId: String): PlayRecordEntity?
 

@@ -3,6 +3,8 @@ import SwiftData
 
 @Model
 final class PlayRecord {
+    #Index<PlayRecord>([\.userProfileId, \.sheetId], [\.playDate])
+
     var id: UUID
     var sheetId: String
     var rate: Double

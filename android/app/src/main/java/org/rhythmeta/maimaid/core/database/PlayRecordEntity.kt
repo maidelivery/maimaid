@@ -21,7 +21,12 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.RESTRICT,
         ),
     ],
-    indices = [Index("profileId"), Index("sheetKey"), Index("playedAt")],
+    indices = [
+        Index("profileId"),
+        Index("sheetKey"),
+        Index("playedAt"),
+        Index(value = ["profileId", "sheetKey"]),
+    ],
 )
 data class PlayRecordEntity(
     @PrimaryKey val id: String,

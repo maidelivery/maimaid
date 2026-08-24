@@ -18,7 +18,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SongAliasEntity::class,
         PresetAvatarEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(DatabaseConverters::class)
@@ -59,6 +59,15 @@ abstract class MaimaidDatabase : RoomDatabase() {
         val Migration3To4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `sheets` ADD COLUMN `multiverInternalLevelValue` TEXT")
+            }
+        }
+
+        val Migration4To5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_play_records_profileId_sheetKey` " +
+                        "ON `play_records` (`profileId`, `sheetKey`)",
+                )
             }
         }
     }

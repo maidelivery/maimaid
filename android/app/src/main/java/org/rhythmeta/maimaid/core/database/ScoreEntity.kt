@@ -21,7 +21,10 @@ import androidx.room.Index
             onDelete = ForeignKey.RESTRICT,
         ),
     ],
-    indices = [Index("profileId"), Index("sheetKey")],
+    indices = [
+        Index("profileId"),
+        Index("sheetKey"),
+    ],
 )
 data class ScoreEntity(
     val profileId: String,

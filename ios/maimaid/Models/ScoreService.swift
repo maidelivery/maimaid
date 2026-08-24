@@ -91,6 +91,11 @@ final class ScoreService {
         }
 
         let sheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["-", "_"])
+        var relationshipRecordIDsBySheet: [String: Set<UUID>] = [:]
+        for sheet in sheets {
+            let sheetId = BackendSyncShared.canonicalRecordSheetId(for: sheet)
+            relationshipRecordIDsBySheet[sheetId] = Set(sheet.playRecords?.map(\.id) ?? [])
+        }
         var didMutate = false
 
         for record in allRecords {
@@ -103,7 +108,7 @@ final class ScoreService {
                 if attachedSheet.playRecords == nil {
                     attachedSheet.playRecords = []
                 }
-                if !(attachedSheet.playRecords?.contains(where: { $0.id == record.id }) ?? false) {
+                if relationshipRecordIDsBySheet[canonicalId, default: []].insert(record.id).inserted {
                     attachedSheet.playRecords?.append(record)
                     didMutate = true
                 }
@@ -122,7 +127,7 @@ final class ScoreService {
             if sheet.playRecords == nil {
                 sheet.playRecords = []
             }
-            if !(sheet.playRecords?.contains(where: { $0.id == record.id }) ?? false) {
+            if relationshipRecordIDsBySheet[canonicalId, default: []].insert(record.id).inserted {
                 sheet.playRecords?.append(record)
             }
             didMutate = true
@@ -276,6 +281,7 @@ final class ScoreService {
         let profileId = currentActiveProfileId(context: context)
         let existingScore = score(for: sheet, context: context)
         let canonicalFC = ThemeUtils.canonicalFC(fc)
+        let calculatedRank = calculateRank(achievement: rate)
         
         let result: Score
         
@@ -283,7 +289,7 @@ final class ScoreService {
             let isNewRateBetter = rate > existing.rate
             if isNewRateBetter {
                 existing.rate = rate
-                existing.rank = rank
+                existing.rank = calculatedRank
                 existing.achievementDate = achievementDate
             }
             
@@ -295,7 +301,7 @@ final class ScoreService {
             let newScore = Score(
                 sheetId: "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)",
                 rate: rate,
-                rank: rank,
+                rank: calculatedRank,
                 dxScore: dxScore,
                 fc: canonicalFC,
                 fs: fs,

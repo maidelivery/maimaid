@@ -511,6 +511,7 @@ class BackendSyncCoordinator(
                 scoreDao.upsertScore(merged)
             }
 
+            val existingRecordFingerprintsByProfile = mutableMapOf<String, MutableSet<String>>()
             snapshot.records.forEach { remote ->
                 val sheetKey = remote.sheet?.let { resolveSheetKey(it, sheetMap) } ?: return@forEach
                 if (remote.profileId !in validProfileIds) return@forEach
@@ -526,9 +527,10 @@ class BackendSyncCoordinator(
                     fs = ScoreRules.canonicalFs(remote.fs),
                     playedAt = playedAt,
                 )
-                val duplicate = scoreDao.playRecords(remote.profileId, sheetKey).any { existing ->
-                    recordFingerprint(existing) == recordFingerprint(incoming)
+                val existingFingerprints = existingRecordFingerprintsByProfile.getOrPut(remote.profileId) {
+                    scoreDao.playRecords(remote.profileId).mapTo(mutableSetOf(), ::recordFingerprint)
                 }
+                val duplicate = !existingFingerprints.add(recordFingerprint(incoming))
                 if (!duplicate) scoreDao.upsertPlayRecord(incoming)
             }
         }

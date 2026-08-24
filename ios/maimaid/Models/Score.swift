@@ -3,6 +3,8 @@ import SwiftData
 
 @Model
 final class Score {
+    #Index<Score>([\.userProfileId, \.sheetId], [\.sheetId])
+
     var sheetId: String // Combines songId, type, and difficulty for uniqueness
     var rate: Double // Percentage, e.g., 100.5000
     var rank: String // SSS+, SSS, SS, etc.

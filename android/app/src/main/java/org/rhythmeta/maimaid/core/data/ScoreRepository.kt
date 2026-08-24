@@ -131,12 +131,17 @@ class ScoreRepository(
     private suspend fun repairMissingPlayRecords(profileId: String, songIdentifier: String) {
         database.withTransaction {
             val scores = scoreDao.scoresForSong(profileId, songIdentifier)
+            if (scores.isEmpty()) return@withTransaction
+
+            val recordsBySheet = scoreDao
+                .playRecordsForSheets(profileId, scores.map(ScoreEntity::sheetKey))
+                .groupBy(PlayRecordEntity::sheetKey)
+
             scores.forEach { score ->
-                val records = scoreDao.playRecords(profileId, score.sheetKey)
-                val hasMatchingRecord = records.any {
+                val hasMatchingRecord = recordsBySheet[score.sheetKey].orEmpty().any {
                     kotlin.math.abs(it.achievement - score.achievement) < 0.0001
                 }
-                if (!hasMatchingRecord && score.achievement > 0) {
+                if (score.achievement > 0 && !hasMatchingRecord) {
                     scoreDao.upsertPlayRecord(
                         PlayRecordEntity(
                             id = idFactory(),
