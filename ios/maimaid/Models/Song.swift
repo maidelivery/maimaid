@@ -41,3 +41,51 @@ final class Song {
         self.isFavorite = false
     }
 }
+
+@Model
+final class SongCollection {
+    @Attribute(.unique) var id: UUID
+    var name: String
+    var sortIndex: Int
+    var createdAt: Date
+    var updatedAt: Date
+    var clientUpdatedAt: Date?
+    var deletedAt: Date?
+
+    init(id: UUID = UUID(), name: String, sortIndex: Int = 0, createdAt: Date = .now, updatedAt: Date = .now, clientUpdatedAt: Date? = nil, deletedAt: Date? = nil) {
+        self.id = id
+        self.name = name
+        self.sortIndex = sortIndex
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.clientUpdatedAt = clientUpdatedAt
+        self.deletedAt = deletedAt
+    }
+}
+
+@Model
+final class SongCollectionItem {
+    @Attribute(.unique) var id: UUID
+    var collectionId: UUID
+    var songId: String
+    var chartType: String
+    var difficulty: String
+    var position: Int
+    var createdAt: Date
+    var updatedAt: Date
+    var clientUpdatedAt: Date?
+    var deletedAt: Date?
+
+    init(id: UUID = UUID(), collectionId: UUID, songId: String, chartType: String, difficulty: String, position: Int = 0, createdAt: Date = .now, updatedAt: Date = .now, clientUpdatedAt: Date? = nil, deletedAt: Date? = nil) {
+        self.id = id
+        self.collectionId = collectionId
+        self.songId = songId
+        self.chartType = chartType
+        self.difficulty = difficulty
+        self.position = position
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.clientUpdatedAt = clientUpdatedAt
+        self.deletedAt = deletedAt
+    }
+}

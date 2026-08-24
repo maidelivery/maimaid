@@ -15,6 +15,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.horizontalScroll
@@ -40,11 +41,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.ArrowDownward
@@ -125,6 +128,7 @@ import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.SongEntity
 import org.rhythmeta.maimaid.core.database.GameVersionEntity
+import org.rhythmeta.maimaid.core.database.SongCollectionEntity
 import org.rhythmeta.maimaid.ui.catalog.ScoreEntrySongCard
 import org.rhythmeta.maimaid.ui.common.openExternalApp
 import org.rhythmeta.maimaid.ui.components.ExpandableBottomSheet
@@ -149,6 +153,7 @@ import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.CheckboxDefaults
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
@@ -166,6 +171,8 @@ import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.LocalContentColor
 import top.yukonga.miuix.kmp.window.WindowListPopup
+import top.yukonga.miuix.kmp.preference.CheckboxLocation
+import top.yukonga.miuix.kmp.preference.CheckboxPreference
 import java.math.RoundingMode
 import java.io.File
 import java.time.Instant
@@ -260,6 +267,8 @@ fun SongDetailScreen(
     )
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val gameVersions by container.catalogRepository.versions.collectAsStateWithLifecycle(initialValue = emptyList())
+    val collections by container.songCollectionRepository.collections.collectAsStateWithLifecycle(initialValue = emptyList())
+    val collectionItems by container.songCollectionRepository.items.collectAsStateWithLifecycle(initialValue = emptyList())
     val aliases by container.catalogRepository
         .observeAliasesForSong(song.songIdentifier)
         .collectAsStateWithLifecycle(initialValue = emptyList())
@@ -289,6 +298,8 @@ fun SongDetailScreen(
     val showCopiedSnackbar: () -> Unit = { showSnackbar(copiedConfirmation) }
     var recordToDelete by remember { mutableStateOf<PlayRecordEntity?>(null) }
     var retainedEntryChart by remember { mutableStateOf<SheetScoreUiState?>(null) }
+    var collectionPickerSheet by remember { mutableStateOf<SheetEntity?>(null) }
+    var selectedCollectionIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var jacketColor by remember(song.songIdentifier) { mutableStateOf<Color?>(null) }
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
     val detailColors = jacketColor?.let { SongVisualUtils.detailColors(it, darkTheme) }
@@ -423,6 +434,19 @@ fun SongDetailScreen(
                         accentColor = accentColor,
                         onRecord = { viewModel.openScoreEntry(chart.sheet.sheetKey) },
                         onDeleteRecord = { recordToDelete = it },
+                        onAddToCollections = {
+                            selectedCollectionIds = collections
+                                .filter { collection ->
+                                    collectionItems.any { item ->
+                                        item.collectionId == collection.id &&
+                                            item.songId == chart.sheet.songIdentifier &&
+                                            item.chartType.equals(chart.sheet.type, ignoreCase = true) &&
+                                            item.difficulty.equals(chart.sheet.difficulty, ignoreCase = true)
+                                    }
+                                }
+                                .mapTo(mutableSetOf(), SongCollectionEntity::id)
+                            collectionPickerSheet = chart.sheet
+                        },
                     )
                 }
             }
@@ -462,6 +486,85 @@ fun SongDetailScreen(
             },
             onDismiss = { recordToDelete = null },
         )
+    }
+
+    ExpandableBottomSheet(
+        visible = collectionPickerSheet != null,
+        onDismissRequest = { collectionPickerSheet = null },
+        expandActionLabel = stringResource(R.string.collections_picker_expand),
+        collapseActionLabel = stringResource(R.string.collections_picker_collapse),
+        expandedStateDescription = stringResource(R.string.collections_picker_expanded),
+        halfExpandedStateDescription = stringResource(R.string.collections_picker_half),
+        header = {
+            IconButton(
+                onClick = { collectionPickerSheet = null },
+                modifier = Modifier.align(Alignment.CenterStart),
+            ) {
+                Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.action_cancel))
+            }
+            Text(
+                text = stringResource(R.string.collections_add_chart),
+                style = MiuixTheme.textStyles.title3,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Center),
+            )
+            IconButton(
+                onClick = { collectionPickerSheet = null },
+                modifier = Modifier.align(Alignment.CenterEnd),
+            ) {
+                Icon(
+                    Icons.Rounded.Check,
+                    contentDescription = stringResource(R.string.action_done),
+                    tint = MiuixTheme.colorScheme.primary,
+                )
+            }
+        },
+    ) { topInset ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, top = topInset + 12.dp, end = 16.dp, bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(collections, key = SongCollectionEntity::id) { collection ->
+                val selected = collection.id in selectedCollectionIds
+                CheckboxPreference(
+                    title = collection.name,
+                    checked = selected,
+                    checkboxLocation = CheckboxLocation.End,
+                    onCheckedChange = { included ->
+                        selectedCollectionIds = if (included) {
+                            selectedCollectionIds + collection.id
+                        } else {
+                            selectedCollectionIds - collection.id
+                        }
+                        collectionPickerSheet?.let { sheet ->
+                            coroutineScope.launch {
+                                container.songCollectionRepository.setMembership(
+                                    collection = collection,
+                                    songId = sheet.songIdentifier,
+                                    chartType = sheet.type,
+                                    difficulty = sheet.difficulty,
+                                    included = included,
+                                )
+                            }
+                        }
+                    },
+                    checkboxColors = CheckboxDefaults.checkboxColors(
+                        checkedBackgroundColor = MiuixTheme.colorScheme.primary,
+                        checkedForegroundColor = MiuixTheme.colorScheme.onPrimary,
+                        uncheckedBackgroundColor = MiuixTheme.colorScheme.onSurfaceVariantActions.copy(alpha = 0.38f),
+                        uncheckedForegroundColor = MiuixTheme.colorScheme.onSurface,
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .squircleSurface(
+                            color = MiuixTheme.colorScheme.surfaceContainer,
+                            cornerRadius = 12.dp,
+                            extension = SquircleExtension,
+                        ),
+                )
+            }
+        }
     }
 }
 
@@ -1382,6 +1485,7 @@ private fun SheetScoreCard(
     accentColor: Color,
     onRecord: () -> Unit,
     onDeleteRecord: (PlayRecordEntity) -> Unit,
+    onAddToCollections: () -> Unit,
 ) {
     var expanded by rememberSaveable(chart.sheet.sheetKey) { mutableStateOf(false) }
     val isUtage = chart.sheet.type.contains("utage", ignoreCase = true)
@@ -1414,13 +1518,14 @@ private fun SheetScoreCard(
         borderColor = accent.copy(alpha = 0.58f),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(
-                    interactionSource = expandInteractionSource,
-                    indication = null,
-                    onClick = { expanded = !expanded },
-                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        interactionSource = expandInteractionSource,
+                        indication = null,
+                        onClick = { expanded = !expanded },
+                        onLongClick = { onAddToCollections() },
+                    ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
@@ -1509,14 +1614,28 @@ private fun SheetScoreCard(
                     )
                 }
 
-                SongDetailButton(
-                    onClick = onRecord,
-                    surfaceColor = actionSurfaceColor,
+                Row(
                     modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Icon(Icons.Rounded.Edit, contentDescription = null)
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.score_record_action))
+                    SongDetailButton(
+                        onClick = onRecord,
+                        surfaceColor = actionSurfaceColor,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Rounded.Edit, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.score_record_action))
+                    }
+                    SongDetailButton(
+                        onClick = onAddToCollections,
+                        surfaceColor = actionSurfaceColor,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.collections_add_chart))
+                    }
                 }
             }
         }

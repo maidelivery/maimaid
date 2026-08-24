@@ -10,10 +10,14 @@ import { ProfileService } from "../../services/profile.service.js";
 import { ScoreService } from "../../services/score.service.js";
 import { removeLegacyDivingFishPlayRecords } from "../../services/legacy-play-record-cleanup.js";
 import { PrismaClient } from "@prisma/client";
+import { AppError } from "../../lib/errors.js";
 
 // Full-profile backups can contain tens of thousands of play records. Keep a
 // bounded payload while allowing existing profiles to synchronize atomically.
 const BULK_ARRAY_MAX = 50_000;
+const MAX_COLLECTIONS_PER_USER = 100;
+const MAX_ITEMS_PER_COLLECTION = 10_000;
+const MAX_ITEMS_PER_USER = 50_000;
 
 const scoreEntrySchema = z.object({
 	sheetId: z
@@ -37,6 +41,27 @@ const scoreEntrySchema = z.object({
 
 const playRecordSchema = scoreEntrySchema.extend({
 	playTime: z.string().optional(),
+});
+
+const collectionUpsertSchema = z.object({
+	collectionId: z.uuid(),
+	name: z.string().trim().min(1).max(40),
+	sortIndex: z.number().int().min(0).max(100_000),
+	createdAt: z.coerce.date().optional(),
+	deletedAt: z.coerce.date().nullable().optional(),
+	clientUpdatedAt: z.coerce.date().optional(),
+});
+
+const collectionItemUpsertSchema = z.object({
+	itemId: z.uuid(),
+	collectionId: z.uuid(),
+	songId: z.string().trim().min(1).max(200),
+	chartType: z.string().trim().min(1).max(32).transform((value) => value.toLowerCase()),
+	difficulty: z.string().trim().min(1).max(64).transform((value) => value.toLowerCase()),
+	position: z.number().int().min(0).max(1_000_000),
+	createdAt: z.coerce.date().optional(),
+	deletedAt: z.coerce.date().nullable().optional(),
+	clientUpdatedAt: z.coerce.date().optional(),
 });
 
 const pushSchema = z.object({
@@ -83,6 +108,8 @@ const pushSchema = z.object({
 		)
 		.max(BULK_ARRAY_MAX)
 		.default([]),
+	collectionUpserts: z.array(collectionUpsertSchema).max(BULK_ARRAY_MAX).default([]),
+	collectionItemUpserts: z.array(collectionItemUpsertSchema).max(BULK_ARRAY_MAX).default([]),
 });
 
 const pullQuerySchema = z.object({
@@ -218,11 +245,16 @@ syncV1Route.post("/sync:push", authRequired, standardValidator("json", pushSchem
 			profiles: number;
 			scores: number;
 			records: number;
+			collections: number;
+			collectionItems: number;
 		};
 		conflicts: Array<{
 			profileId: string;
 			reason: string;
 			serverProfile: unknown;
+			collectionId?: string;
+			itemId?: string;
+			serverEntity?: unknown;
 		}>;
 		profileVersions: Record<string, string>;
 		latestRevision: string;
@@ -231,6 +263,8 @@ syncV1Route.post("/sync:push", authRequired, standardValidator("json", pushSchem
 			profiles: 0,
 			scores: 0,
 			records: 0,
+			collections: 0,
+			collectionItems: 0,
 		},
 		conflicts: [],
 		profileVersions: {},
@@ -438,6 +472,164 @@ syncV1Route.post("/sync:push", authRequired, standardValidator("json", pushSchem
 				}
 			}
 
+			for (const item of body.collectionUpserts) {
+				const existing = await transaction.songCollection.findFirst({ where: { id: item.collectionId } });
+				if (existing && existing.userId !== auth.userId) {
+					result.conflicts.push({ profileId: "", reason: "forbidden", serverProfile: null, collectionId: item.collectionId, serverEntity: existing });
+					continue;
+				}
+				const incomingVersion = item.clientUpdatedAt ?? item.createdAt ?? new Date(0);
+				const existingVersion = existing?.clientUpdatedAt ?? existing?.updatedAt;
+				if (existing && existingVersion && existingVersion > incomingVersion) {
+					result.conflicts.push({ profileId: "", reason: "server_newer", serverProfile: null, collectionId: item.collectionId, serverEntity: existing });
+					continue;
+				}
+				const nextClientUpdatedAt = item.clientUpdatedAt ?? item.createdAt ?? existing?.clientUpdatedAt ?? existing?.updatedAt;
+				const collection = await transaction.songCollection.upsert({
+					where: { id: item.collectionId },
+					create: {
+						id: item.collectionId,
+						userId: auth.userId,
+						name: item.name,
+						sortIndex: item.sortIndex,
+						...(item.createdAt === undefined ? {} : { createdAt: item.createdAt }),
+						clientUpdatedAt: item.clientUpdatedAt ?? item.createdAt ?? new Date(),
+						...(item.deletedAt === undefined ? {} : { deletedAt: item.deletedAt }),
+					},
+					update: {
+						name: item.name.trim(),
+						sortIndex: item.sortIndex,
+						...(nextClientUpdatedAt === undefined ? {} : { clientUpdatedAt: nextClientUpdatedAt }),
+						deletedAt: item.deletedAt ?? null,
+					},
+				});
+				result.applied.collections += 1;
+				await syncService.recordEvent({
+					userId: auth.userId,
+					entityType: "song_collection",
+					entityId: collection.id,
+					op: collection.deletedAt ? "delete" : "upsert",
+					payload: { updatedAt: collection.updatedAt.toISOString() },
+				}, transaction);
+			}
+
+			for (const item of body.collectionItemUpserts) {
+				const collection = await transaction.songCollection.findFirst({ where: { id: item.collectionId, userId: auth.userId } });
+				if (!collection) {
+					result.conflicts.push({ profileId: "", reason: "collection_not_found", serverProfile: null, collectionId: item.collectionId, itemId: item.itemId });
+					continue;
+				}
+				const existingById = await transaction.songCollectionItem.findUnique({
+					where: { id: item.itemId },
+					include: { collection: { select: { userId: true } } },
+				});
+				if (existingById && existingById.collection.userId !== auth.userId) {
+					result.conflicts.push({ profileId: "", reason: "forbidden", serverProfile: null, collectionId: item.collectionId, itemId: item.itemId });
+					continue;
+				}
+				if (existingById && existingById.collectionId !== item.collectionId) {
+					result.conflicts.push({ profileId: "", reason: "item_collection_mismatch", serverProfile: null, collectionId: item.collectionId, itemId: item.itemId, serverEntity: existingById });
+					continue;
+				}
+				const existingByKey = await transaction.songCollectionItem.findFirst({
+					where: {
+						collectionId: item.collectionId,
+						songId: item.songId.trim(),
+						chartType: item.chartType,
+						difficulty: item.difficulty,
+					},
+				});
+				if (existingByKey && existingById && existingByKey.id !== existingById.id) {
+					result.conflicts.push({
+						profileId: "",
+						reason: "item_key_conflict",
+						serverProfile: null,
+						collectionId: item.collectionId,
+						itemId: item.itemId,
+						serverEntity: existingByKey,
+					});
+					continue;
+				}
+				const existing = existingByKey ?? existingById;
+				const incomingVersion = item.clientUpdatedAt ?? item.createdAt ?? new Date(0);
+				const existingVersion = existing?.clientUpdatedAt ?? existing?.updatedAt;
+				if (existing && existingVersion && existingVersion > incomingVersion) {
+					result.conflicts.push({ profileId: "", reason: "server_newer", serverProfile: null, collectionId: item.collectionId, itemId: item.itemId, serverEntity: existing });
+					continue;
+				}
+				const nextClientUpdatedAt = item.clientUpdatedAt ?? item.createdAt ?? existing?.clientUpdatedAt ?? existing?.updatedAt;
+				const stored = existing
+					? await transaction.songCollectionItem.update({
+						where: { id: existing.id },
+						data: {
+							songId: item.songId.trim(),
+							chartType: item.chartType,
+							difficulty: item.difficulty,
+							position: item.position,
+							...(nextClientUpdatedAt === undefined ? {} : { clientUpdatedAt: nextClientUpdatedAt }),
+							deletedAt: item.deletedAt ?? null,
+						},
+					})
+					: await transaction.songCollectionItem.create({
+						data: {
+							id: item.itemId,
+							collectionId: item.collectionId,
+							songId: item.songId.trim(),
+							chartType: item.chartType,
+							difficulty: item.difficulty,
+							position: item.position,
+							...(item.createdAt === undefined ? {} : { createdAt: item.createdAt }),
+							clientUpdatedAt: item.clientUpdatedAt ?? item.createdAt ?? new Date(),
+							...(item.deletedAt === undefined ? {} : { deletedAt: item.deletedAt }),
+						},
+					});
+				result.applied.collectionItems += 1;
+				await syncService.recordEvent({
+					userId: auth.userId,
+					entityType: "song_collection_item",
+					entityId: stored.id,
+					op: stored.deletedAt ? "delete" : "upsert",
+					payload: { collectionId: stored.collectionId, updatedAt: stored.updatedAt.toISOString() },
+				}, transaction);
+			}
+
+			// Validate the committed post-merge state. Running this after LWW checks
+			// lets stale device mutations resolve as conflicts instead of consuming
+			// capacity or being rejected by a limit they would not change.
+			const activeCollectionCount = await transaction.songCollection.count({
+				where: { userId: auth.userId, deletedAt: null },
+			});
+			if (activeCollectionCount > MAX_COLLECTIONS_PER_USER) {
+				throw new AppError(409, "collection_limits_exceeded", `An account can contain at most ${MAX_COLLECTIONS_PER_USER} collections.`, {
+					limit: MAX_COLLECTIONS_PER_USER,
+					kind: "collections",
+				});
+			}
+			const activeItemWhere = {
+				deletedAt: null,
+				collection: { userId: auth.userId, deletedAt: null },
+			};
+			const activeItemCount = await transaction.songCollectionItem.count({ where: activeItemWhere });
+			if (activeItemCount > MAX_ITEMS_PER_USER) {
+				throw new AppError(409, "collection_limits_exceeded", `An account can contain at most ${MAX_ITEMS_PER_USER} entries.`, {
+					limit: MAX_ITEMS_PER_USER,
+					kind: "collection_items_total",
+				});
+			}
+			const itemCounts = await transaction.songCollectionItem.groupBy({
+				by: ["collectionId"],
+				where: activeItemWhere,
+				_count: { _all: true },
+			});
+			const oversizedCollection = itemCounts.find((entry) => entry._count._all > MAX_ITEMS_PER_COLLECTION);
+			if (oversizedCollection) {
+				throw new AppError(409, "collection_limits_exceeded", `A collection can contain at most ${MAX_ITEMS_PER_COLLECTION} entries.`, {
+					limit: MAX_ITEMS_PER_COLLECTION,
+					kind: "collection_items",
+					collectionId: oversizedCollection.collectionId,
+				});
+			}
+
 			const latestEvent = await transaction.syncEvent.findFirst({
 				where: { userId: auth.userId },
 				orderBy: { revision: "desc" },
@@ -482,6 +674,7 @@ syncV1Route.get("/sync:pull", authRequired, standardValidator("query", pullQuery
 		profiles: [],
 		scores: [],
 		records: [],
+		collections: [],
 	};
 	if (shouldIncludeSnapshot) {
 		const profileIds = new Set<string>();

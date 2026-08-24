@@ -243,6 +243,7 @@ private extension AccountDataResolutionCoordinator {
 
     private func overwriteCloudFromLocal(context: ModelContext) async throws {
         try await clearRemoteProfiles()
+        try await BackendIncrementalSyncService.clearRemoteCollectionsAbsentFromLocal(context: context)
         try await BackendCloudSyncService.backupToCloudUnlocked(context: context)
     }
 
@@ -737,6 +738,16 @@ private extension AccountDataResolutionCoordinator {
     }
 
     private func deleteAllLocalUserData(context: ModelContext) throws {
+        let allCollectionItems = try context.fetch(FetchDescriptor<SongCollectionItem>())
+        for item in allCollectionItems {
+            context.delete(item)
+        }
+
+        let allCollections = try context.fetch(FetchDescriptor<SongCollection>())
+        for collection in allCollections {
+            context.delete(collection)
+        }
+
         let allScores = try context.fetch(FetchDescriptor<Score>())
         for score in allScores {
             context.delete(score)
@@ -787,6 +798,18 @@ private extension AccountDataResolutionCoordinator {
         var recordDescriptor = FetchDescriptor<PlayRecord>()
         recordDescriptor.fetchLimit = 1
         if let records = try? context.fetch(recordDescriptor), !records.isEmpty {
+            return true
+        }
+
+        var collectionDescriptor = FetchDescriptor<SongCollection>()
+        collectionDescriptor.fetchLimit = 1
+        if let collections = try? context.fetch(collectionDescriptor), !collections.isEmpty {
+            return true
+        }
+
+        var collectionItemDescriptor = FetchDescriptor<SongCollectionItem>()
+        collectionItemDescriptor.fetchLimit = 1
+        if let items = try? context.fetch(collectionItemDescriptor), !items.isEmpty {
             return true
         }
 

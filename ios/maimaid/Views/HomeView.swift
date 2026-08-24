@@ -359,8 +359,16 @@ struct HomeView: View {
                 )
             }
             .buttonStyle(.plain)
-            
-            
+
+            NavigationLink(destination: SongCollectionsView()) {
+                functionCard(
+                    icon: "rectangle.stack.fill",
+                    title: "home.collections.title",
+                    subtitle: "home.collections.subtitle",
+                    gradient: [Color.orange, Color.green]
+                )
+            }
+            .buttonStyle(.plain)
         }
     }
     // MARK: - Rating Badge

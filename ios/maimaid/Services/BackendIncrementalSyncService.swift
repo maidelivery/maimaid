@@ -79,6 +79,54 @@ private struct BackendSyncSnapshot: Decodable {
     let profiles: [BackendSyncRemoteProfile]
     let scores: [BackendSyncRemoteScore]
     let records: [BackendSyncRemotePlayRecord]
+    let collections: [BackendSyncRemoteCollection]
+
+    init(
+        profiles: [BackendSyncRemoteProfile],
+        scores: [BackendSyncRemoteScore],
+        records: [BackendSyncRemotePlayRecord],
+        collections: [BackendSyncRemoteCollection] = []
+    ) {
+        self.profiles = profiles
+        self.scores = scores
+        self.records = records
+        self.collections = collections
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        profiles = try container.decodeIfPresent([BackendSyncRemoteProfile].self, forKey: .profiles) ?? []
+        scores = try container.decodeIfPresent([BackendSyncRemoteScore].self, forKey: .scores) ?? []
+        records = try container.decodeIfPresent([BackendSyncRemotePlayRecord].self, forKey: .records) ?? []
+        collections = try container.decodeIfPresent([BackendSyncRemoteCollection].self, forKey: .collections) ?? []
+    }
+
+    private enum CodingKeys: String, CodingKey { case profiles, scores, records, collections }
+}
+
+private struct BackendSyncRemoteCollection: Decodable {
+    let id: String
+    let userId: String
+    let name: String
+    let sortIndex: Int
+    let createdAt: Date
+    let updatedAt: Date
+    let clientUpdatedAt: Date?
+    let deletedAt: Date?
+    let items: [BackendSyncRemoteCollectionItem]
+}
+
+private struct BackendSyncRemoteCollectionItem: Decodable {
+    let id: String
+    let collectionId: String
+    let songId: String
+    let chartType: String
+    let difficulty: String
+    let position: Int
+    let createdAt: Date
+    let updatedAt: Date
+    let clientUpdatedAt: Date?
+    let deletedAt: Date?
 }
 
 private struct BackendSyncRemoteProfile: Codable {
@@ -231,6 +279,8 @@ private struct BackendSyncPushPayload: Encodable {
     let playRecordUpserts: [BackendSyncRecordSet]
     let replaceScoreProfileIds: [String]
     let replacePlayRecordProfileIds: [String]
+    let collectionUpserts: [BackendSyncCollectionUpsertPayload]
+    let collectionItemUpserts: [BackendSyncCollectionItemUpsertPayload]
 
     init(
         idempotencyKey: String,
@@ -240,6 +290,8 @@ private struct BackendSyncPushPayload: Encodable {
         playRecordUpserts: [BackendSyncRecordSet],
         replaceScoreProfileIds: [String] = [],
         replacePlayRecordProfileIds: [String] = []
+        ,collectionUpserts: [BackendSyncCollectionUpsertPayload] = []
+        ,collectionItemUpserts: [BackendSyncCollectionItemUpsertPayload] = []
     ) {
         self.idempotencyKey = idempotencyKey
         self.forceProfileOverwrite = forceProfileOverwrite
@@ -248,7 +300,30 @@ private struct BackendSyncPushPayload: Encodable {
         self.playRecordUpserts = playRecordUpserts
         self.replaceScoreProfileIds = replaceScoreProfileIds
         self.replacePlayRecordProfileIds = replacePlayRecordProfileIds
+        self.collectionUpserts = collectionUpserts
+        self.collectionItemUpserts = collectionItemUpserts
     }
+}
+
+private struct BackendSyncCollectionUpsertPayload: Encodable {
+    let collectionId: String
+    let name: String
+    let sortIndex: Int
+    let createdAt: Date
+    let deletedAt: Date?
+    let clientUpdatedAt: Date?
+}
+
+private struct BackendSyncCollectionItemUpsertPayload: Encodable {
+    let itemId: String
+    let collectionId: String
+    let songId: String
+    let chartType: String
+    let difficulty: String
+    let position: Int
+    let createdAt: Date
+    let deletedAt: Date?
+    let clientUpdatedAt: Date?
 }
 
 enum ImportSyncResolutionOption: String, CaseIterable, Identifiable {
@@ -483,7 +558,9 @@ enum BackendIncrementalSyncService {
             forceProfileOverwrite: false,
             profileUpserts: [profileUpsert(profile, avatarURL: avatarURL, clientUpdatedAt: clientUpdatedAt)],
             scoreUpserts: [],
-            playRecordUpserts: []
+            playRecordUpserts: [],
+            collectionUpserts: [],
+            collectionItemUpserts: []
         )
     }
 
@@ -497,6 +574,63 @@ enum BackendIncrementalSyncService {
                 forceProfileOverwrite: forceProfileOverwrite
             )
         }
+    }
+
+    static func clearRemoteCollectionsAbsentFromLocal(context: ModelContext) async throws {
+        guard BackendSessionManager.shared.isAuthenticated else {
+            throw BackendAPIError.unauthorized
+        }
+        let localCollections = try context.fetch(FetchDescriptor<SongCollection>())
+        let localItems = try context.fetch(FetchDescriptor<SongCollectionItem>())
+        let localCollectionIds = Set(localCollections.map { $0.id.uuidString.lowercased() })
+        let localItemIds = Set(localItems.map { $0.id.uuidString.lowercased() })
+        let remoteCollections = try await fetchPullResponse(sinceRevision: "0").snapshot.collections
+        let now = Date()
+        let collectionsToDelete = remoteCollections
+            .filter { !localCollectionIds.contains($0.id.lowercased()) && $0.deletedAt == nil }
+            .map {
+                BackendSyncCollectionUpsertPayload(
+                    collectionId: $0.id.lowercased(),
+                    name: $0.name,
+                    sortIndex: $0.sortIndex,
+                    createdAt: $0.createdAt,
+                    deletedAt: now,
+                    clientUpdatedAt: now
+                )
+            }
+        let itemsToDelete = remoteCollections.flatMap { collection in
+            collection.items.filter { item in
+                !localItemIds.contains(item.id.lowercased()) &&
+                    (!localCollectionIds.contains(collection.id.lowercased()) || item.deletedAt == nil)
+            }
+        }.map {
+            BackendSyncCollectionItemUpsertPayload(
+                itemId: $0.id.lowercased(),
+                collectionId: $0.collectionId.lowercased(),
+                songId: $0.songId,
+                chartType: $0.chartType,
+                difficulty: $0.difficulty,
+                position: $0.position,
+                createdAt: $0.createdAt,
+                deletedAt: now,
+                clientUpdatedAt: now
+            )
+        }
+        guard !collectionsToDelete.isEmpty || !itemsToDelete.isEmpty else { return }
+        let _: BackendSyncPushResponse = try await BackendAPIClient.request(
+            path: "v1/sync:push",
+            method: "POST",
+            body: BackendSyncPushPayload(
+                idempotencyKey: UUID().uuidString.lowercased(),
+                forceProfileOverwrite: false,
+                profileUpserts: [],
+                scoreUpserts: [],
+                playRecordUpserts: [],
+                collectionUpserts: collectionsToDelete,
+                collectionItemUpserts: itemsToDelete
+            ),
+            authentication: .required
+        )
     }
 
     static func pushAllLocalDataUnlocked(
@@ -514,11 +648,62 @@ enum BackendIncrementalSyncService {
         }
 
         let profiles = try context.fetch(FetchDescriptor<UserProfile>())
-        guard !profiles.isEmpty else { return }
+        if profiles.isEmpty {
+            let collections = try context.fetch(FetchDescriptor<SongCollection>())
+            let items = try context.fetch(FetchDescriptor<SongCollectionItem>())
+            guard !collections.isEmpty || !items.isEmpty else { return }
+            let response: BackendSyncPushResponse = try await BackendAPIClient.request(
+                path: "v1/sync:push",
+                method: "POST",
+                body: BackendSyncPushPayload(
+                    idempotencyKey: UUID().uuidString.lowercased(),
+                    forceProfileOverwrite: false,
+                    profileUpserts: [],
+                    scoreUpserts: [],
+                    playRecordUpserts: [],
+                    collectionUpserts: collections.map {
+                        BackendSyncCollectionUpsertPayload(
+                            collectionId: $0.id.uuidString.lowercased(),
+                            name: $0.name,
+                            sortIndex: $0.sortIndex,
+                            createdAt: $0.createdAt,
+                            deletedAt: $0.deletedAt,
+                            clientUpdatedAt: $0.clientUpdatedAt ?? $0.updatedAt
+                        )
+                    },
+                    collectionItemUpserts: items.map {
+                        BackendSyncCollectionItemUpsertPayload(
+                            itemId: $0.id.uuidString.lowercased(),
+                            collectionId: $0.collectionId.uuidString.lowercased(),
+                            songId: $0.songId,
+                            chartType: $0.chartType,
+                            difficulty: $0.difficulty,
+                            position: $0.position,
+                            createdAt: $0.createdAt,
+                            deletedAt: $0.deletedAt,
+                            clientUpdatedAt: $0.clientUpdatedAt ?? $0.updatedAt
+                        )
+                    }
+                ),
+                authentication: .required
+            )
+            let config = ensureSyncConfig(context: context)
+            config.lastSyncRevision = response.latestRevision
+            try context.save()
+            return
+        }
         let sheets = try context.fetch(FetchDescriptor<Sheet>())
         let scoreSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["_", "-"])
         let recordSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["-", "_"])
         let config = ensureSyncConfig(context: context)
+		let localCollections = try context.fetch(FetchDescriptor<SongCollection>())
+		let allCollectionItems = try context.fetch(FetchDescriptor<SongCollectionItem>())
+		let collectionUpserts = localCollections.map {
+			BackendSyncCollectionUpsertPayload(collectionId: $0.id.uuidString.lowercased(), name: $0.name, sortIndex: $0.sortIndex, createdAt: $0.createdAt, deletedAt: $0.deletedAt, clientUpdatedAt: $0.clientUpdatedAt ?? $0.updatedAt)
+		}
+		let collectionItemUpserts = allCollectionItems.map {
+			BackendSyncCollectionItemUpsertPayload(itemId: $0.id.uuidString.lowercased(), collectionId: $0.collectionId.uuidString.lowercased(), songId: $0.songId, chartType: $0.chartType, difficulty: $0.difficulty, position: $0.position, createdAt: $0.createdAt, deletedAt: $0.deletedAt, clientUpdatedAt: $0.clientUpdatedAt ?? $0.updatedAt)
+		}
 		let dataProfileIds = Set(
 			profiles.filter { forceDataUpload || config.pendingDataProfileIds.contains($0.id) || !config.syncedDataProfileIds.contains($0.id) }.map(\.id)
 		)
@@ -558,7 +743,7 @@ enum BackendIncrementalSyncService {
             )
         }
 
-		guard !profileUpserts.isEmpty || !scoreUpserts.isEmpty || !playRecordUpserts.isEmpty || !dataProfileIds.isEmpty else {
+		guard !profileUpserts.isEmpty || !scoreUpserts.isEmpty || !playRecordUpserts.isEmpty || !collectionUpserts.isEmpty || !collectionItemUpserts.isEmpty || !dataProfileIds.isEmpty else {
 			return
 		}
 
@@ -573,6 +758,8 @@ enum BackendIncrementalSyncService {
                 playRecordUpserts: playRecordUpserts
                 ,replaceScoreProfileIds: dataProfileIds.filter { config.pendingFullReplaceProfileIds.contains($0) }.map { $0.uuidString.lowercased() }
                 ,replacePlayRecordProfileIds: dataProfileIds.filter { config.pendingFullReplaceProfileIds.contains($0) }.map { $0.uuidString.lowercased() }
+                ,collectionUpserts: collectionUpserts
+                ,collectionItemUpserts: collectionItemUpserts
             ),
             authentication: .required
         )
@@ -943,6 +1130,7 @@ enum BackendIncrementalSyncService {
         var profiles: [String: BackendSyncRemoteProfile] = [:]
         var scores: [String: BackendSyncRemoteScore] = [:]
         var records: [String: BackendSyncRemotePlayRecord] = [:]
+        var collections: [String: BackendSyncRemoteCollection] = [:]
         var latestRevision = sinceRevision
 
         while true {
@@ -972,6 +1160,7 @@ enum BackendIncrementalSyncService {
             response.snapshot.profiles.forEach { profiles[$0.id.lowercased()] = $0 }
             response.snapshot.scores.forEach { scores[scoreKey($0)] = $0 }
             response.snapshot.records.forEach { records[recordKey($0)] = $0 }
+            response.snapshot.collections.forEach { collections[$0.id.lowercased()] = $0 }
             latestRevision = response.latestRevision
             guard response.hasMore == true, response.latestRevision != cursor else { break }
             cursor = response.latestRevision
@@ -984,7 +1173,8 @@ enum BackendIncrementalSyncService {
             snapshot: BackendSyncSnapshot(
                 profiles: Array(profiles.values),
                 scores: Array(scores.values),
-                records: Array(records.values)
+                records: Array(records.values),
+                collections: Array(collections.values)
             )
         )
     }
@@ -1029,7 +1219,8 @@ enum BackendIncrementalSyncService {
         return BackendSyncSnapshot(
             profiles: snapshot.profiles.filter { !tokens.contains($0.id.lowercased()) },
             scores: snapshot.scores.filter { !tokens.contains($0.profileId.lowercased()) },
-            records: snapshot.records.filter { !tokens.contains($0.profileId.lowercased()) }
+            records: snapshot.records.filter { !tokens.contains($0.profileId.lowercased()) },
+            collections: snapshot.collections
         )
     }
 
@@ -1231,6 +1422,32 @@ enum BackendIncrementalSyncService {
             context.insert(score)
             sheet.scores.append(score)
         }
+
+        let existingCollections = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<SongCollection>()).map { ($0.id, $0) })
+        for remote in snapshot.collections {
+            guard let collectionId = UUID(uuidString: remote.id) else { continue }
+            let collection = existingCollections[collectionId] ?? SongCollection(id: collectionId, name: remote.name, sortIndex: remote.sortIndex, createdAt: remote.createdAt, updatedAt: remote.updatedAt, clientUpdatedAt: remote.clientUpdatedAt, deletedAt: remote.deletedAt)
+            if existingCollections[collectionId] == nil { context.insert(collection) }
+            collection.name = remote.name
+            collection.sortIndex = remote.sortIndex
+            collection.updatedAt = remote.updatedAt
+            collection.clientUpdatedAt = remote.clientUpdatedAt
+            collection.deletedAt = remote.deletedAt
+            let localItems = try context.fetch(FetchDescriptor<SongCollectionItem>(predicate: #Predicate { $0.collectionId == collectionId }))
+            let localById = Dictionary(uniqueKeysWithValues: localItems.map { ($0.id, $0) })
+            for remoteItem in remote.items {
+                guard let itemId = UUID(uuidString: remoteItem.id) else { continue }
+                let item = localById[itemId] ?? SongCollectionItem(id: itemId, collectionId: collectionId, songId: remoteItem.songId, chartType: remoteItem.chartType, difficulty: remoteItem.difficulty, position: remoteItem.position, createdAt: remoteItem.createdAt, updatedAt: remoteItem.updatedAt, clientUpdatedAt: remoteItem.clientUpdatedAt, deletedAt: remoteItem.deletedAt)
+                if localById[itemId] == nil { context.insert(item) }
+                item.songId = remoteItem.songId
+                item.chartType = remoteItem.chartType
+                item.difficulty = remoteItem.difficulty
+                item.position = remoteItem.position
+                item.updatedAt = remoteItem.updatedAt
+                item.clientUpdatedAt = remoteItem.clientUpdatedAt
+                item.deletedAt = remoteItem.deletedAt
+            }
+        }
     }
 
     private static func removeLocalProfiles(with profileIds: Set<UUID>, context: ModelContext) throws {
@@ -1338,7 +1555,8 @@ enum BackendIncrementalSyncService {
         return BackendSyncSnapshot(
             profiles: snapshot.profiles.filter { $0.id.lowercased() == profileToken },
             scores: snapshot.scores.filter { $0.profileId.lowercased() == profileToken },
-            records: snapshot.records.filter { $0.profileId.lowercased() == profileToken }
+            records: snapshot.records.filter { $0.profileId.lowercased() == profileToken },
+            collections: snapshot.collections
         )
     }
 

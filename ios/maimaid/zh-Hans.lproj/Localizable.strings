@@ -73,10 +73,6 @@
 "settings.about.version" = "版本";
 "settings.appearance.showBoundingBox" = "显示识别框";
 
-// MARK: - Data Transfer
-
-// MARK: - iCloud Backup
-
 // MARK: - Useful Links
 "links.title" = "常用网站";
 "links.nearcade.title" = "nearcade";
@@ -672,3 +668,5 @@
 "photo.error.accessDenied" = "没有相册访问权限。";
 "camera.error.outputUnavailable" = "拍照功能当前不可用。";
 "camera.error.dataUnavailable" = "无法获取拍摄的照片数据。";
+"home.collections.title" = "收藏夹";
+"home.collections.subtitle" = "按谱面整理自定义收藏";

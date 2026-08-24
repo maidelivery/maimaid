@@ -17,8 +17,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         GameVersionEntity::class,
         SongAliasEntity::class,
         PresetAvatarEntity::class,
+        SongCollectionEntity::class,
+        SongCollectionItemEntity::class,
     ],
-    version = 5,
+    version = 7,
     exportSchema = true,
 )
 @TypeConverters(DatabaseConverters::class)
@@ -27,6 +29,7 @@ abstract class MaimaidDatabase : RoomDatabase() {
     abstract fun presetAvatarDao(): PresetAvatarDao
     abstract fun profileDao(): ProfileDao
     abstract fun scoreDao(): ScoreDao
+    abstract fun songCollectionDao(): SongCollectionDao
 
     companion object {
         val Migration1To2 = object : Migration(1, 2) {
@@ -68,6 +71,26 @@ abstract class MaimaidDatabase : RoomDatabase() {
                     "CREATE INDEX IF NOT EXISTS `index_play_records_profileId_sheetKey` " +
                         "ON `play_records` (`profileId`, `sheetKey`)",
                 )
+            }
+        }
+
+        val Migration5To6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `song_collections` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `sortIndex` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `deletedAt` INTEGER, PRIMARY KEY(`id`))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `song_collection_items` (`id` TEXT NOT NULL, `collectionId` TEXT NOT NULL, `songId` TEXT NOT NULL, `chartType` TEXT NOT NULL, `difficulty` TEXT NOT NULL, `position` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `deletedAt` INTEGER, PRIMARY KEY(`id`))")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_song_collections_sortIndex` ON `song_collections` (`sortIndex`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_song_collections_updatedAt` ON `song_collections` (`updatedAt`)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_song_collection_items_collectionId_songId_chartType_difficulty` ON `song_collection_items` (`collectionId`, `songId`, `chartType`, `difficulty`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_song_collection_items_collectionId_position` ON `song_collection_items` (`collectionId`, `position`)")
+            }
+        }
+
+        val Migration6To7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `song_collections` ADD COLUMN `clientUpdatedAt` INTEGER")
+                db.execSQL("ALTER TABLE `song_collection_items` ADD COLUMN `clientUpdatedAt` INTEGER")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_song_collections_clientUpdatedAt` ON `song_collections` (`clientUpdatedAt`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_song_collection_items_clientUpdatedAt` ON `song_collection_items` (`clientUpdatedAt`)")
             }
         }
     }

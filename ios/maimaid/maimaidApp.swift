@@ -22,7 +22,9 @@ struct maimaidApp: App {
                 SyncConfig.self,
                 MaimaiIcon.self,
                 UserProfile.self,
-                CommunityAliasCache.self
+                CommunityAliasCache.self,
+                SongCollection.self,
+                SongCollectionItem.self
             )
         } catch {
             fatalError("Failed to create ModelContainer: \(error)")

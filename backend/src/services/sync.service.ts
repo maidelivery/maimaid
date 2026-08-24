@@ -5,7 +5,7 @@ import { TOKENS } from "../di/tokens.js";
 type RecordEventInput = {
 	userId: string;
 	profileId?: string | null;
-	entityType: "profile" | "avatar" | "best_scores" | "play_records" | "import" | "static_bundle";
+	entityType: "profile" | "avatar" | "best_scores" | "play_records" | "import" | "static_bundle" | "song_collection" | "song_collection_item";
 	entityId: string;
 	op: "upsert" | "delete" | "replace" | "bulk_upsert" | "imported";
 	payload?: Record<string, unknown> | null;
@@ -79,7 +79,7 @@ export class SyncService {
 			userId: input.userId,
 		};
 		if (input.profileId !== undefined) {
-			where.profileId = input.profileId;
+			where.OR = [{ profileId: input.profileId }, { profileId: null }];
 		}
 		if (input.sinceRevision !== undefined) {
 			where.revision = {
@@ -96,15 +96,23 @@ export class SyncService {
 
 	async buildSnapshot(userId: string, profileIds: string[]) {
 		const ids = Array.from(new Set(profileIds.filter((value) => value.length > 0)));
+		const collectionsPromise = this.prisma.songCollection.findMany({
+			where: { userId },
+			orderBy: [{ sortIndex: "asc" }, { createdAt: "asc" }],
+			include: {
+				items: { orderBy: [{ position: "asc" }, { createdAt: "asc" }] },
+			},
+		});
 		if (ids.length === 0) {
 			return {
 				profiles: [],
 				scores: [],
 				records: [],
+				collections: await collectionsPromise,
 			};
 		}
 
-		const [profiles, scores, records] = await Promise.all([
+		const [profiles, scores, records, collections] = await Promise.all([
 			this.prisma.profile.findMany({
 				where: {
 					userId,
@@ -182,12 +190,14 @@ export class SyncService {
 				},
 				orderBy: [{ playTime: "desc" }],
 			}),
+			collectionsPromise,
 		]);
 
 		return {
 			profiles,
 			scores,
 			records,
+			collections,
 		};
 	}
 }

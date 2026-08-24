@@ -1,21 +1,22 @@
 package org.rhythmeta.maimaid.ui.catalog
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -30,6 +31,7 @@ import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.SongEntity
 import org.rhythmeta.maimaid.ui.components.SquircleExtension
+import org.rhythmeta.maimaid.ui.components.squircleShape
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.squircle.squircleBorder
@@ -48,6 +50,9 @@ internal fun SongGridCell(
     cornerRadius: Dp,
     showDots: Boolean,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    showActualDifficultyIndicator: Boolean = true,
+    actualSheet: SheetEntity? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -59,7 +64,9 @@ internal fun SongGridCell(
             .data(cachedCover ?: StaticAssetUrls.coverUrl(song.imageName))
             .build()
     }
-    val prioritizedSheets = remember(sheets) { CatalogQuery.prioritizedSheets(sheets) }
+    val prioritizedSheets = remember(sheets, actualSheet) {
+        actualSheet?.let { listOf(it) } ?: CatalogQuery.prioritizedSheets(sheets)
+    }
     val isUtage = sheets.any { it.type.contains("utage", ignoreCase = true) } ||
         song.category.contains("utage", ignoreCase = true) ||
         song.category.contains("宴")
@@ -67,14 +74,9 @@ internal fun SongGridCell(
     Box(
         modifier = modifier
             .aspectRatio(1f)
+            .clip(squircleShape(cornerRadius))
             .squircleSurface(
                 color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.05f),
-                cornerRadius = cornerRadius,
-                extension = SquircleExtension,
-            )
-            .squircleBorder(
-                width = 0.5.dp,
-                color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.1f),
                 cornerRadius = cornerRadius,
                 extension = SquircleExtension,
             )
@@ -83,11 +85,11 @@ internal fun SongGridCell(
                     .filter(String::isNotBlank)
                     .joinToString(", ")
             }
-            .clickable(
+            .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
-                role = Role.Button,
                 onClick = onClick,
+                onLongClick = onLongClick,
             ),
     ) {
         AsyncImage(
@@ -96,6 +98,20 @@ internal fun SongGridCell(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         )
+
+        if (showActualDifficultyIndicator) actualSheet?.let { sheet ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .fillMaxHeight()
+                    .width(4.dp)
+                    .squircleSurface(
+                        color = SongVisualUtils.difficultyColor(sheet.difficulty, sheet.type, darkTheme),
+                        cornerRadius = 2.dp,
+                        extension = SquircleExtension,
+                    ),
+            )
+        }
 
         if (showDots) {
             Row(
@@ -145,5 +161,18 @@ internal fun SongGridCell(
                 }
             }
         }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .squircleBorder(
+                    width = if (actualSheet != null) 1.5.dp else 0.5.dp,
+                    color = actualSheet?.let {
+                        SongVisualUtils.difficultyColor(it.difficulty, it.type, darkTheme)
+                    } ?: MiuixTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                    cornerRadius = cornerRadius,
+                    extension = SquircleExtension,
+                ),
+        )
     }
 }

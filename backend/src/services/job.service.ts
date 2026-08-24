@@ -3,6 +3,7 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import { CatalogService } from "./catalog.service.js";
 import { CommunityAliasService } from "./community-alias.service.js";
+import { SongCollectionCleanupService } from "./song-collection-cleanup.service.js";
 
 // Finished rows are only useful for reading recent history from the dashboard.
 // Keeping them forever grows a table that is written to on a schedule.
@@ -33,6 +34,7 @@ export class JobService {
 		@inject(TOKENS.Prisma) private readonly prisma: PrismaClient,
 		@inject(CatalogService) private readonly catalogService: CatalogService,
 		@inject(CommunityAliasService) private readonly communityAliasService: CommunityAliasService,
+		@inject(SongCollectionCleanupService) private readonly songCollectionCleanupService: SongCollectionCleanupService,
 	) {}
 
 	async enqueue(jobType: string, payload: Record<string, unknown> = {}) {
@@ -78,6 +80,9 @@ export class JobService {
 				return;
 			case "community_alias_roll_cycle":
 				await this.communityAliasService.rollCycle();
+				return;
+			case "song_collection_tombstone_cleanup":
+				await this.songCollectionCleanupService.removeExpiredTombstones();
 				return;
 			default:
 				// Previously an unrecognised type fell through the if/else chain and was

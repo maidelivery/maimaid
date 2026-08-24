@@ -672,3 +672,5 @@
 "photo.error.accessDenied" = "写真ライブラリへのアクセスが許可されていません。";
 "camera.error.outputUnavailable" = "写真撮影を利用できません。";
 "camera.error.dataUnavailable" = "撮影した写真データを取得できません。";
+"home.collections.title" = "コレクション";
+"home.collections.subtitle" = "譜面ごとにコレクションを整理";

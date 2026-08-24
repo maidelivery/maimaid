@@ -73,6 +73,7 @@ struct SongDetailContent: View {
     @State private var approvedCommunityAliases: [CommunityAliasCache] = []
     @State private var communityAliasDailyUsedCount = 0
     @State private var communityQuotaShakePhase: CGFloat = 0
+    @State private var showingCollectionPicker = false
     @State private var isCommunityQuotaBarFlashing = false
     private let communityAliasDailyQuotaLimit = 5
 
@@ -195,18 +196,25 @@ struct SongDetailContent: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
+                Menu {
+                    Button("Add Chart to Collections", systemImage: "rectangle.stack.badge.plus") { showingCollectionPicker = true }
+                    Button {
                     song.isFavorite.toggle()
                     try? modelContext.save()
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 } label: {
-                    Image(systemName: song.isFavorite ? "star.fill" : "star")
-                        .foregroundStyle(song.isFavorite ? .yellow : .primary)
+                    Label("Favourite Song", systemImage: song.isFavorite ? "star.fill" : "star")
                 }
+                } label: { Image(systemName: "ellipsis.circle") }
             }
         }
         .sheet(item: $selectedSheet) { sheet in
             ScoreEntryView(sheet: sheet)
+        }
+        .sheet(isPresented: $showingCollectionPicker) {
+            if let sheet = filteredSheets.first {
+                AddToSongCollectionsView(songId: song.songIdentifier, chartType: sheet.type, difficulty: sheet.difficulty)
+            }
         }
         .overlay(alignment: .bottom) {
             if let message = toastMessage {
@@ -1028,6 +1036,7 @@ struct SheetCardView: View {
     @State private var historyPage = 1
     @State private var recordToDelete: PlayRecord?
     @State private var showingDeleteConfirm = false
+    @State private var showingCollectionPicker = false
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
@@ -1163,12 +1172,20 @@ struct SheetCardView: View {
                     }
                 }
             }
+            .contextMenu {
+                Button("Add to Collections", systemImage: "rectangle.stack.badge.plus") {
+                    showingCollectionPicker = true
+                }
+            }
             
             // Expanded content
             if isExpanded {
                 expandedContent
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
+        }
+        .sheet(isPresented: $showingCollectionPicker) {
+            AddToSongCollectionsView(songId: sheet.songIdentifier, chartType: sheet.type, difficulty: sheet.difficulty)
         }
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
         .overlay(

@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.FactCheck
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.automirrored.rounded.ViewList
 import androidx.compose.material.icons.rounded.Casino
@@ -26,7 +27,6 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.IosShare
-import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -474,10 +474,10 @@ private fun homeTools(): List<HomeTool> = listOf(
         detail = AppDetail.CommunityAliases,
     ),
     HomeTool(
-        title = R.string.home_links,
-        subtitle = R.string.home_links_subtitle,
-        icon = Icons.Rounded.Link,
-        detail = AppDetail.UsefulLinks,
+        title = R.string.home_collections,
+        subtitle = R.string.home_collections_subtitle,
+        icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
+        detail = AppDetail.Collections,
     ),
 )
 

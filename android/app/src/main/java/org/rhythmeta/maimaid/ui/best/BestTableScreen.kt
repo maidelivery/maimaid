@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,6 +35,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -70,18 +72,72 @@ import org.rhythmeta.maimaid.core.database.UserProfileEntity
 import org.rhythmeta.maimaid.ui.components.SquircleExtension
 import org.rhythmeta.maimaid.ui.components.SongListScrollBar
 import org.rhythmeta.maimaid.ui.components.appTextFieldColors
+import org.rhythmeta.maimaid.ui.components.squircleShape
 import org.rhythmeta.maimaid.ui.util.ScoreStatusColors
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
-import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.window.WindowListPopup
+
+@Composable
+internal fun BestTableConstantTopBarAction(container: AppContainer) {
+    val constantMode by container.appPreferencesRepository.best50ConstantMode
+        .collectAsStateWithLifecycle(Best50ConstantMode.Server)
+    val scope = rememberCoroutineScope()
+    var menuExpanded by remember { mutableStateOf(false) }
+    val options = listOf(
+        Best50ConstantMode.Fitted,
+        Best50ConstantMode.Version,
+    )
+    val labels = listOf(
+        stringResource(R.string.best50_use_fitted_constant),
+        stringResource(R.string.best50_use_version_constant),
+    )
+    Box {
+        IconButton(onClick = { menuExpanded = !menuExpanded }) {
+            Icon(
+                imageVector = Icons.Rounded.Settings,
+                contentDescription = stringResource(R.string.best50_constant_section),
+            )
+        }
+        WindowListPopup(
+            show = menuExpanded,
+            alignment = PopupPositionProvider.Align.End,
+            enableWindowDim = true,
+            onDismissRequest = { menuExpanded = false },
+        ) {
+            ListPopupColumn {
+                options.forEachIndexed { index, option ->
+                    DropdownImpl(
+                        text = labels[index],
+                        optionSize = options.size,
+                        isSelected = option == constantMode,
+                        index = index,
+                        onSelectedIndexChange = {
+                            menuExpanded = false
+                            scope.launch {
+                                container.appPreferencesRepository.setBest50ConstantMode(
+                                    if (constantMode == option) Best50ConstantMode.Server else option,
+                                )
+                            }
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun BestTableScreen(
@@ -216,43 +272,6 @@ fun BestTableScreen(
                     },
                 )
             }
-            item {
-                SmallTitle(
-                    text = stringResource(R.string.best50_constant_section),
-                    insideMargin = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    cornerRadius = 16.dp,
-                    insideMargin = PaddingValues(0.dp),
-                    colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
-                ) {
-                    Column {
-                        SwitchPreference(
-                            checked = constantMode == Best50ConstantMode.Fitted,
-                            onCheckedChange = { checked ->
-                                scope.launch {
-                                    container.appPreferencesRepository.setBest50ConstantMode(
-                                        if (checked) Best50ConstantMode.Fitted else Best50ConstantMode.Server,
-                                    )
-                                }
-                            },
-                            title = stringResource(R.string.best50_use_fitted_constant),
-                        )
-                        SwitchPreference(
-                            checked = constantMode == Best50ConstantMode.Version,
-                            onCheckedChange = { checked ->
-                                scope.launch {
-                                    container.appPreferencesRepository.setBest50ConstantMode(
-                                        if (checked) Best50ConstantMode.Version else Best50ConstantMode.Server,
-                                    )
-                                }
-                            },
-                            title = stringResource(R.string.best50_use_version_constant),
-                        )
-                    }
-                }
-            }
             bestEntrySection(
                 sectionKey = "new",
                 titleResource = R.string.best50_new_section,
@@ -279,6 +298,7 @@ fun BestTableScreen(
 
 @Composable
 private fun BestRatingSummary(total: Int, b35Sum: Int, b15Sum: Int) {
+    val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
     Card(
         modifier = Modifier.fillMaxWidth(),
         cornerRadius = 18.dp,
@@ -300,7 +320,7 @@ private fun BestRatingSummary(total: Int, b35Sum: Int, b15Sum: Int) {
                     style = MiuixTheme.textStyles.headline1.copy(
                         fontWeight = FontWeight.Black,
                         fontFamily = FontFamily.SansSerif,
-                        brush = ratingBrush(total),
+                        brush = ratingBrush(total, darkTheme),
                     ),
                     color = Color.Unspecified,
                 )
@@ -463,6 +483,7 @@ private fun BestEntryCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(squircleShape(16.dp))
             .clickable(onClick = onClick),
         cornerRadius = 16.dp,
         insideMargin = PaddingValues(start = 8.dp),
@@ -675,7 +696,14 @@ private fun ratingColor(rating: Int): Color = when {
     else -> Color(0xFF8E8E93)
 }
 
-private fun ratingBrush(rating: Int): Brush = when {
+private fun ratingBrush(rating: Int, darkTheme: Boolean): Brush {
+    fun Color.forTheme(): Color = if (darkTheme) {
+        this
+    } else {
+        Color(red * 0.72f, green * 0.72f, blue * 0.72f, alpha)
+    }
+
+    return when {
     rating >= 15_000 -> Brush.linearGradient(
         colors = listOf(
             Color(0xFFFF5E5E),
@@ -685,7 +713,7 @@ private fun ratingBrush(rating: Int): Brush = when {
             Color(0xFF5EBAFF),
             Color(0xFFBA5EFF),
             Color(0xFFFF5EBA),
-        ),
+        ).map { it.forTheme() },
         start = Offset.Zero,
         end = Offset.Infinite,
     )
@@ -694,14 +722,17 @@ private fun ratingBrush(rating: Int): Brush = when {
             Color(0xFFD3D3D3),
             Color.White,
             Color(0xFFD3D3D3),
-        ),
+        ).map { it.forTheme() },
         start = Offset.Zero,
         end = Offset.Infinite,
     )
     rating >= 14_000 -> Brush.verticalGradient(
-        colors = listOf(Color(0xFFFFD700), Color(0xFFFFA500)),
+        colors = listOf(Color(0xFFFFD700), Color(0xFFFFA500)).map { it.forTheme() },
     )
-    else -> Brush.linearGradient(listOf(ratingColor(rating), ratingColor(rating)))
+    else -> Brush.linearGradient(
+        listOf(ratingColor(rating).forTheme(), ratingColor(rating).forTheme()),
+    )
+    }
 }
 
 private val BestAccent = Color(0xFFFF9500)

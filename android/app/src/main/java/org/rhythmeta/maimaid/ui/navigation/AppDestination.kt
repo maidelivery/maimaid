@@ -17,7 +17,6 @@ enum class AppDetail {
     Dan,
     DanDetail,
     CommunityAliases,
-    UsefulLinks,
     StaticData,
     Profiles,
     BackendAuth,
@@ -28,4 +27,6 @@ enum class AppDetail {
     Appearance,
     About,
     Song,
+    Collections,
+    CollectionDetail,
 }

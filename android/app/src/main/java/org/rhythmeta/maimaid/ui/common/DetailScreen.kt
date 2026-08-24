@@ -64,7 +64,6 @@ import org.rhythmeta.maimaid.ui.constanttable.ConstantTableScreen
 import org.rhythmeta.maimaid.ui.community.CommunityAliasScreen
 import org.rhythmeta.maimaid.ui.dan.DanDetailScreen
 import org.rhythmeta.maimaid.ui.dan.DanListScreen
-import org.rhythmeta.maimaid.ui.links.UsefulLinksScreen
 import org.rhythmeta.maimaid.ui.plate.PlateProgressScreen
 import org.rhythmeta.maimaid.ui.profile.ProfileScreen
 import org.rhythmeta.maimaid.ui.random.RandomSongScreen
@@ -77,6 +76,9 @@ import org.rhythmeta.maimaid.ui.settings.DivingFishImportScreen
 import org.rhythmeta.maimaid.ui.settings.LxnsImportScreen
 import org.rhythmeta.maimaid.ui.settings.OtogameImportScreen
 import org.rhythmeta.maimaid.ui.settings.OtogameLoginScreen
+import org.rhythmeta.maimaid.ui.collections.SongCollectionsScreen
+import org.rhythmeta.maimaid.ui.catalog.CatalogDisplayMode
+import org.rhythmeta.maimaid.core.data.CatalogSortOption
 
 @Composable
 internal fun DetailScreen(
@@ -106,6 +108,19 @@ internal fun DetailScreen(
     onOpenOtogameLogin: () -> Unit,
     onSongDetailBackgroundChanged: (androidx.compose.ui.graphics.Color?) -> Unit,
     onSongDetailTitleChanged: (String) -> Unit,
+    collectionsDisplayMode: CatalogDisplayMode = CatalogDisplayMode.List,
+    collectionsSortOption: CatalogSortOption = CatalogSortOption.DefaultOrder,
+    collectionsSortAscending: Boolean = true,
+    selectedCollectionId: String? = null,
+    collectionsRenameRequested: Boolean = false,
+    collectionsDetailOnly: Boolean = false,
+    onSelectedCollectionIdChange: (String?) -> Unit = {},
+    onCollectionsDisplayModeChange: (CatalogDisplayMode) -> Unit = {},
+    collectionsCreateRequested: Boolean = false,
+    collectionsImportRequested: Boolean = false,
+    onCollectionsCreateRequestHandled: () -> Unit = {},
+    onCollectionsImportRequestHandled: () -> Unit = {},
+    onCollectionsRenameRequestHandled: () -> Unit = {},
 ) {
     when (detail) {
         AppDetail.Song -> SongDetailScreen(
@@ -115,6 +130,52 @@ internal fun DetailScreen(
             onBackgroundChanged = onSongDetailBackgroundChanged,
             onTitleChanged = onSongDetailTitleChanged,
             onOpenCommunityAliases = onOpenCommunityAliases,
+        )
+        AppDetail.Collections -> SongCollectionsScreen(
+            container = container,
+            songs = state.songs,
+            sheets = state.sheets,
+            gameVersions = state.gameVersions,
+            server = state.activeProfile?.server ?: "jp",
+            coverImageStore = container.coverImageStore,
+            contentTopPadding = songContentTopPadding,
+            displayMode = collectionsDisplayMode,
+            sortOption = collectionsSortOption,
+            sortAscending = collectionsSortAscending,
+            onDisplayModeChange = onCollectionsDisplayModeChange,
+            onOpenSong = onOpenSong,
+            selectedCollectionId = selectedCollectionId,
+            onSelectedCollectionIdChange = onSelectedCollectionIdChange,
+            renameRequested = collectionsRenameRequested,
+            detailOnly = false,
+            createRequested = collectionsCreateRequested,
+            importRequested = collectionsImportRequested,
+            onCreateRequestHandled = onCollectionsCreateRequestHandled,
+            onImportRequestHandled = onCollectionsImportRequestHandled,
+            onRenameRequestHandled = onCollectionsRenameRequestHandled,
+        )
+        AppDetail.CollectionDetail -> SongCollectionsScreen(
+            container = container,
+            songs = state.songs,
+            sheets = state.sheets,
+            gameVersions = state.gameVersions,
+            server = state.activeProfile?.server ?: "jp",
+            coverImageStore = container.coverImageStore,
+            contentTopPadding = songContentTopPadding,
+            displayMode = collectionsDisplayMode,
+            sortOption = collectionsSortOption,
+            sortAscending = collectionsSortAscending,
+            onDisplayModeChange = onCollectionsDisplayModeChange,
+            onOpenSong = onOpenSong,
+            selectedCollectionId = selectedCollectionId,
+            onSelectedCollectionIdChange = onSelectedCollectionIdChange,
+            renameRequested = collectionsRenameRequested,
+            detailOnly = true,
+            createRequested = false,
+            importRequested = false,
+            onCreateRequestHandled = {},
+            onImportRequestHandled = {},
+            onRenameRequestHandled = onCollectionsRenameRequestHandled,
         )
         AppDetail.StaticData -> StaticDataDetail(
             state = state,
@@ -186,9 +247,6 @@ internal fun DetailScreen(
                 onOpenSong = onOpenSong,
             )
         }
-        AppDetail.UsefulLinks -> UsefulLinksScreen(
-            contentTopPadding = songContentTopPadding,
-        )
         AppDetail.CommunityAliases -> CommunityAliasScreen(
             container = container,
             songs = state.songs,
@@ -541,4 +599,3 @@ private fun FeatureDetail(state: MainUiState) {
         )
     }
 }
-

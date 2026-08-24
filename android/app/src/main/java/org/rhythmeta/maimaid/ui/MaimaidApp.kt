@@ -6,13 +6,18 @@ import androidx.activity.BackEventCompat
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.IosShare
+import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.animation.AnimatedContent
@@ -63,6 +68,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel as composeViewModel
 import kotlinx.coroutines.CancellationException
@@ -77,9 +83,12 @@ import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.ui.catalog.CatalogScreen
 import org.rhythmeta.maimaid.ui.catalog.CatalogDisplayMode
+import org.rhythmeta.maimaid.ui.catalog.CatalogSortTopBarAction
 import org.rhythmeta.maimaid.ui.catalog.CatalogFilterSettings
 import org.rhythmeta.maimaid.ui.catalog.CatalogSearchBar
+import org.rhythmeta.maimaid.core.data.CatalogSortOption
 import org.rhythmeta.maimaid.ui.catalog.CatalogTopBarActions
+import org.rhythmeta.maimaid.ui.best.BestTableConstantTopBarAction
 import org.rhythmeta.maimaid.ui.common.DetailScreen
 import org.rhythmeta.maimaid.ui.components.LiquidGlassTab
 import org.rhythmeta.maimaid.ui.components.LiquidGlassTabBar
@@ -107,12 +116,16 @@ import org.rhythmeta.maimaid.ui.theme.AppThemeColorSource
 import org.rhythmeta.maimaid.ui.theme.AppThemeMode
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.DropdownImpl
+import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.window.WindowListPopup
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -134,6 +147,7 @@ fun MaimaidApp(
     resetToHome: Boolean = false,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val collections by container.songCollectionRepository.collections.collectAsStateWithLifecycle(emptyList())
     val initialCatalogState by viewModel.initialCatalogState.collectAsStateWithLifecycle()
     val showScannerBoundingBoxes by viewModel.showScannerBoundingBoxes.collectAsStateWithLifecycle()
     val thirdPartyScoreSyncEnabled by viewModel.thirdPartyScoreSyncEnabled.collectAsStateWithLifecycle()
@@ -158,6 +172,7 @@ fun MaimaidApp(
     var homeTabTransitionActive by remember { mutableStateOf(false) }
     var homeTabTransitionJob by remember { mutableStateOf<Job?>(null) }
     var detailBackTransitionJob by remember { mutableStateOf<Job?>(null) }
+    var detailEntranceTransitionJob by remember { mutableStateOf<Job?>(null) }
     var detail by rememberSaveable { mutableStateOf<AppDetail?>(null) }
     var selectedSongId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedDanCategoryId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -180,6 +195,13 @@ fun MaimaidApp(
     var profileCreateRequested by rememberSaveable { mutableStateOf(false) }
     var bestTableExportRequested by rememberSaveable { mutableStateOf(false) }
     var randomSongFilterRequested by rememberSaveable { mutableStateOf(false) }
+    var collectionsCreateRequested by rememberSaveable { mutableStateOf(false) }
+    var collectionsImportRequested by rememberSaveable { mutableStateOf(false) }
+    var collectionsDisplayMode by rememberSaveable { mutableStateOf(CatalogDisplayMode.List) }
+    var collectionsSortOption by rememberSaveable { mutableStateOf(CatalogSortOption.DefaultOrder) }
+    var collectionsSortAscending by rememberSaveable { mutableStateOf(true) }
+    var selectedCollectionId by rememberSaveable { mutableStateOf<String?>(null) }
+    var collectionsRenameRequested by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(initialDetail, resetToHome) {
         when {
@@ -468,6 +490,7 @@ fun MaimaidApp(
     PredictiveBackHandler(enabled = canHandleBack) { progress: Flow<BackEventCompat> ->
         try {
             detailBackTransitionJob?.cancel()
+            detailEntranceTransitionJob?.cancel()
             detailEntranceProgress.stop()
             detailEntranceProgress.snapTo(0f)
             progress.collect { event ->
@@ -489,6 +512,7 @@ fun MaimaidApp(
                     AppDetail.CommunityAliases if communityAliasesFromSong -> AppDetail.Song
                     AppDetail.Song -> songReturnDetail
                     AppDetail.DanDetail -> AppDetail.Dan
+                    AppDetail.CollectionDetail -> AppDetail.Collections
                     AppDetail.OtogameLogin -> AppDetail.OtogameImport
                     else -> null
                 }
@@ -514,6 +538,10 @@ fun MaimaidApp(
                     communityAliasesSourceSongId = null
                     communityAliasesSourceReturnDetail = null
                 }
+                if (currentDetail == AppDetail.CollectionDetail) {
+                    selectedCollectionId = null
+                    collectionsRenameRequested = false
+                }
             } else if (destination != RootDestination.Home) {
                 animateRootDestinationChange = false
                 homeTabTransitionJob?.cancel()
@@ -536,6 +564,7 @@ fun MaimaidApp(
 
     val openDetail: (AppDetail) -> Unit = { next ->
         detailBackTransitionJob?.cancel()
+        detailEntranceTransitionJob?.cancel()
         if (next == AppDetail.CommunityAliases && detail != AppDetail.Song) {
             communityAliasesFromSong = false
             communityAliasesSourceSongId = null
@@ -547,7 +576,7 @@ fun MaimaidApp(
         if (next == AppDetail.ScoreQuery) {
             scoreQuerySearchVisible = true
         }
-        coroutineScope.launch {
+        detailEntranceTransitionJob = coroutineScope.launch {
             detailEntranceProgress.stop()
             detailEntranceProgress.snapTo(1f)
             detail = next
@@ -555,6 +584,7 @@ fun MaimaidApp(
                 targetValue = 0f,
                 animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
             )
+            detailEntranceProgress.snapTo(0f)
         }
     }
     val openSong: (String) -> Unit = { songId ->
@@ -580,10 +610,26 @@ fun MaimaidApp(
                 it == AppDetail.ScoreQuery ||
                 it == AppDetail.PlateProgress ||
                 it == AppDetail.DanDetail ||
+                it == AppDetail.Collections ||
+                it == AppDetail.CollectionDetail ||
                 it == AppDetail.CommunityAliases
         }
         selectedSongId = songId
         openDetail(AppDetail.Song)
+    }
+    val openCollection: (String) -> Unit = { collectionId ->
+        detailEntranceTransitionJob?.cancel()
+        detailEntranceTransitionJob = coroutineScope.launch {
+            detailEntranceProgress.stop()
+            detailEntranceProgress.snapTo(1f)
+            selectedCollectionId = collectionId
+            detail = AppDetail.CollectionDetail
+            detailEntranceProgress.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+            )
+            detailEntranceProgress.snapTo(0f)
+        }
     }
     val openCommunityAliasesFromSong: () -> Unit = {
         communityAliasesFromSong = true
@@ -664,9 +710,12 @@ fun MaimaidApp(
     }
 
     val selectedSong = selectedSongId?.let { id -> uiState.songs.firstOrNull { it.songIdentifier == id } }
+    val selectedCollectionTitle = selectedCollectionId
+        ?.let { id -> collections.firstOrNull { it.id == id }?.name }
     val closeDetail: () -> Unit = {
         if (detail != null && detailBackTransitionJob?.isActive != true) {
             detailBackTransitionJob = coroutineScope.launch {
+                detailEntranceTransitionJob?.cancel()
                 detailEntranceProgress.stop()
                 val initialBackProgress = detailEntranceProgress.value.coerceIn(0f, 1f)
                 backProgress.stop()
@@ -689,6 +738,7 @@ fun MaimaidApp(
                     AppDetail.CommunityAliases if communityAliasesFromSong -> AppDetail.Song
                     AppDetail.Song -> songReturnDetail
                     AppDetail.DanDetail -> AppDetail.Dan
+                    AppDetail.CollectionDetail -> AppDetail.Collections
                     AppDetail.OtogameLogin -> AppDetail.OtogameImport
                     else -> null
                 }
@@ -714,13 +764,19 @@ fun MaimaidApp(
                     communityAliasesSourceSongId = null
                     communityAliasesSourceReturnDetail = null
                 }
+                if (currentDetail == AppDetail.CollectionDetail) {
+                    selectedCollectionId = null
+                    collectionsRenameRequested = false
+                }
                 backProgress.snapTo(0f)
             }
         }
     }
     val detailNavigationIcon: @Composable () -> Unit = {
         if (detail != null) {
-            IconButton(onClick = closeDetail) {
+            IconButton(onClick = {
+                closeDetail()
+            }) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back))
             }
         }
@@ -738,6 +794,64 @@ fun MaimaidApp(
                     tint = if (selectedSong.isFavorite) Color(0xFFE85D5D) else MiuixTheme.colorScheme.onSurface,
                 )
             }
+        } else if (activeDetail == AppDetail.Collections) {
+            var menuExpanded by remember { mutableStateOf(false) }
+            Box {
+                IconButton(onClick = { menuExpanded = !menuExpanded }) {
+                    Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.collections_add))
+                }
+                WindowListPopup(
+                    show = menuExpanded,
+                    alignment = PopupPositionProvider.Align.End,
+                    enableWindowDim = true,
+                    onDismissRequest = { menuExpanded = false },
+                ) {
+                    ListPopupColumn {
+                        DropdownImpl(
+                            text = stringResource(R.string.collections_import_clipboard),
+                            optionSize = 2,
+                            isSelected = false,
+                            index = 0,
+                            onSelectedIndexChange = {
+                                menuExpanded = false
+                                collectionsImportRequested = true
+                            },
+                        )
+                        DropdownImpl(
+                            text = stringResource(R.string.collections_new),
+                            optionSize = 2,
+                            isSelected = false,
+                            index = 1,
+                            onSelectedIndexChange = {
+                                menuExpanded = false
+                                collectionsCreateRequested = true
+                            },
+                        )
+                    }
+                }
+            }
+        } else if (activeDetail == AppDetail.CollectionDetail) {
+            IconButton(onClick = {
+                collectionsDisplayMode = if (collectionsDisplayMode == CatalogDisplayMode.Grid) {
+                    CatalogDisplayMode.List
+                } else {
+                    CatalogDisplayMode.Grid
+                }
+            }) {
+                Icon(
+                    if (collectionsDisplayMode == CatalogDisplayMode.Grid) Icons.AutoMirrored.Rounded.List else Icons.Rounded.GridView,
+                    contentDescription = stringResource(R.string.collections_display_mode),
+                )
+            }
+            CatalogSortTopBarAction(
+                sortOption = collectionsSortOption,
+                sortAscending = collectionsSortAscending,
+                onSortOptionChange = { collectionsSortOption = it },
+                onSortAscendingChange = { collectionsSortAscending = it },
+            )
+            IconButton(onClick = { collectionsRenameRequested = true }) {
+                Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.collections_rename))
+            }
         } else if (activeDetail == AppDetail.Profiles) {
             IconButton(onClick = { profileCreateRequested = true }) {
                 Icon(
@@ -746,6 +860,7 @@ fun MaimaidApp(
                 )
             }
         } else if (activeDetail == AppDetail.BestTable) {
+            BestTableConstantTopBarAction(container)
             IconButton(onClick = { bestTableExportRequested = true }) {
                 Icon(
                     imageVector = Icons.Rounded.IosShare,
@@ -798,10 +913,17 @@ fun MaimaidApp(
     }
 
     val gestureInProgress = backProgress.value > 0f
+    val collectionNestedNavigation = detail == AppDetail.CollectionDetail
     val detailSourceProgress = when {
+        collectionNestedNavigation -> 0f
         gestureInProgress -> backProgress.value
         detail != null -> detailEntranceProgress.value
         else -> 0f
+    }
+    val collectionSourceProgress = when {
+        collectionNestedNavigation && gestureInProgress -> backProgress.value
+        collectionNestedNavigation -> detailEntranceProgress.value
+        else -> detailSourceProgress
     }
     val detailIsMoving = gestureInProgress || detailEntranceProgress.value > 0f
     val foregroundShape = squircleShape(rememberDeviceCornerRadius())
@@ -1425,6 +1547,7 @@ fun MaimaidApp(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .zIndex(if (isForeground) 1f else 0f)
                     .graphicsLayer {
                         translationX = if (isForeground) {
                             if (gestureInProgress) {
@@ -1498,7 +1621,168 @@ fun MaimaidApp(
             }
         }
 
+        val showCollectionListLayer = detail == AppDetail.Collections || detail == AppDetail.CollectionDetail
+        if (showCollectionListLayer) {
+            val isForeground = detail == AppDetail.Collections
+            val sourceDimAlpha = if (isForeground) 0f else 0.1f * (1f - collectionSourceProgress)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(if (isForeground) 1f else 0f)
+                    .graphicsLayer {
+                        translationX = if (isForeground) {
+                            if (gestureInProgress) {
+                                size.width * backProgress.value
+                            } else {
+                                size.width * detailEntranceProgress.value
+                            }
+                        } else {
+                            -size.width * 0.25f * (1f - collectionSourceProgress)
+                        }
+                        if (isForeground) {
+                            shape = foregroundShape
+                            clip = detailIsMoving
+                            shadowElevation = if (detailIsMoving) 12.dp.toPx() else 0f
+                        }
+                    },
+            ) {
+                DetailNavigationLayer(
+                    title = detailTitle(AppDetail.Collections),
+                    onBack = closeDetail,
+                    scrollBehavior = MiuixScrollBehavior(),
+                    actions = { detailActions(AppDetail.Collections) },
+                ) { contentTopPadding ->
+                    DetailScreen(
+                        detail = AppDetail.Collections,
+                        state = uiState,
+                        selectedSongId = selectedSongId,
+                        selectedDanCategoryId = selectedDanCategoryId,
+                        container = container,
+                        songContentTopPadding = contentTopPadding,
+                        communityAliasListState = communityAliasListState,
+                        recommendationSelectedPage = recommendationSelectedPage,
+                        danSelectedPage = danSelectedPage,
+                        scoreQueryViewModel = null,
+                        showScoreQueryFilter = false,
+                        profileCreateRequested = false,
+                        bestTableExportRequested = false,
+                        randomSongFilterRequested = false,
+                        randomSongSessionState = randomSongSessionState,
+                        onProfileCreateRequestHandled = {},
+                        onBestTableExportRequestHandled = {},
+                        onRandomSongFilterRequestHandled = {},
+                        onRandomSongFilterActiveChanged = {},
+                        onDismissScoreQueryFilter = {},
+                        onOpenSong = openSongFromDetail,
+                        onOpenDanCategory = { _, _ -> },
+                        onOpenCommunityAliases = {},
+                        onOpenOtogameLogin = {},
+                        onSongDetailBackgroundChanged = {},
+                        onSongDetailTitleChanged = {},
+                        collectionsDisplayMode = collectionsDisplayMode,
+                        collectionsSortOption = collectionsSortOption,
+                        collectionsSortAscending = collectionsSortAscending,
+                        selectedCollectionId = selectedCollectionId,
+                        collectionsRenameRequested = collectionsRenameRequested,
+                        collectionsDetailOnly = false,
+                        onSelectedCollectionIdChange = { id -> id?.let(openCollection) },
+                        onCollectionsDisplayModeChange = { collectionsDisplayMode = it },
+                        collectionsCreateRequested = collectionsCreateRequested,
+                        collectionsImportRequested = collectionsImportRequested,
+                        onCollectionsCreateRequestHandled = { collectionsCreateRequested = false },
+                        onCollectionsImportRequestHandled = { collectionsImportRequested = false },
+                        onCollectionsRenameRequestHandled = { collectionsRenameRequested = false },
+                    )
+                }
+                if (sourceDimAlpha > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = sourceDimAlpha)),
+                    )
+                }
+            }
+        }
+
+        val showCollectionDetailLayer = detail == AppDetail.CollectionDetail ||
+            (detail == AppDetail.Song && songReturnDetail == AppDetail.CollectionDetail)
+        if (showCollectionDetailLayer) {
+            val isForeground = detail == AppDetail.CollectionDetail
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(if (isForeground) 1f else 0f)
+                    .graphicsLayer {
+                        translationX = if (isForeground) {
+                            if (gestureInProgress) {
+                                size.width * backProgress.value
+                            } else {
+                                size.width * detailEntranceProgress.value
+                            }
+                        } else {
+                            -size.width * 0.25f * (1f - detailSourceProgress)
+                        }
+                        if (isForeground) {
+                            shape = foregroundShape
+                            clip = detailIsMoving
+                            shadowElevation = if (detailIsMoving) 12.dp.toPx() else 0f
+                        }
+                    },
+            ) {
+                DetailNavigationLayer(
+                    title = selectedCollectionTitle ?: detailTitle(AppDetail.Collections),
+                    onBack = closeDetail,
+                    scrollBehavior = MiuixScrollBehavior(),
+                    actions = { detailActions(AppDetail.CollectionDetail) },
+                ) { contentTopPadding ->
+                    DetailScreen(
+                        detail = AppDetail.CollectionDetail,
+                        state = uiState,
+                        selectedSongId = selectedSongId,
+                        selectedDanCategoryId = selectedDanCategoryId,
+                        container = container,
+                        songContentTopPadding = contentTopPadding,
+                        communityAliasListState = communityAliasListState,
+                        recommendationSelectedPage = recommendationSelectedPage,
+                        danSelectedPage = danSelectedPage,
+                        scoreQueryViewModel = null,
+                        showScoreQueryFilter = false,
+                        profileCreateRequested = false,
+                        bestTableExportRequested = false,
+                        randomSongFilterRequested = false,
+                        randomSongSessionState = randomSongSessionState,
+                        onProfileCreateRequestHandled = {},
+                        onBestTableExportRequestHandled = {},
+                        onRandomSongFilterRequestHandled = {},
+                        onRandomSongFilterActiveChanged = {},
+                        onDismissScoreQueryFilter = {},
+                        onOpenSong = openSongFromDetail,
+                        onOpenDanCategory = { _, _ -> },
+                        onOpenCommunityAliases = {},
+                        onOpenOtogameLogin = {},
+                        onSongDetailBackgroundChanged = {},
+                        onSongDetailTitleChanged = {},
+                        collectionsDisplayMode = collectionsDisplayMode,
+                        collectionsSortOption = collectionsSortOption,
+                        collectionsSortAscending = collectionsSortAscending,
+                        selectedCollectionId = selectedCollectionId,
+                        collectionsRenameRequested = collectionsRenameRequested,
+                        collectionsDetailOnly = true,
+                        onSelectedCollectionIdChange = {},
+                        onCollectionsDisplayModeChange = { collectionsDisplayMode = it },
+                        collectionsCreateRequested = false,
+                        collectionsImportRequested = false,
+                        onCollectionsCreateRequestHandled = {},
+                        onCollectionsImportRequestHandled = {},
+                        onCollectionsRenameRequestHandled = { collectionsRenameRequested = false },
+                    )
+                }
+            }
+        }
+
         detail?.takeUnless {
+            it == AppDetail.Collections ||
+            it == AppDetail.CollectionDetail ||
             it == AppDetail.RandomSong ||
                 it == AppDetail.BestTable ||
                 it == AppDetail.Recommendations ||
@@ -1554,7 +1838,8 @@ fun MaimaidApp(
                                 activeDetail == AppDetail.Dan ||
                                 activeDetail == AppDetail.DanDetail ||
                                 activeDetail == AppDetail.CommunityAliases ||
-                                activeDetail == AppDetail.UsefulLinks ||
+                                activeDetail == AppDetail.Collections ||
+                                activeDetail == AppDetail.CollectionDetail ||
                                 activeDetail == AppDetail.DivingFishImport ||
                                 activeDetail == AppDetail.LxnsImport ||
                                 activeDetail == AppDetail.OtogameImport
@@ -1624,12 +1909,15 @@ fun MaimaidApp(
                             activeDetail == AppDetail.Dan ||
                             activeDetail == AppDetail.DanDetail ||
                             activeDetail == AppDetail.CommunityAliases ||
-                            activeDetail == AppDetail.UsefulLinks ||
+                            activeDetail == AppDetail.Collections ||
+                            activeDetail == AppDetail.CollectionDetail ||
                             activeDetail == AppDetail.DivingFishImport ||
                             activeDetail == AppDetail.LxnsImport ||
                             activeDetail == AppDetail.OtogameImport
                         ) {
-                            val detailTitle = if (activeDetail == AppDetail.DanDetail) {
+                            val detailTitle = if (activeDetail == AppDetail.CollectionDetail && selectedCollectionTitle != null) {
+                                selectedCollectionTitle
+                            } else if (activeDetail == AppDetail.DanDetail) {
                                 selectedDanCategoryTitle ?: detailTitle(AppDetail.Dan)
                             } else {
                                 detailTitle(activeDetail)
@@ -1723,7 +2011,6 @@ fun MaimaidApp(
                                     AppDetail.Dan,
                                     AppDetail.DanDetail,
                                     AppDetail.CommunityAliases,
-                                    AppDetail.UsefulLinks,
                                     AppDetail.DivingFishImport,
                                     AppDetail.LxnsImport,
                                     AppDetail.OtogameImport,
@@ -1731,7 +2018,10 @@ fun MaimaidApp(
                                     -> Modifier
                                         .layerBackdrop(detailBackdrop)
                                         .background(backgroundColor)
-                                    AppDetail.StaticData -> Modifier
+                                    AppDetail.StaticData,
+                                    AppDetail.Collections,
+                                    AppDetail.CollectionDetail,
+                                    -> Modifier
                                         .padding(paddingValues)
                                         .layerBackdrop(detailBackdrop)
                                     else -> Modifier.padding(paddingValues)
@@ -1779,6 +2069,19 @@ fun MaimaidApp(
                                     songDetailTitle = currentSongId to title
                                 }
                             },
+                            collectionsDisplayMode = collectionsDisplayMode,
+                            collectionsSortOption = collectionsSortOption,
+                            collectionsSortAscending = collectionsSortAscending,
+                            selectedCollectionId = selectedCollectionId,
+                            collectionsRenameRequested = collectionsRenameRequested,
+                            collectionsDetailOnly = selectedCollectionId != null,
+                            onSelectedCollectionIdChange = { id -> id?.let(openCollection) },
+                            onCollectionsDisplayModeChange = { collectionsDisplayMode = it },
+                            collectionsCreateRequested = collectionsCreateRequested,
+                            collectionsImportRequested = collectionsImportRequested,
+                            onCollectionsCreateRequestHandled = { collectionsCreateRequested = false },
+                            onCollectionsImportRequestHandled = { collectionsImportRequested = false },
+                            onCollectionsRenameRequestHandled = { collectionsRenameRequested = false },
                         )
                     }
                 }
@@ -2072,7 +2375,6 @@ private fun detailTitle(detail: AppDetail): String = when (detail) {
     AppDetail.Dan -> stringResource(R.string.detail_dan)
     AppDetail.DanDetail -> stringResource(R.string.detail_dan)
     AppDetail.CommunityAliases -> stringResource(R.string.detail_community_aliases)
-    AppDetail.UsefulLinks -> stringResource(R.string.detail_useful_links)
     AppDetail.StaticData -> stringResource(R.string.detail_static_data)
     AppDetail.Profiles -> stringResource(R.string.detail_profiles)
     AppDetail.BackendAuth -> stringResource(R.string.detail_cloud_account)
@@ -2083,4 +2385,6 @@ private fun detailTitle(detail: AppDetail): String = when (detail) {
     AppDetail.Appearance -> stringResource(R.string.detail_appearance)
     AppDetail.About -> stringResource(R.string.detail_about)
     AppDetail.Song -> ""
+    AppDetail.Collections -> stringResource(R.string.settings_collections)
+    AppDetail.CollectionDetail -> stringResource(R.string.settings_collections)
 }

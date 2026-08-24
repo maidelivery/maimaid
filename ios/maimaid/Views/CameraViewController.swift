@@ -5,6 +5,7 @@ import os
 final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
     var onImageCaptured: ((UIImage) -> Void)?
     var onPhotoCaptured: ((Result<Data, Error>) -> Void)?
+    var onQRCodeDetected: ((String) -> Void)?
     
     private var captureSession: AVCaptureSession?
     private var previewLayer: AVCaptureVideoPreviewLayer?
@@ -51,6 +52,13 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
                 photoOut.isHighResolutionCaptureEnabled = true
             }
             photoOutput = photoOut
+        }
+
+        let metadataOutput = AVCaptureMetadataOutput()
+        if captureSession.canAddOutput(metadataOutput) {
+            captureSession.addOutput(metadataOutput)
+            metadataOutput.setMetadataObjectsDelegate(self, queue: processingQueue)
+            metadataOutput.metadataObjectTypes = [.qr]
         }
         
         if let connection = videoOutput.connection(with: .video) {
@@ -186,6 +194,15 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
         } catch {
             return
         }
+    }
+}
+
+extension CameraViewController: AVCaptureMetadataOutputObjectsDelegate {
+    nonisolated func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
+        guard let code = metadataObjects.compactMap({ $0 as? AVMetadataMachineReadableCodeObject }).first(where: { $0.type == .qr }),
+              let value = code.stringValue,
+              value.hasPrefix(SongCollectionCodec.prefix) else { return }
+        Task { @MainActor [weak self] in self?.onQRCodeDetected?(value) }
     }
 }
 

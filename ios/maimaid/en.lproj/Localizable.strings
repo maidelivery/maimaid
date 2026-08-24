@@ -672,3 +672,5 @@
 "photo.error.accessDenied" = "Photo library access denied.";
 "camera.error.outputUnavailable" = "Photo capture is unavailable.";
 "camera.error.dataUnavailable" = "Captured photo data is unavailable.";
+"home.collections.title" = "Collections";
+"home.collections.subtitle" = "Organize charts into custom collections";

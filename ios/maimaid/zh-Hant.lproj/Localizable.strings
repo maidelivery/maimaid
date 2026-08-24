@@ -672,3 +672,5 @@
 "photo.error.accessDenied" = "沒有相簿存取權限。";
 "camera.error.outputUnavailable" = "拍照功能目前無法使用。";
 "camera.error.dataUnavailable" = "無法取得拍攝的照片資料。";
+"home.collections.title" = "收藏夾";
+"home.collections.subtitle" = "按譜面整理自訂收藏";

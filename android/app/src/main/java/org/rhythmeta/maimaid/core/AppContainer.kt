@@ -32,6 +32,7 @@ import org.rhythmeta.maimaid.core.data.RecommendationRepository
 import org.rhythmeta.maimaid.core.data.ScoreRepository
 import org.rhythmeta.maimaid.core.data.ScoreQueryRepository
 import org.rhythmeta.maimaid.core.data.ScoreSyncService
+import org.rhythmeta.maimaid.core.data.SongCollectionRepository
 import org.rhythmeta.maimaid.core.database.MaimaidDatabase
 import org.rhythmeta.maimaid.core.ml.OnnxSessionFactory
 import org.rhythmeta.maimaid.core.network.BackendApiClient
@@ -55,6 +56,8 @@ class AppContainer(context: Context) {
         MaimaidDatabase.Migration2To3,
         MaimaidDatabase.Migration3To4,
         MaimaidDatabase.Migration4To5,
+        MaimaidDatabase.Migration5To6,
+        MaimaidDatabase.Migration6To7,
     )
         .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
         .build()
@@ -105,6 +108,7 @@ class AppContainer(context: Context) {
         profileRepository = profileRepository,
         syncStateStore = backendSyncStateStore,
     )
+    val songCollectionRepository = SongCollectionRepository(database.songCollectionDao())
 
     val catalogRepository = CatalogRepository(
         database = database,

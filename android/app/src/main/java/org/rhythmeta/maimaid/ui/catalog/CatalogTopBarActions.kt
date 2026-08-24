@@ -70,6 +70,35 @@ internal fun CatalogTopBarActions(
         )
     }
 
+    CatalogSortTopBarAction(
+        sortOption = sortOption,
+        sortAscending = sortAscending,
+        onSortOptionChange = onSortOptionChange,
+        onSortAscendingChange = onSortAscendingChange,
+    )
+
+    IconButton(
+        onClick = {
+            sortMenuExpanded = false
+            onShowFilter()
+        },
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.FilterList,
+            contentDescription = stringResource(R.string.catalog_filter_title),
+            tint = if (filterActive) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
+internal fun CatalogSortTopBarAction(
+    sortOption: CatalogSortOption,
+    sortAscending: Boolean,
+    onSortOptionChange: (CatalogSortOption) -> Unit,
+    onSortAscendingChange: (Boolean) -> Unit,
+) {
+    var sortMenuExpanded by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { sortMenuExpanded = !sortMenuExpanded }) {
             Icon(
@@ -132,19 +161,6 @@ internal fun CatalogTopBarActions(
                 }
             }
         }
-    }
-
-    IconButton(
-        onClick = {
-            sortMenuExpanded = false
-            onShowFilter()
-        },
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.FilterList,
-            contentDescription = stringResource(R.string.catalog_filter_title),
-            tint = if (filterActive) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface,
-        )
     }
 }
 

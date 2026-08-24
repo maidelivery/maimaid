@@ -1,4 +1,5 @@
 import Foundation
+import Compression
 
 struct BackendSyncFlexibleDouble: Decodable {
     let value: Double
@@ -176,5 +177,69 @@ enum BackendSyncShared {
         difficulty: String
     ) -> String {
         "\(identifier)\(separator)\(chartType)\(separator)\(difficulty)".lowercased()
+    }
+}
+
+struct SongCollectionExport: Codable, Sendable {
+    let version: Int
+    let kind: String
+    let collections: [SongCollectionExportCollection]
+
+    enum CodingKeys: String, CodingKey { case version = "v", kind = "k", collections = "c" }
+}
+
+struct SongCollectionExportCollection: Codable, Sendable {
+    let id: String
+    let name: String
+    let position: Int
+    let entries: [SongCollectionExportEntry]
+
+    enum CodingKeys: String, CodingKey { case id = "i", name = "n", position = "p", entries = "e" }
+}
+
+struct SongCollectionExportEntry: Codable, Sendable {
+    let songId: String
+    let chartType: String
+    let difficulty: String
+    let position: Int
+
+    enum CodingKeys: String, CodingKey { case songId = "s", chartType = "t", difficulty = "d", position = "p" }
+}
+
+enum SongCollectionCodec {
+    nonisolated static let prefix = "MMD1."
+    nonisolated static let kind = "MMD_COLLECTIONS"
+
+    static func encode(collections: [SongCollection], items: [SongCollectionItem]) throws -> String {
+        let active = collections.filter { $0.deletedAt == nil }.sorted { $0.sortIndex == $1.sortIndex ? $0.id.uuidString < $1.id.uuidString : $0.sortIndex < $1.sortIndex }
+        let itemMap = Dictionary(grouping: items.filter { $0.deletedAt == nil }, by: \.collectionId)
+        let payload = SongCollectionExport(version: 1, kind: kind, collections: active.map { collection in
+            SongCollectionExportCollection(
+                id: collection.id.uuidString.lowercased(), name: collection.name, position: collection.sortIndex,
+                entries: (itemMap[collection.id] ?? []).sorted { $0.position == $1.position ? $0.id.uuidString < $1.id.uuidString : $0.position < $1.position }.map {
+                    SongCollectionExportEntry(songId: $0.songId, chartType: $0.chartType.lowercased(), difficulty: $0.difficulty.lowercased(), position: $0.position)
+                }
+            )
+        })
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let raw = try encoder.encode(payload)
+        let compressed = try (raw as NSData).compressed(using: .zlib) as Data
+        return prefix + compressed.base64EncodedString(options: [.endLineWithLineFeed])
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+    }
+
+    static func decode(_ value: String) throws -> SongCollectionExport {
+        guard value.hasPrefix(prefix), value.count <= 2_000_000 else { throw CocoaError(.fileReadCorruptFile) }
+        var encoded = String(value.dropFirst(prefix.count)).replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        encoded += String(repeating: "=", count: (4 - encoded.count % 4) % 4)
+        guard let compressed = Data(base64Encoded: encoded), compressed.count <= 1_000_000,
+              let raw = try? (compressed as NSData).decompressed(using: .zlib) as Data,
+              raw.count <= 1_000_000 else { throw CocoaError(.fileReadCorruptFile) }
+        let payload = try JSONDecoder().decode(SongCollectionExport.self, from: raw)
+        guard payload.version == 1, payload.kind == kind, payload.collections.count <= 100 else { throw CocoaError(.fileReadCorruptFile) }
+        return payload
     }
 }

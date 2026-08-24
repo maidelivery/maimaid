@@ -17,6 +17,8 @@ import org.rhythmeta.maimaid.core.database.PlayRecordEntity
 import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.UserProfileEntity
+import org.rhythmeta.maimaid.core.database.SongCollectionEntity
+import org.rhythmeta.maimaid.core.database.SongCollectionItemEntity
 import org.rhythmeta.maimaid.core.network.BackendApiClient
 
 private const val SyncBatchSize = 250
@@ -273,6 +275,7 @@ class BackendSyncCoordinator(
         val localProfiles = database.profileDao().profiles()
         if (localProfiles.isEmpty()) return@withLock
         removeRemoteProfilesAbsentLocally(localProfiles.mapTo(mutableSetOf()) { it.id })
+        clearRemoteCollections()
         syncStateStore.update { current -> current.copy(pendingMutation = null) }
         pushAll(forceProfiles = true, overwriteProfileMetadata = true, replaceData = true)
         recordSyncedState(user.id)
@@ -361,7 +364,11 @@ class BackendSyncCoordinator(
 
     private suspend fun clearLocalUserData(createDefault: Boolean) {
         val profiles = database.profileDao().profiles()
-        database.withTransaction { database.profileDao().deleteAll() }
+        database.withTransaction {
+            database.profileDao().deleteAll()
+            database.songCollectionDao().deleteAllItems()
+            database.songCollectionDao().deleteAllCollections()
+        }
         profiles.mapNotNull(UserProfileEntity::avatarPath).forEach(profileAvatarStore::deleteStored)
         profiles.forEach { profileCredentialStore.delete(it.id) }
         syncStateStore.clearSessionState(keepOwner = false)
@@ -440,6 +447,7 @@ class BackendSyncCoordinator(
 		val profiles = linkedMapOf<String, BackendRemoteProfile>()
 		val scores = linkedMapOf<String, BackendRemoteScore>()
 		val records = linkedMapOf<String, BackendRemotePlayRecord>()
+		val collections = linkedMapOf<String, BackendRemoteCollection>()
 		var latest = initialRevision
 		do {
 			val responseElement = sessionManager.authorizedRequest(
@@ -450,6 +458,7 @@ class BackendSyncCoordinator(
 			response.snapshot.profiles.forEach { profiles[it.id] = it }
 			response.snapshot.scores.forEach { score -> scores[scoreKey(score)] = score }
 			response.snapshot.records.forEach { record -> records[recordKey(record)] = record }
+			response.snapshot.collections.forEach { collections[it.id] = it }
 			latest = response.latestRevision
 			if (!response.hasMore || response.latestRevision == cursor) break
 			cursor = response.latestRevision
@@ -461,6 +470,7 @@ class BackendSyncCoordinator(
 				profiles = profiles.values.toList(),
 				scores = scores.values.toList(),
 				records = records.values.toList(),
+				collections = collections.values.toList(),
 			),
 		)
 	}
@@ -574,6 +584,18 @@ class BackendSyncCoordinator(
                 val duplicate = !existingFingerprints.add(recordFingerprint(incoming))
                 if (!duplicate) scoreDao.upsertPlayRecord(incoming)
             }
+
+            val collectionDao = database.songCollectionDao()
+            snapshot.collections.forEach { remote ->
+                collectionDao.upsertCollection(
+                    SongCollectionEntity(remote.id, remote.name, remote.sortIndex, parseTime(remote.createdAt), parseTime(remote.updatedAt), remote.deletedAt?.let(::parseTime), remote.clientUpdatedAt?.let(::parseTime))
+                )
+                remote.items.forEach { item ->
+                    collectionDao.upsertItem(
+                        SongCollectionItemEntity(item.id, item.collectionId, item.songId, item.chartType, item.difficulty, item.position, parseTime(item.createdAt), parseTime(item.updatedAt), item.deletedAt?.let(::parseTime), item.clientUpdatedAt?.let(::parseTime))
+                    )
+                }
+            }
         }
         (oldAvatarPaths + removedProfiles.mapNotNull(UserProfileEntity::avatarPath))
             .distinct()
@@ -655,9 +677,20 @@ class BackendSyncCoordinator(
         replaceData: Boolean = false,
     ) {
         val profiles = database.profileDao().profiles()
-        if (profiles.isEmpty()) return
+        if (profiles.isEmpty()) {
+            pushCollectionsOnly()
+            return
+        }
         val state = syncStateStore.load()
         val sheets = database.catalogDao().sheets().associateBy(SheetEntity::sheetKey)
+        val localCollections = database.songCollectionDao().collectionsIncludingDeleted()
+        val localCollectionItems = database.songCollectionDao().itemsIncludingDeleted()
+        val collectionUpserts = localCollections.map { collection ->
+            BackendCollectionUpsert(collection.id, collection.name, collection.sortIndex, formatTime(collection.createdAt), collection.deletedAt?.let(::formatTime), collection.clientUpdatedAt?.let(::formatTime) ?: formatTime(collection.updatedAt))
+        }
+        val collectionItemUpserts = localCollectionItems.map { item ->
+            BackendCollectionItemUpsert(item.id, item.collectionId, item.songId, item.chartType, item.difficulty, item.position, formatTime(item.createdAt), item.deletedAt?.let(::formatTime), item.clientUpdatedAt?.let(::formatTime) ?: formatTime(item.updatedAt))
+        }
         syncStateStore.update { it.copy(pendingMutation = null) }
 
         for (profile in profiles) {
@@ -683,7 +716,7 @@ class BackendSyncCoordinator(
             } else {
                 emptyList()
             }
-			if (!dataChanged && !shouldReplaceData && profileUpsert.isEmpty()) {
+            if (!dataChanged && !shouldReplaceData && profileUpsert.isEmpty() && profile != profiles.first()) {
 				continue
 			}
             val batchCount = maxOf(
@@ -714,6 +747,8 @@ class BackendSyncCoordinator(
                         ?.let { listOf(BackendScoreSet(profile.id, it)) }.orEmpty(),
                     playRecordUpserts = recordEntries.takeIf(List<BackendPlayRecordEntry>::isNotEmpty)
                         ?.let { listOf(BackendRecordSet(profile.id, it)) }.orEmpty(),
+					collectionUpserts = if (batchIndex == 0 && profile == profiles.first()) collectionUpserts else emptyList(),
+					collectionItemUpserts = if (batchIndex == 0 && profile == profiles.first()) collectionItemUpserts else emptyList(),
 				replaceScoreProfileIds = if (batchIndex == 0 && dataChanged && shouldReplaceData) listOf(profile.id) else emptyList(),
 				replacePlayRecordProfileIds = if (batchIndex == 0 && dataChanged && shouldReplaceData) listOf(profile.id) else emptyList(),
                 )
@@ -757,6 +792,48 @@ class BackendSyncCoordinator(
             )
         }
 		uploadLocalAvatars()
+    }
+
+    private suspend fun pushCollectionsOnly() {
+        val collections = database.songCollectionDao().collectionsIncludingDeleted()
+        val items = database.songCollectionDao().itemsIncludingDeleted()
+        if (collections.isEmpty() && items.isEmpty()) return
+        val payload = BackendSyncPushPayload(
+            idempotencyKey = UUID.randomUUID().toString(),
+            profileUpserts = emptyList(),
+            scoreUpserts = emptyList(),
+            playRecordUpserts = emptyList(),
+            collectionUpserts = collections.map { collection ->
+                BackendCollectionUpsert(
+                    collection.id,
+                    collection.name,
+                    collection.sortIndex,
+                    formatTime(collection.createdAt),
+                    collection.deletedAt?.let(::formatTime),
+                    collection.clientUpdatedAt?.let(::formatTime) ?: formatTime(collection.updatedAt),
+                )
+            },
+            collectionItemUpserts = items.map { item ->
+                BackendCollectionItemUpsert(
+                    item.id,
+                    item.collectionId,
+                    item.songId,
+                    item.chartType,
+                    item.difficulty,
+                    item.position,
+                    formatTime(item.createdAt),
+                    item.deletedAt?.let(::formatTime),
+                    item.clientUpdatedAt?.let(::formatTime) ?: formatTime(item.updatedAt),
+                )
+            },
+        )
+        val responseElement = sessionManager.authorizedRequest(
+            path = "v1/sync:push",
+            method = "POST",
+            body = json.encodeToJsonElement(BackendSyncPushPayload.serializer(), payload),
+        )
+        val response = json.decodeFromJsonElement(BackendSyncPushResponse.serializer(), responseElement)
+        syncStateStore.update { it.copy(lastRevision = response.latestRevision, pendingMutation = null) }
     }
 
     private suspend fun pushImportedProfileData(profileId: String) {
@@ -850,6 +927,43 @@ class BackendSyncCoordinator(
         profiles.forEach { profile ->
             sessionManager.authorizedRequest(path = "v1/profiles/${profile.id}", method = "DELETE")
         }
+        clearRemoteCollections()
+    }
+
+    private suspend fun clearRemoteCollections() {
+        val remoteCollections = fetchFullSnapshot().snapshot.collections
+        val localCollectionIds = database.songCollectionDao().collectionsIncludingDeleted().mapTo(mutableSetOf(), SongCollectionEntity::id)
+        val localItemIds = database.songCollectionDao().itemsIncludingDeleted().mapTo(mutableSetOf(), SongCollectionItemEntity::id)
+        val now = formatTime(System.currentTimeMillis())
+        val collectionsToDelete = remoteCollections.filter { it.id !in localCollectionIds && it.deletedAt == null }
+            .map { remote ->
+                BackendCollectionUpsert(remote.id, remote.name, remote.sortIndex, remote.createdAt, now, now)
+            }
+        val itemsToDelete = remoteCollections.flatMap { collection ->
+            collection.items.filter { item ->
+                item.id !in localItemIds && (collection.id !in localCollectionIds || item.deletedAt == null)
+            }
+        }.map { item ->
+            BackendCollectionItemUpsert(item.id, item.collectionId, item.songId, item.chartType, item.difficulty, item.position, item.createdAt, now, now)
+        }
+        if (collectionsToDelete.isEmpty() && itemsToDelete.isEmpty()) return
+        val responseElement = sessionManager.authorizedRequest(
+            path = "v1/sync:push",
+            method = "POST",
+            body = json.encodeToJsonElement(
+                BackendSyncPushPayload.serializer(),
+                BackendSyncPushPayload(
+                    idempotencyKey = UUID.randomUUID().toString(),
+                    profileUpserts = emptyList(),
+                    scoreUpserts = emptyList(),
+                    playRecordUpserts = emptyList(),
+                    collectionUpserts = collectionsToDelete,
+                    collectionItemUpserts = itemsToDelete,
+                ),
+            ),
+        )
+        val response = json.decodeFromJsonElement(BackendSyncPushResponse.serializer(), responseElement)
+        syncStateStore.update { it.copy(lastRevision = response.latestRevision, pendingMutation = null) }
     }
 
     private suspend fun removeRemoteProfilesAbsentLocally(localProfileIds: Set<String>) {
@@ -932,7 +1046,10 @@ class BackendSyncCoordinator(
         }
     }
 
-    private suspend fun hasLocalData(): Boolean = database.profileDao().profiles().isNotEmpty()
+    private suspend fun hasLocalData(): Boolean =
+        database.profileDao().profiles().isNotEmpty() ||
+            database.songCollectionDao().hasAnyCollections() ||
+            database.songCollectionDao().hasAnyItems()
 
     private fun BackendRemoteProfile.toEntity(existing: UserProfileEntity?): UserProfileEntity = UserProfileEntity(
         id = id,
@@ -1011,6 +1128,7 @@ class BackendSyncCoordinator(
         profiles = profiles.filter { it.id == profileId },
         scores = scores.filter { it.profileId == profileId },
         records = records.filter { it.profileId == profileId },
+        collections = collections,
     )
 
     private fun BackendRemoteScore.toScoreEntity(sheetKey: String) = ScoreEntity(

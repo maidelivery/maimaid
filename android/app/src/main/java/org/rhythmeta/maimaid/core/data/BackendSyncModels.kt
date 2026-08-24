@@ -72,6 +72,19 @@ data class BackendSyncSnapshot(
     val profiles: List<BackendRemoteProfile> = emptyList(),
     val scores: List<BackendRemoteScore> = emptyList(),
     val records: List<BackendRemotePlayRecord> = emptyList(),
+    val collections: List<BackendRemoteCollection> = emptyList(),
+)
+
+@Serializable data class BackendRemoteCollection(
+    val id: String, val userId: String = "", val name: String, val sortIndex: Int = 0,
+    val createdAt: String, val updatedAt: String, val deletedAt: String? = null,
+    val clientUpdatedAt: String? = null,
+    val items: List<BackendRemoteCollectionItem> = emptyList(),
+)
+@Serializable data class BackendRemoteCollectionItem(
+    val id: String, val collectionId: String, val songId: String, val chartType: String,
+    val difficulty: String, val position: Int = 0, val createdAt: String, val updatedAt: String,
+    val deletedAt: String? = null, val clientUpdatedAt: String? = null,
 )
 
 @Serializable
@@ -143,6 +156,18 @@ data class BackendSyncPushPayload(
     val playRecordUpserts: List<BackendRecordSet>,
     val replaceScoreProfileIds: List<String> = emptyList(),
     val replacePlayRecordProfileIds: List<String> = emptyList(),
+    val collectionUpserts: List<BackendCollectionUpsert> = emptyList(),
+    val collectionItemUpserts: List<BackendCollectionItemUpsert> = emptyList(),
+)
+
+@Serializable data class BackendCollectionUpsert(
+    val collectionId: String, val name: String, val sortIndex: Int, val createdAt: String,
+    val deletedAt: String? = null, val clientUpdatedAt: String? = null,
+)
+@Serializable data class BackendCollectionItemUpsert(
+    val itemId: String, val collectionId: String, val songId: String, val chartType: String,
+    val difficulty: String, val position: Int, val createdAt: String,
+    val deletedAt: String? = null, val clientUpdatedAt: String? = null,
 )
 
 @Serializable

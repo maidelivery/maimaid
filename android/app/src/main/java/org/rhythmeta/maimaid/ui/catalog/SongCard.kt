@@ -2,6 +2,7 @@ package org.rhythmeta.maimaid.ui.catalog
 
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,11 +20,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -40,6 +41,7 @@ import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.SongEntity
 import org.rhythmeta.maimaid.ui.components.SquircleExtension
+import org.rhythmeta.maimaid.ui.components.squircleShape
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.squircle.squircleBorder
@@ -54,7 +56,9 @@ internal fun SongCard(
     versions: List<GameVersionEntity>,
     coverImageStore: CoverImageStore,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     chartType: String? = null,
+    actualSheet: SheetEntity? = null,
     modifier: Modifier = Modifier,
 ) {
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
@@ -62,7 +66,7 @@ internal fun SongCard(
     val highestSheet = remember(prioritizedSheets) {
         prioritizedSheets.maxByOrNull { SongVisualUtils.difficultyOrder(it.difficulty) }
     }
-    val accentColor = highestSheet?.let {
+    val accentColor = (actualSheet ?: highestSheet)?.let {
         SongVisualUtils.difficultyColor(it.difficulty, it.type, darkTheme)
     } ?: SongVisualUtils.utageColor(darkTheme)
     val versionBadgeChartTypes = remember(song.category, sheets, chartType) {
@@ -95,11 +99,11 @@ internal fun SongCard(
                 cornerRadius = 14.dp,
                 extension = SquircleExtension,
             )
-            .clickable(
+            .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
-                role = Role.Button,
                 onClick = onClick,
+                onLongClick = onLongClick,
             )
             .padding(vertical = 12.dp),
     ) {
@@ -304,6 +308,8 @@ internal fun SongJacket(
     coverImageStore: CoverImageStore,
     size: androidx.compose.ui.unit.Dp = 52.dp,
     cornerRadius: androidx.compose.ui.unit.Dp = 12.dp,
+    borderColor: Color? = null,
+    borderWidth: androidx.compose.ui.unit.Dp = 0.5.dp,
 ) {
     val context = LocalContext.current
     val cachedCover = remember(imageName) { coverImageStore.fileFor(imageName) }
@@ -316,23 +322,28 @@ internal fun SongJacket(
     Box(
         modifier = Modifier
             .size(size)
+            .clip(squircleShape(cornerRadius))
             .squircleSurface(
                 color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.05f),
                 cornerRadius = cornerRadius,
                 extension = SquircleExtension,
             )
-            .squircleBorder(
-                width = 0.5.dp,
-                color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.1f),
-                cornerRadius = cornerRadius,
-                extension = SquircleExtension,
-            ),
     ) {
         AsyncImage(
             model = model,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .squircleBorder(
+                    width = borderWidth,
+                    color = borderColor ?: MiuixTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                    cornerRadius = cornerRadius,
+                    extension = SquircleExtension,
+                ),
         )
     }
 }

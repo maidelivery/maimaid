@@ -91,6 +91,7 @@ model User {
   authSessionCodes       AuthSessionCode[]
   syncEvents             SyncEvent[]
   syncMutations          SyncMutation[]
+  songCollections        SongCollection[]
 
   @@map("users")
   @@unique([usernameNormalized, usernameDiscriminator])
@@ -202,6 +203,44 @@ model ProfileBinding {
   @@unique([profileId, provider])
   @@index([provider, externalUserId])
   @@map("profile_bindings")
+}
+
+model SongCollection {
+  id        String                @id @db.Uuid
+  userId    String                @db.Uuid
+  name      String
+  sortIndex Int                   @default(0)
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  clientUpdatedAt DateTime?
+  deletedAt DateTime?
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     SongCollectionItem[]
+
+  @@index([userId, sortIndex])
+  @@index([userId, updatedAt])
+  @@index([userId, clientUpdatedAt])
+  @@map("song_collections")
+}
+
+model SongCollectionItem {
+  id           String        @id @db.Uuid
+  collectionId String        @db.Uuid
+  songId       String
+  chartType    String
+  difficulty   String
+  position     Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  clientUpdatedAt DateTime?
+  deletedAt    DateTime?
+  collection   SongCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, songId, chartType, difficulty])
+  @@index([collectionId, position])
+  @@index([collectionId, updatedAt])
+  @@index([collectionId, clientUpdatedAt])
+  @@map("song_collection_items")
 }
 
 model DivingFishOAuthSession {
