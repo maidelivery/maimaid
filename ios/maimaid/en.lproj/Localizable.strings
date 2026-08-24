@@ -24,8 +24,6 @@
 "home.recommendation.subtitle" = "Constant analysis";
 "home.plateProgress.title" = "Plate Progress";
 "home.plateProgress.subtitle" = "Version plate progress";
-"home.usefulLinks.title" = "Useful Links";
-"home.usefulLinks.subtitle" = "Wiki, Parsers, etc.";
 "home.scoreQuery.title" = "Score Query";
 "home.scoreQuery.subtitle" = "Browse all scores";
 "home.dan.title" = "Dan Certification";
@@ -77,23 +75,6 @@
 
 // MARK: - iCloud Backup
 
-// MARK: - Useful Links
-"links.title" = "Useful Links";
-"links.nearcade.title" = "nearcade";
-"links.nearcade.subtitle" = "Find nearby arcade locations";
-"links.dx_jp.title" = "maimai DX Japan";
-"links.dx_jp.subtitle" = "Official site (JP)";
-"links.df.title" = "Diving Fish";
-"links.df.subtitle" = "Score tool & B50 calc";
-"links.lxns.title" = "LXNS Coffee House";
-"links.lxns.subtitle" = "Modern score tool";
-"links.gamerch.title" = "maimai Wiki (Gamerch)";
-"links.gamerch.subtitle" = "JP strategies & charts";
-"links.dxrating.title" = "DXRating.net";
-"links.dxrating.subtitle" = "Chart database";
-"links.mailv.title" = "Chart Constant Station 🏖☀️";
-"links.mailv.subtitle" = "Chart constant info";
-
 // MARK: - Song Detail
 "song.detail.copy.success %@" = "Copied %@";
 "song.detail.stats.fitDiff" = "Fitted Diff";
@@ -116,6 +97,7 @@
 "song.detail.lock.required" = "Lock";
 "song.detail.lock.notRequired" = "No lock";
 "song.detail.action.record" = "Record Score";
+"song.detail.action.favorite" = "Favorite Song";
 "song.detail.section.notes" = "Notes";
 "song.detail.section.rating" = "Rating Table";
 "song.detail.section.history" = "Play History";
@@ -131,6 +113,7 @@
 "song.detail.share.action" = "Share Image";
 "song.detail.label.title" = "Title";
 "song.detail.label.artist" = "Artist";
+"song.detail.label.alias" = "Alias";
 "song.detail.history.delete.title" = "Delete Score";
 "song.detail.history.delete.confirm" = "Delete";
 "song.detail.history.delete.cancel" = "Cancel";
@@ -183,7 +166,7 @@
 "sort.title" = "Sort By";
 "sort.default" = "Default";
 "sort.versionDate" = "Version/Date";
-"sort.difficulty" = "Max Difficulty";
+"sort.difficulty" = "Difficulty";
 "sort.ascending" = "Ascending";
 "sort.descending" = "Descending";
 
@@ -342,6 +325,7 @@
 "bestTable.export.fitDiff.rating" = "FitDiff Rating";
 "bestTable.settings.useFitDiff" = "Use Fitting Diff";
 "bestTable.settings.constants" = "Calculation Constants";
+"bestTable.settings.constants.default" = "Default";
 "bestTable.settings.useVersionConstant" = "Use Version Constants";
 "bestTable.export.versionConstant" = "Version Constants Enabled";
 "bestTable.export.versionConstant.rating" = "Version Constant Rating";
@@ -672,5 +656,29 @@
 "photo.error.accessDenied" = "Photo library access denied.";
 "camera.error.outputUnavailable" = "Photo capture is unavailable.";
 "camera.error.dataUnavailable" = "Captured photo data is unavailable.";
-"home.collections.title" = "Collections";
-"home.collections.subtitle" = "Organize charts into custom collections";
+"home_collections" = "Collections";
+"home_collections_subtitle" = "Organize charts into custom collections";
+"collections_copy_export_code" = "Copy export code";
+"collections_share" = "Share";
+"collections_share_chooser" = "Share";
+"collections_add" = "Add collection";
+"collections_import_clipboard" = "Import from clipboard";
+"collections_import_success" = "Collection imported";
+"collections_import_failed" = "Collection import failed";
+"collections_new" = "New collection";
+"collections_rename" = "Rename";
+"collections_edit" = "Edit";
+"collections_delete" = "Delete";
+"collections_display_mode" = "Change display mode";
+"collections_delete_item" = "Remove chart";
+"collections_add_chart" = "Add to collection";
+"collections_picker_title" = "Add to Collections";
+"collections_picker_empty" = "No collections available";
+"collections_picker_expand" = "Expand collection picker";
+"collections_picker_collapse" = "Collapse collection picker";
+"collections_picker_expanded" = "Collection picker expanded";
+"collections_picker_half" = "Collection picker partially expanded";
+"collections_name" = "Name";
+"collections_empty" = "No collections yet";
+"collections_item_count %lld" = "%lld charts";
+"collections_missing" = "Chart unavailable in the current catalog";

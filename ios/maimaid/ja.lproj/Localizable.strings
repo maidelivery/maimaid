@@ -24,8 +24,6 @@
 "home.recommendation.subtitle" = "定数分析";
 "home.plateProgress.title" = "プレートの進捗状況";
 "home.plateProgress.subtitle" = "バージョンプレートの進捗状況";
-"home.usefulLinks.title" = "役立つリンク";
-"home.usefulLinks.subtitle" = "Wiki、パーサーなど";
 "home.scoreQuery.title" = "スコア検索";
 "home.scoreQuery.subtitle" = "すべてのスコアを閲覧";
 "home.dan.title" = "段位認定";
@@ -77,23 +75,6 @@
 
 // MARK: - iCloud Backup
 
-// MARK: - Useful Links
-"links.title" = "役立つリンク";
-"links.nearcade.title" = "nearcade";
-"links.nearcade.subtitle" = "近くのゲームセンターの場所を探す";
-"links.dx_jp.title" = "maimai DX Japan";
-"links.dx_jp.subtitle" = "公式サイト（JP）";
-"links.df.title" = "Diving Fish";
-"links.df.subtitle" = "スコアツール＆B50計算";
-"links.lxns.title" = "LXNS Coffee House";
-"links.lxns.subtitle" = "最新のスコアツール";
-"links.gamerch.title" = "maimai Wiki (Gamerch)";
-"links.gamerch.subtitle" = "JPの戦略とチャート";
-"links.dxrating.title" = "DXRating.net";
-"links.dxrating.subtitle" = "チャートデータベース";
-"links.mailv.title" = "チャート定数ステーション 🏖☀️";
-"links.mailv.subtitle" = "チャート定数情報";
-
 // MARK: - Song Detail
 "song.detail.copy.success %@" = "%@ をコピーしました";
 "song.detail.stats.fitDiff" = "擬合難度";
@@ -115,6 +96,7 @@
 "song.detail.lock.required" = "ロック";
 "song.detail.lock.notRequired" = "ロックなし";
 "song.detail.action.record" = "スコアを記録する";
+"song.detail.action.favorite" = "お気に入りの曲";
 "song.detail.section.notes" = "ノーツ情報";
 "song.detail.section.rating" = "レーティング表";
 "song.detail.section.history" = "プレイ履歴";
@@ -130,6 +112,7 @@
 "song.detail.share.action" = "画像を共有する";
 "song.detail.label.title" = "タイトル";
 "song.detail.label.artist" = "アーティスト";
+"song.detail.label.alias" = "別名";
 "song.detail.history.delete.title" = "スコアの削除";
 "song.detail.history.delete.confirm" = "削除";
 "song.detail.history.delete.cancel" = "キャンセル";
@@ -182,7 +165,7 @@
 "sort.title" = "並べ替え";
 "sort.default" = "デフォルト";
 "sort.versionDate" = "バージョン/日付";
-"sort.difficulty" = "最大難易度";
+"sort.difficulty" = "難易度";
 "sort.ascending" = "昇順";
 "sort.descending" = "降順";
 
@@ -341,6 +324,7 @@
 "bestTable.export.fitDiff.rating" = "擬合 Rating";
 "bestTable.settings.useFitDiff" = "擬合難度を使う";
 "bestTable.settings.constants" = "計算定数";
+"bestTable.settings.constants.default" = "デフォルト";
 "bestTable.settings.useVersionConstant" = "バージョン定数を使う";
 "bestTable.export.versionConstant" = "バージョン定数を使用";
 "bestTable.export.versionConstant.rating" = "バージョン定数 Rating";
@@ -672,5 +656,29 @@
 "photo.error.accessDenied" = "写真ライブラリへのアクセスが許可されていません。";
 "camera.error.outputUnavailable" = "写真撮影を利用できません。";
 "camera.error.dataUnavailable" = "撮影した写真データを取得できません。";
-"home.collections.title" = "コレクション";
-"home.collections.subtitle" = "譜面ごとにコレクションを整理";
+"home_collections" = "コレクション";
+"home_collections_subtitle" = "譜面ごとにコレクションを整理";
+"collections_copy_export_code" = "書き出しコードをコピー";
+"collections_share" = "共有";
+"collections_share_chooser" = "共有";
+"collections_add" = "コレクションを追加";
+"collections_import_clipboard" = "クリップボードから読み込む";
+"collections_import_success" = "コレクションを読み込みました";
+"collections_import_failed" = "コレクションの読み込みに失敗しました";
+"collections_new" = "コレクションを新規作成";
+"collections_rename" = "名前を変更する";
+"collections_edit" = "編集";
+"collections_delete" = "削除";
+"collections_display_mode" = "表示モードを変更";
+"collections_delete_item" = "譜面を削除";
+"collections_add_chart" = "コレクションに追加";
+"collections_picker_title" = "コレクションに追加";
+"collections_picker_empty" = "利用できるコレクションがありません";
+"collections_picker_expand" = "コレクション選択を展開";
+"collections_picker_collapse" = "コレクション選択を縮小";
+"collections_picker_expanded" = "コレクション選択を展開済み";
+"collections_picker_half" = "コレクション選択を半展開";
+"collections_name" = "名前";
+"collections_empty" = "コレクションはありません";
+"collections_item_count %lld" = "%lld 譜面";
+"collections_missing" = "現在の曲目データにこの譜面がありません";

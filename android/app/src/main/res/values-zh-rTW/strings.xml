@@ -424,6 +424,7 @@
     <string name="song_aliases_empty">尚無通過的別名</string>
     <string name="song_aliases_count">%1$d 個已通過別名</string>
     <string name="song_aliases_board">公示投票</string>
+    <string name="song_alias_copy_label">別名</string>
     <string name="community_alias_unconfigured_title">雲端服務不可用</string>
     <string name="community_alias_unconfigured_message">設定雲端服務後即可使用社群別名。</string>
     <string name="community_alias_login_title">需要登入</string>

@@ -1,7 +1,7 @@
 package org.rhythmeta.maimaid.core.data
 
-import android.util.Base64
 import java.io.ByteArrayOutputStream
+import java.util.Base64
 import java.util.zip.Deflater
 import java.util.zip.Inflater
 import kotlinx.serialization.SerialName
@@ -39,21 +39,24 @@ object SongCollectionCodec {
     fun encode(collections: List<SongCollectionExportCollection>): String {
         val raw = json.encodeToString(SongCollectionExport.serializer(), SongCollectionExport(1, Kind, collections))
             .encodeToByteArray()
-        val deflater = Deflater(Deflater.BEST_COMPRESSION)
+        // NSData's .zlib stream on Apple platforms is a raw DEFLATE stream.
+        // Keep nowrap=true so both platforms use the same wire format.
+        val deflater = Deflater(Deflater.BEST_COMPRESSION, true)
         deflater.setInput(raw)
         deflater.finish()
         val buffer = ByteArray(8192)
         val compressed = ByteArrayOutputStream()
         while (!deflater.finished()) compressed.write(buffer, 0, deflater.deflate(buffer))
         deflater.end()
-        return Prefix + Base64.encodeToString(compressed.toByteArray(), Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+        return Prefix + Base64.getUrlEncoder().withoutPadding().encodeToString(compressed.toByteArray())
     }
 
     fun decode(value: String): SongCollectionExport {
-        require(value.startsWith(Prefix) && value.length <= 2_000_000)
-        val compressed = Base64.decode(value.removePrefix(Prefix), Base64.URL_SAFE or Base64.NO_WRAP)
+        val normalized = value.filterNot(Char::isWhitespace)
+        require(normalized.startsWith(Prefix) && normalized.length <= 2_000_000)
+        val compressed = Base64.getUrlDecoder().decode(normalized.removePrefix(Prefix))
         require(compressed.size <= 1_000_000)
-        val inflater = Inflater()
+        val inflater = Inflater(true)
         inflater.setInput(compressed)
         val output = ByteArrayOutputStream()
         val buffer = ByteArray(8192)

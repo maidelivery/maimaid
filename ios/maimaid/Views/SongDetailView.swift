@@ -73,7 +73,6 @@ struct SongDetailContent: View {
     @State private var approvedCommunityAliases: [CommunityAliasCache] = []
     @State private var communityAliasDailyUsedCount = 0
     @State private var communityQuotaShakePhase: CGFloat = 0
-    @State private var showingCollectionPicker = false
     @State private var isCommunityQuotaBarFlashing = false
     private let communityAliasDailyQuotaLimit = 5
 
@@ -197,24 +196,18 @@ struct SongDetailContent: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button("Add Chart to Collections", systemImage: "rectangle.stack.badge.plus") { showingCollectionPicker = true }
                     Button {
-                    song.isFavorite.toggle()
-                    try? modelContext.save()
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                } label: {
-                    Label("Favourite Song", systemImage: song.isFavorite ? "star.fill" : "star")
-                }
+                        song.isFavorite.toggle()
+                        try? modelContext.save()
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    } label: {
+                        Label("song.detail.action.favorite", systemImage: song.isFavorite ? "star.fill" : "star")
+                    }
                 } label: { Image(systemName: "ellipsis.circle") }
             }
         }
         .sheet(item: $selectedSheet) { sheet in
             ScoreEntryView(sheet: sheet)
-        }
-        .sheet(isPresented: $showingCollectionPicker) {
-            if let sheet = filteredSheets.first {
-                AddToSongCollectionsView(songId: song.songIdentifier, chartType: sheet.type, difficulty: sheet.difficulty)
-            }
         }
         .overlay(alignment: .bottom) {
             if let message = toastMessage {
@@ -553,7 +546,7 @@ struct SongDetailContent: View {
                                         }
                                     }
                                     .onTapGesture {
-                                        copyToClipboard(alias.text, label: String(localized: "profile.edit.titleName"))
+                                        copyToClipboard(alias.text, label: String(localized: "song.detail.label.alias"))
                                     }
                             }
                         }
@@ -1037,6 +1030,7 @@ struct SheetCardView: View {
     @State private var recordToDelete: PlayRecord?
     @State private var showingDeleteConfirm = false
     @State private var showingCollectionPicker = false
+    @GestureState private var isCollectionLongPressing = false
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
@@ -1172,11 +1166,6 @@ struct SheetCardView: View {
                     }
                 }
             }
-            .contextMenu {
-                Button("Add to Collections", systemImage: "rectangle.stack.badge.plus") {
-                    showingCollectionPicker = true
-                }
-            }
             
             // Expanded content
             if isExpanded {
@@ -1192,8 +1181,25 @@ struct SheetCardView: View {
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(diffColor.opacity(0.15), lineWidth: 1)
         )
-        
+        .contentShape(.rect(cornerRadius: 16))
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.45, maximumDistance: 24)
+                .updating($isCollectionLongPressing) { value, state, _ in
+                    state = value
+                }
+                .onEnded { _ in
+                    showingCollectionPicker = true
+                }
+        )
+        .scaleEffect(isCollectionLongPressing ? 0.985 : 1)
+        .offset(y: isCollectionLongPressing ? -4 : 0)
+        .shadow(
+            color: .black.opacity(isCollectionLongPressing ? 0.18 : 0),
+            radius: isCollectionLongPressing ? 12 : 0,
+            y: isCollectionLongPressing ? 6 : 0
+        )
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isExpanded)
+        .animation(.spring(response: 0.22, dampingFraction: 0.82), value: isCollectionLongPressing)
         .alert("song.detail.history.delete.title", isPresented: $showingDeleteConfirm) {
             Button("song.detail.history.delete.confirm", role: .destructive) {
                 if let record = recordToDelete {
@@ -1324,18 +1330,25 @@ struct SheetCardView: View {
                 playHistoryTable(records: records, diffColor: diffColor)
             }
             
-            // Record button
-            Button(action: onRecord) {
-                HStack(spacing: 6) {
-                    Image(systemName: "pencil.line")
-                        .font(.system(size: 12, weight: .semibold))
-                    Text("song.detail.action.record")
+            HStack(spacing: 10) {
+							Button(action: onRecord) {
+									Label("song.detail.action.record", systemImage: "pencil.line")
+											.font(.system(size: 13, weight: .semibold))
+											.foregroundStyle(diffColor)
+											.frame(maxWidth: .infinity)
+											.padding(.vertical, 10)
+											.background(diffColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+							}
+                Button {
+                    showingCollectionPicker = true
+                } label: {
+                    Label("collections_add_chart", systemImage: "rectangle.stack.badge.plus")
                         .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(diffColor)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(diffColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
                 }
-                .foregroundStyle(diffColor)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(diffColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
             }
             .padding(.horizontal, 16)
         }

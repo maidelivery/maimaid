@@ -18,6 +18,8 @@ enum AppStorageKeys {
     static let songsSortOption = "songs.sortOption"
     static let songsSortAscending = "songs.sortAscending"
     static let songsGridColumns = "songs.gridColumns"
+    static let collectionsSortOption = "collections.sortOption"
+    static let collectionsSortAscending = "collections.sortAscending"
     static let didShowOnboarding = "onboarding.didShowOnboarding"
 }
 

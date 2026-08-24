@@ -424,6 +424,7 @@
     <string name="song_aliases_empty">承認済みの別名はありません</string>
     <string name="song_aliases_count">承認済みの別名 %1$d 件</string>
     <string name="song_aliases_board">投票ボード</string>
+    <string name="song_alias_copy_label">別名</string>
     <string name="community_alias_unconfigured_title">クラウドサービスを利用できません</string>
     <string name="community_alias_unconfigured_message">コミュニティ別名を使うにはクラウドサービスを設定してください。</string>
     <string name="community_alias_login_title">ログインが必要です</string>

@@ -3,7 +3,6 @@ package org.rhythmeta.maimaid.ui.best
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +23,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Functions
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,7 +55,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import java.io.File
 import java.util.Locale
 import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.R
@@ -107,7 +105,7 @@ internal fun BestTableConstantTopBarAction(container: AppContainer) {
     Box {
         IconButton(onClick = { menuExpanded = !menuExpanded }) {
             Icon(
-                imageVector = Icons.Rounded.Settings,
+                imageVector = Icons.Rounded.Functions,
                 contentDescription = stringResource(R.string.best50_constant_section),
             )
         }

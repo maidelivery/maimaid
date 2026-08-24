@@ -759,14 +759,17 @@ extension View {
 
 // MARK: - Grid Cell
 
-private struct SongGridCell: View {
+struct SongGridCell: View {
     let song: Song
     var scoreCache: [String: Score] = [:]
     var columnCount: Int = 4
     var cellSize: CGFloat = 60
     var cornerRadius: CGFloat = 6
     var showDots: Bool = true
+    var actualSheet: Sheet? = nil
+    var showActualDifficultyBorder: Bool = false
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
     
     private var utageFontSize: CGFloat {
         switch columnCount {
@@ -785,6 +788,15 @@ private struct SongGridCell: View {
                 cornerRadius: cornerRadius,
                 useThumbnail: true
             )
+            .overlay {
+                if showActualDifficultyBorder, let actualSheet {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .stroke(
+                            ThemeUtils.colorForDifficulty(actualSheet.difficulty, actualSheet.type, colorScheme),
+                            lineWidth: 2
+                        )
+                }
+            }
             
             if showDots {
                 let isUtage = song.songId > 100000
@@ -797,6 +809,7 @@ private struct SongGridCell: View {
                             .padding(.horizontal, 2)
                     } else {
                         let prioritizedSheets: [Sheet] = {
+                            if let actualSheet { return [actualSheet] }
                             let dxSheets = song.sheets.filter { $0.type.lowercased() == "dx" }
                             if !dxSheets.isEmpty {
                                 return dxSheets.sorted(by: { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) })

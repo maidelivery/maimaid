@@ -224,16 +224,18 @@ enum SongCollectionCodec {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let raw = try encoder.encode(payload)
+        // NSData's .zlib stream is raw DEFLATE on Apple platforms. Android mirrors this with nowrap=true.
         let compressed = try (raw as NSData).compressed(using: .zlib) as Data
-        return prefix + compressed.base64EncodedString(options: [.endLineWithLineFeed])
+        return prefix + compressed.base64EncodedString()
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
     }
 
     static func decode(_ value: String) throws -> SongCollectionExport {
-        guard value.hasPrefix(prefix), value.count <= 2_000_000 else { throw CocoaError(.fileReadCorruptFile) }
-        var encoded = String(value.dropFirst(prefix.count)).replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        let normalizedValue = value.filter { !$0.isWhitespace }
+        guard normalizedValue.hasPrefix(prefix), normalizedValue.count <= 2_000_000 else { throw CocoaError(.fileReadCorruptFile) }
+        var encoded = String(normalizedValue.dropFirst(prefix.count)).replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
         encoded += String(repeating: "=", count: (4 - encoded.count % 4) % 4)
         guard let compressed = Data(base64Encoded: encoded), compressed.count <= 1_000_000,
               let raw = try? (compressed as NSData).decompressed(using: .zlib) as Data,

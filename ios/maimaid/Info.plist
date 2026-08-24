@@ -10,6 +10,8 @@
 	<string>$(STATIC_ASSETS_URL)</string>
 	<key>CFBundleLocalizations</key>
 	<array>
+		<string>zh_TW</string>
+		<string>ja</string>
 		<string>en</string>
 		<string>zh-Hans</string>
 	</array>
@@ -19,7 +21,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>in.shikoch.maimaid</string>
+			<string>org.rhythmeta.maimaid</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>maimaid</string>

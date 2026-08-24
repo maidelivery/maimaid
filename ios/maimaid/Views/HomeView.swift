@@ -350,21 +350,11 @@ struct HomeView: View {
             }
             .buttonStyle(.plain)
             
-            NavigationLink(destination: UsefulLinksView()) {
-                functionCard(
-                    icon: "link",
-                    title: "home.usefulLinks.title",
-                    subtitle: "home.usefulLinks.subtitle",
-                    gradient: [Color.blue, Color.cyan]
-                )
-            }
-            .buttonStyle(.plain)
-
             NavigationLink(destination: SongCollectionsView()) {
                 functionCard(
                     icon: "rectangle.stack.fill",
-                    title: "home.collections.title",
-                    subtitle: "home.collections.subtitle",
+                    title: "home_collections",
+                    subtitle: "home_collections_subtitle",
                     gradient: [Color.orange, Color.green]
                 )
             }

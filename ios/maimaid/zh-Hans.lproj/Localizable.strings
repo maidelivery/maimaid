@@ -24,8 +24,6 @@
 "home.recommendation.subtitle" = "定数拟合分析";
 "home.plateProgress.title" = "牌子进度";
 "home.plateProgress.subtitle" = "查看各版本牌子获取进度";
-"home.usefulLinks.title" = "常用网站";
-"home.usefulLinks.subtitle" = "官方、维基、查分器等";
 "home.scoreQuery.title" = "成绩查询";
 "home.scoreQuery.subtitle" = "浏览全部成绩";
 "home.dan.title" = "段位认定";
@@ -73,23 +71,6 @@
 "settings.about.version" = "版本";
 "settings.appearance.showBoundingBox" = "显示识别框";
 
-// MARK: - Useful Links
-"links.title" = "常用网站";
-"links.nearcade.title" = "nearcade";
-"links.nearcade.subtitle" = "附近机厅 · 一键导航";
-"links.dx_jp.title" = "maimai DX Japan";
-"links.dx_jp.subtitle" = "maimai DX 日文官网，包含最新曲目和活动信息";
-"links.df.title" = "Diving Fish";
-"links.df.subtitle" = "老牌查分工具，支持数据导入与 B50 计算";
-"links.lxns.title" = "落雪咖啡屋 maimai DX 查分器";
-"links.lxns.subtitle" = "落雪查分器，界面现代且功能完善";
-"links.gamerch.title" = "maimai 维基 (Gamerch)";
-"links.gamerch.subtitle" = "最详细的日服攻略 and 谱面信息维基";
-"links.dxrating.title" = "DXRating.net";
-"links.dxrating.subtitle" = "一个界面现代的 maimai 谱面信息大全";
-"links.mailv.title" = "maimai譜面定数ちほー🏖☀️";
-"links.mailv.subtitle" = "SEGA音ゲー｢maimaiでらっくす CiRCLE｣の譜面定数(内部定数、内部Lv.)非公式調査班";
-
 // MARK: - Song Detail
 "song.detail.copy.success %@" = "已复制%@";
 "song.detail.stats.fitDiff" = "拟合难度";
@@ -112,6 +93,7 @@
 "song.detail.lock.required" = "需要解锁";
 "song.detail.lock.notRequired" = "无需解锁";
 "song.detail.action.record" = "记录成绩";
+"song.detail.action.favorite" = "喜爱歌曲";
 "song.detail.section.notes" = "音符统计";
 "song.detail.section.rating" = "达成率 → 得分";
 "song.detail.section.history" = "历史成绩";
@@ -127,6 +109,7 @@
 "song.detail.share.action" = "分享图片";
 "song.detail.label.title" = "曲名";
 "song.detail.label.artist" = "曲师";
+"song.detail.label.alias" = "别名";
 "song.detail.history.delete.title" = "删除成绩";
 "song.detail.history.delete.confirm" = "删除";
 "song.detail.history.delete.cancel" = "取消";
@@ -179,7 +162,7 @@
 "sort.title" = "排序方式";
 "sort.default" = "默认";
 "sort.versionDate" = "版本/日期";
-"sort.difficulty" = "最大难度";
+"sort.difficulty" = "难度";
 "sort.ascending" = "升序";
 "sort.descending" = "降序";
 
@@ -338,6 +321,7 @@
 "bestTable.export.fitDiff.rating" = "拟合 Rating";
 "bestTable.settings.useFitDiff" = "使用拟合定数";
 "bestTable.settings.constants" = "计算定数";
+"bestTable.settings.constants.default" = "默认";
 "bestTable.settings.useVersionConstant" = "使用版本定数";
 "bestTable.export.versionConstant" = "已开启版本定数";
 "bestTable.export.versionConstant.rating" = "版本定数 Rating";
@@ -668,5 +652,29 @@
 "photo.error.accessDenied" = "没有相册访问权限。";
 "camera.error.outputUnavailable" = "拍照功能当前不可用。";
 "camera.error.dataUnavailable" = "无法获取拍摄的照片数据。";
-"home.collections.title" = "收藏夹";
-"home.collections.subtitle" = "按谱面整理自定义收藏";
+"home_collections" = "收藏夹";
+"home_collections_subtitle" = "按谱面整理自定义收藏";
+"collections_copy_export_code" = "复制导出码";
+"collections_share" = "分享";
+"collections_share_chooser" = "分享";
+"collections_add" = "添加收藏夹";
+"collections_import_clipboard" = "从剪贴板导入";
+"collections_import_success" = "收藏夹导入成功";
+"collections_import_failed" = "收藏夹导入失败";
+"collections_new" = "新建收藏夹";
+"collections_rename" = "重命名";
+"collections_edit" = "编辑";
+"collections_delete" = "删除";
+"collections_display_mode" = "切换展示模式";
+"collections_delete_item" = "删除谱面";
+"collections_add_chart" = "添加至收藏夹";
+"collections_picker_title" = "添加至收藏夹";
+"collections_picker_empty" = "暂无可用收藏夹";
+"collections_picker_expand" = "展开收藏夹选择";
+"collections_picker_collapse" = "收起收藏夹选择";
+"collections_picker_expanded" = "收藏夹选择已展开";
+"collections_picker_half" = "收藏夹选择半展开";
+"collections_name" = "名称";
+"collections_empty" = "还没有收藏夹";
+"collections_item_count %lld" = "%lld 个谱面";
+"collections_missing" = "当前曲库中暂无此谱面";

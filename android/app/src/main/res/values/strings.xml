@@ -424,6 +424,7 @@
     <string name="song_aliases_empty">No approved aliases yet</string>
     <string name="song_aliases_count">%1$d approved aliases</string>
     <string name="song_aliases_board">Voting board</string>
+    <string name="song_alias_copy_label">Alias</string>
     <string name="community_alias_unconfigured_title">Cloud service unavailable</string>
     <string name="community_alias_unconfigured_message">Configure the cloud service before using community aliases.</string>
     <string name="community_alias_login_title">Sign in required</string>

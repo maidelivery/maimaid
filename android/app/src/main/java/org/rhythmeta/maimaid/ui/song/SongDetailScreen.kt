@@ -589,6 +589,7 @@ private fun SongHeader(
     val density = LocalDensity.current
     var artistLineStartPx by remember(song.songIdentifier) { mutableStateOf<Float?>(null) }
     val jacketShape = remember { squircleShape(26.dp) }
+    val aliasCopyLabel = stringResource(R.string.song_alias_copy_label)
     var jacketMenuExpanded by remember { mutableStateOf(false) }
     var actionSourceFile by remember(cachedCover, song.imageName) { mutableStateOf(cachedCover) }
     var pendingLegacyDownload by remember { mutableStateOf<File?>(null) }
@@ -791,6 +792,16 @@ private fun SongHeader(
                             style = MiuixTheme.textStyles.footnote2,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             modifier = Modifier
+                                .clickable {
+                                    if (copyToClipboard(
+                                            context,
+                                            aliasCopyLabel,
+                                            alias.text,
+                                        )
+                                    ) {
+                                        onCopied()
+                                    }
+                                }
                                 .squircleSurface(
                                     color = surfaceColor,
                                     cornerRadius = 50.dp,

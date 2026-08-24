@@ -4,7 +4,9 @@ import SwiftData
 struct SongRowView: View {
     let song: Song
     var chartType: String? = nil
+    var actualSheet: Sheet? = nil
     var scoreCache: [String: Score] = [:]
+    var showsCardBackground = true
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
@@ -16,7 +18,7 @@ struct SongRowView: View {
     }
     
     private var accentColor: Color {
-        guard let sheet = highestSheet else { return ThemeUtils.utageColor(colorScheme) }
+        guard let sheet = actualSheet ?? highestSheet else { return ThemeUtils.utageColor(colorScheme) }
         return ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type, colorScheme)
     }
 
@@ -37,7 +39,11 @@ struct SongRowView: View {
             
             HStack(spacing: 14) {
                 // Jacket
-                SongJacketView(imageName: song.imageName, size: 52, cornerRadius: 12)
+                SongJacketView(
+                    imageName: song.imageName,
+                    size: showsCardBackground ? 52 : 56,
+                    cornerRadius: showsCardBackground ? 12 : 10
+                )
                 
                 // Info
                 VStack(alignment: .leading, spacing: 3) {
@@ -64,6 +70,7 @@ struct SongRowView: View {
                     // Difficulty dots - use cached scores for better performance
                     HStack(spacing: 3) {
                         let prioritizedSheets: [Sheet] = {
+                            if let actualSheet { return [actualSheet] }
                             let dxSheets = song.sheets.filter { $0.type.lowercased() == "dx" }
                             if !dxSheets.isEmpty {
                                 return dxSheets.sorted(by: { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) })
@@ -85,15 +92,22 @@ struct SongRowView: View {
                 }
             }
             .padding(.leading, 10)
-            .padding(.trailing, 14)
+            .padding(.trailing, showsCardBackground ? 14 : 0)
         }
-        .padding(.vertical, 12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(accentColor.opacity(0.12), lineWidth: 1)
-        )
-        .padding(.horizontal, 16)
+        .padding(.vertical, showsCardBackground ? 12 : 2)
+        .background {
+            if showsCardBackground {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(.ultraThinMaterial)
+            }
+        }
+        .overlay {
+            if showsCardBackground {
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(accentColor.opacity(0.12), lineWidth: 1)
+            }
+        }
+        .padding(.horizontal, showsCardBackground ? 16 : 0)
     }
     
     // MARK: - Progress Dot (original - with context)

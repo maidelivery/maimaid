@@ -49,6 +49,13 @@ struct BestTableView: View {
     private var serverVersion: String? {
         cachedServerVersion
     }
+
+    private var constantModeSelection: Binding<Best50ConstantMode?> {
+        Binding(
+            get: { constantMode == .server ? nil : constantMode },
+            set: { constantMode = $0 ?? .server }
+        )
+    }
     
     private var b35Sum: Int {
         cache.b50Result.b35.reduce(0) { $0 + $1.rating }
@@ -77,6 +84,7 @@ struct BestTableView: View {
                         Text("\(cache.b50Result.total)")
                             .font(.system(size: 34, weight: .black, design: .rounded))
                             .foregroundStyle(ThemeUtils.ratingGradient(cache.b50Result.total))
+                            .brightness(colorScheme == .light ? -0.28 : 0)
                             .opacity(cache.isLoading ? 0.3 : 1.0)
                     }
                     Spacer()
@@ -160,13 +168,6 @@ struct BestTableView: View {
                 
             }
 
-            Section("bestTable.settings.constants") {
-                Toggle("bestTable.settings.useFitDiff", isOn: fittedConstantBinding)
-                    .tint(.orange)
-                Toggle("bestTable.settings.useVersionConstant", isOn: versionConstantBinding)
-                    .tint(.orange)
-            }
-            
             Section(String(localized: "bestTable.section.new \(currentB15Count)")) {
                 if cache.isLoading && cache.isFirstLoad {
                     ForEach(0..<min(5, currentB15Count), id: \.self) { _ in
@@ -214,6 +215,23 @@ struct BestTableView: View {
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle("bestTable.title")
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Picker(selection: constantModeSelection) {
+                        Text("bestTable.settings.constants.default")
+                            .tag(nil as Best50ConstantMode?)
+                        Text("bestTable.settings.useFitDiff")
+                            .tag(Best50ConstantMode.fitted as Best50ConstantMode?)
+                        Text("bestTable.settings.useVersionConstant")
+                            .tag(Best50ConstantMode.version as Best50ConstantMode?)
+                    } label: {
+                        Text("bestTable.settings.constants")
+                    }
+                } label: {
+                    Image(systemName: "function")
+                }
+                .accessibilityLabel(Text("bestTable.settings.constants"))
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     exportImage()
@@ -458,20 +476,6 @@ struct BestTableView: View {
             configs: configs,
             overriddenVersion: overriddenVersion,
             constantMode: constantMode
-        )
-    }
-
-    private var fittedConstantBinding: Binding<Bool> {
-        Binding(
-            get: { constantMode == .fitted },
-            set: { constantMode = $0 ? .fitted : .server }
-        )
-    }
-
-    private var versionConstantBinding: Binding<Bool> {
-        Binding(
-            get: { constantMode == .version },
-            set: { constantMode = $0 ? .version : .server }
         )
     }
 
