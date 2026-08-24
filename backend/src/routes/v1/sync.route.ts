@@ -42,6 +42,8 @@ const playRecordSchema = scoreEntrySchema.extend({
 const pushSchema = z.object({
 	idempotencyKey: z.string().min(8),
 	forceProfileOverwrite: z.boolean().default(false),
+	replaceScoreProfileIds: z.array(z.uuid()).max(BULK_ARRAY_MAX).default([]),
+	replacePlayRecordProfileIds: z.array(z.uuid()).max(BULK_ARRAY_MAX).default([]),
 	profileUpserts: z
 		.array(
 			z.object({
@@ -363,6 +365,38 @@ syncV1Route.post("/sync:push", authRequired, standardValidator("json", pushSchem
 				}
 			}
 
+			for (const profileId of new Set(body.replaceScoreProfileIds)) {
+				await scoreService.requireProfileOwnership(profileId, auth.userId, transaction);
+				const deleted = await transaction.bestScore.deleteMany({ where: { profileId } });
+				await syncService.recordEvent(
+					{
+						userId: auth.userId,
+						profileId,
+						entityType: "best_scores",
+						entityId: profileId,
+						op: "replace",
+						payload: { deleted: deleted.count },
+					},
+					transaction,
+				);
+			}
+
+			for (const profileId of new Set(body.replacePlayRecordProfileIds)) {
+				await scoreService.requireProfileOwnership(profileId, auth.userId, transaction);
+				const deleted = await transaction.playRecord.deleteMany({ where: { profileId } });
+				await syncService.recordEvent(
+					{
+						userId: auth.userId,
+						profileId,
+						entityType: "play_records",
+						entityId: profileId,
+						op: "replace",
+						payload: { deleted: deleted.count },
+					},
+					transaction,
+				);
+			}
+
 			for (const scoreSet of body.scoreUpserts) {
 				await scoreService.requireProfileOwnership(scoreSet.profileId, auth.userId, transaction);
 				const mapped = mapScoresForUpsert(scoreSet.scores);
@@ -474,6 +508,7 @@ syncV1Route.get("/sync:pull", authRequired, standardValidator("query", pullQuery
 	return ok(c, {
 		events,
 		latestRevision,
+		hasMore: events.length >= query.limit,
 		snapshotIncluded: shouldIncludeSnapshot,
 		snapshot,
 	});

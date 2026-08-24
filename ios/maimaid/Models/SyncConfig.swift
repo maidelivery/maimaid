@@ -23,6 +23,9 @@ final class SyncConfig {
     var pendingUpdatedProfileIdsData: Data?
     var pendingUpdatedProfileTokensData: Data?
     var pendingDeletedProfileIdsData: Data?
+    var pendingDataProfileIdsData: Data?
+    var pendingFullReplaceProfileIdsData: Data?
+    var syncedDataProfileIdsData: Data?
     var localDataOwnerUserId: String?
     var pendingResolutionForUserId: String?
     var pendingResolutionDetectedAt: Date?
@@ -128,6 +131,50 @@ final class SyncConfig {
         var profileIds = pendingDeletedProfileIds
         profileIds.remove(profileId)
         pendingDeletedProfileIds = profileIds
+    }
+
+    var pendingDataProfileIds: Set<UUID> {
+        get { decodeProfileIds(from: pendingDataProfileIdsData) }
+        set { pendingDataProfileIdsData = encodeProfileIds(newValue) }
+    }
+
+    var pendingFullReplaceProfileIds: Set<UUID> {
+        get { decodeProfileIds(from: pendingFullReplaceProfileIdsData) }
+        set { pendingFullReplaceProfileIdsData = encodeProfileIds(newValue) }
+    }
+
+    var syncedDataProfileIds: Set<UUID> {
+        get { decodeProfileIds(from: syncedDataProfileIdsData) }
+        set { syncedDataProfileIdsData = encodeProfileIds(newValue) }
+    }
+
+    func markDataPending(_ profileId: UUID, fullReplace: Bool = false) {
+        var pending = pendingDataProfileIds
+        pending.insert(profileId)
+        pendingDataProfileIds = pending
+        if fullReplace {
+            var replacements = pendingFullReplaceProfileIds
+            replacements.insert(profileId)
+            pendingFullReplaceProfileIds = replacements
+        }
+    }
+
+    func markDataSynced(_ profileId: UUID) {
+        var pending = pendingDataProfileIds
+        pending.remove(profileId)
+        pendingDataProfileIds = pending
+        var replacements = pendingFullReplaceProfileIds
+        replacements.remove(profileId)
+        pendingFullReplaceProfileIds = replacements
+        var synced = syncedDataProfileIds
+        synced.insert(profileId)
+        syncedDataProfileIds = synced
+    }
+
+    func resetDataSyncState() {
+        pendingDataProfileIdsData = nil
+        pendingFullReplaceProfileIdsData = nil
+        syncedDataProfileIdsData = nil
     }
 
     private var remoteProfileVersions: [String: Date] {

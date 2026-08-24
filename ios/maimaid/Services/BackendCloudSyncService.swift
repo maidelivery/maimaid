@@ -206,9 +206,9 @@ enum BackendCloudSyncService {
         try await removeRemoteProfilesAbsentLocally(localProfiles: localProfiles)
         try await BackendIncrementalSyncService.pushAllLocalDataUnlocked(
             context: context,
-            forceProfileOverwrite: true
+            forceProfileOverwrite: true,
+            forceDataUpload: true
         )
-        try await BackendIncrementalSyncService.pullUpdatesUnlocked(context: context, force: true)
 
         let config = ensureSyncConfig(context: context)
         config.lastCloudBackupDate = Date.now

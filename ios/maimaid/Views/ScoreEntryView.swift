@@ -583,6 +583,9 @@ struct ScoreEntryView: View {
         try? modelContext.save()
         cachedCurrentScore = savedScore
         ScoreService.shared.notifyScoresChanged(for: savedScore.userProfileId)
+		if let profileId = savedScore.userProfileId {
+			SyncManager.shared.markCloudDataPending(profileId: profileId, context: modelContext)
+		}
 
         Task {
             await SyncManager.shared.syncAfterScoreSave(

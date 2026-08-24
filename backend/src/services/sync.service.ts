@@ -113,6 +113,24 @@ export class SyncService {
 					},
 				},
 				orderBy: [{ isActive: "desc" }, { createdAt: "asc" }],
+				select: {
+					id: true,
+					name: true,
+					server: true,
+					avatarUrl: true,
+					isActive: true,
+					playerRating: true,
+					plate: true,
+					dfUsername: true,
+					b35Count: true,
+					b15Count: true,
+					b35RecLimit: true,
+					b15RecLimit: true,
+					createdAt: true,
+					lastImportDateDf: true,
+					lastImportDateLxns: true,
+					updatedAt: true,
+				},
 			}),
 			this.prisma.bestScore.findMany({
 				where: {
@@ -120,10 +138,20 @@ export class SyncService {
 						in: ids,
 					},
 				},
-				include: {
+				select: {
+					profileId: true,
+					achievements: true,
+					rank: true,
+					dxScore: true,
+					fc: true,
+					fs: true,
+					achievedAt: true,
 					sheet: {
-						include: {
-							song: true,
+						select: {
+							songIdentifier: true,
+							songId: true,
+							chartType: true,
+							difficulty: true,
 						},
 					},
 				},
@@ -135,10 +163,20 @@ export class SyncService {
 						in: ids,
 					},
 				},
-				include: {
+				select: {
+					profileId: true,
+					achievements: true,
+					rank: true,
+					dxScore: true,
+					fc: true,
+					fs: true,
+					playTime: true,
 					sheet: {
-						include: {
-							song: true,
+						select: {
+							songIdentifier: true,
+							songId: true,
+							chartType: true,
+							difficulty: true,
 						},
 					},
 				},

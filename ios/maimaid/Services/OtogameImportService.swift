@@ -182,6 +182,7 @@ final class OtogameImportService {
             throw error
         }
         ScoreService.shared.notifyScoresChanged(for: profileID)
+		BackendIncrementalSyncService.markDataPending(profileId: profileID, context: context)
 
         return OtogameImportResult(
             fetchedCount: fetched.fetchedCount,

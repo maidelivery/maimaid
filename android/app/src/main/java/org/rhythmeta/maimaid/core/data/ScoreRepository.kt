@@ -23,6 +23,7 @@ data class SongScoreData(
 class ScoreRepository(
     private val database: MaimaidDatabase,
     private val profileRepository: ProfileRepository,
+    private val syncStateStore: BackendSyncStateStore? = null,
     private val clock: () -> Long = System::currentTimeMillis,
     private val idFactory: () -> String = { UUID.randomUUID().toString() },
 ) {
@@ -94,6 +95,7 @@ class ScoreRepository(
             now = now,
         )
         scoreDao.upsertScore(merged)
+		syncStateStore?.markDataPending(profile.id)
         merged
     }
 
@@ -103,6 +105,7 @@ class ScoreRepository(
         if (record.profileId != profile.id) return@withTransaction
 
         scoreDao.deletePlayRecord(record)
+		syncStateStore?.markDataPending(profile.id, replace = true)
         val currentScore = scoreDao.score(profile.id, record.sheetKey) ?: return@withTransaction
         if (!ScoreRules.deletedRecordWasBest(currentScore, record)) return@withTransaction
 
@@ -126,6 +129,7 @@ class ScoreRepository(
     suspend fun deleteScore(sheetKey: String) = database.withTransaction {
         val profile = profileRepository.ensureActiveProfile()
         scoreDao.deleteScore(profile.id, sheetKey)
+		syncStateStore?.markDataPending(profile.id, replace = true)
     }
 
     private suspend fun repairMissingPlayRecords(profileId: String, songIdentifier: String) {

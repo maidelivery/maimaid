@@ -80,6 +80,7 @@ enum BackendAPIClient {
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("gzip", forHTTPHeaderField: "Accept-Encoding")
         request.setValue("app", forHTTPHeaderField: "X-Maimaid-Client")
         if let token = initialToken {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")

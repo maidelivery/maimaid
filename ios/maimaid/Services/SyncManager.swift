@@ -141,6 +141,14 @@ class SyncManager {
             print("SyncManager: [Backend] 覆盖式云端同步失败：\(error.localizedDescription)")
         }
     }
+
+    func markCloudDataPending(profileId: UUID, context: ModelContext, fullReplace: Bool = false) {
+        BackendIncrementalSyncService.markDataPending(
+            profileId: profileId,
+            context: context,
+            fullReplace: fullReplace
+        )
+    }
     
     private func uploadToBackend(sheet: Sheet, score: Score, profile: UserProfile) async {
         print("SyncManager: [Backend] 开始上传成绩。")

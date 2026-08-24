@@ -116,6 +116,7 @@ final class AccountDataResolutionCoordinator {
         config.pendingResolutionDetectedAt = nil
         config.lastSyncRevision = "0"
         config.clearRemoteProfileVersions()
+        config.resetDataSyncState()
         try context.save()
         ScoreService.shared.invalidateAllCaches()
         latestConflictState = nil

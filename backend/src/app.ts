@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
+import { compress } from "hono/compress";
 import { createMiddleware } from "hono/factory";
 import { Scalar } from "@scalar/hono-api-reference";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -69,6 +70,7 @@ export const createApp = (options: CreateAppOptions = {}) => {
 			allowHeaders: ["Content-Type", "Authorization", "X-Maimaid-Client"],
 		}),
 	);
+	app.use("*", compress());
 
 	app.route("/health", healthRoute);
 	app.route("/v1/auth", authV1Route);

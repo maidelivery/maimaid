@@ -1484,6 +1484,9 @@ struct SheetCardView: View {
         
         try? modelContext.save()
         ScoreService.shared.notifyScoresChanged(for: profileId)
+        if let profileId {
+            SyncManager.shared.markCloudDataPending(profileId: profileId, context: modelContext, fullReplace: true)
+        }
         Task {
             await SyncManager.shared.syncCloudSnapshotIfNeeded(context: modelContext)
         }

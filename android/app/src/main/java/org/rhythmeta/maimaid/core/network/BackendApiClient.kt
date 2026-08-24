@@ -2,6 +2,7 @@ package org.rhythmeta.maimaid.core.network
 
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.zip.GZIPInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -52,6 +53,7 @@ class BackendApiClient(
             connection.connectTimeout = ConnectTimeoutMillis
             connection.readTimeout = ReadTimeoutMillis
             connection.setRequestProperty("Accept", "application/json")
+            connection.setRequestProperty("Accept-Encoding", "gzip")
             connection.setRequestProperty("X-Maimaid-Client", "app")
             accessToken?.let { connection.setRequestProperty("Authorization", "Bearer $it") }
             if (body != null) {
@@ -63,7 +65,12 @@ class BackendApiClient(
             }
 
             val status = connection.responseCode
-            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+            val rawStream = if (status in 200..299) connection.inputStream else connection.errorStream
+            val stream = if (connection.contentEncoding.equals("gzip", ignoreCase = true) && rawStream != null) {
+                GZIPInputStream(rawStream)
+            } else {
+                rawStream
+            }
             val responseText = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
             if (status !in 200..299) {
                 val payload = runCatching { json.parseToJsonElement(responseText).jsonObject }.getOrNull()

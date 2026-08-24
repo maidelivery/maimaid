@@ -373,6 +373,7 @@ model PlayRecord {
   sheet         Sheet    @relation(fields: [sheetId], references: [id], onDelete: Cascade)
 
   @@index([profileId, playTime])
+  @@index([profileId, sheetId, playTime])
   @@map("play_records")
 }
 

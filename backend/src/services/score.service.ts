@@ -268,6 +268,7 @@ export class ScoreService {
 				id: true,
 				sheetId: true,
 				achievements: true,
+				rank: true,
 				dxScore: true,
 				fc: true,
 				fs: true,
@@ -333,22 +334,32 @@ export class ScoreService {
 			const mergedFc = this.pickBetterProgress(existing.fc, incomingFc, FC_ORDER);
 			const mergedFs = this.pickBetterProgress(existing.fs, incomingFs, FS_ORDER);
 			const mergedAchievedAt = mergedAchievements > existing.achievements.toNumber() ? achievedAtForMax : existing.achievedAt;
+			const mergedRank = this.rankByAchievements(mergedAchievements);
+			const changed =
+				mergedAchievements !== existing.achievements.toNumber() ||
+				mergedRank !== existing.rank ||
+				mergedDxScore !== existing.dxScore ||
+				mergedFc !== existing.fc ||
+				mergedFs !== existing.fs ||
+				mergedAchievedAt.getTime() !== existing.achievedAt.getTime();
 
-			updateOps.push(
-				database.bestScore.update({
-					where: { id: existing.id },
-					data: {
-						achievements: mergedAchievements,
-						rank: this.rankByAchievements(mergedAchievements),
-						dxScore: mergedDxScore,
-						fc: mergedFc,
-						fs: mergedFs,
-						achievedAt: mergedAchievedAt,
-						source,
-						sourcePayload: latestSourcePayload,
-					},
-				}),
-			);
+			if (changed) {
+				updateOps.push(
+					database.bestScore.update({
+						where: { id: existing.id },
+						data: {
+							achievements: mergedAchievements,
+							rank: mergedRank,
+							dxScore: mergedDxScore,
+							fc: mergedFc,
+							fs: mergedFs,
+							achievedAt: mergedAchievedAt,
+							source,
+							sourcePayload: latestSourcePayload,
+						},
+					}),
+				);
+			}
 			for (let index = 0; index < entries.length; index += 1) {
 				applied.push({ sheetId: first.sheetId, action: "updated" });
 			}

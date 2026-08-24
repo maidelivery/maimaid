@@ -78,6 +78,7 @@ data class BackendSyncSnapshot(
 data class BackendSyncPullResponse(
     val events: List<BackendSyncEvent> = emptyList(),
     val latestRevision: String = "0",
+    val hasMore: Boolean = false,
     val snapshot: BackendSyncSnapshot = BackendSyncSnapshot(),
 )
 
@@ -140,6 +141,8 @@ data class BackendSyncPushPayload(
     val profileUpserts: List<BackendProfileUpsert>,
     val scoreUpserts: List<BackendScoreSet>,
     val playRecordUpserts: List<BackendRecordSet>,
+    val replaceScoreProfileIds: List<String> = emptyList(),
+    val replacePlayRecordProfileIds: List<String> = emptyList(),
 )
 
 @Serializable

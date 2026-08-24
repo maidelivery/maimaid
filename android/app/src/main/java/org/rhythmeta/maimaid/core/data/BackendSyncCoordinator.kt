@@ -130,7 +130,15 @@ class BackendSyncCoordinator(
             body = json.encodeToJsonElement(BackendSyncPushPayload.serializer(), payload),
         )
         val response = json.decodeFromJsonElement(BackendSyncPushResponse.serializer(), responseElement)
-        syncStateStore.update { current -> current.copy(lastRevision = response.latestRevision) }
+        val scores = database.scoreDao().scores(score.profileId)
+        val records = database.scoreDao().playRecords(score.profileId)
+        syncStateStore.update { current ->
+            current.copy(
+                lastRevision = response.latestRevision,
+                syncedDataFingerprintByProfile = current.syncedDataFingerprintByProfile +
+                    (score.profileId to BackendSyncStateStore.dataFingerprint(scores, records)),
+            )
+        }
     }
 
     suspend fun previewImportConflicts(profileId: String): ImportSyncConflictPreview = syncMutex.withLock {
@@ -229,13 +237,13 @@ class BackendSyncCoordinator(
                             .toMap(),
                     )
                 }
-                pushAll(forceProfiles = true, overwriteProfileMetadata = true)
+                pushAll(forceProfiles = true, overwriteProfileMetadata = true, replaceData = true)
                 pullAndApply(sinceRevision = "0", replace = false)
             }
             BackendAccountResolution.KeepLocal -> {
                 remapLocalProfiles()
                 clearRemoteProfiles()
-                pushAll(forceProfiles = true)
+                pushAll(forceProfiles = true, replaceData = true)
                 pullAndApply(sinceRevision = "0", replace = false)
             }
             BackendAccountResolution.UseCloud -> {
@@ -266,7 +274,7 @@ class BackendSyncCoordinator(
         if (localProfiles.isEmpty()) return@withLock
         removeRemoteProfilesAbsentLocally(localProfiles.mapTo(mutableSetOf()) { it.id })
         syncStateStore.update { current -> current.copy(pendingMutation = null) }
-        pushAll(forceProfiles = true, overwriteProfileMetadata = true)
+        pushAll(forceProfiles = true, overwriteProfileMetadata = true, replaceData = true)
         recordSyncedState(user.id)
     }
 
@@ -317,7 +325,7 @@ class BackendSyncCoordinator(
         val user = sessionManager.state.value.user ?: error("Authentication required.")
         when (resolution) {
             BackendAccountResolution.KeepLocal -> {
-                pushAll(forceProfiles = true, overwriteProfileMetadata = true)
+                pushAll(forceProfiles = true, overwriteProfileMetadata = true, replaceData = true)
                 pullAndApply(sinceRevision = syncStateStore.load().lastRevision, replace = false)
             }
             BackendAccountResolution.Merge -> {
@@ -372,10 +380,7 @@ class BackendSyncCoordinator(
         val response = if (sinceRevision == "0") {
             fetchFullSnapshot()
         } else {
-            val responseElement = sessionManager.authorizedRequest(
-                path = "v1/sync:pull?sinceRevision=$sinceRevision&includeSnapshot=true&limit=500",
-            )
-            json.decodeFromJsonElement(BackendSyncPullResponse.serializer(), responseElement)
+            fetchAllPullPages(sinceRevision)
         }
         val syncState = syncStateStore.load()
         val localProfiles = database.profileDao().profiles().associateBy(UserProfileEntity::id)
@@ -426,22 +431,58 @@ class BackendSyncCoordinator(
     }
 
     private suspend fun fetchFullSnapshot(): BackendSyncPullResponse {
-        val responseElement = sessionManager.authorizedRequest(
-            path = "v1/sync:pull?sinceRevision=0&includeSnapshot=true&limit=500",
-        )
-        val pullResponse = json.decodeFromJsonElement(BackendSyncPullResponse.serializer(), responseElement)
-        val profilesElement = sessionManager.authorizedRequest("v1/profiles")
-        val profiles = json.decodeFromJsonElement(ProfilesResponse.serializer(), profilesElement).profiles
-        val scores = mutableListOf<BackendRemoteScore>()
-        val records = mutableListOf<BackendRemotePlayRecord>()
-        profiles.forEach { profile ->
-            val scoreElement = sessionManager.authorizedRequest("v1/scores?profileId=${profile.id}")
-            scores += json.decodeFromJsonElement(ScoresResponse.serializer(), scoreElement).scores
-            val recordElement = sessionManager.authorizedRequest("v1/play-records?profileId=${profile.id}&limit=5000")
-            records += json.decodeFromJsonElement(RecordsResponse.serializer(), recordElement).records
-        }
-        return pullResponse.copy(snapshot = BackendSyncSnapshot(profiles, scores, records))
-    }
+		return fetchAllPullPages("0")
+	}
+
+	private suspend fun fetchAllPullPages(initialRevision: String): BackendSyncPullResponse {
+		var cursor = initialRevision
+		val events = mutableListOf<BackendSyncEvent>()
+		val profiles = linkedMapOf<String, BackendRemoteProfile>()
+		val scores = linkedMapOf<String, BackendRemoteScore>()
+		val records = linkedMapOf<String, BackendRemotePlayRecord>()
+		var latest = initialRevision
+		do {
+			val responseElement = sessionManager.authorizedRequest(
+				path = "v1/sync:pull?sinceRevision=$cursor&includeSnapshot=true&limit=500",
+			)
+			val response = json.decodeFromJsonElement(BackendSyncPullResponse.serializer(), responseElement)
+			events += response.events
+			response.snapshot.profiles.forEach { profiles[it.id] = it }
+			response.snapshot.scores.forEach { score -> scores[scoreKey(score)] = score }
+			response.snapshot.records.forEach { record -> records[recordKey(record)] = record }
+			latest = response.latestRevision
+			if (!response.hasMore || response.latestRevision == cursor) break
+			cursor = response.latestRevision
+		} while (true)
+		return BackendSyncPullResponse(
+			events = events,
+			latestRevision = latest,
+			snapshot = BackendSyncSnapshot(
+				profiles = profiles.values.toList(),
+				scores = scores.values.toList(),
+				records = records.values.toList(),
+			),
+		)
+	}
+
+	private fun scoreKey(score: BackendRemoteScore): String = listOf(
+		score.profileId,
+		score.sheet?.songIdentifier,
+		score.sheet?.chartType,
+		score.sheet?.difficulty,
+	).joinToString("|")
+
+	private fun recordKey(record: BackendRemotePlayRecord): String = listOf(
+		record.profileId,
+		record.sheet?.songIdentifier,
+		record.sheet?.chartType,
+		record.sheet?.difficulty,
+		record.playTime,
+		record.achievements,
+		record.dxScore,
+		record.fc,
+		record.fs,
+	).joinToString("|")
 
     private suspend fun applySnapshot(
         snapshot: BackendSyncSnapshot,
@@ -611,6 +652,7 @@ class BackendSyncCoordinator(
     private suspend fun pushAll(
         forceProfiles: Boolean,
         overwriteProfileMetadata: Boolean = false,
+        replaceData: Boolean = false,
     ) {
         val profiles = database.profileDao().profiles()
         if (profiles.isEmpty()) return
@@ -625,6 +667,9 @@ class BackendSyncCoordinator(
             if (legacyRecords.isNotEmpty()) database.scoreDao().deletePlayRecords(legacyRecords)
             val records = localRecords.filterNot { it.id in legacyIds }
             val scores = database.scoreDao().scores(profile.id)
+            val dataFingerprint = BackendSyncStateStore.dataFingerprint(scores, records)
+            val dataChanged = state.syncedDataFingerprintByProfile[profile.id] != dataFingerprint
+            val shouldReplaceData = replaceData || profile.id in state.pendingDataReplaceProfileIds
             val profileFingerprint = BackendSyncStateStore.profileFingerprint(profile)
             val profileChanged = profileFingerprint != state.syncedFingerprintByProfile[profile.id]
             val profileUpsert = if (
@@ -638,10 +683,13 @@ class BackendSyncCoordinator(
             } else {
                 emptyList()
             }
+			if (!dataChanged && !shouldReplaceData && profileUpsert.isEmpty()) {
+				continue
+			}
             val batchCount = maxOf(
                 1,
-                (scores.size + SyncBatchSize - 1) / SyncBatchSize,
-                (records.size + SyncBatchSize - 1) / SyncBatchSize,
+                if (dataChanged) (scores.size + SyncBatchSize - 1) / SyncBatchSize else 0,
+                if (dataChanged) (records.size + SyncBatchSize - 1) / SyncBatchSize else 0,
             )
 
             repeat(batchCount) { batchIndex ->
@@ -666,6 +714,8 @@ class BackendSyncCoordinator(
                         ?.let { listOf(BackendScoreSet(profile.id, it)) }.orEmpty(),
                     playRecordUpserts = recordEntries.takeIf(List<BackendPlayRecordEntry>::isNotEmpty)
                         ?.let { listOf(BackendRecordSet(profile.id, it)) }.orEmpty(),
+				replaceScoreProfileIds = if (batchIndex == 0 && dataChanged && shouldReplaceData) listOf(profile.id) else emptyList(),
+				replacePlayRecordProfileIds = if (batchIndex == 0 && dataChanged && shouldReplaceData) listOf(profile.id) else emptyList(),
                 )
                 val responseElement = sessionManager.authorizedRequest(
                     path = "v1/sync:push",
@@ -693,7 +743,10 @@ class BackendSyncCoordinator(
             }
             syncStateStore.update { current ->
                 current.copy(syncedFingerprintByProfile = current.syncedFingerprintByProfile +
-                    (profile.id to profileFingerprint))
+                    (profile.id to profileFingerprint),
+						syncedDataFingerprintByProfile = current.syncedDataFingerprintByProfile +
+						(profile.id to dataFingerprint),
+					pendingDataReplaceProfileIds = current.pendingDataReplaceProfileIds - profile.id)
             }
         }
         val remoteProfiles = fetchRemoteProfiles()
@@ -703,7 +756,7 @@ class BackendSyncCoordinator(
                     .mapNotNull { profile -> profile.updatedAt?.let { profile.id to it } },
             )
         }
-        if (uploadLocalAvatars()) pushAll(forceProfiles = false)
+		uploadLocalAvatars()
     }
 
     private suspend fun pushImportedProfileData(profileId: String) {
@@ -768,6 +821,18 @@ class BackendSyncCoordinator(
                 "?v=" + java.net.URLEncoder.encode(upload.updatedAt, Charsets.UTF_8.name())
             val updated = profile.copy(avatarUrl = avatarUrl)
             profileDao.upsert(updated)
+			val profileResponse = sessionManager.authorizedRequest(
+				path = "v1/profiles/${profile.id}",
+				method = "PUT",
+				body = json.encodeToJsonElement(
+					BackendProfileUpsert.serializer(),
+					updated.toUpsert(clientUpdatedAt = upload.updatedAt),
+				),
+			)
+			val profileResult = json.decodeFromJsonElement(BackendRemoteProfile.serializer(), profileResponse)
+			syncStateStore.update { current ->
+				current.copy(remoteUpdatedAtByProfile = current.remoteUpdatedAtByProfile + (profile.id to (profileResult.updatedAt ?: upload.updatedAt)))
+			}
             uploadedAny = true
         }
         return uploadedAny
@@ -837,17 +902,32 @@ class BackendSyncCoordinator(
                 profileAvatarStore.deleteStored(oldPath)
             }
         }
-        syncStateStore.update { it.copy(lastRevision = "0", remoteUpdatedAtByProfile = emptyMap(), syncedFingerprintByProfile = emptyMap()) }
+		syncStateStore.update {
+			it.copy(
+				lastRevision = "0",
+				remoteUpdatedAtByProfile = emptyMap(),
+				syncedFingerprintByProfile = emptyMap(),
+				syncedDataFingerprintByProfile = emptyMap(),
+				pendingDataReplaceProfileIds = emptySet(),
+			)
+		}
     }
 
     private suspend fun recordSyncedState(userId: String) {
         val profiles = database.profileDao().profiles()
+        val syncedDataFingerprints = profiles.associate { profile ->
+            profile.id to BackendSyncStateStore.dataFingerprint(
+                database.scoreDao().scores(profile.id),
+                database.scoreDao().playRecords(profile.id),
+            )
+        }
         syncStateStore.update { current ->
             current.copy(
                 ownerUserId = userId,
                 syncedFingerprintByProfile = profiles.associate { profile ->
                     profile.id to BackendSyncStateStore.profileFingerprint(profile)
                 },
+                syncedDataFingerprintByProfile = syncedDataFingerprints,
             )
         }
     }

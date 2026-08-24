@@ -84,7 +84,7 @@ class AppContainer(context: Context) {
         catalogDao = database.catalogDao(),
         json = json,
     )
-    private val backendSyncStateStore = BackendSyncStateStore(applicationContext, json)
+    val backendSyncStateStore = BackendSyncStateStore(applicationContext, json)
 
     val profileRepository = ProfileRepository(
         profileDao = database.profileDao(),
@@ -103,6 +103,7 @@ class AppContainer(context: Context) {
     val scoreRepository = ScoreRepository(
         database = database,
         profileRepository = profileRepository,
+        syncStateStore = backendSyncStateStore,
     )
 
     val catalogRepository = CatalogRepository(
