@@ -220,12 +220,13 @@
     <string name="otogame_session_required">请在下方登录 Otogame</string>
     <string name="otogame_active_profile">当前档案：%1$s</string>
     <string name="otogame_no_active_profile">暂无当前档案</string>
-    <string name="otogame_import_description">同步全部可存取记录。每次同步都会扫描可存取范围并在本机去除重复记录。</string>
+    <string name="otogame_import_description">同步前四页游玩记录。DX Pass Rating 数据可用时也会更新当前最佳成绩。</string>
     <string name="otogame_jp_profile_required">此导入功能仅对日服档案开放。</string>
     <string name="otogame_reload">重新加载 Otogame 页面</string>
     <string name="otogame_open_login">打开 Otogame 登录页面</string>
     <string name="otogame_sync_action">同步游玩记录</string>
     <string name="otogame_syncing">正在同步…</string>
+    <string name="otogame_page_progress">正在获取第 %1$d/%2$d 页</string>
     <string name="otogame_result_imported">游玩记录已导入</string>
     <string name="otogame_result_no_changes">没有新的游玩记录</string>
     <string name="otogame_result_login_required">Otogame 登录状态已失效，请刷新页面并重新登录。</string>

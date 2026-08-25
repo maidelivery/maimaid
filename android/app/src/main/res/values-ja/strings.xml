@@ -220,12 +220,13 @@
     <string name="otogame_session_required">下の画面で Otogame にログインしてください</string>
     <string name="otogame_active_profile">使用中のプロフィール：%1$s</string>
     <string name="otogame_no_active_profile">使用中のプロフィールがありません</string>
-    <string name="otogame_import_description">アクセス可能な再生履歴をすべて同期します。同期処理ごとに、アクセス可能な範囲をスキャンし、ローカルで重複レコードを削除します。</string>
+    <string name="otogame_import_description">プレイ履歴の先頭4ページを同期します。DX Passのレーティングデータを利用できる場合は、現在のベストスコアも更新します。</string>
     <string name="otogame_jp_profile_required">このインポートは日本版プロフィールでのみ利用できます。</string>
     <string name="otogame_reload">Otogame ページを再読み込み</string>
     <string name="otogame_open_login">Otogame ログインページを開く</string>
     <string name="otogame_sync_action">プレイ履歴を同期</string>
     <string name="otogame_syncing">同期中…</string>
+    <string name="otogame_page_progress">%1$d/%2$d ページを取得中</string>
     <string name="otogame_result_imported">プレイ履歴をインポートしました</string>
     <string name="otogame_result_no_changes">新しいプレイ履歴はありません</string>
     <string name="otogame_result_login_required">Otogame のログインが期限切れです。ページを再読み込みしてログインしてください。</string>

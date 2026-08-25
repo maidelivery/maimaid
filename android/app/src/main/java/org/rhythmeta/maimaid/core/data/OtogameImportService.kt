@@ -3,6 +3,7 @@ package org.rhythmeta.maimaid.core.data
 import androidx.room.withTransaction
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
@@ -23,7 +24,10 @@ class OtogameImportService(
 ) {
     private val apiClient = OtogameApiClient(json)
 
-    suspend fun importRecent(authorizationHeader: String): OtogameImportResult {
+    suspend fun importRecent(
+        authorizationHeader: String,
+        onPageProgress: (currentPage: Int, totalPages: Int) -> Unit = { _, _ -> },
+    ): OtogameImportResult {
         val profile = database.profileDao().activeProfile() ?: throw OtogameProfileUnavailableException()
         if (!OtogameImportPolicy.isEligibleServer(profile.server)) throw OtogameProfileUnavailableException()
 
@@ -33,7 +37,17 @@ class OtogameImportService(
             profileId = profile.id,
             authorizationHeader = authorizationHeader,
             existingRecordIds = existingRecordIds,
+            onPageProgress = onPageProgress,
         )
+        val ratingEntries = try {
+            apiClient.fetchRating(authorizationHeader).data.let { data ->
+                data.ratingList + data.newRatingList
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            emptyList()
+        }
         val matcher = OtogameSheetMatcher(
             songs = database.catalogDao().songs(),
             sheets = database.catalogDao().sheets(),
@@ -55,12 +69,24 @@ class OtogameImportService(
             if (ScoreRules.validate(input, maxDxScore) != null) return@mapNotNull null
             MappedPlaylog(pending.id, sheet.sheetKey, input, playedAt, pending.playlog.scoreRank)
         }
+        val mappedRatingScores = ratingEntries.mapNotNull { entry ->
+            val sheet = matcher.match(entry) ?: return@mapNotNull null
+            val input = ScoreInput(
+                achievement = OtogameImportPolicy.achievement(entry.achievement),
+                fc = OtogameImportPolicy.fullCombo(entry.comboStatus),
+            )
+            if (ScoreRules.validate(input, ScoreRules.effectiveMaxDxScore(sheet.total)) != null) {
+                return@mapNotNull null
+            }
+            MappedRatingScore(sheet.sheetKey, input)
+        }
 
         var importedCount = 0
         var concurrentDuplicateCount = 0
         database.withTransaction {
             val currentProfile = database.profileDao().activeProfile()
-            if (currentProfile?.id != profile.id || !OtogameImportPolicy.isEligibleServer(currentProfile.server)) {
+                ?: throw OtogameProfileUnavailableException()
+            if (currentProfile.id != profile.id || !OtogameImportPolicy.isEligibleServer(currentProfile.server)) {
                 throw OtogameProfileUnavailableException()
             }
             val scoreDao = database.scoreDao()
@@ -95,6 +121,20 @@ class OtogameImportService(
                 )
                 importedCount += 1
             }
+            mappedRatingScores.forEach { item ->
+                val existing = scoreDao.score(profile.id, item.sheetKey)
+                val merged = ScoreRules.mergeScore(
+                    profileId = profile.id,
+                    sheetKey = item.sheetKey,
+                    existing = existing,
+                    input = item.input,
+                    now = System.currentTimeMillis(),
+                )
+                if (merged != existing) {
+                    scoreDao.upsertScore(merged)
+                    importedCount += 1
+                }
+            }
         }
 
         return OtogameImportResult(
@@ -109,6 +149,7 @@ class OtogameImportService(
         profileId: String,
         authorizationHeader: String,
         existingRecordIds: Set<String>,
+        onPageProgress: (currentPage: Int, totalPages: Int) -> Unit,
     ): FetchedPlaylogs {
         val playlogs = mutableListOf<PendingPlaylog>()
         val seenRecordIds = mutableSetOf<String>()
@@ -117,11 +158,10 @@ class OtogameImportService(
         var page = 1
 
         while (true) {
-            val response = try {
-                apiClient.fetchPlaylogs(authorizationHeader, page)
-            } catch (_: OtogameFreeHistoryLimitException) {
-                break
-            }
+            val response = apiClient.fetchPlaylogs(authorizationHeader, page)
+            val totalPages = response.data.pagination.totalPage
+                .coerceIn(1, OtogameImportPolicy.PlaylogPageLimit)
+            onPageProgress(page, totalPages)
             if (response.data.data.isEmpty()) break
 
             for (playlog in response.data.data) {
@@ -137,7 +177,7 @@ class OtogameImportService(
                 }
                 playlogs += PendingPlaylog(id, playlog)
             }
-            if (page >= response.data.pagination.totalPage.coerceAtLeast(1)) break
+            if (page >= totalPages) break
             page += 1
         }
         return FetchedPlaylogs(playlogs, fetchedCount, duplicateCount)
@@ -157,6 +197,11 @@ class OtogameImportService(
         val input: ScoreInput,
         val playedAt: Long,
         val scoreRank: Int,
+    )
+
+    private data class MappedRatingScore(
+        val sheetKey: String,
+        val input: ScoreInput,
     )
 }
 
@@ -189,10 +234,33 @@ private class OtogameApiClient(
                     }
                     HttpURLConnection.HTTP_UNAUTHORIZED, HttpURLConnection.HTTP_FORBIDDEN ->
                         throw OtogameUnauthorizedException()
-                    else -> if (OtogameImportPolicy.isFreeHistoryLimitResponse(page, status)) {
-                        throw OtogameFreeHistoryLimitException()
-                    } else {
-                        throw IllegalStateException("Otogame request failed with HTTP $status.")
+                    else -> throw IllegalStateException("Otogame request failed with HTTP $status.")
+                }
+            } finally {
+                connection.disconnect()
+            }
+        }
+
+    suspend fun fetchRating(authorizationHeader: String): OtogameRatingResponse =
+        withContext(Dispatchers.IO) {
+            require(authorizationHeader.startsWith("Bearer ", ignoreCase = true))
+            val connection = URL(RatingEndpoint).openConnection() as HttpURLConnection
+            try {
+                connection.requestMethod = "GET"
+                connection.connectTimeout = TimeoutMillis
+                connection.readTimeout = TimeoutMillis
+                connection.useCaches = false
+                connection.setRequestProperty("Accept", "application/json")
+                connection.setRequestProperty("Authorization", authorizationHeader)
+                connection.setRequestProperty("Referer", "https://u.otogame.net/maimai/music")
+                if (connection.responseCode != HttpURLConnection.HTTP_OK) {
+                    throw IllegalStateException("Otogame rating request failed.")
+                }
+                connection.inputStream.bufferedReader().use { reader ->
+                    try {
+                        json.decodeFromString<OtogameRatingResponse>(reader.readText())
+                    } catch (error: SerializationException) {
+                        throw OtogameResponseException(error)
                     }
                 }
             } finally {
@@ -202,11 +270,10 @@ private class OtogameApiClient(
 
     private companion object {
         const val PlaylogEndpoint = "https://u.otogame.net/api/game/maimai/playlog"
+        const val RatingEndpoint = "https://u.otogame.net/api/game/maimai/rating"
         const val TimeoutMillis = 15_000
     }
 }
-
-private class OtogameFreeHistoryLimitException : Exception()
 
 private class OtogameResponseException(cause: Throwable) :
     Exception("Otogame returned an unsupported response.", cause)

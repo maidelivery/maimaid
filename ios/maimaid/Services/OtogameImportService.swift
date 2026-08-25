@@ -29,13 +29,10 @@ enum OtogameImportError: LocalizedError {
     }
 }
 
-private enum OtogameAPIError: Error {
-    case freeHistoryLimitReached
-}
-
 @MainActor
 private final class OtogameAPIClient {
     private let endpoint = URL(string: "https://u.otogame.net/api/game/maimai/playlog")
+    private let ratingEndpoint = URL(string: "https://u.otogame.net/api/game/maimai/rating")
 
     func fetchPlaylogs(authorizationHeader: String, page: Int) async throws -> OtogamePlaylogResponse {
         guard authorizationHeader.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -72,10 +69,37 @@ private final class OtogameAPIClient {
             }
         case 401, 403:
             throw OtogameImportError.unauthorized
-        case 400 where page == OtogameImportPolicy.fullHistoryProbePage:
-            throw OtogameAPIError.freeHistoryLimitReached
         default:
             throw OtogameImportError.requestFailed(httpResponse.statusCode)
+        }
+    }
+
+    func fetchRating(authorizationHeader: String) async throws -> OtogameRatingResponse {
+        guard authorizationHeader.trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased().hasPrefix("bearer ") else {
+            throw OtogameImportError.invalidAuthorization
+        }
+        guard let ratingEndpoint else {
+            throw OtogameImportError.invalidResponse
+        }
+
+        var request = URLRequest(url: ratingEndpoint)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 15
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(authorizationHeader, forHTTPHeaderField: "Authorization")
+        request.setValue("https://u.otogame.net/maimai/music", forHTTPHeaderField: "Referer")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw OtogameImportError.invalidResponse
+        }
+        do {
+            return try JSONDecoder().decode(OtogameRatingResponse.self, from: data)
+        } catch {
+            throw OtogameImportError.invalidResponse
         }
     }
 }
@@ -91,7 +115,8 @@ final class OtogameImportService {
     func importRecent(
         authorizationHeader: String,
         expectedProfileID: UUID,
-        context: ModelContext
+        context: ModelContext,
+        onPageProgress: (Int, Int) -> Void = { _, _ in }
     ) async throws -> OtogameImportResult {
         try validateActiveProfile(expectedID: expectedProfileID, context: context)
 
@@ -104,8 +129,19 @@ final class OtogameImportService {
             authorizationHeader: authorizationHeader,
             profileID: profileID,
             existingRecordIDs: existingRecordIDs,
-            context: context
+            context: context,
+            onPageProgress: onPageProgress
         )
+        let ratingData: OtogameRatingData?
+        do {
+            ratingData = try await apiClient.fetchRating(authorizationHeader: authorizationHeader).data
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            try Task.checkCancellation()
+            ratingData = nil
+        }
+        let ratingEntries = (ratingData?.ratingList ?? []) + (ratingData?.newRatingList ?? [])
 
         try validateActiveProfile(expectedID: profileID, context: context)
         let matcher = OtogameSheetMatcher(
@@ -138,6 +174,21 @@ final class OtogameImportService {
                 fullCombo: OtogameImportPolicy.fullCombo(for: pending.playlog.comboStatus),
                 fullSync: OtogameImportPolicy.fullSync(for: pending.playlog.syncStatus),
                 playedAt: Date(timeIntervalSince1970: TimeInterval(pending.playlog.playDate))
+            )
+        }
+        let mappedRatingScores = ratingEntries.compactMap { entry -> MappedRatingScore? in
+            guard let sheet = matcher.match(entry),
+                  entry.achievement >= 0 else {
+                return nil
+            }
+            let achievement = OtogameImportPolicy.achievement(entry.achievement)
+            guard achievement.isFinite, (0...101).contains(achievement) else {
+                return nil
+            }
+            return MappedRatingScore(
+                sheet: sheet,
+                achievement: achievement,
+                fullCombo: OtogameImportPolicy.fullCombo(for: entry.comboStatus)
             )
         }
 
@@ -173,6 +224,21 @@ final class OtogameImportService {
             )
             importedCount += 1
         }
+        for item in mappedRatingScores {
+            let existingScore = ScoreService.shared.score(for: item.sheet, context: context)
+            let previousRate = existingScore?.rate
+            let previousFullCombo = existingScore?.fc
+            let savedScore = ScoreService.shared.saveScore(
+                sheet: item.sheet,
+                rate: item.achievement,
+                rank: OtogameImportPolicy.calculatedRank(for: item.achievement),
+                fc: item.fullCombo,
+                context: context
+            )
+            if previousRate != savedScore.rate || previousFullCombo != savedScore.fc {
+                importedCount += 1
+            }
+        }
 
         do {
             try validateActiveProfile(expectedID: profileID, context: context)
@@ -196,7 +262,8 @@ final class OtogameImportService {
         authorizationHeader: String,
         profileID: UUID,
         existingRecordIDs: Set<UUID>,
-        context: ModelContext
+        context: ModelContext,
+        onPageProgress: (Int, Int) -> Void
     ) async throws -> FetchedPlaylogs {
         var playlogs: [PendingPlaylog] = []
         var seenRecordIDs = Set<UUID>()
@@ -206,16 +273,13 @@ final class OtogameImportService {
 
         while true {
             try Task.checkCancellation()
-            let response: OtogamePlaylogResponse
-            do {
-                response = try await apiClient.fetchPlaylogs(
-                    authorizationHeader: authorizationHeader,
-                    page: page
-                )
-            } catch OtogameAPIError.freeHistoryLimitReached {
-                break
-            }
+            let response = try await apiClient.fetchPlaylogs(
+                authorizationHeader: authorizationHeader,
+                page: page
+            )
             try validateActiveProfile(expectedID: profileID, context: context)
+            let totalPages = min(max(response.data.pagination.totalPage, 1), OtogameImportPolicy.playlogPageLimit)
+            onPageProgress(page, totalPages)
             guard !response.data.data.isEmpty else {
                 break
             }
@@ -233,7 +297,7 @@ final class OtogameImportService {
                     duplicateCount += 1
                 }
             }
-            if page >= max(response.data.pagination.totalPage, 1) {
+            if page >= totalPages {
                 break
             }
             page += 1
@@ -264,6 +328,13 @@ private struct FetchedPlaylogs {
     let playlogs: [PendingPlaylog]
     let fetchedCount: Int
     let duplicateCount: Int
+}
+
+@MainActor
+private struct MappedRatingScore {
+    let sheet: Sheet
+    let achievement: Double
+    let fullCombo: String?
 }
 
 @MainActor

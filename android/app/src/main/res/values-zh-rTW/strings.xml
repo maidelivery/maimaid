@@ -220,12 +220,13 @@
     <string name="otogame_session_required">請在下方登入 Otogame</string>
     <string name="otogame_active_profile">目前檔案：%1$s</string>
     <string name="otogame_no_active_profile">目前沒有使用中的檔案</string>
-    <string name="otogame_import_description">同步全部可存取記錄。每次同步都會掃描可存取範圍並在本機去除重複記錄。</string>
+    <string name="otogame_import_description">同步前四頁遊玩記錄。DX Pass Rating 資料可用時也會更新目前最佳成績。</string>
     <string name="otogame_jp_profile_required">此匯入功能僅對日服檔案開放。</string>
     <string name="otogame_reload">重新載入 Otogame 頁面</string>
     <string name="otogame_open_login">開啟 Otogame 登入頁面</string>
     <string name="otogame_sync_action">同步遊玩記錄</string>
     <string name="otogame_syncing">正在同步…</string>
+    <string name="otogame_page_progress">正在取得第 %1$d/%2$d 頁</string>
     <string name="otogame_result_imported">遊玩記錄已匯入</string>
     <string name="otogame_result_no_changes">沒有新的遊玩記錄</string>
     <string name="otogame_result_login_required">Otogame 登入狀態已失效，請重新整理頁面並再次登入。</string>

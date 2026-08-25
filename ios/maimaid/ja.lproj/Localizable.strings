@@ -219,13 +219,14 @@
 
 // Otogame
 "import.otogame.title" = "Otogame からインポート";
-"import.otogame.description" = "アクセス可能な再生履歴をすべて同期します。同期処理ごとに、アクセス可能な範囲をスキャンし、ローカルで重複レコードを削除します。";
+"import.otogame.description" = "プレイ履歴の先頭4ページを同期します。DX Passのレーティングデータを利用できる場合は、現在のベストスコアも更新します。";
 "import.otogame.activeProfile %@" = "現在のプロフィール：%@";
 "import.otogame.session.ready" = "Otogame セッション準備完了";
 "import.otogame.session.required" = "Otogame にログインしてください";
 "import.otogame.action.openLogin" = "Otogame ログインを開く";
 "import.otogame.action.sync" = "プレイ履歴を同期";
 "import.otogame.action.syncing" = "プレイ履歴を同期中...";
+"import.otogame.progress %lld %lld" = "%1$lld/%2$lld ページを取得中";
 "import.otogame.login.title" = "Otogame ログイン";
 "import.otogame.login.reload" = "再読み込み";
 "import.otogame.profileRequired" = "有効な日本版プロフィールが必要です。";

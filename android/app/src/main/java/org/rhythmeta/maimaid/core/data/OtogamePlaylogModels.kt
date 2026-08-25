@@ -21,6 +21,36 @@ internal data class OtogamePlaylogResponse(
     val data: OtogamePlaylogPage = OtogamePlaylogPage(),
 )
 
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+internal data class OtogameRatingResponse(
+    val data: OtogameRatingData = OtogameRatingData(),
+)
+
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+internal data class OtogameRatingData(
+    @SerialName("rating_list")
+    @JsonNames("ratingList")
+    val ratingList: List<OtogameRatingEntry> = emptyList(),
+    @SerialName("new_rating_list")
+    @JsonNames("newRatingList")
+    val newRatingList: List<OtogameRatingEntry> = emptyList(),
+)
+
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+internal data class OtogameRatingEntry(
+    val music: OtogameMusic = OtogameMusic(),
+    @SerialName("level_info")
+    @JsonNames("levelInfo")
+    val levelInfo: OtogameLevelInfo = OtogameLevelInfo(),
+    val achievement: Long = 0,
+    @SerialName("combo_status")
+    @JsonNames("comboStatus")
+    val comboStatus: Int = 0,
+)
+
 @Serializable
 internal data class OtogamePlaylogPage(
     val data: List<OtogamePlaylog> = emptyList(),

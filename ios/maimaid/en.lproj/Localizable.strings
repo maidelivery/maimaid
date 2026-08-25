@@ -220,13 +220,14 @@
 
 // Otogame
 "import.otogame.title" = "Import from Otogame";
-"import.otogame.description" = "Sync all accessible play history. Each sync scans the accessible range and deduplicates records locally.";
+"import.otogame.description" = "Sync the first four pages of play history. DX Pass rating data also updates current best scores when available.";
 "import.otogame.activeProfile %@" = "Active profile: %@";
 "import.otogame.session.ready" = "Otogame session ready";
 "import.otogame.session.required" = "Sign in to Otogame first";
 "import.otogame.action.openLogin" = "Open Otogame Login";
 "import.otogame.action.sync" = "Sync Play History";
 "import.otogame.action.syncing" = "Syncing play history...";
+"import.otogame.progress %lld %lld" = "Fetched page %1$lld of %2$lld";
 "import.otogame.login.title" = "Otogame Login";
 "import.otogame.login.reload" = "Reload";
 "import.otogame.profileRequired" = "An active Japanese server profile is required.";

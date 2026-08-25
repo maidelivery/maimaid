@@ -4,10 +4,7 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
 internal object OtogameImportPolicy {
-    const val FullHistoryProbePage = 5
-
-    fun isFreeHistoryLimitResponse(page: Int, statusCode: Int): Boolean =
-        page == FullHistoryProbePage && statusCode == 400
+    const val PlaylogPageLimit = 4
 
     fun isEligibleServer(server: String?): Boolean = server?.trim()?.equals("jp", ignoreCase = true) == true
 

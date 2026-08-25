@@ -26,6 +26,23 @@ internal class OtogameSheetMatcher(
         }.distinctBy(SheetEntity::sheetKey).singleOrNull()
     }
 
+    fun match(entry: OtogameRatingEntry): SheetEntity? {
+        val difficulty = OtogameImportPolicy.difficulty(entry.levelInfo.difficulty) ?: return null
+        val chartType = if (entry.music.isDeluxe) "dx" else "standard"
+        return match(entry.music, difficulty, chartType)
+    }
+
+    private fun match(music: OtogameMusic, difficulty: String, chartType: String): SheetEntity? {
+        val eligible = japaneseSheets.filter { sheet ->
+            typeMatches(sheet, chartType) && difficultyMatches(sheet, difficulty, music.utageKanjiName)
+        }
+        val normalizedTitle = normalizeTitle(music.name)
+        if (normalizedTitle.isEmpty()) return null
+        return eligible.filter { sheet ->
+            normalizeTitle(songsById[sheet.songIdentifier]?.title.orEmpty()) == normalizedTitle
+        }.distinctBy(SheetEntity::sheetKey).singleOrNull()
+    }
+
     private fun typeMatches(sheet: SheetEntity, chartType: String): Boolean =
         canonicalChartType(sheet.type) == canonicalChartType(chartType)
 

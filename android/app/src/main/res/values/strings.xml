@@ -220,12 +220,13 @@
     <string name="otogame_session_required">Sign in to Otogame below</string>
     <string name="otogame_active_profile">Active profile: %1$s</string>
     <string name="otogame_no_active_profile">No active profile</string>
-    <string name="otogame_import_description">Sync all accessible play history. Each sync scans the accessible range and deduplicates records locally.</string>
+    <string name="otogame_import_description">Sync the first four pages of play history. DX Pass rating data also updates current best scores when available.</string>
     <string name="otogame_jp_profile_required">This import is available only for Japanese-server profiles.</string>
     <string name="otogame_reload">Reload Otogame page</string>
     <string name="otogame_open_login">Open Otogame sign-in page</string>
     <string name="otogame_sync_action">Sync play history</string>
     <string name="otogame_syncing">Syncing…</string>
+    <string name="otogame_page_progress">Fetched page %1$d of %2$d</string>
     <string name="otogame_result_imported">Play history imported</string>
     <string name="otogame_result_no_changes">No new plays found</string>
     <string name="otogame_result_login_required">The Otogame session expired. Reload the page and sign in again.</string>

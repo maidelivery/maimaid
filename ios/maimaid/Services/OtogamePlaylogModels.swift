@@ -6,6 +6,34 @@ struct OtogamePlaylogResponse: Decodable, Sendable {
     let data: OtogamePlaylogPage
 }
 
+struct OtogameRatingResponse: Decodable, Sendable {
+    let data: OtogameRatingData
+}
+
+struct OtogameRatingData: Decodable, Sendable {
+    let ratingList: [OtogameRatingEntry]
+    let newRatingList: [OtogameRatingEntry]
+
+    private enum CodingKeys: String, CodingKey {
+        case ratingList = "rating_list"
+        case newRatingList = "new_rating_list"
+    }
+}
+
+struct OtogameRatingEntry: Decodable, Sendable {
+    let music: OtogameMusic
+    let levelInfo: OtogameLevelInfo
+    let achievement: Int64
+    let comboStatus: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case music
+        case levelInfo = "level_info"
+        case achievement
+        case comboStatus = "combo_status"
+    }
+}
+
 struct OtogamePlaylogPage: Decodable, Sendable {
     let data: [OtogamePlaylog]
     let pagination: OtogamePagination

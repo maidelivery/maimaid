@@ -219,13 +219,14 @@
 
 // Otogame
 "import.otogame.title" = "從 Otogame 匯入";
-"import.otogame.description" = "同步全部可存取記錄。每次同步都會掃描可存取範圍並在本機去除重複記錄。";
+"import.otogame.description" = "同步前四頁遊玩記錄。DX Pass Rating 資料可用時也會更新目前最佳成績。";
 "import.otogame.activeProfile %@" = "目前檔案：%@";
 "import.otogame.session.ready" = "Otogame 登入狀態已就緒";
 "import.otogame.session.required" = "請先登入 Otogame";
 "import.otogame.action.openLogin" = "開啟 Otogame 登入頁";
 "import.otogame.action.sync" = "同步遊玩記錄";
 "import.otogame.action.syncing" = "正在同步遊玩記錄...";
+"import.otogame.progress %lld %lld" = "正在取得第 %1$lld/%2$lld 頁";
 "import.otogame.login.title" = "Otogame 登入";
 "import.otogame.login.reload" = "重新載入";
 "import.otogame.profileRequired" = "需要啟用一個日服檔案。";

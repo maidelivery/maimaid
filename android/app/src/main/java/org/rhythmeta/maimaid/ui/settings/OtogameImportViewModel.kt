@@ -38,6 +38,8 @@ data class OtogameImportUiState(
     val importedCount: Int = 0,
     val duplicateCount: Int = 0,
     val unmatchedCount: Int = 0,
+    val currentPage: Int = 0,
+    val totalPages: Int = 0,
 ) {
     val isBusy: Boolean get() = phase != OtogameImportPhase.Idle
 }
@@ -66,6 +68,8 @@ class OtogameImportViewModel(
                         importedCount = current.importedCount.takeUnless { profileChanged } ?: 0,
                         duplicateCount = current.duplicateCount.takeUnless { profileChanged } ?: 0,
                         unmatchedCount = current.unmatchedCount.takeUnless { profileChanged } ?: 0,
+                        currentPage = current.currentPage.takeUnless { profileChanged } ?: 0,
+                        totalPages = current.totalPages.takeUnless { profileChanged } ?: 0,
                     )
                 }
             }
@@ -100,10 +104,16 @@ class OtogameImportViewModel(
                     importedCount = 0,
                     duplicateCount = 0,
                     unmatchedCount = 0,
+                    currentPage = 0,
+                    totalPages = 0,
                 )
             }
             try {
-                val result = container.otogameImportService.importRecent(header)
+                val result = container.otogameImportService.importRecent(header) { currentPage, totalPages ->
+                    mutableState.update {
+                        it.copy(currentPage = currentPage, totalPages = totalPages)
+                    }
+                }
                 mutableState.update {
                     it.copy(
                         phase = OtogameImportPhase.Idle,

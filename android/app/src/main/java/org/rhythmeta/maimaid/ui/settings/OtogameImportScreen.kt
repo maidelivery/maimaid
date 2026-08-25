@@ -49,6 +49,8 @@ import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -230,6 +232,25 @@ private fun OtogameControlPanel(
                     stringResource(
                         if (state.isBusy) R.string.otogame_syncing else R.string.otogame_sync_action,
                     ),
+                )
+            }
+            if (state.isBusy && state.totalPages > 0) {
+                LinearProgressIndicator(
+                    progress = (state.currentPage.toFloat() / state.totalPages.toFloat()).coerceIn(0f, 1f),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                        foregroundColor = MiuixTheme.colorScheme.primary,
+                        backgroundColor = MiuixTheme.colorScheme.primary.copy(alpha = 0.16f),
+                    ),
+                )
+                Text(
+                    text = stringResource(
+                        R.string.otogame_page_progress,
+                        state.currentPage,
+                        state.totalPages,
+                    ),
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
             }
             OtogameResult(state)

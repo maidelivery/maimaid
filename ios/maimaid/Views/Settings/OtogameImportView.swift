@@ -48,7 +48,9 @@ struct OtogameImportView: View {
                 OtogameImportStatusSection(
                     isImporting: viewModel.isImporting,
                     outcome: viewModel.outcome,
-                    result: viewModel.result
+                    result: viewModel.result,
+                    currentPage: viewModel.currentPage,
+                    totalPages: viewModel.totalPages
                 )
             }
         }
@@ -85,6 +87,8 @@ private struct OtogameImportStatusSection: View {
     let isImporting: Bool
     let outcome: OtogameImportOutcome?
     let result: OtogameImportResult?
+    let currentPage: Int
+    let totalPages: Int
 
     var body: some View {
         Section("import.otogame.status.header") {
@@ -93,6 +97,14 @@ private struct OtogameImportStatusSection: View {
                     ProgressView()
                     Text("import.otogame.action.syncing")
                         .foregroundStyle(.secondary)
+                }
+                if totalPages > 0 {
+                    VStack(alignment: .leading) {
+                        ProgressView(value: Double(currentPage), total: Double(totalPages))
+                        Text("import.otogame.progress \(currentPage) \(totalPages)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             } else if let outcome {
                 Label {

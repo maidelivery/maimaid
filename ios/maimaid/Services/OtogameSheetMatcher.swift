@@ -34,6 +34,33 @@ struct OtogameSheetMatcher {
         return matches.count == 1 ? matches[0] : nil
     }
 
+    func match(_ entry: OtogameRatingEntry) -> Sheet? {
+        match(
+            music: entry.music,
+            difficultyCode: entry.levelInfo.difficulty
+        )
+    }
+
+    private func match(music: OtogameMusic, difficultyCode: Int) -> Sheet? {
+        guard let difficulty = OtogameImportPolicy.difficulty(for: difficultyCode) else {
+            return nil
+        }
+        let expectedType = music.isDeluxe ? "dx" : "standard"
+        let expectedTitle = normalizeTitle(music.name)
+        guard !expectedTitle.isEmpty else {
+            return nil
+        }
+        let matches = japaneseSheets.filter { sheet in
+            guard chartType(sheet.type) == expectedType,
+                  difficultyMatches(sheet, expected: difficulty, utageKanji: music.utageKanjiName) else {
+                return false
+            }
+            let title = sheet.song?.title ?? songsByIdentifier[sheet.songIdentifier]?.title ?? ""
+            return normalizeTitle(title) == expectedTitle
+        }
+        return matches.count == 1 ? matches[0] : nil
+    }
+
     private func chartType(_ value: String) -> String {
         switch value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
         case "std", "standard": "standard"

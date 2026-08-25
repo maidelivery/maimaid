@@ -9,6 +9,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OtogameImportPolicyTest {
+    private val json = Json { ignoreUnknownKeys = true }
+
     @Test
     fun `only Japanese profiles are eligible`() {
         assertTrue(OtogameImportPolicy.isEligibleServer("jp"))
@@ -42,16 +44,8 @@ class OtogameImportPolicyTest {
     }
 
     @Test
-    fun `only page five HTTP 400 marks the free history limit`() {
-        assertTrue(OtogameImportPolicy.isFreeHistoryLimitResponse(page = 5, statusCode = 400))
-        assertFalse(OtogameImportPolicy.isFreeHistoryLimitResponse(page = 4, statusCode = 400))
-        assertFalse(OtogameImportPolicy.isFreeHistoryLimitResponse(page = 6, statusCode = 400))
-        assertFalse(OtogameImportPolicy.isFreeHistoryLimitResponse(page = 5, statusCode = 500))
-    }
-
-    @Test
     fun `response accepts Otogame snake case fields`() {
-        val response = Json.decodeFromString<OtogamePlaylogResponse>(
+        val response = json.decodeFromString<OtogamePlaylogResponse>(
             """
             {
               "code": "ok",
@@ -78,6 +72,38 @@ class OtogameImportPolicyTest {
         assertEquals("d2bb79f9-random", response.data.data.single().music.musicId)
         assertEquals(3, OtogameImportPolicy.difficultyCode(response.data.data.single()))
         assertEquals(12, response.data.pagination.totalPage)
+    }
+
+    @Test
+    fun `rating response decodes current B35 and B15 score lists`() {
+        val response = json.decodeFromString<OtogameRatingResponse>(
+            """
+            {
+              "code": "ok",
+              "message": "",
+              "data": {
+                "rating_list": [{
+                  "music": {"music_id": "old", "name": "Old Song", "is_deluxe": false},
+                  "level_info": {"difficulty": 3, "level": 20},
+                  "achievement": 1000000,
+                  "rating": 300,
+                  "combo_status": 1
+                }],
+                "new_rating_list": [{
+                  "music": {"music_id": "new", "name": "New Song", "is_deluxe": true},
+                  "level_info": {"difficulty": 4, "level": 21},
+                  "achievement": 1005000,
+                  "rating": 310,
+                  "combo_status": 4
+                }]
+              }
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals("Old Song", response.data.ratingList.single().music.name)
+        assertEquals("New Song", response.data.newRatingList.single().music.name)
+        assertEquals(4, response.data.newRatingList.single().comboStatus)
     }
 
     private fun playlog() = OtogamePlaylog(

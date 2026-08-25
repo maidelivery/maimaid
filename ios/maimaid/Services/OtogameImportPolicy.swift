@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 
 enum OtogameImportPolicy {
-    static let fullHistoryProbePage = 5
+    static let playlogPageLimit = 4
 
     static func isEligibleServer(_ server: String?) -> Bool {
         server?.trimmingCharacters(in: .whitespacesAndNewlines).localizedCaseInsensitiveCompare("jp") == .orderedSame
