@@ -8,6 +8,7 @@
 
 - iOS 与 Android 新增歌曲收藏功能，支持创建、重命名、删除和排序收藏夹及收藏谱面，并支持通过剪贴板导入和分享导出。
 - Otogame 导入现在支持读取 B50 成绩。
+- Android 端现在支持暗色 Adaptive Icon。
 
 #### 变更
 
@@ -27,6 +28,7 @@
 
 - Added song collections to iOS and Android, with support for creating, renaming, deleting, and reordering collections and chart entries, plus clipboard imports and shared exports.
 - Added B50 score imports to Otogame imports.
+- Android now support dark Adaptive Icon.
 
 #### Changed
 
