@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.2.6
+
+### 中文
+
+#### 新增
+
+- iOS 与 Android 新增歌曲收藏功能，支持创建、重命名、删除和排序收藏夹及收藏谱面，并支持通过剪贴板导入和分享导出。
+- Otogame 导入现在支持读取 B50 成绩。
+
+#### 变更
+
+- 优化 iOS 与 Android 云端备份和恢复流程，按档案增量同步数据并减少重复查询和传输。
+- 批量处理成绩历史和同步查询，提升大档案数据关联与同步速度。
+- 调整 Rating++ 推荐排序，统一按潜在提升、拟合难度差和目标达成度排序。
+- Otogame 导入游玩记录最多读取前四页，降低触发 429 限流的概率。
+- 收藏夹数据纳入 iOS 与 Android 云端同步。
+
+#### 修复
+
+- 修复 Android 发布版 R8 移除 WorkManager 无参构造函数导致 Glance 小组件更新任务无法启动的问题。
+
+### English
+
+#### Added
+
+- Added song collections to iOS and Android, with support for creating, renaming, deleting, and reordering collections and chart entries, plus clipboard imports and shared exports.
+- Added B50 score imports to Otogame imports.
+
+#### Changed
+
+- Improved iOS and Android cloud backup and restore with profile-scoped incremental synchronization and less redundant querying and transfer.
+- Batched score-history and synchronization queries to improve large-profile data association and sync speed.
+- Updated Rating++ recommendation ordering to consistently use potential gain, fit-difficulty gap, and target achievement.
+- Limited Otogame playlog imports to four pages to reduce 429 rate-limit responses.
+- Included collection data in iOS and Android cloud synchronization.
+
+#### Fixed
+
+- Fixed Android release builds where R8 removed WorkManager's parameterless constructor and prevented Glance widget update tasks from starting.
+
 ## 1.2.5
 
 ### 中文
