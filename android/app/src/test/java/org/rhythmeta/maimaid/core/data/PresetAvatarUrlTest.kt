@@ -24,7 +24,7 @@ class PresetAvatarUrlTest {
     }
 
     @Test
-    fun `uses automatic image negotiation with raw and upstream fallbacks`() {
+    fun `requests png with raw and upstream fallbacks`() {
         val assets = StaticAssetConfiguration(
             coverBaseUrl = "https://static.example.com/cdn-cgi/image/format=avif/static-assets/covers/",
             coverFallbackBaseUrl = "https://static.example.com/static-assets/covers/",
@@ -35,7 +35,7 @@ class PresetAvatarUrlTest {
         try {
             assertEquals(
                 listOf(
-                    "https://static.example.com/cdn-cgi/image/f=auto/static-assets/covers/cover.png",
+                    "https://static.example.com/cdn-cgi/image/format=png/static-assets/covers/cover.png",
                     "https://static.example.com/static-assets/covers/cover.png",
                     "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/cover.png",
                 ),
@@ -43,13 +43,32 @@ class PresetAvatarUrlTest {
             )
             val avatarUrl = PresetAvatarUrl.forIcon(123)
             assertEquals(
-                "https://static.example.com/cdn-cgi/image/f=auto/static-assets/lxns-icons/123.png",
+                "https://static.example.com/cdn-cgi/image/format=png/static-assets/lxns-icons/123.png",
                 avatarUrl,
             )
             assertTrue(PresetAvatarUrl.isPreset(avatarUrl))
             assertEquals(123, PresetAvatarUrl.iconId(avatarUrl))
         } finally {
             StaticAssetUrls.configure(null)
+        }
+    }
+
+    @Test
+    fun `normalizes legacy image transformations to png`() {
+        listOf(
+            "format=avif",
+            "f=avif",
+            "format=auto",
+            "f=auto",
+            "format=webp",
+            "f=webp",
+        ).forEach { transformation ->
+            assertEquals(
+                "https://static.example.com/cdn-cgi/image/format=png/covers/",
+                StaticAssetUrls.normalizeImageTransformation(
+                    "https://static.example.com/cdn-cgi/image/$transformation/covers/",
+                ),
+            )
         }
     }
 }

@@ -83,7 +83,11 @@ enum StaticAssetURL {
 
     nonisolated private static func normalizedImageTransformation(_ value: String) -> String {
         value
-            .replacing("/cdn-cgi/image/format=avif/", with: "/cdn-cgi/image/f=auto/")
-            .replacing("/cdn-cgi/image/f=avif/", with: "/cdn-cgi/image/f=auto/")
+            .replacing("/cdn-cgi/image/format=avif/", with: "/cdn-cgi/image/format=png/")
+            .replacing("/cdn-cgi/image/f=avif/", with: "/cdn-cgi/image/format=png/")
+            .replacing("/cdn-cgi/image/format=auto/", with: "/cdn-cgi/image/format=png/")
+            .replacing("/cdn-cgi/image/f=auto/", with: "/cdn-cgi/image/format=png/")
+            .replacing("/cdn-cgi/image/format=webp/", with: "/cdn-cgi/image/format=png/")
+            .replacing("/cdn-cgi/image/f=webp/", with: "/cdn-cgi/image/format=png/")
     }
 }

@@ -131,8 +131,8 @@ const writeStaticTree = async () => {
 		createdAt,
 		bundle: bundlePath,
 		assets: {
-			coverBaseUrl: `${staticAssetsBaseUrl}/cdn-cgi/image/f=auto/covers/`,
-			presetAvatarBaseUrl: `${staticAssetsBaseUrl}/cdn-cgi/image/f=auto/lxns-icons/`,
+			coverBaseUrl: `${staticAssetsBaseUrl}/cdn-cgi/image/format=png/covers/`,
+			presetAvatarBaseUrl: `${staticAssetsBaseUrl}/cdn-cgi/image/format=png/lxns-icons/`,
 			coverFallbackBaseUrl: `${staticAssetsBaseUrl}/covers/`,
 			presetAvatarFallbackBaseUrl: `${staticAssetsBaseUrl}/lxns-icons/`,
 		},

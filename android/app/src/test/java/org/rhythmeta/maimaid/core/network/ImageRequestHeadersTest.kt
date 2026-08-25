@@ -5,18 +5,7 @@ import org.junit.Test
 
 class ImageRequestHeadersTest {
     @Test
-    fun `prefers avif and webp when both decoders are available`() {
-        assertEquals(
-            "image/avif,image/webp,image/png,image/jpeg",
-            ImageRequestHeaders.acceptHeader(supportsAvif = true, supportsWebp = true),
-        )
-    }
-
-    @Test
-    fun `omits avif when its decoder is unavailable`() {
-        assertEquals(
-            "image/webp,image/png,image/jpeg",
-            ImageRequestHeaders.acceptHeader(supportsAvif = false, supportsWebp = true),
-        )
+    fun `requests png directly`() {
+        assertEquals("image/png", ImageRequestHeaders.ACCEPT)
     }
 }

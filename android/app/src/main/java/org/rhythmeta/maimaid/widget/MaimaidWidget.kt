@@ -55,6 +55,7 @@ import org.rhythmeta.maimaid.MainActivity
 import org.rhythmeta.maimaid.MaimaidApplication
 import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.data.Best50ConstantMode
+import org.rhythmeta.maimaid.core.network.ImageRequestHeaders
 import java.util.Locale
 import androidx.core.graphics.scale
 
@@ -196,7 +197,7 @@ private fun fetchRemoteWidgetBitmap(urlString: String): Bitmap? {
         connection.connectTimeout = 10_000
         connection.readTimeout = 15_000
         connection.instanceFollowRedirects = true
-        connection.setRequestProperty("Accept", "image/avif,image/webp,image/png,image/jpeg,*/*")
+        connection.setRequestProperty("Accept", ImageRequestHeaders.ACCEPT)
         connection.connect()
         if (connection.responseCode !in 200..299) return@runCatching null
         connection.inputStream.use { stream ->

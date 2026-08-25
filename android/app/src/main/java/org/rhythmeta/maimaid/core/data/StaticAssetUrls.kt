@@ -52,8 +52,12 @@ object StaticAssetUrls {
     }
 
     internal fun normalizeImageTransformation(value: String): String = value
-        .replace("/cdn-cgi/image/format=avif/", "/cdn-cgi/image/f=auto/")
-        .replace("/cdn-cgi/image/f=avif/", "/cdn-cgi/image/f=auto/")
+        .replace("/cdn-cgi/image/format=avif/", "/cdn-cgi/image/format=png/")
+        .replace("/cdn-cgi/image/f=avif/", "/cdn-cgi/image/format=png/")
+        .replace("/cdn-cgi/image/format=auto/", "/cdn-cgi/image/format=png/")
+        .replace("/cdn-cgi/image/f=auto/", "/cdn-cgi/image/format=png/")
+        .replace("/cdn-cgi/image/format=webp/", "/cdn-cgi/image/format=png/")
+        .replace("/cdn-cgi/image/f=webp/", "/cdn-cgi/image/format=png/")
 
     private const val LegacyCoverBaseUrl = "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/"
     private const val LegacyPresetAvatarBaseUrl = "https://assets2.lxns.net/maimai/icon/"
