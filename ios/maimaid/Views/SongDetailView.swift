@@ -195,15 +195,13 @@ struct SongDetailContent: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
                     Button {
                         song.isFavorite.toggle()
                         try? modelContext.save()
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     } label: {
-                        Label("song.detail.action.favorite", systemImage: song.isFavorite ? "star.fill" : "star")
+                        Label("song.detail.action.favorite", systemImage: song.isFavorite ? "heart.fill" : "heart")
                     }
-                } label: { Image(systemName: "ellipsis.circle") }
             }
         }
         .sheet(item: $selectedSheet) { sheet in
