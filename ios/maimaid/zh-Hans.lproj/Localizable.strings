@@ -662,6 +662,10 @@
 "collections_import_clipboard" = "从剪贴板导入";
 "collections_import_success" = "收藏夹导入成功";
 "collections_import_failed" = "收藏夹导入失败";
+"collections_import_prompt_title" = "导入收藏夹？";
+"collections_import_prompt_message %@" = "要将“%@”导入收藏夹吗？";
+"collections_import_confirm" = "导入";
+"collections_import_cancel" = "取消";
 "collections_new" = "新建收藏夹";
 "collections_rename" = "重命名";
 "collections_edit" = "编辑";

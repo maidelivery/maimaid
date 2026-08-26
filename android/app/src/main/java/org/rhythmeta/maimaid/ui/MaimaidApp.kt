@@ -33,6 +33,9 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.RowScope
@@ -81,6 +84,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlin.math.roundToInt
 import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.AppContainer
+import org.rhythmeta.maimaid.core.data.SongCollectionExport
 import org.rhythmeta.maimaid.ui.catalog.CatalogScreen
 import org.rhythmeta.maimaid.ui.catalog.CatalogDisplayMode
 import org.rhythmeta.maimaid.ui.catalog.CatalogSortTopBarAction
@@ -118,6 +122,10 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -126,6 +134,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowListPopup
+import top.yukonga.miuix.kmp.window.WindowDialog
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -145,6 +154,9 @@ fun MaimaidApp(
     onSendLogs: () -> Unit,
     initialDetail: AppDetail? = null,
     resetToHome: Boolean = false,
+    pendingCollectionImport: SongCollectionExport? = null,
+    onCollectionImportConfirmed: (SongCollectionExport) -> Unit = {},
+    onCollectionImportDismissed: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val collections by container.songCollectionRepository.collections.collectAsStateWithLifecycle(emptyList())
@@ -2094,6 +2106,29 @@ fun MaimaidApp(
             container = container,
             onDismiss = { showHomeProfileEditor = false },
         )
+
+        pendingCollectionImport?.let { collection ->
+            WindowDialog(
+                show = true,
+                title = stringResource(R.string.collections_import_prompt_title),
+                summary = stringResource(R.string.collections_import_prompt_summary, collection.name),
+                onDismissRequest = onCollectionImportDismissed,
+            ) {
+                TextButton(
+                    text = stringResource(R.string.collections_import_cancel),
+                    onClick = onCollectionImportDismissed,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(10.dp))
+                Button(
+                    onClick = { onCollectionImportConfirmed(collection) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColorsPrimary(),
+                ) {
+                    Text(stringResource(R.string.collections_import_confirm))
+                }
+            }
+        }
     }
 }
 

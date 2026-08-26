@@ -39,10 +39,7 @@ struct maimaidApp: App {
                 .onOpenURL { url in
                     if CollectionSharingService.isCollectionLink(url) {
                         Task {
-                            await collectionImportCoordinator.importCollection(
-                                from: url.absoluteString,
-                                context: sharedModelContainer.mainContext
-                            )
+                            collectionImportCoordinator.prepareImport(from: url.absoluteString)
                         }
                     } else {
                         BackendSessionManager.shared.handleAuthRedirect(url)

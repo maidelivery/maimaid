@@ -666,6 +666,10 @@
 "collections_import_clipboard" = "Import from clipboard";
 "collections_import_success" = "Collection imported";
 "collections_import_failed" = "Collection import failed";
+"collections_import_prompt_title" = "Import collection?";
+"collections_import_prompt_message %@" = "Import \"%@\" into your collections?";
+"collections_import_confirm" = "Import";
+"collections_import_cancel" = "Cancel";
 "collections_new" = "New collection";
 "collections_rename" = "Rename";
 "collections_edit" = "Edit";

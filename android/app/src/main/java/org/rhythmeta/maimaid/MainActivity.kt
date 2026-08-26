@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.core.LogReportExporter
+import org.rhythmeta.maimaid.core.data.SongCollectionExport
 import org.rhythmeta.maimaid.ui.MaimaidApp
 import org.rhythmeta.maimaid.ui.navigation.AppDetail
 import org.rhythmeta.maimaid.ui.theme.MaimaidTheme
@@ -21,6 +22,8 @@ import org.rhythmeta.maimaid.widget.WidgetDestinationExtra
 class MainActivity : ComponentActivity() {
     private val widgetDetail = mutableStateOf<AppDetail?>(null)
     private val widgetHomeRequest = mutableStateOf(false)
+    private val pendingCollectionImport = mutableStateOf<SongCollectionExport?>(null)
+    private var collectionResolutionJob: kotlinx.coroutines.Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +56,9 @@ class MainActivity : ComponentActivity() {
                     onSendLogs = ::sendLogs,
                     initialDetail = widgetDetail.value,
                     resetToHome = widgetHomeRequest.value,
+                    pendingCollectionImport = pendingCollectionImport.value,
+                    onCollectionImportConfirmed = ::confirmCollectionImport,
+                    onCollectionImportDismissed = { pendingCollectionImport.value = null },
                 )
             }
         }
@@ -98,9 +104,24 @@ class MainActivity : ComponentActivity() {
             org.rhythmeta.maimaid.core.data.SongCollectionCodec.extractCollectionId(url) != null
         if (!isCollectionLink) return
         val container = (application as MaimaidApplication).container
+        collectionResolutionJob?.cancel()
+        pendingCollectionImport.value = null
+        collectionResolutionJob = lifecycleScope.launch {
+            runCatching {
+                container.collectionSharingService.resolveImport(url)
+            }.onSuccess { collection ->
+                pendingCollectionImport.value = collection
+            }.onFailure {
+                Toast.makeText(this@MainActivity, R.string.collections_import_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun confirmCollectionImport(collection: SongCollectionExport) {
+        pendingCollectionImport.value = null
+        val container = (application as MaimaidApplication).container
         lifecycleScope.launch {
             runCatching {
-                val collection = container.collectionSharingService.resolveImport(url)
                 container.songCollectionRepository.importCollection(collection)
             }.onSuccess {
                 Toast.makeText(this@MainActivity, R.string.collections_import_success, Toast.LENGTH_LONG).show()

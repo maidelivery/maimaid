@@ -1,5 +1,5 @@
 /*
-  Content-Security-Policy: default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; form-action 'self'; connect-src 'self' https://api.rhythmeta.org https://maimaid-assets.rhythmeta.org https://assets.rhythmeta.org; img-src 'self' data: https://dp4p6x0xfi5o9.cloudfront.net https://assets2.lxns.net https://api.rhythmeta.org https://maimaid-assets.rhythmeta.org https://assets.rhythmeta.org; font-src 'self' data:; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; form-action 'self'; connect-src 'self' http://localhost:8787 https://assets.rhythmeta.org; img-src 'self' data: https://dp4p6x0xfi5o9.cloudfront.net https://assets2.lxns.net http://localhost:8787 https://assets.rhythmeta.org; font-src 'self' data:; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

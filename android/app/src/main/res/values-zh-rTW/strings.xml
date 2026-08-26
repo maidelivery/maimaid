@@ -65,6 +65,10 @@
     <string name="collections_import_clipboard">從剪貼簿匯入</string>
     <string name="collections_import_success">收藏夾匯入成功</string>
     <string name="collections_import_failed">收藏夾匯入失敗</string>
+    <string name="collections_import_prompt_title">匯入收藏夾？</string>
+    <string name="collections_import_prompt_summary">要將「%1$s」匯入收藏夾嗎？</string>
+    <string name="collections_import_confirm">匯入</string>
+    <string name="collections_import_cancel">取消</string>
     <string name="collections_new">新建收藏夾</string>
     <string name="collections_rename">重新命名</string>
     <string name="collections_edit">編輯</string>

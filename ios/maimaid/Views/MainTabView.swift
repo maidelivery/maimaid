@@ -3,6 +3,7 @@ import SwiftData
 
 struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(CollectionImportCoordinator.self) private var collectionImportCoordinator
     @State private var didScheduleSongsPreload = false
     
     @State private var searchText = ""
@@ -18,7 +19,9 @@ struct MainTabView: View {
     }
     
     var body: some View {
-        TabView {
+        @Bindable var collectionImportCoordinator = collectionImportCoordinator
+
+        return TabView {
             Tab("tab.home", systemImage: "house") {
                 HomeView()
             }
@@ -37,6 +40,20 @@ struct MainTabView: View {
             }
         }
         .preferredColorScheme(preferredScheme)
+        .alert(item: $collectionImportCoordinator.pendingImport) { pending in
+            Alert(
+                title: Text("collections_import_prompt_title"),
+                message: Text(String(localized: "collections_import_prompt_message \(pending.payload.name)")),
+                primaryButton: .default(Text("collections_import_confirm")) {
+                    Task {
+                        await collectionImportCoordinator.confirmPendingImport(pending.payload, context: modelContext)
+                    }
+                },
+                secondaryButton: .cancel(Text("collections_import_cancel")) {
+                    collectionImportCoordinator.cancelPendingImport()
+                }
+            )
+        }
         .task {
             // Migrate legacy SyncConfig data to UserProfile (one-time)
             migrateToUserProfileIfNeeded()

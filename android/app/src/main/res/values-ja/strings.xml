@@ -65,6 +65,10 @@
     <string name="collections_import_clipboard">クリップボードから読み込む</string>
     <string name="collections_import_success">コレクションを読み込みました</string>
     <string name="collections_import_failed">コレクションの読み込みに失敗しました</string>
+    <string name="collections_import_prompt_title">コレクションを読み込みますか？</string>
+    <string name="collections_import_prompt_summary">「%1$s」をコレクションに読み込みますか？</string>
+    <string name="collections_import_confirm">読み込む</string>
+    <string name="collections_import_cancel">キャンセル</string>
     <string name="collections_new">コレクションを新規作成</string>
     <string name="collections_rename">名前を変更する</string>
     <string name="collections_edit">編集</string>

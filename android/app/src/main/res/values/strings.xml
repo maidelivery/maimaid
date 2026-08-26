@@ -65,6 +65,10 @@
     <string name="collections_import_clipboard">Import from clipboard</string>
     <string name="collections_import_success">Collection imported</string>
     <string name="collections_import_failed">Collection import failed</string>
+    <string name="collections_import_prompt_title">Import collection?</string>
+    <string name="collections_import_prompt_summary">Import “%1$s” into your collections?</string>
+    <string name="collections_import_confirm">Import</string>
+    <string name="collections_import_cancel">Cancel</string>
     <string name="collections_new">New collection</string>
     <string name="collections_rename">Rename</string>
     <string name="collections_edit">Edit</string>

@@ -666,6 +666,10 @@
 "collections_import_clipboard" = "クリップボードから読み込む";
 "collections_import_success" = "コレクションを読み込みました";
 "collections_import_failed" = "コレクションの読み込みに失敗しました";
+"collections_import_prompt_title" = "コレクションを読み込みますか？";
+"collections_import_prompt_message %@" = "「%@」をコレクションに読み込みますか？";
+"collections_import_confirm" = "読み込む";
+"collections_import_cancel" = "キャンセル";
 "collections_new" = "コレクションを新規作成";
 "collections_rename" = "名前を変更する";
 "collections_edit" = "編集";
