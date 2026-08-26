@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.2.6.1
+
+### 中文
+
+#### 新增
+
+- 收藏夹新增 MMD2 分享格式，支持通过公开链接分享和导入收藏夹，并可选择分享当前快照或云端最新版本。
+- iOS 与 Android 的扫描模型改为按需下载，支持模型清单校验和更新，减少应用初始体积。
+
+#### 变更
+
+- 静态资源、歌曲封面和预设头像统一请求 PNG，提升图片解码兼容性。
+- 收藏夹链接导入现在会先显示确认对话框。
+- 歌曲详情的收藏按钮改用心形图标。
+
+#### 修复
+
+- 修复 Android 收藏夹页面缺少谱面版本信息的问题。
+
+### English
+
+#### Added
+
+- Added the MMD2 collection-sharing format with public collection links, import support, and choices between sharing the current snapshot or the latest cloud version.
+- Added on-demand scanner model downloads on iOS and Android with manifest validation and updates, reducing the initial app size.
+
+#### Changed
+
+- Switched static-asset, song-cover, and preset-avatar requests to PNG for broader image-decoding compatibility.
+- Added a confirmation prompt before importing a collection link.
+- Replaced the favorite star icon in song details with a heart icon.
+
+#### Fixed
+
+- Fixed missing chart-version information on Android collection pages.
+
 ## 1.2.6
 
 ### 中文
