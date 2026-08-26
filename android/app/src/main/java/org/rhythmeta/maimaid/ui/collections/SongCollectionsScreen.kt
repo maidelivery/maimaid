@@ -678,14 +678,20 @@ private fun CollectionDetail(
     } else {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, top = contentTopPadding + 8.dp, end = 16.dp, bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             columnItems(cards, key = { it.item.id }) { card ->
-                CollectionListCard(card, coverImageStore, onOpenSong, onDelete)
+                CollectionListCard(card, gameVersions, coverImageStore, onOpenSong, onDelete)
             }
         }
     }
 }
 
 @Composable
-private fun CollectionListCard(card: CollectionCard, coverImageStore: CoverImageStore, onOpenSong: (String) -> Unit, onDelete: (SongCollectionItemEntity) -> Unit) {
+private fun CollectionListCard(
+    card: CollectionCard,
+    gameVersions: List<GameVersionEntity>,
+    coverImageStore: CoverImageStore,
+    onOpenSong: (String) -> Unit,
+    onDelete: (SongCollectionItemEntity) -> Unit,
+) {
     if (card.song == null || card.sheet == null) return MissingCard(card)
     var menuExpanded by remember(card.item.id) { mutableStateOf(false) }
     Box(Modifier.fillMaxWidth()) {
@@ -693,7 +699,7 @@ private fun CollectionListCard(card: CollectionCard, coverImageStore: CoverImage
             song = card.song,
             sheets = listOf(card.sheet),
             scoresBySheetKey = emptyMap(),
-            versions = emptyList(),
+            versions = gameVersions,
             coverImageStore = coverImageStore,
             actualSheet = card.sheet,
             onClick = { onOpenSong(card.song.songIdentifier) },
