@@ -156,6 +156,17 @@
     <string name="scanner_camera_permission_action">カメラを許可</string>
     <string name="scanner_processing">画像を認識中…</string>
     <string name="scanner_model_error">スキャンモデルを読み込めませんでした</string>
+    <string name="scanner_models_checking">スキャンモデルを確認中…</string>
+    <string name="scanner_models_required">スキャンモデルのダウンロードが必要です</string>
+    <string name="scanner_models_download_title">スキャンモデルをダウンロードしますか？</string>
+    <string name="scanner_models_download_summary">%1$s をダウンロードすると、端末上で画像認識を利用できます。</string>
+    <string name="scanner_models_update_title">スキャンモデルの更新があります</string>
+    <string name="scanner_models_update_summary">現在のモデルは引き続き利用できます。%1$s の更新をダウンロードしますか？</string>
+    <string name="scanner_models_download_size">ダウンロードサイズ：%1$s</string>
+    <string name="scanner_models_download_action">ダウンロード</string>
+    <string name="scanner_models_downloading">スキャンモデルをダウンロード中…</string>
+    <string name="scanner_models_failed">スキャンモデルのダウンロードに失敗しました</string>
+    <string name="scanner_models_offline_cache">オフラインでダウンロード済みのスキャンモデルを使用中です</string>
     <string name="scanner_error_title">一致する楽曲が見つかりませんでした</string>
     <string name="scanner_photo_saved">写真を保存しました</string>
     <string name="scanner_photo_error">写真を保存できませんでした</string>

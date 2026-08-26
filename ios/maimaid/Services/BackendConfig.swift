@@ -42,6 +42,13 @@ enum BackendConfig {
         return URL(string: value)
     }
 
+    static var modelAssetsBaseURL: URL? {
+        guard let value = AppInfo.configuredString(for: BundleInfoKeys.modelAssetsURL) else {
+            return nil
+        }
+        return URL(string: value)
+    }
+
     static func staticAssetsEndpoint(_ path: String) -> URL? {
         staticAssetsBaseURL?.appending(path: path)
     }

@@ -6,55 +6,23 @@ import Foundation
 /// Processor that encapsulates the logic for classifying Maimai image types using CoreML model.
 nonisolated final class MLDistinguishProcessor {
     nonisolated(unsafe) static let shared = MLDistinguishProcessor()
-    
-    // The compiled CoreML model
-    private let visionModel: VNCoreMLModel?
-    
-    private init() {
-        self.visionModel = Self.loadModel()
-    }
-    
-    // MARK: - Setup
-    
-    private static func loadModel() -> VNCoreMLModel? {
-        do {
-            let config = MLModelConfiguration()
-            config.computeUnits = .all
-            
-            // Try specific version first
-            if let modelURL = Bundle.main.url(forResource: "maimaidistinguish v1.2", withExtension: "mlmodelc") {
-                let mlModel = try MLModel(contentsOf: modelURL, configuration: config)
-                let visionModel = try VNCoreMLModel(for: mlModel)
-                print("MLDistinguishProcessor: Successfully loaded maimaidistinguish v1.2 model.")
-                return visionModel
-            } else if let urls = Bundle.main.urls(forResourcesWithExtension: "mlmodelc", subdirectory: nil), let first = urls.first(where: { $0.lastPathComponent.contains("maimaidistinguish") }) {
-                print("MLDistinguishProcessor: Loaded fallback model \(first.lastPathComponent)")
-                let mlModel = try MLModel(contentsOf: first, configuration: config)
-                return try VNCoreMLModel(for: mlModel)
-            } else {
-                print("MLDistinguishProcessor: maimaidistinguish model not found in bundle. Check Target Membership.")
-                return nil
-            }
-        } catch {
-            print("MLDistinguishProcessor: Error loading maimaidistinguish model - \(error)")
-            return nil
-        }
-    }
+    private init() {}
     
     // MARK: - Processing
     
     /// Classifies an image into .score, .choose, or .unknown
-    func classify(_ image: UIImage) async -> MaimaiImageType {
+    func classify(_ image: UIImage) async throws -> MaimaiImageType {
         let normalizedImage = await MainActor.run { image.normalized() }
+        let visionModel = try await MLModelStore.shared.model(for: .distinguish)
         return Self.classifySynchronously(normalizedImage, visionModel: visionModel)
     }
     
     private static func classifySynchronously(_ image: UIImage, visionModel: VNCoreMLModel?) -> MaimaiImageType {
-        guard let cgImage = image.cgImage, let vnModel = visionModel else {
+        guard let cgImage = image.cgImage, let visionModel else {
             return .unknown
         }
         
-        let request = VNCoreMLRequest(model: vnModel)
+        let request = VNCoreMLRequest(model: visionModel)
         request.imageCropAndScaleOption = .scaleFit
         let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up, options: [:])
         

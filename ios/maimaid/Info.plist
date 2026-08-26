@@ -26,6 +26,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>MODEL_ASSETS_URL</key>
+	<string>$(MODEL_ASSETS_URL)</string>
 	<key>STATIC_ASSETS_URL</key>
 	<string>$(STATIC_ASSETS_URL)</string>
 </dict>

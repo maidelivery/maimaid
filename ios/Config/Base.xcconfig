@@ -2,5 +2,6 @@
 BACKEND_URL =
 BACKEND_AUTH_URL =
 STATIC_ASSETS_URL = https:/$()/maimaid-assets.rhythmeta.org
+MODEL_ASSETS_URL = https:/$()/models.rhythmeta.org
 
 #include? "Secrets.xcconfig"

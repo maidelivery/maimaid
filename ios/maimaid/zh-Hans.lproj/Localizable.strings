@@ -52,6 +52,19 @@
 "scanner.library.hint" = "从相册导入照片进行识别。";
 "scanner.photo.saved" = "已保存至 maimai 相册";
 "scanner.photo.error" = "照片保存失败";
+"scanner.models.checking" = "正在检查扫描模型…";
+"scanner.models.required" = "需要下载扫描模型";
+"scanner.models.download.title" = "下载扫描模型？";
+"scanner.models.download.summary %@" = "下载 %@ 后即可在本地识别图片。";
+"scanner.models.update.title" = "扫描模型有可用更新";
+"scanner.models.update.summary %@" = "当前模型可以继续使用。现在下载 %@ 的更新？";
+"scanner.models.size %@" = "下载大小：%@";
+"scanner.models.download.action" = "下载";
+"scanner.models.downloading" = "正在下载扫描模型…";
+"scanner.models.failed" = "扫描模型下载失败";
+"scanner.models.cancel" = "取消";
+"scanner.models.retry" = "重试";
+"scanner.models.offline.cache" = "当前离线，正在使用已下载的扫描模型";
 
 // MARK: - Settings
 "settings.title" = "设置";

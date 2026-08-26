@@ -156,6 +156,17 @@
     <string name="scanner_camera_permission_action">允許使用相機</string>
     <string name="scanner_processing">正在辨識圖片…</string>
     <string name="scanner_model_error">掃描模型載入失敗</string>
+    <string name="scanner_models_checking">正在檢查掃描模型…</string>
+    <string name="scanner_models_required">需要下載掃描模型</string>
+    <string name="scanner_models_download_title">下載掃描模型？</string>
+    <string name="scanner_models_download_summary">下載 %1$s 後即可在本機辨識圖片。</string>
+    <string name="scanner_models_update_title">掃描模型有可用更新</string>
+    <string name="scanner_models_update_summary">目前模型可以繼續使用。現在下載 %1$s 的更新？</string>
+    <string name="scanner_models_download_size">下載大小：%1$s</string>
+    <string name="scanner_models_download_action">下載</string>
+    <string name="scanner_models_downloading">正在下載掃描模型…</string>
+    <string name="scanner_models_failed">掃描模型下載失敗</string>
+    <string name="scanner_models_offline_cache">目前離線，正在使用已下載的掃描模型</string>
     <string name="scanner_error_title">找不到相符的歌曲</string>
     <string name="scanner_photo_saved">照片已儲存</string>
     <string name="scanner_photo_error">照片儲存失敗</string>

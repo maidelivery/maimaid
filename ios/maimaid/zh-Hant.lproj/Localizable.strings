@@ -52,6 +52,19 @@
 "scanner.library.hint" = "從相簿匯入照片進行識別。";
 "scanner.photo.saved" = "已儲存至 maimai 相簿";
 "scanner.photo.error" = "照片儲存失敗";
+"scanner.models.checking" = "正在檢查掃描模型…";
+"scanner.models.required" = "需要下載掃描模型";
+"scanner.models.download.title" = "下載掃描模型？";
+"scanner.models.download.summary %@" = "下載 %@ 後即可在本機辨識圖片。";
+"scanner.models.update.title" = "掃描模型有可用更新";
+"scanner.models.update.summary %@" = "目前模型可以繼續使用。現在下載 %@ 的更新？";
+"scanner.models.size %@" = "下載大小：%@";
+"scanner.models.download.action" = "下載";
+"scanner.models.downloading" = "正在下載掃描模型…";
+"scanner.models.failed" = "掃描模型下載失敗";
+"scanner.models.cancel" = "取消";
+"scanner.models.retry" = "重試";
+"scanner.models.offline.cache" = "目前離線，正在使用已下載的掃描模型";
 
 // MARK: - Settings
 "settings.title" = "設定";

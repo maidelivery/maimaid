@@ -6,51 +6,14 @@ import Foundation
 /// Processor that encapsulates the logic for parsing Maimai scores using CoreML model.
 nonisolated final class MLScoreProcessor {
     nonisolated(unsafe) static let shared = MLScoreProcessor()
-    
-    // The compiled CoreML model
-    private let visionModel: VNCoreMLModel?
-    
-    private init() {
-        self.visionModel = Self.loadModel()
-    }
-    
-    // MARK: - Setup
-    
-    private static func loadModel() -> VNCoreMLModel? {
-        do {
-            let config = MLModelConfiguration()
-            config.computeUnits = .all
-            
-            if let modelURL = Bundle.main.url(forResource: "maimaid v1.41n", withExtension: "mlmodelc") {
-                let mlModel = try MLModel(contentsOf: modelURL, configuration: config)
-                let visionModel = try VNCoreMLModel(for: mlModel)
-                print("MLScoreProcessor: Successfully loaded maimaid v1.41n model from mlmodelc.")
-                return visionModel
-            } else if let modelURL = Bundle.main.url(forResource: "maimaid v1.4n", withExtension: "mlmodelc") {
-                let mlModel = try MLModel(contentsOf: modelURL, configuration: config)
-                let visionModel = try VNCoreMLModel(for: mlModel)
-                print("MLScoreProcessor: Loaded fallback maimaid v1.4n model.")
-                return visionModel
-            } else if let urls = Bundle.main.urls(forResourcesWithExtension: "mlmodelc", subdirectory: nil),
-                      let first = urls.first(where: { $0.lastPathComponent.contains("maimaid") && !$0.lastPathComponent.contains("distinguish") && !$0.lastPathComponent.contains("choose") }) {
-                print("MLScoreProcessor: Loaded fallback model \(first.lastPathComponent)")
-                let mlModel = try MLModel(contentsOf: first, configuration: config)
-                return try VNCoreMLModel(for: mlModel)
-            } else {
-                print("MLScoreProcessor: No maimaid score model found in bundle. Check Target Membership.")
-                return nil
-            }
-        } catch {
-            print("MLScoreProcessor: Error loading model - \(error)")
-            return nil
-        }
-    }
+    private init() {}
     
     // MARK: - Processing
     
     /// Processes an image using object detection and targeted OCR.
-    func process(_ image: UIImage) async -> MLScoreResult {
+    func process(_ image: UIImage) async throws -> MLScoreResult {
         let normalizedImage = await MainActor.run { image.normalized() }
+        let visionModel = try await MLModelStore.shared.model(for: .score)
         return Self.processSynchronously(normalizedImage, visionModel: visionModel)
     }
     

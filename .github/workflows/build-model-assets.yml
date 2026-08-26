@@ -1,0 +1,87 @@
+name: Build vision model assets
+
+"on":
+  push:
+    paths:
+      - model-assets/android/**
+      - model-assets/ios/*.mlpackage/**
+      - scripts/build-model-assets.mjs
+      - models-worker/**
+      - .github/workflows/build-model-assets.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-model-assets
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build model manifest
+        run: node scripts/build-model-assets.mjs
+
+      - name: Validate manifest
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const entries = JSON.parse(fs.readFileSync('models-worker/public/manifest.json', 'utf8'));
+          if (entries.length !== 8) throw new Error(`Expected 8 model entries, got ${entries.length}`);
+          for (const entry of entries) {
+            if (!/^[^/]+$/.test(entry.filename) || !/^[a-f0-9]{64}$/.test(entry.sha256) || !Number.isSafeInteger(entry.size) || entry.size <= 0) {
+              throw new Error(`Invalid manifest entry: ${JSON.stringify(entry)}`);
+            }
+            const file = fs.readFileSync(`models-worker/public/${entry.filename}`);
+            if (file.length !== entry.size) throw new Error(`Size mismatch: ${entry.filename}`);
+            if (crypto.createHash('sha256').update(file).digest('hex') !== entry.sha256) throw new Error(`Digest mismatch: ${entry.filename}`);
+          }
+          NODE
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Wrangler
+        run: pnpm dlx wrangler@4.123.0 --version
+
+      - name: Deploy model Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          : "${CLOUDFLARE_API_TOKEN:?Missing secret CLOUDFLARE_API_TOKEN}"
+          : "${CLOUDFLARE_ACCOUNT_ID:?Missing secret CLOUDFLARE_ACCOUNT_ID}"
+          pnpm dlx wrangler@4.123.0 deploy --config models-worker/wrangler.jsonc
+
+      - name: Verify remote manifest and files
+        run: |
+          set -euo pipefail
+          curl --fail --retry 5 --retry-all-errors https://models.rhythmeta.org/manifest.json -o /tmp/models-manifest.json
+          node <<'NODE'
+          const fs = require('node:fs');
+          const local = JSON.parse(fs.readFileSync('models-worker/public/manifest.json', 'utf8'));
+          const remote = JSON.parse(fs.readFileSync('/tmp/models-manifest.json', 'utf8'));
+          if (JSON.stringify(local) !== JSON.stringify(remote)) throw new Error('Remote manifest differs from local manifest');
+          NODE
+          while IFS= read -r row; do
+            filename="$(printf '%s' "$row" | cut -f1)"
+            size="$(printf '%s' "$row" | cut -f2)"
+            sha256="$(printf '%s' "$row" | cut -f3)"
+            remote_path="/tmp/${filename}"
+            curl --fail --retry 5 --retry-all-errors "https://models.rhythmeta.org/${filename}" -o "${remote_path}"
+            test "$(stat -c '%s' "${remote_path}")" = "${size}"
+            printf '%s  %s\n' "${sha256}" "${remote_path}" | sha256sum --check --status
+          done < <(node -e 'for (const e of require("./models-worker/public/manifest.json")) console.log(`${e.filename}\t${e.size}\t${e.sha256}`)')

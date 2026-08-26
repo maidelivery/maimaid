@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.graphics.Paint
+import android.text.format.Formatter
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -82,9 +83,15 @@ import org.rhythmeta.maimaid.ui.song.ScoreEntrySheet
 import org.rhythmeta.maimaid.ui.song.SheetScoreUiState
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -108,6 +115,7 @@ fun ScannerScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val cameraController = remember { ScannerCameraController() }
     val scope = rememberCoroutineScope()
+    var modelPromptDismissed by remember { mutableStateOf(false) }
     var cameraPermissionGranted by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
     }
@@ -141,6 +149,13 @@ fun ScannerScreen(
 
     LaunchedEffect(songs, sheets, aliases, server) {
         viewModel.updateCatalog(songs, sheets, aliases, server)
+    }
+    LaunchedEffect(state.modelState) {
+        if (state.modelState is ScannerModelState.DownloadRequired ||
+            state.modelState is ScannerModelState.UpdateAvailable
+        ) {
+            modelPromptDismissed = false
+        }
     }
     LaunchedEffect(enabled, cameraPermissionGranted) {
         if (enabled && !cameraPermissionGranted) permissionLauncher.launch(Manifest.permission.CAMERA)
@@ -198,6 +213,14 @@ fun ScannerScreen(
 
         ScannerStatusOverlay(
             state = state,
+            modifier = Modifier.align(Alignment.Center),
+        )
+
+        ScannerModelGate(
+            modelState = state.modelState,
+            onDownload = viewModel::downloadModels,
+            onRetry = viewModel::downloadModels,
+            onCancel = viewModel::cancelModelDownload,
             modifier = Modifier.align(Alignment.Center),
         )
 
@@ -285,6 +308,136 @@ fun ScannerScreen(
             onDismiss = viewModel::dismissScoreEntry,
         )
     }
+
+    val promptState = state.modelState
+    if (!modelPromptDismissed &&
+        (promptState is ScannerModelState.DownloadRequired || promptState is ScannerModelState.UpdateAvailable)
+    ) {
+        val isUpdate = promptState is ScannerModelState.UpdateAvailable
+        val totalBytes = when (promptState) {
+            is ScannerModelState.DownloadRequired -> promptState.totalBytes
+            is ScannerModelState.UpdateAvailable -> promptState.totalBytes
+        }
+        WindowDialog(
+            show = true,
+            title = stringResource(
+                if (isUpdate) R.string.scanner_models_update_title
+                else R.string.scanner_models_download_title,
+            ),
+            summary = stringResource(
+                if (isUpdate) R.string.scanner_models_update_summary
+                else R.string.scanner_models_download_summary,
+                Formatter.formatShortFileSize(context, totalBytes),
+            ),
+            onDismissRequest = { modelPromptDismissed = true },
+        ) {
+            TextButton(
+                text = stringResource(R.string.action_cancel),
+                onClick = { modelPromptDismissed = true },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.size(10.dp))
+            Button(
+                onClick = {
+                    modelPromptDismissed = true
+                    viewModel.downloadModels()
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColorsPrimary(),
+            ) {
+                Text(stringResource(R.string.scanner_models_download_action))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScannerModelGate(
+    modelState: ScannerModelState,
+    onDownload: () -> Unit,
+    onRetry: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val blocksRecognition = when (modelState) {
+        is ScannerModelState.Checking -> !modelState.cachedModelsAvailable
+        is ScannerModelState.DownloadRequired -> true
+        is ScannerModelState.Downloading -> !modelState.isUpdate
+        is ScannerModelState.Failed -> !modelState.cachedModelsAvailable
+        is ScannerModelState.Ready,
+        is ScannerModelState.UpdateAvailable,
+        -> false
+    }
+    val shouldShow = blocksRecognition ||
+        modelState is ScannerModelState.Downloading ||
+        modelState is ScannerModelState.Failed
+    if (!shouldShow) return
+
+    Column(
+        modifier = modifier
+            .padding(horizontal = 28.dp)
+            .fillMaxWidth()
+            .squircleSurface(Color.Black.copy(alpha = 0.72f), 16.dp, SquircleExtension)
+            .padding(18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        when (modelState) {
+            is ScannerModelState.Checking -> {
+                CircularProgressIndicator(size = 24.dp, strokeWidth = 2.dp)
+                Text(stringResource(R.string.scanner_models_checking), color = Color.White)
+            }
+            is ScannerModelState.DownloadRequired -> {
+                Text(stringResource(R.string.scanner_models_required), color = Color.White)
+                Text(
+                    stringResource(
+                        R.string.scanner_models_download_size,
+                        Formatter.formatShortFileSize(context, modelState.totalBytes),
+                    ),
+                    color = Color.White.copy(alpha = 0.72f),
+                )
+                Button(onClick = onDownload, colors = ButtonDefaults.buttonColorsPrimary()) {
+                    Text(stringResource(R.string.scanner_models_download_action))
+                }
+            }
+            is ScannerModelState.Downloading -> {
+                Text(stringResource(R.string.scanner_models_downloading), color = Color.White)
+                LinearProgressIndicator(
+                    progress = modelState.progress.fraction,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                        foregroundColor = MiuixTheme.colorScheme.primary,
+                        backgroundColor = Color.White.copy(alpha = 0.16f),
+                    ),
+                )
+                Text(
+                    stringResource(
+                        R.string.catalog_sync_byte_progress,
+                        Formatter.formatShortFileSize(context, modelState.progress.downloadedBytes),
+                        Formatter.formatShortFileSize(context, modelState.progress.totalBytes),
+                    ),
+                    color = Color.White.copy(alpha = 0.72f),
+                )
+                TextButton(text = stringResource(R.string.action_cancel), onClick = onCancel)
+            }
+            is ScannerModelState.Failed -> {
+                Text(stringResource(R.string.scanner_models_failed), color = Color.White)
+                Text(
+                    modelState.message,
+                    color = Color.White.copy(alpha = 0.72f),
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Button(onClick = onRetry, colors = ButtonDefaults.buttonColorsPrimary()) {
+                    Text(stringResource(R.string.action_retry))
+                }
+            }
+            is ScannerModelState.Ready,
+            is ScannerModelState.UpdateAvailable,
+            -> Unit
+        }
+    }
 }
 
 @Composable
@@ -321,6 +474,7 @@ private fun ScannerStatusOverlay(state: ScannerUiState, modifier: Modifier = Mod
         state.message == ScannerMessage.RecognitionFailed -> stringResource(R.string.scanner_error_title)
         state.message == ScannerMessage.PhotoSaved -> stringResource(R.string.scanner_photo_saved)
         state.message == ScannerMessage.PhotoSaveFailed -> stringResource(R.string.scanner_photo_error)
+        state.message == ScannerMessage.OfflineModels -> stringResource(R.string.scanner_models_offline_cache)
         else -> null
     }
     AnimatedVisibility(

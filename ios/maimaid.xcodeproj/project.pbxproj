@@ -7,19 +7,24 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3728607A2F604BC70028E788 /* maimaid v1.41n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 372860792F604BC70028E788 /* maimaid v1.41n.mlpackage */; };
-		373DA3D92F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */; };
-		373DA3E52F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */; };
 		37D90C31303E0AB600214267 /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = 37D90C30303E0AB600214267 /* SwiftProtobuf */; };
 		37D90C33303E0AB600214267 /* SwiftProtobufPluginLibrary in Frameworks */ = {isa = PBXBuildFile; productRef = 37D90C32303E0AB600214267 /* SwiftProtobufPluginLibrary */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		A10000013B00000100000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 375868E12F4C78EB006316F5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 375868E82F4C78EB006316F5;
+			remoteInfo = maimaid;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		3703C0013B00000100000001 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
-		372860792F604BC70028E788 /* maimaid v1.41n.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaid v1.41n.mlpackage"; sourceTree = "<group>"; };
-		373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaidetector v1.2n.mlpackage"; sourceTree = "<group>"; };
-		373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "maimaidistinguish v1.2.mlpackage"; sourceTree = "<group>"; };
 		37C9C3DD2F4CDAAB002CBF7A /* maimaid.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = maimaid.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000013B00000100000002 /* maimaidTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = maimaidTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -41,6 +46,11 @@
 			path = maimaid;
 			sourceTree = "<group>";
 		};
+		A10000013B00000100000003 /* maimaidTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = maimaidTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -50,6 +60,13 @@
 			files = (
 				37D90C33303E0AB600214267 /* SwiftProtobufPluginLibrary in Frameworks */,
 				37D90C31303E0AB600214267 /* SwiftProtobuf in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000013B00000100000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -64,23 +81,14 @@
 			path = Config;
 			sourceTree = "<group>";
 		};
-		370E0E492F65C18C0066B825 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
 		375868E02F4C78EB006316F5 = {
 			isa = PBXGroup;
 			children = (
 				375868EB2F4C78EB006316F5 /* maimaid */,
+				A10000013B00000100000003 /* maimaidTests */,
 				3703C0013B00000100000003 /* Config */,
 				37C9C3DD2F4CDAAB002CBF7A /* maimaid.app */,
-				372860792F604BC70028E788 /* maimaid v1.41n.mlpackage */,
-				373DA3D82F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage */,
-				373DA3E42F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage */,
-				370E0E492F65C18C0066B825 /* Frameworks */,
+				A10000013B00000100000002 /* maimaidTests.xctest */,
 			);
 			sourceTree = "<group>";
 		};
@@ -112,6 +120,29 @@
 			productReference = 37C9C3DD2F4CDAAB002CBF7A /* maimaid.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A10000013B00000100000005 /* maimaidTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000013B0000010000000A /* Build configuration list for PBXNativeTarget "maimaidTests" */;
+			buildPhases = (
+				A10000013B00000100000006 /* Sources */,
+				A10000013B00000100000004 /* Frameworks */,
+				A10000013B00000100000007 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10000013B00000100000008 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A10000013B00000100000003 /* maimaidTests */,
+			);
+			name = maimaidTests;
+			packageProductDependencies = (
+			);
+			productName = maimaidTests;
+			productReference = A10000013B00000100000002 /* maimaidTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -124,6 +155,10 @@
 				TargetAttributes = {
 					375868E82F4C78EB006316F5 = {
 						CreatedOnToolsVersion = 26.3;
+					};
+					A10000013B00000100000005 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 375868E82F4C78EB006316F5;
 					};
 				};
 			};
@@ -148,12 +183,20 @@
 			projectRoot = "";
 			targets = (
 				375868E82F4C78EB006316F5 /* maimaid */,
+				A10000013B00000100000005 /* maimaidTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		37C9ADBF2F4CC4C2002CBF7A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000013B00000100000007 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -186,13 +229,25 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3728607A2F604BC70028E788 /* maimaid v1.41n.mlpackage in Sources */,
-				373DA3D92F5DCF5B00DC93C0 /* maimaidetector v1.2n.mlpackage in Sources */,
-				373DA3E52F5FAD2900DC93C0 /* maimaidistinguish v1.2.mlpackage in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000013B00000100000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A10000013B00000100000008 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 375868E82F4C78EB006316F5 /* maimaid */;
+			targetProxy = A10000013B00000100000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		375868F82F4C78EC006316F5 /* Debug */ = {
@@ -228,7 +283,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
@@ -283,7 +338,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
@@ -430,6 +485,47 @@
 			};
 			name = Release;
 		};
+		A10000013B0000010000000B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 375Q3RU4Z3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.rhythmeta.maimaidTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/maimaid.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/maimaid";
+			};
+			name = Debug;
+		};
+		A10000013B0000010000000C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 375Q3RU4Z3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.rhythmeta.maimaidTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/maimaid.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/maimaid";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -447,6 +543,15 @@
 			buildConfigurations = (
 				375868F82F4C78EC006316F5 /* Debug */,
 				375868F92F4C78EC006316F5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000013B0000010000000A /* Build configuration list for PBXNativeTarget "maimaidTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000013B0000010000000B /* Debug */,
+				A10000013B0000010000000C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

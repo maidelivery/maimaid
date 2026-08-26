@@ -1,6 +1,5 @@
 package org.rhythmeta.maimaid.core.ml
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -10,6 +9,7 @@ import android.graphics.RectF
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
+import java.io.File
 import java.nio.FloatBuffer
 import kotlinx.serialization.json.Json
 import kotlin.math.ceil
@@ -22,14 +22,10 @@ internal data class OcrText(
 )
 
 internal class PaddleTextRecognizer(
-    context: Context,
     private val session: OrtSession,
-    characterAssetPath: String,
+    characterFile: File,
 ) {
-    private val characters: List<String> = context.assets
-        .open(characterAssetPath)
-        .bufferedReader()
-        .use { reader -> Json.decodeFromString<List<String>>(reader.readText()) } + " "
+    private val characters = loadPaddleCharacters(characterFile)
 
     fun recognize(
         bitmap: Bitmap,
@@ -135,3 +131,8 @@ internal class PaddleTextRecognizer(
         const val BlankIndex = 0
     }
 }
+
+internal fun loadPaddleCharacters(characterFile: File): List<String> = characterFile
+    .inputStream()
+    .bufferedReader()
+    .use { reader -> Json.decodeFromString<List<String>>(reader.readText()) } + " "

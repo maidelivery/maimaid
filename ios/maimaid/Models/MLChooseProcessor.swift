@@ -6,57 +6,25 @@ import Foundation
 /// Processor that encapsulates the logic for parsing Maimai song choice screens using CoreML model.
 nonisolated final class MLChooseProcessor {
     nonisolated(unsafe) static let shared = MLChooseProcessor()
-    
-    // The compiled CoreML model
-    private let visionModel: VNCoreMLModel?
-    
-    private init() {
-        self.visionModel = Self.loadModel()
-    }
-    
-    // MARK: - Setup
-    
-    private static func loadModel() -> VNCoreMLModel? {
-        do {
-            let config = MLModelConfiguration()
-            config.computeUnits = .all
-            
-            // Try specific version first
-            if let modelURL = Bundle.main.url(forResource: "maimaidetector v1.2n", withExtension: "mlmodelc") {
-                let mlModel = try MLModel(contentsOf: modelURL, configuration: config)
-                let visionModel = try VNCoreMLModel(for: mlModel)
-                print("MLChooseProcessor: Successfully loaded maimaidetector v1.2n model.")
-                return visionModel
-            } else if let urls = Bundle.main.urls(forResourcesWithExtension: "mlmodelc", subdirectory: nil), let first = urls.first(where: { $0.lastPathComponent.contains("maimaidetector") }) {
-                print("MLChooseProcessor: Successfully loaded fallback model \(first.lastPathComponent)")
-                let mlModel = try MLModel(contentsOf: first, configuration: config)
-                return try VNCoreMLModel(for: mlModel)
-            } else {
-                print("MLChooseProcessor: maimaidetector model not found in bundle. Check Target Membership.")
-                return nil
-            }
-        } catch {
-            print("MLChooseProcessor: Error loading maimaidetector model - \(error)")
-            return nil
-        }
-    }
+    private init() {}
     
     // MARK: - Processing
     
     /// Processes an image using `maimaidetector` object detection and targeted OCR.
-    func process(_ image: UIImage) async -> MLChooseResult {
+    func process(_ image: UIImage) async throws -> MLChooseResult {
         let normalizedImage = await MainActor.run { image.normalized() }
+        let visionModel = try await MLModelStore.shared.model(for: .detector)
         return Self.processSynchronously(normalizedImage, visionModel: visionModel)
     }
     
     private static func processSynchronously(_ image: UIImage, visionModel: VNCoreMLModel?) -> MLChooseResult {
         var result = MLChooseResult()
         
-        guard let cgImage = image.cgImage, let vnModel = visionModel else {
+        guard let cgImage = image.cgImage, let visionModel else {
             return result
         }
         
-        let request = VNCoreMLRequest(model: vnModel)
+        let request = VNCoreMLRequest(model: visionModel)
         request.imageCropAndScaleOption = .scaleFit
         let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up, options: [:])
         

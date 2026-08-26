@@ -11,6 +11,7 @@
     "build:json:songid": "node scripts/build-songid-json.mjs",
     "build:json:utage": "node scripts/build-utage-chart-stats-json.mjs",
     "build:json": "pnpm run build:json:songid && pnpm run build:json:utage",
+    "build:model-assets": "node scripts/build-model-assets.mjs",
     "list:ios": "nx run ios:list",
     "clean:ios": "nx run ios:clean",
     "build:ios": "nx run ios:build",

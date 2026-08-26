@@ -156,6 +156,17 @@
     <string name="scanner_camera_permission_action">允许使用相机</string>
     <string name="scanner_processing">正在识别图片…</string>
     <string name="scanner_model_error">扫描模型加载失败</string>
+    <string name="scanner_models_checking">正在检查扫描模型…</string>
+    <string name="scanner_models_required">需要下载扫描模型</string>
+    <string name="scanner_models_download_title">下载扫描模型？</string>
+    <string name="scanner_models_download_summary">下载 %1$s 后即可在本地识别图片。</string>
+    <string name="scanner_models_update_title">扫描模型有可用更新</string>
+    <string name="scanner_models_update_summary">当前模型可以继续使用。现在下载 %1$s 的更新？</string>
+    <string name="scanner_models_download_size">下载大小：%1$s</string>
+    <string name="scanner_models_download_action">下载</string>
+    <string name="scanner_models_downloading">正在下载扫描模型…</string>
+    <string name="scanner_models_failed">扫描模型下载失败</string>
+    <string name="scanner_models_offline_cache">当前离线，正在使用已下载的扫描模型</string>
     <string name="scanner_error_title">没有找到匹配的歌曲</string>
     <string name="scanner_photo_saved">照片已保存</string>
     <string name="scanner_photo_error">照片保存失败</string>

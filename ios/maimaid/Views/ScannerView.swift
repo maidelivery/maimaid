@@ -320,6 +320,7 @@ struct ScannerView: View {
     @State private var feedbackDismissTask: Task<Void, Never>? = nil
     @State private var frameAnalysisTask: Task<Void, Never>? = nil
     @State private var pendingFrameImage: UIImage? = nil
+    @State private var modelController = ScannerModelDownloadController()
     
     private var resolvedCurrentScoreSheet: Sheet? {
         guard let song = recognizedSong else { return nil }
@@ -345,7 +346,9 @@ struct ScannerView: View {
     }
     
     var body: some View {
-        NavigationStack {
+        @Bindable var downloadController = modelController
+
+        return NavigationStack {
             ZStack {
                 CameraPreviewView(
                     onImageCaptured: handleCameraFrame,
@@ -419,6 +422,13 @@ struct ScannerView: View {
                     }
                     resultView()
                 }
+
+                ScannerModelDownloadView(
+                    state: modelController.state,
+                    download: modelController.download,
+                    retry: modelController.download,
+                    cancel: modelController.cancelDownload
+                )
             }
             .sheet(isPresented: $isShowingScoreEntry, onDismiss: {
                 resetScanner()
@@ -436,8 +446,48 @@ struct ScannerView: View {
                 frameAnalysisTask?.cancel()
                 frameAnalysisTask = nil
                 pendingFrameImage = nil
+                modelController.cancelDownload()
             }
         }
+        .task {
+            modelController.check()
+        }
+        .onChange(of: modelController.state) { _, state in
+            if case .ready(offline: true) = state {
+                showFeedback(String(localized: "scanner.models.offline.cache"))
+            }
+        }
+        .confirmationDialog(
+            modelPromptTitle,
+            isPresented: $downloadController.isShowingPrompt,
+            titleVisibility: .visible
+        ) {
+            Button("scanner.models.download.action", systemImage: "arrow.down.circle") {
+                modelController.download()
+            }
+            Button("scanner.models.cancel", role: .cancel) {}
+        } message: {
+            Text(modelPromptMessage)
+        }
+    }
+
+    private var modelPromptTitle: LocalizedStringKey {
+        if case .updateAvailable = modelController.state {
+            return "scanner.models.update.title"
+        }
+        return "scanner.models.download.title"
+    }
+
+    private var modelPromptMessage: String {
+        let totalBytes: Int64 = switch modelController.state {
+        case let .downloadRequired(totalBytes), let .updateAvailable(totalBytes): totalBytes
+        case .checking, .downloading, .ready, .failed: 0
+        }
+        let size = totalBytes.formatted(.byteCount(style: .file))
+        if case .updateAvailable = modelController.state {
+            return String(localized: "scanner.models.update.summary \(size)")
+        }
+        return String(localized: "scanner.models.download.summary \(size)")
     }
 
     private func handleCollectionQRCode(_ value: String) {
@@ -461,6 +511,7 @@ struct ScannerView: View {
     // MARK: - Photo Processing
     
     private func processSelectedPhoto(_ item: PhotosPickerItem) async {
+        guard modelController.canRecognize else { return }
         isProcessingPhoto = true
         photoImportFeedback = nil
         
@@ -471,10 +522,26 @@ struct ScannerView: View {
             return
         }
         
-        let imageType = await MLDistinguishProcessor.shared.classify(image)
+        let imageType: MaimaiImageType
+        do {
+            imageType = try await MLDistinguishProcessor.shared.classify(image)
+        } catch {
+            isProcessingPhoto = false
+            await modelController.reportRuntimeFailure(error)
+            showFeedback(error.localizedDescription)
+            return
+        }
         
         if imageType == .choose {
-            let recognition = await MLChooseProcessor.shared.process(image)
+            let recognition: MLChooseResult
+            do {
+                recognition = try await MLChooseProcessor.shared.process(image)
+            } catch {
+                isProcessingPhoto = false
+                await modelController.reportRuntimeFailure(error)
+                showFeedback(error.localizedDescription)
+                return
+            }
             var matchedSongs: [Song] = []
             var seenIds = Set<String>()
             var allCandidates = recognition.titleCandidates
@@ -524,7 +591,15 @@ struct ScannerView: View {
                 showFeedback(String(localized: "scanner.error.title"))
             }
         } else {
-            let recognition = await MLScoreProcessor.shared.process(image)
+            let recognition: MLScoreResult
+            do {
+                recognition = try await MLScoreProcessor.shared.process(image)
+            } catch {
+                isProcessingPhoto = false
+                await modelController.reportRuntimeFailure(error)
+                showFeedback(error.localizedDescription)
+                return
+            }
             let matchedSongs = matchSongsWithFilters(titleCandidates: recognition.titleCandidates, title: recognition.title, difficulty: recognition.difficulty, level: recognition.level, maxCombo: recognition.maxCombo, dxScore: recognition.dxScore, maxDxScore: recognition.maxDxScore, type: recognition.type, kanji: recognition.kanji)
             
             isProcessingPhoto = false
@@ -948,6 +1023,8 @@ struct ScannerView: View {
                     .padding(10)
                     .background(.ultraThinMaterial, in: Circle())
             }
+            .disabled(!modelController.canRecognize)
+            .opacity(modelController.canRecognize ? 1 : 0.5)
             .accessibilityLabel(Text("scanner.library.button"))
             .accessibilityHint(Text("scanner.library.hint"))
         }
@@ -1013,7 +1090,7 @@ struct ScannerView: View {
     // MARK: - Camera Frame Handling
     
     private func handleCameraFrame(_ image: UIImage) {
-        guard !isShowingScoreEntry else { return }
+        guard !isShowingScoreEntry, modelController.canRecognize else { return }
         pendingFrameImage = image
         
         guard frameAnalysisTask == nil else { return }
@@ -1035,7 +1112,14 @@ struct ScannerView: View {
     private func analyzeCameraFrame(_ image: UIImage) async {
         guard !isShowingScoreEntry else { return }
         
-        let imageType = await MLDistinguishProcessor.shared.classify(image)
+        guard modelController.canRecognize else { return }
+        let imageType: MaimaiImageType
+        do {
+            imageType = try await MLDistinguishProcessor.shared.classify(image)
+        } catch {
+            await modelController.reportRuntimeFailure(error)
+            return
+        }
         guard !Task.isCancelled, !isShowingScoreEntry else { return }
         
         if imageType == .unknown {
@@ -1044,7 +1128,13 @@ struct ScannerView: View {
         }
         
         if imageType == .choose {
-            let recognition = await MLChooseProcessor.shared.process(image)
+            let recognition: MLChooseResult
+            do {
+                recognition = try await MLChooseProcessor.shared.process(image)
+            } catch {
+                await modelController.reportRuntimeFailure(error)
+                return
+            }
             guard !Task.isCancelled, !isShowingScoreEntry else { return }
             
             var frameMatches: [String] = []
@@ -1066,7 +1156,13 @@ struct ScannerView: View {
             }
             updateUIWithResults(songIds: frameMatches, rate: nil, diff: nil, type: nil, dxScore: nil, maxDxScore: nil, fc: nil, fs: nil, boxes: recognition.boxes, imageClass: .choose, level: nil, maxCombo: nil, kanji: nil)
         } else {
-            let recognition = await MLScoreProcessor.shared.process(image)
+            let recognition: MLScoreResult
+            do {
+                recognition = try await MLScoreProcessor.shared.process(image)
+            } catch {
+                await modelController.reportRuntimeFailure(error)
+                return
+            }
             guard !Task.isCancelled, !isShowingScoreEntry else { return }
             
             let matchedSongIds = matchSongsForCameraFrame(titleCandidates: recognition.titleCandidates, title: recognition.title, difficulty: recognition.difficulty, level: recognition.level, maxCombo: recognition.maxCombo, dxScore: recognition.dxScore, maxDxScore: recognition.maxDxScore, type: recognition.type, kanji: recognition.kanji)

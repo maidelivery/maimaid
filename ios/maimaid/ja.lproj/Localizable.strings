@@ -52,6 +52,19 @@
 "scanner.library.hint" = "認識のためにライブラリから写真をインポートします。";
 "scanner.photo.saved" = "maimaiアルバムに保存しました";
 "scanner.photo.error" = "写真の保存に失敗しました";
+"scanner.models.checking" = "スキャンモデルを確認中…";
+"scanner.models.required" = "スキャンモデルのダウンロードが必要です";
+"scanner.models.download.title" = "スキャンモデルをダウンロードしますか？";
+"scanner.models.download.summary %@" = "%@ をダウンロードすると、端末上で画像認識を利用できます。";
+"scanner.models.update.title" = "スキャンモデルの更新があります";
+"scanner.models.update.summary %@" = "現在のモデルは引き続き利用できます。%@ の更新をダウンロードしますか？";
+"scanner.models.size %@" = "ダウンロードサイズ：%@";
+"scanner.models.download.action" = "ダウンロード";
+"scanner.models.downloading" = "スキャンモデルをダウンロード中…";
+"scanner.models.failed" = "スキャンモデルのダウンロードに失敗しました";
+"scanner.models.cancel" = "キャンセル";
+"scanner.models.retry" = "再試行";
+"scanner.models.offline.cache" = "オフラインでダウンロード済みのスキャンモデルを使用中です";
 
 // MARK: - Settings
 "settings.title" = "設定";

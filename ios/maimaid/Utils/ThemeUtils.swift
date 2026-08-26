@@ -47,6 +47,7 @@ enum BundleInfoKeys {
     static let backendURL = "BACKEND_URL"
     static let backendAuthURL = "BACKEND_AUTH_URL"
     static let staticAssetsURL = "STATIC_ASSETS_URL"
+    static let modelAssetsURL = "MODEL_ASSETS_URL"
 }
 
 enum AppInfo {

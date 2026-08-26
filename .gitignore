@@ -14,6 +14,8 @@ backend/.env.docker.local
 
 static-worker/public/
 static-worker/.wrangler/
+models-worker/public/
+models-worker/.wrangler/
 
 # Xcode user-local files
 **/xcuserdata/

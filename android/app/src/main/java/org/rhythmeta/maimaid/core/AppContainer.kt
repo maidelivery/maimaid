@@ -36,6 +36,7 @@ import org.rhythmeta.maimaid.core.data.ScoreSyncService
 import org.rhythmeta.maimaid.core.data.SongCollectionRepository
 import org.rhythmeta.maimaid.core.database.MaimaidDatabase
 import org.rhythmeta.maimaid.core.ml.OnnxSessionFactory
+import org.rhythmeta.maimaid.core.ml.RemoteModelStore
 import org.rhythmeta.maimaid.core.network.BackendApiClient
 import org.rhythmeta.maimaid.core.network.StaticBundleClient
 import org.rhythmeta.maimaid.widget.WidgetUpdateCoordinator
@@ -66,7 +67,12 @@ class AppContainer(context: Context) {
     val widgetUpdateCoordinator = WidgetUpdateCoordinator(applicationContext)
 
     val appPreferencesRepository = AppPreferencesRepository(applicationContext)
-    val onnxSessionFactory = OnnxSessionFactory(applicationContext)
+    val remoteModelStore = RemoteModelStore(
+        context = applicationContext,
+        baseUrl = BuildConfig.MODEL_ASSETS_URL,
+        json = json,
+    )
+    val onnxSessionFactory = OnnxSessionFactory(remoteModelStore)
     val coverImageStore = CoverImageStore(applicationContext)
     val presetAvatarImageStore = PresetAvatarImageStore(applicationContext)
     val profileAvatarStore = ProfileAvatarStore(applicationContext)

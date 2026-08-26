@@ -1,16 +1,13 @@
 package org.rhythmeta.maimaid.core.ml
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import ai.onnxruntime.OrtSession
 import kotlin.math.roundToInt
 
 class ScannerRecognitionEngine(
-    context: Context,
     private val sessionFactory: OnnxSessionFactory,
 ) : AutoCloseable {
-    private val applicationContext = context.applicationContext
     private var classifierSession: OrtSession? = null
     private var scoreSession: OrtSession? = null
     private var chooseSession: OrtSession? = null
@@ -56,9 +53,8 @@ class ScannerRecognitionEngine(
         }
         if (textRecognizer == null) {
             textRecognizer = PaddleTextRecognizer(
-                applicationContext,
                 requireNotNull(textSession),
-                MultilingualCharacterAssetPath,
+                sessionFactory.textCharactersFile(),
             )
         }
     }
@@ -208,7 +204,6 @@ class ScannerRecognitionEngine(
     }
 
     private companion object {
-        const val MultilingualCharacterAssetPath = "models/ocr/ppocr-v6-small-chars.json"
         val ChooseLabels = listOf("title")
         val ScoreLabels = listOf(
             "achievement", "ap", "app", "difficulty", "dx", "dxscore", "fc", "fcp",

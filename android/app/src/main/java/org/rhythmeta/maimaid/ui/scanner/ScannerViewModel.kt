@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,7 @@ import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.SongAliasEntity
 import org.rhythmeta.maimaid.core.database.SongEntity
 import org.rhythmeta.maimaid.core.ml.RecognizedRegion
+import org.rhythmeta.maimaid.core.ml.ModelAvailability
 import org.rhythmeta.maimaid.core.ml.ScannerCatalog
 import org.rhythmeta.maimaid.core.ml.ScannerMatch
 import org.rhythmeta.maimaid.core.ml.ScannerRecognitionEngine
@@ -28,6 +30,7 @@ import org.rhythmeta.maimaid.core.ml.ScannerStabilizer
 import org.rhythmeta.maimaid.ui.song.ScoreSaveStatus
 
 data class ScannerUiState(
+    val modelState: ScannerModelState = ScannerModelState.Checking(),
     val isLoadingModels: Boolean = true,
     val isProcessingPhoto: Boolean = false,
     val match: ScannerMatch? = null,
@@ -44,20 +47,129 @@ enum class ScannerMessage {
     RecognitionFailed,
     PhotoSaved,
     PhotoSaveFailed,
+    OfflineModels,
 }
 
 class ScannerViewModel(
     private val container: AppContainer,
 ) : ViewModel() {
-    private val engine = ScannerRecognitionEngine(container.applicationContext, container.onnxSessionFactory)
+    private var engine = ScannerRecognitionEngine(container.onnxSessionFactory)
     private val stabilizer = ScannerStabilizer()
     private val analysisMutex = Mutex()
+    private var modelTask: Job? = null
     private var photoResultDismissJob: Job? = null
     @Volatile
     private var liveRecognitionEnabled = true
     private var catalog = ScannerCatalog(emptyList(), emptyList(), emptyMap())
     private val mutableState = MutableStateFlow(ScannerUiState())
     val state = mutableState.asStateFlow()
+
+    init {
+        checkModels()
+    }
+
+    fun checkModels() {
+        modelTask?.cancel()
+        modelTask = viewModelScope.launch {
+            val cachedModelsAvailable = canRecognize(mutableState.value.modelState) ||
+                container.remoteModelStore.hasUsableCachedModels()
+            if (!cachedModelsAvailable) liveRecognitionEnabled = false
+            mutableState.update {
+                it.copy(modelState = ScannerModelState.Checking(cachedModelsAvailable))
+            }
+            when (val availability = container.remoteModelStore.inspect()) {
+                is ModelAvailability.Ready -> {
+                    liveRecognitionEnabled = true
+                    mutableState.update {
+                        it.copy(
+                            modelState = ScannerModelState.Ready(availability.offline),
+                            isLoadingModels = false,
+                            message = ScannerMessage.OfflineModels.takeIf { availability.offline },
+                        )
+                    }
+                }
+                is ModelAvailability.DownloadRequired -> {
+                    liveRecognitionEnabled = false
+                    mutableState.update {
+                        it.copy(
+                            modelState = ScannerModelState.DownloadRequired(availability.totalBytes),
+                            isLoadingModels = false,
+                        )
+                    }
+                }
+                is ModelAvailability.UpdateAvailable -> {
+                    liveRecognitionEnabled = true
+                    mutableState.update {
+                        it.copy(
+                            modelState = ScannerModelState.UpdateAvailable(availability.totalBytes),
+                            isLoadingModels = false,
+                        )
+                    }
+                }
+                is ModelAvailability.Failed -> {
+                    liveRecognitionEnabled = cachedModelsAvailable
+                    mutableState.update {
+                        it.copy(
+                            modelState = ScannerModelState.Failed(
+                                availability.message,
+                                cachedModelsAvailable,
+                            ),
+                            isLoadingModels = false,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun downloadModels() {
+        val previous = mutableState.value.modelState
+        val isUpdate = previous is ScannerModelState.UpdateAvailable ||
+            (previous is ScannerModelState.Failed && previous.cachedModelsAvailable)
+        modelTask?.cancel()
+        liveRecognitionEnabled = isUpdate
+        modelTask = viewModelScope.launch {
+            try {
+                container.remoteModelStore.downloadPending { progress ->
+                    mutableState.update {
+                        it.copy(modelState = ScannerModelState.Downloading(progress, isUpdate))
+                    }
+                }
+                analysisMutex.withLock {
+                    engine.close()
+                    engine = ScannerRecognitionEngine(container.onnxSessionFactory)
+                    stabilizer.reset()
+                }
+                mutableState.update {
+                    it.copy(
+                        modelState = ScannerModelState.Ready(),
+                        isLoadingModels = false,
+                        match = null,
+                        regions = emptyList(),
+                    )
+                }
+                liveRecognitionEnabled = true
+            } catch (_: CancellationException) {
+                mutableState.update { it.copy(modelState = previous) }
+                liveRecognitionEnabled = canRecognize(previous)
+            } catch (error: Exception) {
+                mutableState.update {
+                    it.copy(
+                        modelState = ScannerModelState.Failed(
+                            message = error.message ?: error::class.java.simpleName,
+                            cachedModelsAvailable = isUpdate,
+                        ),
+                        isLoadingModels = false,
+                    )
+                }
+                liveRecognitionEnabled = isUpdate
+            }
+        }
+    }
+
+    fun cancelModelDownload() {
+        modelTask?.cancel()
+    }
 
     fun updateCatalog(
         songs: List<SongEntity>,
@@ -75,7 +187,7 @@ class ScannerViewModel(
     }
 
     fun analyzeLiveFrame(bitmap: Bitmap) {
-        if (!liveRecognitionEnabled ||
+        if (!liveRecognitionEnabled || !canRecognize(mutableState.value.modelState) ||
             mutableState.value.isProcessingPhoto ||
             mutableState.value.scoreEntryVisible
         ) {
@@ -106,8 +218,8 @@ class ScannerViewModel(
                         imageHeight = raw.imageHeight,
                     )
                 }
-            } catch (_: Exception) {
-                mutableState.update { it.copy(isLoadingModels = false, message = ScannerMessage.LoadFailed) }
+            } catch (error: Exception) {
+                handleRuntimeModelFailure(error)
             } finally {
                 bitmap.recycle()
                 analysisMutex.unlock()
@@ -120,6 +232,10 @@ class ScannerViewModel(
     }
 
     fun analyzePhotoWhenReady(bitmap: Bitmap) {
+        if (!canRecognize(mutableState.value.modelState)) {
+            bitmap.recycle()
+            return
+        }
         photoResultDismissJob?.cancel()
         liveRecognitionEnabled = false
         mutableState.update { it.copy(isProcessingPhoto = true, message = null) }
@@ -160,7 +276,8 @@ class ScannerViewModel(
             } else {
                 schedulePhotoResultDismissal()
             }
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            handleRuntimeModelFailure(error)
             mutableState.update {
                 it.copy(
                     isLoadingModels = false,
@@ -168,9 +285,32 @@ class ScannerViewModel(
                     message = ScannerMessage.RecognitionFailed,
                 )
             }
-            liveRecognitionEnabled = true
         } finally {
             bitmap.recycle()
+        }
+    }
+
+    private suspend fun handleRuntimeModelFailure(error: Exception) {
+        val currentModelState = mutableState.value.modelState
+        if (currentModelState is ScannerModelState.Downloading && currentModelState.isUpdate) {
+            liveRecognitionEnabled = false
+            mutableState.update { it.copy(message = ScannerMessage.LoadFailed) }
+            return
+        }
+        liveRecognitionEnabled = false
+        container.remoteModelStore.invalidateActiveModels()
+        engine.close()
+        engine = ScannerRecognitionEngine(container.onnxSessionFactory)
+        stabilizer.reset()
+        mutableState.update {
+            it.copy(
+                modelState = ScannerModelState.Failed(
+                    message = error.message ?: error::class.java.simpleName,
+                    cachedModelsAvailable = false,
+                ),
+                isLoadingModels = false,
+                message = ScannerMessage.LoadFailed,
+            )
         }
     }
 
@@ -182,8 +322,13 @@ class ScannerViewModel(
 
     private fun clearResultAndResumeLiveRecognition() {
         stabilizer.reset()
-        mutableState.update { ScannerUiState(isLoadingModels = false) }
-        liveRecognitionEnabled = true
+        mutableState.update {
+            ScannerUiState(
+                modelState = it.modelState,
+                isLoadingModels = false,
+            )
+        }
+        liveRecognitionEnabled = canRecognize(mutableState.value.modelState)
     }
 
     private fun schedulePhotoResultDismissal() {
@@ -241,6 +386,7 @@ class ScannerViewModel(
     }
 
     override fun onCleared() {
+        modelTask?.cancel()
         photoResultDismissJob?.cancel()
         engine.close()
     }
@@ -257,5 +403,16 @@ class ScannerViewModel(
 
     private companion object {
         const val PhotoResultDurationMillis = 5_000L
+
+        fun canRecognize(state: ScannerModelState): Boolean = when (state) {
+            is ScannerModelState.Ready,
+            is ScannerModelState.UpdateAvailable,
+            -> true
+            is ScannerModelState.Checking -> state.cachedModelsAvailable
+            is ScannerModelState.Downloading -> state.isUpdate
+            is ScannerModelState.Failed -> state.cachedModelsAvailable
+            is ScannerModelState.DownloadRequired,
+            -> false
+        }
     }
 }

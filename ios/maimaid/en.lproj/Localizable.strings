@@ -52,6 +52,19 @@
 "scanner.library.hint" = "Imports a photo from your library for recognition.";
 "scanner.photo.saved" = "Saved to maimai Album";
 "scanner.photo.error" = "Failed to save photo";
+"scanner.models.checking" = "Checking scanner models…";
+"scanner.models.required" = "Scanner models are required";
+"scanner.models.download.title" = "Download scanner models?";
+"scanner.models.download.summary %@" = "Download %@ to enable local image recognition.";
+"scanner.models.update.title" = "Scanner model update available";
+"scanner.models.update.summary %@" = "The current models remain available. Download the %@ update now?";
+"scanner.models.size %@" = "Download size: %@";
+"scanner.models.download.action" = "Download";
+"scanner.models.downloading" = "Downloading scanner models…";
+"scanner.models.failed" = "Scanner model download failed";
+"scanner.models.cancel" = "Cancel";
+"scanner.models.retry" = "Retry";
+"scanner.models.offline.cache" = "Using downloaded scanner models offline";
 
 // MARK: - Settings
 "settings.title" = "Settings";

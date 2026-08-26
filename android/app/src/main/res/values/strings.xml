@@ -156,6 +156,17 @@
     <string name="scanner_camera_permission_action">Allow camera access</string>
     <string name="scanner_processing">Recognizing image…</string>
     <string name="scanner_model_error">Scanner model failed to load</string>
+    <string name="scanner_models_checking">Checking scanner models…</string>
+    <string name="scanner_models_required">Scanner models are required</string>
+    <string name="scanner_models_download_title">Download scanner models?</string>
+    <string name="scanner_models_download_summary">Download %1$s to enable local image recognition.</string>
+    <string name="scanner_models_update_title">Scanner model update available</string>
+    <string name="scanner_models_update_summary">The current models remain available. Download the %1$s update now?</string>
+    <string name="scanner_models_download_size">Download size: %1$s</string>
+    <string name="scanner_models_download_action">Download</string>
+    <string name="scanner_models_downloading">Downloading scanner models…</string>
+    <string name="scanner_models_failed">Scanner model download failed</string>
+    <string name="scanner_models_offline_cache">Using downloaded scanner models offline</string>
     <string name="scanner_error_title">No matching song was found</string>
     <string name="scanner_photo_saved">Photo saved</string>
     <string name="scanner_photo_error">Photo could not be saved</string>
