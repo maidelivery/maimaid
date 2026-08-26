@@ -53,8 +53,18 @@ const contentSecurityPolicy = [
 export default function nextConfig(phase: string): NextConfig {
 	return {
 		output: "export",
+		images: {
+			unoptimized: true,
+			remotePatterns: [
+				{ protocol: "https", hostname: "maimaid-assets.rhythmeta.org" },
+				{ protocol: "https", hostname: "assets.rhythmeta.org" },
+			],
+		},
 		...(phase === PHASE_DEVELOPMENT_SERVER
 			? {
+					async rewrites() {
+						return [{ source: "/collection/:segment", destination: "/?collection=:segment" }];
+					},
 					async headers() {
 						return [
 							{

@@ -201,7 +201,8 @@ extension CameraViewController: AVCaptureMetadataOutputObjectsDelegate {
     nonisolated func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
         guard let code = metadataObjects.compactMap({ $0 as? AVMetadataMachineReadableCodeObject }).first(where: { $0.type == .qr }),
               let value = code.stringValue,
-              value.hasPrefix(SongCollectionCodec.prefix) else { return }
+              let url = URL(string: value),
+              CollectionSharingService.isCollectionLink(url) else { return }
         Task { @MainActor [weak self] in self?.onQRCodeDetected?(value) }
     }
 }

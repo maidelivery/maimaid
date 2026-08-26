@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import UIKit
 
 struct SongCollectionsView: View {
     private static var prefetchedSongsDescriptor: FetchDescriptor<Song> {
@@ -10,6 +9,7 @@ struct SongCollectionsView: View {
     }
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(CollectionImportCoordinator.self) private var collectionImportCoordinator
     @Query private var collections: [SongCollection]
     @Query private var items: [SongCollectionItem]
     @Query private var songs: [Song]
@@ -17,6 +17,8 @@ struct SongCollectionsView: View {
     @State private var showingCreate = false
     @State private var newName = ""
     @State private var sharePayload: CollectionSharePayload?
+    @State private var pendingShareCollection: SongCollection?
+    @State private var showingShareChoices = false
     @State private var feedbackMessage: String?
 
     init() {
@@ -92,7 +94,24 @@ struct SongCollectionsView: View {
             Button("profile.edit.cancel", role: .cancel) { newName = "" }
         }
         .sheet(item: $sharePayload) { payload in
-            ShareSheetView(items: [payload.text])
+            ShareSheetView(items: [payload.url])
+        }
+        .confirmationDialog(
+            "collections_share_source_title",
+            isPresented: $showingShareChoices,
+            titleVisibility: .visible
+        ) {
+            Button("collections_share_current_snapshot", action: sharePendingSnapshot)
+            Button("collections_share_cloud_latest", action: sharePendingCloud)
+            Button("profile.edit.cancel", role: .cancel) {
+                pendingShareCollection = nil
+            }
+        }
+        .onChange(of: collectionImportCoordinator.feedbackID) {
+            let message = collectionImportCoordinator.feedbackKey == "collections_import_success"
+                ? String(localized: "collections_import_success")
+                : String(localized: "collections_import_failed")
+            showFeedback(message)
         }
         .overlay(alignment: .bottom) {
             if let feedbackMessage {
@@ -166,51 +185,41 @@ struct SongCollectionsView: View {
     }
 
     private func share(_ collection: SongCollection) {
-        guard let encoded = try? SongCollectionCodec.encode(
-            collections: [collection],
-            items: items.filter { $0.collectionId == collection.id && $0.deletedAt == nil }
-        ) else { return }
-        sharePayload = CollectionSharePayload(text: encoded)
+        Task {
+            if (try? await CollectionSharingService.fetchCloudCollection(collection.id)) != nil {
+                pendingShareCollection = collection
+                showingShareChoices = true
+            } else {
+                shareSnapshot(collection)
+            }
+        }
     }
 
     private func importFromClipboard() {
-        guard let code = UIPasteboard.general.string,
-              let payload = try? SongCollectionCodec.decode(code),
-              !payload.collections.isEmpty else {
+        guard let value = UIPasteboard.general.string else {
             showFeedback(String(localized: "collections_import_failed"))
             return
         }
-        let now = Date.now
-        var importedCount = 0
-        var usedNames = Set(orderedCollections.map { $0.name })
-        for source in payload.collections {
-            let baseName = String(source.name.prefix(40))
-            let uniqueName = uniqueCollectionName(from: baseName, existingNames: usedNames)
-            let collection = SongCollection(
-                name: uniqueName,
-                sortIndex: orderedCollections.count + importedCount,
-                createdAt: now,
-                updatedAt: now,
-                clientUpdatedAt: now
-            )
-            modelContext.insert(collection)
-            usedNames.insert(uniqueName)
-            for entry in source.entries {
-                modelContext.insert(SongCollectionItem(
-                    collectionId: collection.id,
-                    songId: entry.songId,
-                    chartType: entry.chartType,
-                    difficulty: entry.difficulty,
-                    position: entry.position,
-                    createdAt: now,
-                    updatedAt: now,
-                    clientUpdatedAt: now
-                ))
-            }
-            importedCount += 1
+        Task {
+            await collectionImportCoordinator.importCollection(from: value, context: modelContext)
         }
-        try? modelContext.save()
-        showFeedback(String(localized: "collections_import_success"))
+    }
+
+    private func sharePendingSnapshot() {
+        guard let collection = pendingShareCollection else { return }
+        shareSnapshot(collection)
+        pendingShareCollection = nil
+    }
+
+    private func sharePendingCloud() {
+        guard let collection = pendingShareCollection else { return }
+        sharePayload = CollectionSharePayload(url: SongCollectionCodec.webURL(for: collection.id))
+        pendingShareCollection = nil
+    }
+
+    private func shareSnapshot(_ collection: SongCollection) {
+        guard let encoded = try? SongCollectionCodec.encode(collection: collection, items: items) else { return }
+        sharePayload = CollectionSharePayload(url: SongCollectionCodec.webURL(for: encoded))
     }
 
     private func showFeedback(_ message: String) {
@@ -239,6 +248,7 @@ struct SongCollectionDetailView: View {
     @State private var showingRename = false
     @State private var draftName = ""
     @State private var sharePayload: CollectionSharePayload?
+    @State private var showingShareChoices = false
 
     init(collection: SongCollection, songs: [Song]) {
         self.collection = collection
@@ -351,7 +361,16 @@ struct SongCollectionDetailView: View {
             Button("profile.edit.cancel", role: .cancel) {}
         }
         .sheet(item: $sharePayload) { payload in
-            ShareSheetView(items: [payload.text])
+            ShareSheetView(items: [payload.url])
+        }
+        .confirmationDialog(
+            "collections_share_source_title",
+            isPresented: $showingShareChoices,
+            titleVisibility: .visible
+        ) {
+            Button("collections_share_current_snapshot", action: shareSnapshot)
+            Button("collections_share_cloud_latest", action: shareCloud)
+            Button("profile.edit.cancel", role: .cancel) {}
         }
     }
 
@@ -437,8 +456,22 @@ struct SongCollectionDetailView: View {
     }
 
     private func share() {
-        guard let encoded = try? SongCollectionCodec.encode(collections: [collection], items: items) else { return }
-        sharePayload = CollectionSharePayload(text: encoded)
+        Task {
+            if (try? await CollectionSharingService.fetchCloudCollection(collection.id)) != nil {
+                showingShareChoices = true
+            } else {
+                shareSnapshot()
+            }
+        }
+    }
+
+    private func shareSnapshot() {
+        guard let encoded = try? SongCollectionCodec.encode(collection: collection, items: items) else { return }
+        sharePayload = CollectionSharePayload(url: SongCollectionCodec.webURL(for: encoded))
+    }
+
+    private func shareCloud() {
+        sharePayload = CollectionSharePayload(url: SongCollectionCodec.webURL(for: collection.id))
     }
 }
 
@@ -447,11 +480,6 @@ private struct SongCollectionCard: Identifiable {
     let song: Song?
     let sheet: Sheet?
     var id: UUID { item.id }
-}
-
-private struct CollectionSharePayload: Identifiable {
-    let id = UUID()
-    let text: String
 }
 
 private struct SongCollectionPreview: Identifiable {

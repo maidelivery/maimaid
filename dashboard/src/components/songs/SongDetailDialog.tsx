@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
@@ -232,6 +232,7 @@ export function SongDetailDialog({
 			<DialogContent className="max-h-[90vh] sm:max-w-6xl lg:max-w-7xl overflow-y-auto">
 				<DialogHeader>
 					<DialogTitle>{t("detailTitle")}</DialogTitle>
+					<DialogDescription className="sr-only">{song?.title ?? t("detailTitle")}</DialogDescription>
 				</DialogHeader>
 
 				{song ? (

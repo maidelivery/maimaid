@@ -60,7 +60,7 @@ class SongCollectionRepository(private val dao: SongCollectionDao) {
         }
     }
 
-    suspend fun importCollection(source: org.rhythmeta.maimaid.core.data.SongCollectionExportCollection): SongCollectionEntity {
+    suspend fun importCollection(source: SongCollectionExport): SongCollectionEntity {
         val existingCollections = dao.collectionsIncludingDeleted()
         val activeNames = existingCollections
             .asSequence()

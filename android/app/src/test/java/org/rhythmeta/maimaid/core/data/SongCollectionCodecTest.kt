@@ -6,39 +6,41 @@ import org.junit.Test
 
 class SongCollectionCodecTest {
     @Test
-    fun decodesIosRawDeflateExport() {
-        val encoded =
-            "MMD1.q1ZKVrKKrlZKBZMpSlZKuYnFJalFSjpKBUpWBjpKxUCh4vy8dKBACZCZUqFUG6ujlAlkZqYAxfKAjJDU4hKoepBcNlDI19cl3tnfx8fVOcTT3y8YKFumZGVYCwA"
+    fun decodesSharedGoldenPayloadAndPreservesEntryOrder() {
+        val payload = SongCollectionCodec.decode(GOLDEN_PAYLOAD)
 
-        val payload = SongCollectionCodec.decode(encoded)
-
-        assertEquals(1, payload.version)
-        assertEquals(SongCollectionCodec.Kind, payload.kind)
-        assertEquals(1, payload.collections.size)
-        assertEquals("Test", payload.collections.single().name)
-        assertEquals("song", payload.collections.single().entries.single().songId)
+        assertEquals("Road to SSS", payload.name)
+        assertEquals(listOf("100", "200", "300"), payload.entries.map(SongCollectionExportEntry::songId))
+        assertEquals(listOf("master", "expert", "remaster"), payload.entries.map(SongCollectionExportEntry::difficulty))
     }
 
     @Test
     fun androidEncodingRoundTripsWithRawDeflate() {
-        val collection = SongCollectionExportCollection(
-            id = "collection-id",
+        val collection = SongCollectionExport(
             name = "Test",
-            position = 0,
             entries = listOf(
                 SongCollectionExportEntry(
                     songId = "song",
                     chartType = "dx",
                     difficulty = "master",
-                    position = 0,
                 ),
             ),
         )
 
-        val encoded = SongCollectionCodec.encode(listOf(collection))
+        val encoded = SongCollectionCodec.encode(collection)
         val decoded = SongCollectionCodec.decode(encoded)
 
         assertTrue(encoded.startsWith(SongCollectionCodec.Prefix))
-        assertEquals(collection, decoded.collections.single())
+        assertEquals(collection, decoded)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsLegacyPayload() {
+        SongCollectionCodec.decode("MMD1.invalid")
+    }
+
+    private companion object {
+        const val GOLDEN_PAYLOAD =
+            "MMD2.4-IOyk9MUSjJVwgODhYS5GI2NDAQYkqpkGLLTSwuSS0SEuJiNgIKMReXpEixpVYUpBaVCAlzMRtDlXEUpUIUAgA"
     }
 }

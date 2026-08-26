@@ -58,6 +58,9 @@
     <string name="collections_copy_export_code">Copy export code</string>
     <string name="collections_share">Share</string>
     <string name="collections_share_chooser">Share</string>
+    <string name="collections_share_source_title">Share collection</string>
+    <string name="collections_share_current_snapshot">Current snapshot</string>
+    <string name="collections_share_cloud_latest">Latest cloud collection</string>
     <string name="collections_add">Add collection</string>
     <string name="collections_import_clipboard">Import from clipboard</string>
     <string name="collections_import_success">Collection imported</string>

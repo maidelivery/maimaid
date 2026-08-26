@@ -683,3 +683,7 @@
 "collections_empty" = "還沒有收藏夾";
 "collections_item_count %lld" = "%lld 個譜面";
 "collections_missing" = "目前曲庫中沒有此譜面";
+"collections_share_source_title" = "分享收藏夾";
+"collections_share_current_snapshot" = "目前快照";
+"collections_share_cloud_latest" = "雲端最新";
+"collections_import_default_name" = "匯入的收藏夾";

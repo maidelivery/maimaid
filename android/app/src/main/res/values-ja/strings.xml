@@ -58,6 +58,9 @@
     <string name="collections_copy_export_code">書き出しコードをコピー</string>
     <string name="collections_share">共有</string>
     <string name="collections_share_chooser">共有</string>
+    <string name="collections_share_source_title">コレクションを共有</string>
+    <string name="collections_share_current_snapshot">現在のスナップショット</string>
+    <string name="collections_share_cloud_latest">クラウドの最新版</string>
     <string name="collections_add">コレクションを追加</string>
     <string name="collections_import_clipboard">クリップボードから読み込む</string>
     <string name="collections_import_success">コレクションを読み込みました</string>

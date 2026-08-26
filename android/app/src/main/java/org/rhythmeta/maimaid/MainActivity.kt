@@ -27,6 +27,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         applyWidgetRoute(intent)
         dispatchAuthIntent(intent)
+        dispatchCollectionIntent(intent)
         setContent {
             val maimaidApplication = application as MaimaidApplication
             val mainViewModel: org.rhythmeta.maimaid.ui.MainViewModel = viewModel(
@@ -62,6 +63,7 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         applyWidgetRoute(intent)
         dispatchAuthIntent(intent)
+        dispatchCollectionIntent(intent)
     }
 
     private fun sendLogs() {
@@ -87,6 +89,24 @@ class MainActivity : ComponentActivity() {
         val container = (application as MaimaidApplication).container
         lifecycleScope.launch {
             container.backendSessionManager.handleAuthRedirect(url)
+        }
+    }
+
+    private fun dispatchCollectionIntent(intent: Intent?) {
+        val url = intent?.dataString ?: return
+        val isCollectionLink = org.rhythmeta.maimaid.core.data.SongCollectionCodec.extractToken(url) != null ||
+            org.rhythmeta.maimaid.core.data.SongCollectionCodec.extractCollectionId(url) != null
+        if (!isCollectionLink) return
+        val container = (application as MaimaidApplication).container
+        lifecycleScope.launch {
+            runCatching {
+                val collection = container.collectionSharingService.resolveImport(url)
+                container.songCollectionRepository.importCollection(collection)
+            }.onSuccess {
+                Toast.makeText(this@MainActivity, R.string.collections_import_success, Toast.LENGTH_LONG).show()
+            }.onFailure {
+                Toast.makeText(this@MainActivity, R.string.collections_import_failed, Toast.LENGTH_LONG).show()
+            }
         }
     }
 

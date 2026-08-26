@@ -132,6 +132,7 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.androidx.browser)
     implementation(libs.androidx.glance.appwidget)
+    implementation(libs.protobuf.javalite)
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("androidx.palette:palette-ktx:1.0.0")
     ksp(libs.androidx.room.compiler)

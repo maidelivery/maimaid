@@ -11,6 +11,7 @@ import SwiftUI
 @main
 struct maimaidApp: App {
     @Environment(\.scenePhase) private var scenePhase
+    @State private var collectionImportCoordinator = CollectionImportCoordinator()
 
     private let sharedModelContainer: ModelContainer = {
         do {
@@ -34,8 +35,18 @@ struct maimaidApp: App {
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                .environment(collectionImportCoordinator)
                 .onOpenURL { url in
-                    BackendSessionManager.shared.handleAuthRedirect(url)
+                    if CollectionSharingService.isCollectionLink(url) {
+                        Task {
+                            await collectionImportCoordinator.importCollection(
+                                from: url.absoluteString,
+                                context: sharedModelContainer.mainContext
+                            )
+                        }
+                    } else {
+                        BackendSessionManager.shared.handleAuthRedirect(url)
+                    }
                 }
         }
         .modelContainer(sharedModelContainer)

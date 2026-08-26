@@ -683,3 +683,7 @@
 "collections_empty" = "No collections yet";
 "collections_item_count %lld" = "%lld charts";
 "collections_missing" = "Chart unavailable in the current catalog";
+"collections_share_source_title" = "Share collection";
+"collections_share_current_snapshot" = "Current snapshot";
+"collections_share_cloud_latest" = "Latest cloud collection";
+"collections_import_default_name" = "Imported collection";

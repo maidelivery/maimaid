@@ -19,6 +19,7 @@ import org.rhythmeta.maimaid.core.data.ChartFitStore
 import org.rhythmeta.maimaid.core.data.CoverImageStore
 import org.rhythmeta.maimaid.core.data.ConstantTableRepository
 import org.rhythmeta.maimaid.core.data.CommunityAliasService
+import org.rhythmeta.maimaid.core.data.CollectionSharingService
 import org.rhythmeta.maimaid.core.data.DanRepository
 import org.rhythmeta.maimaid.core.data.DanStore
 import org.rhythmeta.maimaid.core.data.PlateProgressRepository
@@ -109,6 +110,7 @@ class AppContainer(context: Context) {
         syncStateStore = backendSyncStateStore,
     )
     val songCollectionRepository = SongCollectionRepository(database.songCollectionDao())
+    val collectionSharingService = CollectionSharingService(backendApiClient, json)
 
     val catalogRepository = CatalogRepository(
         database = database,

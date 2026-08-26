@@ -35,14 +35,8 @@ import {
 	SONG_HIDE_DELETED_STORAGE_KEY,
 	SONG_SORT_ASC_STORAGE_KEY,
 	SONG_SORT_OPTION_STORAGE_KEY,
-	STATIC_ASSETS_URL,
 	localizedStandardContains,
 	normalizeSearchText,
-	parseBundleLxnsAliases,
-	parseBundleSheets,
-	parseBundleSongs,
-	parseCatalogVersionItems,
-	parseSongIdItems,
 	resolveProfileAvatarUrl,
 	songSnapshotMatchesSearch,
 } from "@/lib/app-helpers";
@@ -68,6 +62,7 @@ import { buildSongCatalogIndex, normalizeDifficulty, normalizeSheetType } from "
 import { SongDetailDialog } from "./components/songs/SongDetailDialog";
 import type { Song } from "./components/songs/types";
 import { requestJson } from "./lib/backend-client";
+import { loadStaticCatalog } from "./lib/static-catalog";
 import {
 	clearStoredSessionArtifacts,
 	persistRefreshToken,
@@ -823,38 +818,13 @@ function App() {
 	}, [request, session, setActiveProfileId, setProfiles]);
 
 	const loadSongCatalog = useCallback(async () => {
-		if (!STATIC_ASSETS_URL) throw new Error("Missing NEXT_PUBLIC_STATIC_ASSETS_URL.");
-		const manifestResponse = await fetch(`${STATIC_ASSETS_URL}/manifest.json`, { cache: "no-store" });
-		if (!manifestResponse.ok) throw new Error(`Static manifest HTTP ${manifestResponse.status}`);
-		const manifest = (await manifestResponse.json()) as { bundle?: string };
-		if (!manifest.bundle) throw new Error("Static manifest has no bundle path.");
-		const bundleURL = new URL(manifest.bundle, `${STATIC_ASSETS_URL}/`);
-		const bundleResponse = await fetch(bundleURL);
-		if (!bundleResponse.ok) throw new Error(`Static bundle HTTP ${bundleResponse.status}`);
-		const bundlePayload = (await bundleResponse.json()) as { payload?: { resources?: Record<string, unknown> } };
-		const resources = bundlePayload.payload?.resources;
-		const dataJsonResource = resources?.data_json;
-		const songidResource = resources?.songid_json;
-		const lxnsAliasesResource = resources?.lxns_aliases;
-
-		const nextSongs = parseBundleSongs(dataJsonResource);
-		const nextSheets = parseBundleSheets(dataJsonResource);
-		if (nextSongs.length === 0 || nextSheets.length === 0) {
-			throw new Error(t("app:backendErrDefault"));
-		}
-
-		const nextSongIdItems = parseSongIdItems(songidResource);
-		const nextAliases = parseBundleLxnsAliases(lxnsAliasesResource, {
-			songs: nextSongs,
-			songIdItems: nextSongIdItems,
-		});
-
-		setSongCatalog(nextSongs);
-		setCatalogSheets(nextSheets);
-		setCatalogAliases(nextAliases);
-		setSongIdItems(nextSongIdItems);
-		setCatalogVersionItems(parseCatalogVersionItems(dataJsonResource));
-	}, [setCatalogAliases, setCatalogSheets, setCatalogVersionItems, setSongCatalog, setSongIdItems, t]);
+		const catalog = await loadStaticCatalog();
+		setSongCatalog(catalog.songs);
+		setCatalogSheets(catalog.sheets);
+		setCatalogAliases(catalog.aliases);
+		setSongIdItems(catalog.songIdItems);
+		setCatalogVersionItems(catalog.versionItems);
+	}, [setCatalogAliases, setCatalogSheets, setCatalogVersionItems, setSongCatalog, setSongIdItems]);
 
 	const loadSongDetail = useCallback(
 		async (songIdentifier: string) => {

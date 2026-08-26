@@ -1,74 +1,130 @@
 package org.rhythmeta.maimaid.core.data
 
+import com.google.protobuf.InvalidProtocolBufferException
 import java.io.ByteArrayOutputStream
 import java.util.Base64
 import java.util.zip.Deflater
 import java.util.zip.Inflater
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import org.rhythmeta.maimaid.sharing.SongCollectionShare
 
-@Serializable
 data class SongCollectionExport(
-    @SerialName("v") val version: Int,
-    @SerialName("k") val kind: String,
-    @SerialName("c") val collections: List<SongCollectionExportCollection>,
+    val name: String,
+    val entries: List<SongCollectionExportEntry>,
 )
 
-@Serializable
-data class SongCollectionExportCollection(
-    @SerialName("i") val id: String,
-    @SerialName("n") val name: String,
-    @SerialName("p") val position: Int,
-    @SerialName("e") val entries: List<SongCollectionExportEntry>,
-)
-
-@Serializable
 data class SongCollectionExportEntry(
-    @SerialName("s") val songId: String,
-    @SerialName("t") val chartType: String,
-    @SerialName("d") val difficulty: String,
-    @SerialName("p") val position: Int,
+    val songId: String,
+    val chartType: String,
+    val difficulty: String,
 )
 
 object SongCollectionCodec {
-    const val Prefix = "MMD1."
-    const val Kind = "MMD_COLLECTIONS"
-    private val json = Json { encodeDefaults = true; explicitNulls = false }
+    const val Prefix = "MMD2."
+    const val WebBaseUrl = "https://maimaid.rhythmeta.org/collection/"
+    const val AppBaseUrl = "maimaid://collection/"
 
-    fun encode(collections: List<SongCollectionExportCollection>): String {
-        val raw = json.encodeToString(SongCollectionExport.serializer(), SongCollectionExport(1, Kind, collections))
-            .encodeToByteArray()
-        // NSData's .zlib stream on Apple platforms is a raw DEFLATE stream.
-        // Keep nowrap=true so both platforms use the same wire format.
-        val deflater = Deflater(Deflater.BEST_COMPRESSION, true)
-        deflater.setInput(raw)
-        deflater.finish()
-        val buffer = ByteArray(8192)
-        val compressed = ByteArrayOutputStream()
-        while (!deflater.finished()) compressed.write(buffer, 0, deflater.deflate(buffer))
-        deflater.end()
-        return Prefix + Base64.getUrlEncoder().withoutPadding().encodeToString(compressed.toByteArray())
+    private const val MaxTextLength = 2_000_000
+    private const val MaxCompressedBytes = 1_000_000
+    private const val MaxRawBytes = 1_000_000
+    private const val MaxEntriesPerCollection = 10_000
+
+    fun encode(collection: SongCollectionExport): String {
+        require(collection.name.length <= 200)
+        require(collection.entries.size <= MaxEntriesPerCollection)
+        val message = SongCollectionShare.newBuilder()
+            .setName(collection.name)
+            .addAllEntries(collection.entries.map { entry ->
+                require(entry.songId.length <= 200)
+                require(entry.chartType.length <= 32)
+                require(entry.difficulty.length <= 64)
+                org.rhythmeta.maimaid.sharing.SongCollectionEntry.newBuilder()
+                    .setSongId(entry.songId)
+                    .setChartType(entry.chartType.lowercase())
+                    .setDifficulty(entry.difficulty.lowercase())
+                    .build()
+            })
+            .build()
+        return Prefix + Base64.getUrlEncoder().withoutPadding().encodeToString(compress(message.toByteArray()))
     }
+
+    fun webUrl(collection: SongCollectionExport): String = WebBaseUrl + encode(collection)
+
+    fun appUrl(collection: SongCollectionExport): String = AppBaseUrl + encode(collection)
 
     fun decode(value: String): SongCollectionExport {
-        val normalized = value.filterNot(Char::isWhitespace)
-        require(normalized.startsWith(Prefix) && normalized.length <= 2_000_000)
-        val compressed = Base64.getUrlDecoder().decode(normalized.removePrefix(Prefix))
-        require(compressed.size <= 1_000_000)
-        val inflater = Inflater(true)
-        inflater.setInput(compressed)
-        val output = ByteArrayOutputStream()
-        val buffer = ByteArray(8192)
-        while (!inflater.finished()) {
-            val count = inflater.inflate(buffer)
-            require(count > 0 || !inflater.needsInput())
-            output.write(buffer, 0, count)
-            require(output.size() <= 1_000_000)
+        val token = extractToken(value) ?: throw IllegalArgumentException("Invalid collection sharing link")
+        val compressed = Base64.getUrlDecoder().decode(token.removePrefix(Prefix))
+        require(compressed.size <= MaxCompressedBytes)
+        val message = try {
+            SongCollectionShare.parseFrom(decompress(compressed))
+        } catch (error: InvalidProtocolBufferException) {
+            throw IllegalArgumentException("Invalid collection payload", error)
         }
-        inflater.end()
-        val result = json.decodeFromString<SongCollectionExport>(output.toString(Charsets.UTF_8.name()))
-        require(result.version == 1 && result.kind == Kind && result.collections.size <= 100)
-        return result
+        require(message.entriesCount <= MaxEntriesPerCollection)
+        return SongCollectionExport(
+            name = message.name,
+            entries = message.entriesList.map { entry ->
+                SongCollectionExportEntry(
+                    songId = entry.songId,
+                    chartType = entry.chartType,
+                    difficulty = entry.difficulty,
+                )
+            },
+        )
     }
+
+    fun extractToken(value: String): String? {
+        val normalized = value.filterNot(Char::isWhitespace)
+        if (normalized.length > MaxTextLength) return null
+        if (normalized.startsWith(Prefix)) return normalized
+        return extractSegment(normalized)?.takeIf { it.startsWith(Prefix) && it.length <= MaxTextLength }
+    }
+
+    fun extractCollectionId(value: String): String? = extractSegment(value.filterNot(Char::isWhitespace))
+        ?.takeIf { CollectionIdPattern.matches(it) }
+
+    private fun extractSegment(value: String): String? {
+        val uri = runCatching { java.net.URI(value) }.getOrNull() ?: return null
+        return when {
+            uri.scheme == "https" && uri.host == "maimaid.rhythmeta.org" ->
+                uri.path.removePrefix("/collection/").trim('/').takeIf(String::isNotEmpty)
+            uri.scheme == "maimaid" && uri.host == "collection" ->
+                uri.path.trim('/').takeIf(String::isNotEmpty)
+            else -> null
+        }
+    }
+
+    private fun compress(raw: ByteArray): ByteArray {
+        val deflater = Deflater(Deflater.BEST_COMPRESSION, true)
+        return try {
+            deflater.setInput(raw)
+            deflater.finish()
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            while (!deflater.finished()) output.write(buffer, 0, deflater.deflate(buffer))
+            output.toByteArray()
+        } finally {
+            deflater.end()
+        }
+    }
+
+    private fun decompress(compressed: ByteArray): ByteArray {
+        val inflater = Inflater(true)
+        return try {
+            inflater.setInput(compressed)
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            while (!inflater.finished()) {
+                val count = inflater.inflate(buffer)
+                require(count > 0 || !inflater.needsInput())
+                output.write(buffer, 0, count)
+                require(output.size() <= MaxRawBytes)
+            }
+            output.toByteArray()
+        } finally {
+            inflater.end()
+        }
+    }
+
+    private val CollectionIdPattern = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
 }

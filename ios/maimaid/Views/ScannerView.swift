@@ -444,29 +444,11 @@ struct ScannerView: View {
         guard !isProcessingPhoto else { return }
         do {
             let payload = try SongCollectionCodec.decode(value)
-            let existing = try modelContext.fetch(FetchDescriptor<SongCollection>()).filter { $0.deletedAt == nil }
-            for exported in payload.collections {
-                let name = uniqueCollectionName(exported.name, existing: existing)
-                let now = Date.now
-                let collection = SongCollection(name: name, sortIndex: existing.count, createdAt: now, updatedAt: now, clientUpdatedAt: now)
-                modelContext.insert(collection)
-                for entry in exported.entries {
-                    modelContext.insert(SongCollectionItem(collectionId: collection.id, songId: entry.songId, chartType: entry.chartType, difficulty: entry.difficulty, position: entry.position, createdAt: now, updatedAt: now, clientUpdatedAt: now))
-                }
-            }
-            try modelContext.save()
+            try SongCollectionImportService.importCollection(payload, context: modelContext)
             showFeedback("Imported collections")
         } catch {
             showFeedback("Invalid collection QR code")
         }
-    }
-
-    private func uniqueCollectionName(_ raw: String, existing: [SongCollection]) -> String {
-        let names = Set(existing.map { $0.name })
-        if !names.contains(raw) { return raw }
-        var index = 2
-        while names.contains("\(raw) (\(index))") { index += 1 }
-        return "\(raw) (\(index))"
     }
     
     @ViewBuilder

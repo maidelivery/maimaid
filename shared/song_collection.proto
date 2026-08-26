@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package org.rhythmeta.maimaid.sharing;
+
+option java_package = "org.rhythmeta.maimaid.sharing";
+option java_multiple_files = true;
+option swift_prefix = "MMD";
+
+message SongCollectionShare {
+  string name = 1;
+  repeated SongCollectionEntry entries = 2;
+}
+
+message SongCollectionEntry {
+  string song_id = 1;
+  string chart_type = 2;
+  string difficulty = 3;
+}

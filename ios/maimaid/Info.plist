@@ -6,8 +6,6 @@
 	<string>$(BACKEND_AUTH_URL)</string>
 	<key>BACKEND_URL</key>
 	<string>$(BACKEND_URL)</string>
-	<key>STATIC_ASSETS_URL</key>
-	<string>$(STATIC_ASSETS_URL)</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>zh_TW</string>
@@ -28,5 +26,7 @@
 			</array>
 		</dict>
 	</array>
+	<key>STATIC_ASSETS_URL</key>
+	<string>$(STATIC_ASSETS_URL)</string>
 </dict>
 </plist>

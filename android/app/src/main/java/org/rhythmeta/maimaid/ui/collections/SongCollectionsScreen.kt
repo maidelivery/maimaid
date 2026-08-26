@@ -52,7 +52,7 @@ import org.rhythmeta.maimaid.core.data.CoverImageStore
 import org.rhythmeta.maimaid.core.data.CatalogSortOption
 import org.rhythmeta.maimaid.core.data.ServerChartPolicy
 import org.rhythmeta.maimaid.core.data.SongCollectionCodec
-import org.rhythmeta.maimaid.core.data.SongCollectionExportCollection
+import org.rhythmeta.maimaid.core.data.SongCollectionExport
 import org.rhythmeta.maimaid.core.data.SongCollectionExportEntry
 import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.SongCollectionEntity
@@ -112,6 +112,7 @@ fun SongCollectionsScreen(
     val collections by container.songCollectionRepository.collections.collectAsState(emptyList())
     val items by container.songCollectionRepository.items.collectAsState(emptyList())
     var draftName by remember { mutableStateOf("") }
+    var sharingCollection by remember { mutableStateOf<SongCollectionEntity?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -124,10 +125,8 @@ fun SongCollectionsScreen(
                 ?.getItemAt(0)?.coerceToText(context)?.toString()
             val result = runCatching {
                 require(!code.isNullOrBlank())
-                val payload = SongCollectionCodec.decode(code)
-                payload.collections.forEach { source ->
-                    container.songCollectionRepository.importCollection(source)
-                }
+                val payload = container.collectionSharingService.resolveImport(code)
+                container.songCollectionRepository.importCollection(payload)
             }
             scope.launch {
                 snackbarHostState.showSnackbar(
@@ -164,7 +163,18 @@ fun SongCollectionsScreen(
                 sortAscending = sortAscending,
                 coverImageStore = coverImageStore,
                 onOpen = { onSelectedCollectionIdChange(it.id) },
-                onShare = { collection -> shareCollection(context, collection, items) },
+                onShare = { collection ->
+                    scope.launch {
+                        val cloudCollection = runCatching {
+                            container.collectionSharingService.fetchCloudCollection(collection.id)
+                        }.getOrNull()
+                        if (cloudCollection == null) {
+                            shareCollectionSnapshot(context, collection, items)
+                        } else {
+                            sharingCollection = collection
+                        }
+                    }
+                },
                 onDelete = { collection ->
                     scope.launch { container.songCollectionRepository.delete(collection) }
                 },
@@ -247,6 +257,34 @@ fun SongCollectionsScreen(
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColorsPrimary(),
                 ) { Text(stringResource(R.string.action_done)) }
+            }
+        }
+    }
+
+    sharingCollection?.let { collection ->
+        WindowDialog(
+            show = true,
+            title = stringResource(R.string.collections_share_source_title),
+            onDismissRequest = { sharingCollection = null },
+        ) {
+            TextButton(
+                text = stringResource(R.string.collections_share_current_snapshot),
+                onClick = {
+                    shareCollectionSnapshot(context, collection, items)
+                    sharingCollection = null
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(10.dp))
+            Button(
+                onClick = {
+                    shareCollectionUrl(context, SongCollectionCodec.WebBaseUrl + collection.id)
+                    sharingCollection = null
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColorsPrimary(),
+            ) {
+                Text(stringResource(R.string.collections_share_cloud_latest))
             }
         }
     }
@@ -499,7 +537,7 @@ private fun CollectionSummaryRow(
     }
 }
 
-private fun shareCollection(
+private fun shareCollectionSnapshot(
     context: Context,
     collection: SongCollectionEntity,
     items: List<SongCollectionItemEntity>,
@@ -513,19 +551,24 @@ private fun shareCollection(
                 songId = item.songId,
                 chartType = item.chartType,
                 difficulty = item.difficulty,
-                position = item.position,
             )
         }
         .toList()
-    val export = SongCollectionExportCollection(
-        id = collection.id,
+    val export = SongCollectionExport(
         name = collection.name,
-        position = collection.sortIndex,
         entries = entries,
     )
     val sendIntent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, SongCollectionCodec.encode(listOf(export)))
+        putExtra(Intent.EXTRA_TEXT, SongCollectionCodec.webUrl(export))
+    }
+    context.startActivity(Intent.createChooser(sendIntent, context.getString(R.string.collections_share_chooser)))
+}
+
+private fun shareCollectionUrl(context: Context, url: String) {
+    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, url)
     }
     context.startActivity(Intent.createChooser(sendIntent, context.getString(R.string.collections_share_chooser)))
 }

@@ -683,3 +683,7 @@
 "collections_empty" = "コレクションはありません";
 "collections_item_count %lld" = "%lld 譜面";
 "collections_missing" = "現在の曲目データにこの譜面がありません";
+"collections_share_source_title" = "コレクションを共有";
+"collections_share_current_snapshot" = "現在のスナップショット";
+"collections_share_cloud_latest" = "クラウドの最新版";
+"collections_import_default_name" = "読み込んだコレクション";

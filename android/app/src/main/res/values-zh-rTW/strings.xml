@@ -58,6 +58,9 @@
     <string name="collections_copy_export_code">複製匯出碼</string>
     <string name="collections_share">分享</string>
     <string name="collections_share_chooser">分享</string>
+    <string name="collections_share_source_title">分享收藏夾</string>
+    <string name="collections_share_current_snapshot">目前快照</string>
+    <string name="collections_share_cloud_latest">雲端最新</string>
     <string name="collections_add">新增收藏夾</string>
     <string name="collections_import_clipboard">從剪貼簿匯入</string>
     <string name="collections_import_success">收藏夾匯入成功</string>
