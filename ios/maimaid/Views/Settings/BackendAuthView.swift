@@ -6,10 +6,17 @@ import UIKit
 @MainActor
 private final class BackendWebAuthPresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        UIApplication.shared.connectedScenes
+        let windowScenes = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .first(where: \.isKeyWindow) ?? ASPresentationAnchor()
+        let activeWindowScene = windowScenes.first(where: { $0.activationState == .foregroundActive })
+            ?? windowScenes.first
+
+        guard let activeWindowScene else {
+            preconditionFailure("A connected window scene is required for web authentication")
+        }
+
+        return activeWindowScene.windows.first(where: \.isKeyWindow)
+            ?? ASPresentationAnchor(windowScene: activeWindowScene)
     }
 }
 
