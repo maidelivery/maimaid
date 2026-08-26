@@ -1,16 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-	BarChart3Icon,
-	DatabaseIcon,
-	DownloadIcon,
-	MenuIcon,
-	Music2Icon,
-	Settings2Icon,
-	ShieldIcon,
-	TagsIcon,
-	UserIcon,
-	UsersIcon,
-} from "lucide-react";
+import { BarChart3Icon, MenuIcon, Music2Icon, Settings2Icon, ShieldIcon, TagsIcon, UserIcon, UsersIcon } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { Alert as UiAlert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -54,8 +43,6 @@ import type {
 	PlayRecordRow,
 	Profile,
 	ScoreRow,
-	StaticBundle,
-	StaticSource,
 	ToastSeverity,
 } from "@/lib/app-types";
 import { buildSongCatalogIndex, normalizeDifficulty, normalizeSheetType } from "@/lib/song-index";
@@ -184,8 +171,6 @@ function App() {
 		setScoreDifficulty,
 		scoreAchievements,
 		setScoreAchievements,
-		lxnsAuthCode,
-		setLxnsAuthCode,
 		communityRows,
 		setCommunityRows,
 		communitySongName,
@@ -210,16 +195,6 @@ function App() {
 		setNewUserEmail,
 		newUserPassword,
 		setNewUserPassword,
-		staticSources,
-		setStaticSources,
-		staticBundles,
-		setStaticBundles,
-		newStaticCategory,
-		setNewStaticCategory,
-		newStaticActiveUrl,
-		setNewStaticActiveUrl,
-		newStaticFallbackUrls,
-		setNewStaticFallbackUrls,
 	} = useDashboardStore(
 		useShallow((state) => ({
 			session: state.session,
@@ -291,8 +266,6 @@ function App() {
 			setScoreDifficulty: state.setScoreDifficulty,
 			scoreAchievements: state.scoreAchievements,
 			setScoreAchievements: state.setScoreAchievements,
-			lxnsAuthCode: state.lxnsAuthCode,
-			setLxnsAuthCode: state.setLxnsAuthCode,
 			communityRows: state.communityRows,
 			setCommunityRows: state.setCommunityRows,
 			communitySongName: state.communitySongName,
@@ -317,16 +290,6 @@ function App() {
 			setNewUserEmail: state.setNewUserEmail,
 			newUserPassword: state.newUserPassword,
 			setNewUserPassword: state.setNewUserPassword,
-			staticSources: state.staticSources,
-			setStaticSources: state.setStaticSources,
-			staticBundles: state.staticBundles,
-			setStaticBundles: state.setStaticBundles,
-			newStaticCategory: state.newStaticCategory,
-			setNewStaticCategory: state.setNewStaticCategory,
-			newStaticActiveUrl: state.newStaticActiveUrl,
-			setNewStaticActiveUrl: state.setNewStaticActiveUrl,
-			newStaticFallbackUrls: state.newStaticFallbackUrls,
-			setNewStaticFallbackUrls: state.setNewStaticFallbackUrls,
 		})),
 	);
 
@@ -975,16 +938,6 @@ function App() {
 		setAdminUsers(payload.rows);
 	}, [isAdmin, request, setAdminUsers]);
 
-	const loadStaticAdmin = useCallback(async () => {
-		if (!isAdmin) return;
-		const [sourcePayload, bundlePayload] = await Promise.all([
-			request<{ sources: StaticSource[] }>("v1/admin/static-sources"),
-			request<{ bundles: StaticBundle[] }>("v1/admin/static-bundles"),
-		]);
-		setStaticSources(sourcePayload.sources);
-		setStaticBundles(bundlePayload.bundles);
-	}, [isAdmin, request, setStaticBundles, setStaticSources]);
-
 	const loadMfaStatus = useCallback(async () => {
 		if (!session) {
 			setMfaStatus(null);
@@ -1070,7 +1023,7 @@ function App() {
 					loadBackupCodeStatus(),
 				]);
 				if (isAdmin) {
-					await Promise.all([loadAdminCandidates(), loadAdminStats(), loadAdminUsers(), loadStaticAdmin()]);
+					await Promise.all([loadAdminCandidates(), loadAdminStats(), loadAdminUsers()]);
 				}
 			} catch (error) {
 				showToast((error as Error).message, "error");
@@ -1087,7 +1040,6 @@ function App() {
 		loadPasskeys,
 		loadProfiles,
 		loadSongCatalog,
-		loadStaticAdmin,
 		resetForSignedOut,
 		session,
 		sessionBootstrapped,
@@ -1188,7 +1140,6 @@ function App() {
 		scoreAchievements,
 		resolveSongByName,
 		loadScores,
-		lxnsAuthCode,
 		communitySongName,
 		communityAliasText,
 		setCommunityAliasText,
@@ -1203,13 +1154,6 @@ function App() {
 		setNewUserEmail,
 		setNewUserPassword,
 		loadAdminUsers,
-		newStaticCategory,
-		newStaticActiveUrl,
-		newStaticFallbackUrls,
-		setNewStaticCategory,
-		setNewStaticActiveUrl,
-		setNewStaticFallbackUrls,
-		loadStaticAdmin,
 		setMfaSetup,
 		mfaSetupCode,
 		setMfaSetupCode,
@@ -1228,10 +1172,6 @@ function App() {
 		handleSaveScoreEdit,
 		handleDeleteScore,
 		handleDeletePlayRecord,
-		handleImportDf,
-		handleAuthorizeDf,
-		handleDisconnectDf,
-		handleImportLxns,
 		handleCommunitySubmit,
 		handleCommunityVote,
 		handleAdminCandidateStatus,
@@ -1240,8 +1180,6 @@ function App() {
 		handleCreateUser,
 		handleUpdateUsername,
 		handleDeleteUser,
-		handleToggleSource,
-		handleEditSourceUrl,
 		handleStartTotpSetup,
 		handleConfirmTotpSetup,
 		handleDisableTotp,
@@ -1255,18 +1193,13 @@ function App() {
 		const baseTabs = [
 			{ value: "songs", label: t("app:tabSongs"), icon: Music2Icon },
 			{ value: "scores", label: t("app:tabScores"), icon: BarChart3Icon },
-			{ value: "import", label: t("app:tabImport"), icon: DownloadIcon },
 			{ value: "aliases", label: t("app:tabAliases"), icon: TagsIcon },
 			{ value: "settings", label: t("app:tabSettings"), icon: Settings2Icon },
 		];
 		if (!isAdmin) {
 			return baseTabs;
 		}
-		return [
-			...baseTabs,
-			{ value: "admin-users", label: t("app:tabAdminUsers"), icon: UsersIcon },
-			{ value: "admin-static", label: t("app:tabAdminStatic"), icon: DatabaseIcon },
-		];
+		return [...baseTabs, { value: "admin-users", label: t("app:tabAdminUsers"), icon: UsersIcon }];
 	}, [isAdmin, t]);
 
 	if (!BACKEND_URL) {
@@ -1482,12 +1415,6 @@ function App() {
 			openScoreEditDialog={openScoreEditDialog}
 			handleDeleteScore={handleDeleteScore}
 			handleDeletePlayRecord={handleDeletePlayRecord}
-			lxnsAuthCode={lxnsAuthCode}
-			setLxnsAuthCode={setLxnsAuthCode}
-			handleImportDf={handleImportDf}
-			handleAuthorizeDf={handleAuthorizeDf}
-			handleDisconnectDf={handleDisconnectDf}
-			handleImportLxns={handleImportLxns}
 			communityDailyCount={communityDailyCount}
 			communityRows={communityRows}
 			communitySongName={communitySongName}
@@ -1522,11 +1449,6 @@ function App() {
 			handleCreateUser={handleCreateUser}
 			loadAdminUsers={loadAdminUsers}
 			handleDeleteUser={handleDeleteUser}
-			staticSources={staticSources}
-			staticBundles={staticBundles}
-			loadStaticAdmin={loadStaticAdmin}
-			handleToggleSource={handleToggleSource}
-			handleEditSourceUrl={handleEditSourceUrl}
 		/>
 	);
 

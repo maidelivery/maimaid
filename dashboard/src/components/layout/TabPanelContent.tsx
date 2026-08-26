@@ -1,9 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AdminStaticPage } from "@/components/pages/AdminStaticPage";
 import { AdminUsersPage } from "@/components/pages/AdminUsersPage";
 import { AliasesPage } from "@/components/pages/AliasesPage";
-import { ImportsPage } from "@/components/pages/ImportsPage";
 import { ScoresPage } from "@/components/pages/ScoresPage";
 import { SettingsPage } from "@/components/pages/SettingsPage";
 import { SongFiltersCard } from "@/components/songs/SongFiltersCard";
@@ -21,8 +19,6 @@ import type {
 	PlayRecordRow,
 	Profile,
 	ScoreRow,
-	StaticBundle,
-	StaticSource,
 } from "@/lib/app-types";
 import type { Session } from "@/lib/session";
 import { useTranslation } from "react-i18next";
@@ -90,13 +86,6 @@ type TabPanelContentProps = {
 	handleDeleteScore: (scoreId: string) => Promise<void>;
 	handleDeletePlayRecord: (recordId: string) => Promise<void>;
 
-	lxnsAuthCode: string;
-	setLxnsAuthCode: Dispatch<SetStateAction<string>>;
-	handleImportDf: () => Promise<void>;
-	handleAuthorizeDf: () => Promise<void>;
-	handleDisconnectDf: () => Promise<void>;
-	handleImportLxns: (input: { codeVerifier: string }) => Promise<void>;
-
 	communityDailyCount: number;
 	communityRows: CommunityCandidate[];
 	communitySongName: string;
@@ -133,12 +122,6 @@ type TabPanelContentProps = {
 	handleCreateUser: () => Promise<void>;
 	loadAdminUsers: () => Promise<void>;
 	handleDeleteUser: (userId: string) => Promise<void>;
-
-	staticSources: StaticSource[];
-	staticBundles: StaticBundle[];
-	loadStaticAdmin: () => Promise<void>;
-	handleToggleSource: (source: StaticSource) => Promise<void>;
-	handleEditSourceUrl: (source: StaticSource, nextUrl: string, nextExtraUrl?: string) => Promise<void>;
 };
 
 export function TabPanelContent(props: TabPanelContentProps) {
@@ -199,12 +182,6 @@ export function TabPanelContent(props: TabPanelContentProps) {
 		openScoreEditDialog,
 		handleDeleteScore,
 		handleDeletePlayRecord,
-		lxnsAuthCode,
-		setLxnsAuthCode,
-		handleImportDf,
-		handleAuthorizeDf,
-		handleDisconnectDf,
-		handleImportLxns,
 		communityDailyCount,
 		communityRows,
 		communitySongName,
@@ -239,11 +216,6 @@ export function TabPanelContent(props: TabPanelContentProps) {
 		handleCreateUser,
 		loadAdminUsers,
 		handleDeleteUser,
-		staticSources,
-		staticBundles,
-		loadStaticAdmin,
-		handleToggleSource,
-		handleEditSourceUrl,
 	} = props;
 
 	const { t } = useTranslation();
@@ -324,19 +296,6 @@ export function TabPanelContent(props: TabPanelContentProps) {
 		);
 	}
 
-	if (tab === "import") {
-		return (
-			<ImportsPage
-				lxnsAuthCode={lxnsAuthCode}
-				onLxnsAuthCodeChange={setLxnsAuthCode}
-				onImportDf={handleImportDf}
-				onAuthorizeDf={handleAuthorizeDf}
-				onDisconnectDf={handleDisconnectDf}
-				onImportLxns={handleImportLxns}
-			/>
-		);
-	}
-
 	if (tab === "aliases") {
 		return (
 			<AliasesPage
@@ -408,18 +367,6 @@ export function TabPanelContent(props: TabPanelContentProps) {
 				onCreateUser={handleCreateUser}
 				onReloadUsers={loadAdminUsers}
 				onDeleteUser={handleDeleteUser}
-			/>
-		);
-	}
-
-	if (tab === "admin-static" && isAdmin) {
-		return (
-			<AdminStaticPage
-				staticSources={staticSources}
-				staticBundles={staticBundles}
-				onReloadStatic={loadStaticAdmin}
-				onToggleSource={handleToggleSource}
-				onEditSourceUrl={handleEditSourceUrl}
 			/>
 		);
 	}

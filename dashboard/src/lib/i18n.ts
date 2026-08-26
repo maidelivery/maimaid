@@ -89,20 +89,7 @@ const persistLanguage = (language: SupportedLanguage) => {
 
 i18n.use(initReactI18next).init({
 	resources,
-	ns: [
-		"language",
-		"sidebar",
-		"auth",
-		"app",
-		"tab",
-		"scores",
-		"settings",
-		"adminStatic",
-		"adminUsers",
-		"aliases",
-		"imports",
-		"collection",
-	],
+	ns: ["language", "sidebar", "auth", "app", "tab", "scores", "settings", "adminUsers", "aliases", "collection"],
 	defaultNS: "app",
 	lng: DEFAULT_LANGUAGE,
 	fallbackLng: DEFAULT_LANGUAGE,

@@ -128,24 +128,6 @@ export type AdminUserRow = {
 	};
 };
 
-export type StaticSource = {
-	id: string;
-	category: string;
-	activeUrl: string;
-	fallbackUrls: string[];
-	enabled: boolean;
-};
-
-export type StaticBundle = {
-	id: string;
-	version: string;
-	md5: string;
-	active: boolean;
-	createdAt: string;
-	manifestUrl?: string | null;
-	bundleUrl?: string | null;
-};
-
 export type MfaStatus = {
 	mfaEnabled: boolean;
 	totpEnabled: boolean;

@@ -25,8 +25,6 @@ import type {
 	Profile,
 	ScoreRow,
 	SongIdItem,
-	StaticBundle,
-	StaticSource,
 } from "@/lib/app-types";
 import type { Session } from "@/lib/session";
 
@@ -108,7 +106,6 @@ type DashboardStore = {
 	scoreType: string;
 	scoreDifficulty: string;
 	scoreAchievements: string;
-	lxnsAuthCode: string;
 	communityRows: CommunityCandidate[];
 	communitySongName: string;
 	communityAliasText: string;
@@ -123,11 +120,6 @@ type DashboardStore = {
 	adminUsers: AdminUserRow[];
 	newUserEmail: string;
 	newUserPassword: string;
-	staticSources: StaticSource[];
-	staticBundles: StaticBundle[];
-	newStaticCategory: string;
-	newStaticActiveUrl: string;
-	newStaticFallbackUrls: string;
 
 	setSession: (next: StateUpdater<Session | null>) => void;
 	setSessionBootstrapped: (next: StateUpdater<boolean>) => void;
@@ -163,7 +155,6 @@ type DashboardStore = {
 	setScoreType: (next: StateUpdater<string>) => void;
 	setScoreDifficulty: (next: StateUpdater<string>) => void;
 	setScoreAchievements: (next: StateUpdater<string>) => void;
-	setLxnsAuthCode: (next: StateUpdater<string>) => void;
 	setCommunityRows: (next: StateUpdater<CommunityCandidate[]>) => void;
 	setCommunitySongName: (next: StateUpdater<string>) => void;
 	setCommunityAliasText: (next: StateUpdater<string>) => void;
@@ -178,11 +169,6 @@ type DashboardStore = {
 	setAdminUsers: (next: StateUpdater<AdminUserRow[]>) => void;
 	setNewUserEmail: (next: StateUpdater<string>) => void;
 	setNewUserPassword: (next: StateUpdater<string>) => void;
-	setStaticSources: (next: StateUpdater<StaticSource[]>) => void;
-	setStaticBundles: (next: StateUpdater<StaticBundle[]>) => void;
-	setNewStaticCategory: (next: StateUpdater<string>) => void;
-	setNewStaticActiveUrl: (next: StateUpdater<string>) => void;
-	setNewStaticFallbackUrls: (next: StateUpdater<string>) => void;
 	resetForSignedOut: () => void;
 };
 
@@ -224,7 +210,6 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
 	scoreType: "standard",
 	scoreDifficulty: "expert",
 	scoreAchievements: "100.0000",
-	lxnsAuthCode: "",
 	communityRows: [],
 	communitySongName: "",
 	communityAliasText: "",
@@ -239,11 +224,6 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
 	adminUsers: [],
 	newUserEmail: "",
 	newUserPassword: "",
-	staticSources: [],
-	staticBundles: [],
-	newStaticCategory: "",
-	newStaticActiveUrl: "",
-	newStaticFallbackUrls: "",
 
 	setSession: (next) => set((state) => ({ session: resolveStateUpdate(next, state.session) })),
 	setSessionBootstrapped: (next) =>
@@ -282,7 +262,6 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
 	setScoreType: (next) => set((state) => ({ scoreType: resolveStateUpdate(next, state.scoreType) })),
 	setScoreDifficulty: (next) => set((state) => ({ scoreDifficulty: resolveStateUpdate(next, state.scoreDifficulty) })),
 	setScoreAchievements: (next) => set((state) => ({ scoreAchievements: resolveStateUpdate(next, state.scoreAchievements) })),
-	setLxnsAuthCode: (next) => set((state) => ({ lxnsAuthCode: resolveStateUpdate(next, state.lxnsAuthCode) })),
 	setCommunityRows: (next) => set((state) => ({ communityRows: resolveStateUpdate(next, state.communityRows) })),
 	setCommunitySongName: (next) => set((state) => ({ communitySongName: resolveStateUpdate(next, state.communitySongName) })),
 	setCommunityAliasText: (next) => set((state) => ({ communityAliasText: resolveStateUpdate(next, state.communityAliasText) })),
@@ -301,12 +280,6 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
 	setAdminUsers: (next) => set((state) => ({ adminUsers: resolveStateUpdate(next, state.adminUsers) })),
 	setNewUserEmail: (next) => set((state) => ({ newUserEmail: resolveStateUpdate(next, state.newUserEmail) })),
 	setNewUserPassword: (next) => set((state) => ({ newUserPassword: resolveStateUpdate(next, state.newUserPassword) })),
-	setStaticSources: (next) => set((state) => ({ staticSources: resolveStateUpdate(next, state.staticSources) })),
-	setStaticBundles: (next) => set((state) => ({ staticBundles: resolveStateUpdate(next, state.staticBundles) })),
-	setNewStaticCategory: (next) => set((state) => ({ newStaticCategory: resolveStateUpdate(next, state.newStaticCategory) })),
-	setNewStaticActiveUrl: (next) => set((state) => ({ newStaticActiveUrl: resolveStateUpdate(next, state.newStaticActiveUrl) })),
-	setNewStaticFallbackUrls: (next) =>
-		set((state) => ({ newStaticFallbackUrls: resolveStateUpdate(next, state.newStaticFallbackUrls) })),
 	resetForSignedOut: () =>
 		set(() => ({
 			profiles: [],
@@ -316,8 +289,6 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
 			adminCandidates: [],
 			adminStats: null,
 			adminUsers: [],
-			staticSources: [],
-			staticBundles: [],
 			mfaStatus: null,
 			passkeys: [],
 			backupCodeStatus: {

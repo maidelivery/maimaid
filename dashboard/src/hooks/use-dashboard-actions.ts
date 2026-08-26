@@ -17,7 +17,6 @@ import type {
 	OpaqueRegistrationStartResponse,
 	ScoreEditState,
 	ScoreRow,
-	StaticSource,
 	ToastSeverity,
 } from "@/lib/app-types";
 import { finishOpaqueRegistration, startOpaqueRegistration } from "@/lib/opaque-password";
@@ -78,7 +77,6 @@ type UseDashboardActionsInput = {
 	scoreAchievements: string;
 	resolveSongByName: (songName: string) => Song | null;
 	loadScores: () => Promise<void>;
-	lxnsAuthCode: string;
 	communitySongName: string;
 	communityAliasText: string;
 	setCommunityAliasText: (value: string) => void;
@@ -93,13 +91,6 @@ type UseDashboardActionsInput = {
 	setNewUserEmail: (value: string) => void;
 	setNewUserPassword: (value: string) => void;
 	loadAdminUsers: () => Promise<void>;
-	newStaticCategory: string;
-	newStaticActiveUrl: string;
-	newStaticFallbackUrls: string;
-	setNewStaticCategory: (value: string) => void;
-	setNewStaticActiveUrl: (value: string) => void;
-	setNewStaticFallbackUrls: (value: string) => void;
-	loadStaticAdmin: () => Promise<void>;
 	setMfaSetup: (value: MfaSetup | null) => void;
 	mfaSetupCode: string;
 	setMfaSetupCode: (value: string) => void;
@@ -123,7 +114,6 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		scoreAchievements,
 		resolveSongByName,
 		loadScores,
-		lxnsAuthCode,
 		communitySongName,
 		communityAliasText,
 		setCommunityAliasText,
@@ -138,13 +128,6 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		setNewUserEmail,
 		setNewUserPassword,
 		loadAdminUsers,
-		newStaticCategory,
-		newStaticActiveUrl,
-		newStaticFallbackUrls,
-		setNewStaticCategory,
-		setNewStaticActiveUrl,
-		setNewStaticFallbackUrls,
-		loadStaticAdmin,
 		setMfaSetup,
 		mfaSetupCode,
 		setMfaSetupCode,
@@ -339,112 +322,6 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 			});
 			await loadScores();
 			showToast(t("actionRecDeleted"), "success");
-		} catch (error) {
-			showToast((error as Error).message, "error");
-		}
-	};
-
-	const handleImportDf = async () => {
-		if (!activeProfileId) {
-			showToast(t("actionDfReq"), "warning");
-			return;
-		}
-		try {
-			const payload = await request<{ upsertedCount: number }>("v1/imports:importDf", {
-				method: "POST",
-				body: { profileId: activeProfileId },
-			});
-			await loadScores();
-			showToast(t("actionDfSuccess", { count: payload.upsertedCount }), "success");
-		} catch (error) {
-			showToast((error as Error).message, "error");
-		}
-	};
-
-	const handleAuthorizeDf = async () => {
-		if (!activeProfileId) {
-			showToast(t("actionDfReq"), "warning");
-			return;
-		}
-
-		const authorizationWindow = window.open("about:blank", "_blank");
-		if (!authorizationWindow) {
-			showToast(t("actionDfPopupBlocked"), "warning");
-			return;
-		}
-
-		try {
-			const authorization = await request<{
-				authorizationId: string;
-				authorizationUrl: string;
-				expiresAt: string;
-			}>("v1/imports:authorizeDivingFish", {
-				method: "POST",
-				body: { profileId: activeProfileId },
-			});
-			authorizationWindow.location.replace(authorization.authorizationUrl);
-
-			while (Date.now() < new Date(authorization.expiresAt).getTime()) {
-				await new Promise((resolve) => window.setTimeout(resolve, 1_500));
-				const status = await request<{ status: string; errorCode: string | null }>(
-					`v1/imports:divingFishAuthorizationStatus?authorizationId=${encodeURIComponent(authorization.authorizationId)}`,
-				);
-				if (status.status === "success") {
-					authorizationWindow.close();
-					await handleImportDf();
-					return;
-				}
-				if (status.status === "failed" || status.status === "expired") {
-					throw new Error(status.errorCode || t("actionDfOauthFailed"));
-				}
-			}
-			throw new Error(t("actionDfOauthExpired"));
-		} catch (error) {
-			authorizationWindow.close();
-			showToast((error as Error).message, "error");
-		}
-	};
-
-	const handleDisconnectDf = async () => {
-		if (!activeProfileId) {
-			showToast(t("actionDfReq"), "warning");
-			return;
-		}
-		try {
-			await request("v1/imports:divingFishBinding", {
-				method: "DELETE",
-				body: { profileId: activeProfileId },
-			});
-			showToast(t("actionDfDisconnected"), "success");
-		} catch (error) {
-			showToast((error as Error).message, "error");
-		}
-	};
-
-	const handleImportLxns = async (input: { codeVerifier: string }) => {
-		if (!activeProfileId || !lxnsAuthCode.trim() || !input.codeVerifier.trim()) {
-			showToast(t("actionLxnsReq"), "warning");
-			return;
-		}
-		try {
-			const oauthPayload = await request<{ accessToken: string; refreshToken: string }>("v1/imports:exchangeLxnsToken", {
-				method: "POST",
-				body: {
-					code: lxnsAuthCode.trim(),
-					codeVerifier: input.codeVerifier.trim(),
-				},
-			});
-
-			const payload = await request<{ upsertedCount: number }>("v1/imports:importLxns", {
-				method: "POST",
-				body: {
-					profileId: activeProfileId,
-					accessToken: oauthPayload.accessToken,
-				},
-			});
-
-			await loadScores();
-			showToast(t("actionLxnsSuccess", { count: payload.upsertedCount }), "success");
 		} catch (error) {
 			showToast((error as Error).message, "error");
 		}
@@ -692,75 +569,6 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		}
 	};
 
-	const handleToggleSource = async (source: StaticSource) => {
-		try {
-			await request(`v1/admin/static-sources/${encodeURIComponent(source.id)}`, {
-				method: "PATCH",
-				body: {
-					enabled: !source.enabled,
-				},
-			});
-			await loadStaticAdmin();
-			showToast(t("actionSrcUpdate"), "success");
-		} catch (error) {
-			showToast((error as Error).message, "error");
-		}
-	};
-
-	const handleCreateSource = async () => {
-		if (!newStaticCategory.trim() || !newStaticActiveUrl.trim()) {
-			showToast(t("actionSrcReq"), "warning");
-			return;
-		}
-		try {
-			const fallbackUrls = newStaticFallbackUrls
-				.split(",")
-				.map((item) => item.trim())
-				.filter((item) => item.length > 0);
-			await request("v1/admin/static-sources", {
-				method: "POST",
-				body: {
-					category: newStaticCategory.trim(),
-					activeUrl: newStaticActiveUrl.trim(),
-					fallbackUrls,
-					enabled: true,
-				},
-			});
-			setNewStaticCategory("");
-			setNewStaticActiveUrl("");
-			setNewStaticFallbackUrls("");
-			await loadStaticAdmin();
-			showToast(t("actionSrcCreate"), "success");
-		} catch (error) {
-			showToast((error as Error).message, "error");
-		}
-	};
-
-	const handleEditSourceUrl = async (source: StaticSource, nextUrl: string, nextExtraUrl?: string) => {
-		const normalizedUrl = nextUrl.trim();
-		if (!normalizedUrl) {
-			showToast(t("actionSrcUrlReq"), "warning");
-			return;
-		}
-		const normalizedExtraUrl = nextExtraUrl?.trim() ?? "";
-		try {
-			const body: Record<string, unknown> = {
-				activeUrl: normalizedUrl,
-			};
-			if (source.category === "chart_fit") {
-				body.fallbackUrls = normalizedExtraUrl ? [normalizedExtraUrl] : [];
-			}
-			await request(`v1/admin/static-sources/${encodeURIComponent(source.id)}`, {
-				method: "PATCH",
-				body,
-			});
-			await loadStaticAdmin();
-			showToast(t("actionSrcUrlUpdate"), "success");
-		} catch (error) {
-			showToast((error as Error).message, "error");
-		}
-	};
-
 	const handleStartTotpSetup = async () => {
 		try {
 			const payload = await request<MfaSetup>("v1/auth/mfa/totp:startSetup", {
@@ -913,10 +721,6 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		handleSaveScoreEdit,
 		handleDeleteScore,
 		handleDeletePlayRecord,
-		handleImportDf,
-		handleAuthorizeDf,
-		handleDisconnectDf,
-		handleImportLxns,
 		handleCommunitySubmit,
 		handleCommunityVote,
 		handleAdminCandidateStatus,
@@ -925,9 +729,6 @@ export function useDashboardActions(input: UseDashboardActionsInput) {
 		handleCreateUser,
 		handleUpdateUsername,
 		handleDeleteUser,
-		handleToggleSource,
-		handleCreateSource,
-		handleEditSourceUrl,
 		handleStartTotpSetup,
 		handleConfirmTotpSetup,
 		handleDisableTotp,
