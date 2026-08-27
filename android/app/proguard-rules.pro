@@ -12,3 +12,6 @@
 # remove its public constructor, which prevents Glance's update worker from
 # starting in a minified build.
 -keep class androidx.work.OverwritingInputMerger { *; }
+
+# Protobuf lite resolves generated message fields by their source names.
+-keep class org.rhythmeta.maimaid.sharing.** { *; }
