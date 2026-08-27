@@ -72,14 +72,11 @@ jobs:
           : "${CLOUDFLARE_ACCOUNT_ID:?Missing GitHub Secret CLOUDFLARE_ACCOUNT_ID}"
           pnpm exec wrangler deploy --config ../static-worker/wrangler.jsonc
 
-      - name: Verify and notify API
+      - name: Verify static assets
         working-directory: backend
         env:
-          MAIMAID_API_URL: ${{ secrets.MAIMAID_API_URL }}
-          MAIMAID_INTERNAL_JOB_TOKEN: ${{ secrets.MAIMAID_INTERNAL_JOB_TOKEN }}
           MAIMAID_STATIC_ASSETS_URL: ${{ secrets.MAIMAID_STATIC_ASSETS_URL }}
         run: |
           set -euo pipefail
           curl --fail --retry 5 --retry-all-errors "${MAIMAID_STATIC_ASSETS_URL%/}/manifest.json" -o /tmp/maimaid-manifest.json
           node -e 'const fs=require("fs"); const local=JSON.parse(fs.readFileSync("../static-worker/public/manifest.json")); const remote=JSON.parse(fs.readFileSync("/tmp/maimaid-manifest.json")); if (local.version !== remote.version || local.md5 !== remote.md5) process.exit(1)'
-          pnpm run static-bundle:build -- --notify >/dev/null 2>&1 || true
