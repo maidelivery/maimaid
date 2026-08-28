@@ -1,5 +1,9 @@
-FROM postgres:18.3-bookworm
+FROM postgres:18.6-bookworm
 
-RUN apt-get update \
+ARG DEBIAN_MIRROR=mirrors.aliyun.com
+
+RUN find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) \
+    -exec sed -i "s|deb.debian.org|${DEBIAN_MIRROR}|g" {} + \
+  && apt-get update \
   && apt-get install -y --no-install-recommends postgresql-18-cron \
   && rm -rf /var/lib/apt/lists/*

@@ -1,9 +1,15 @@
+ARG DEBIAN_MIRROR=mirrors.aliyun.com
+
 FROM node:26-bookworm-slim AS builder
+
+ARG DEBIAN_MIRROR
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 
-RUN apt-get update \
+RUN find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) \
+    -exec sed -i "s|deb.debian.org|${DEBIAN_MIRROR}|g" {} + \
+  && apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
@@ -29,7 +35,11 @@ RUN pnpm prisma generate \
 
 FROM oven/bun:1.4.0-slim
 
-RUN apt-get update \
+ARG DEBIAN_MIRROR
+
+RUN find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) \
+    -exec sed -i "s|deb.debian.org|${DEBIAN_MIRROR}|g" {} + \
+  && apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
