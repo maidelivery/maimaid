@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.2.6.2
+
+### 中文
+
+#### 新增
+
+- Android 侧新增完全体主题设置页面
+
+#### 修复
+
+- 修复从定数表打开歌曲详情后返回时列表滚动位置丢失的问题。
+- 修复随机歌曲页面打开歌曲详情时返回层级和过渡期间的交互问题。
+
+#### 变更
+
+- 优化 Android 外观设置预览，使用 maimaid 主页的档案卡、Best 50 卡片和双列功能卡布局。
+- 预览支持普通底栏和悬浮底栏，并根据底栏玻璃开关显示透明效果；普通底栏贴合设备预览底部。
+- Monet 颜色关闭时，预览使用内置静态色板；设备预览采用屏幕比例和圆角样式。
+- 页面缩放改为保持系统字体比例，并支持通过弹窗输入 80%–110% 的缩放值。
+- 调整歌曲详情页面的信息卡、标签和成绩输入框边框样式。
+
+### English
+
+#### Added
+
+- Android now support full functional theme settings page.
+
+#### Fixed
+
+- Fixed the constant table losing its scroll position after opening and closing a song detail page.
+- Fixed navigation layering and interaction issues while opening or returning from song details in Random Song.
+
+#### Changed
+
+- Updated the Android appearance preview with maimaid's profile card, Best 50 card, and two-column function-card layout.
+- Added preview states for the standard and floating bottom bars, including the translucent glass treatment and bottom-aligned standard bar.
+- The preview uses the built-in static palette when Monet colors are disabled and follows the device aspect ratio and rounded-corner style.
+- Improved page scaling by preserving the system font scale and adding a dialog for 80%–110% values.
+- Updated borders for song-detail information cards, metadata chips, and score-entry fields.
+
 ## 1.2.6.1
 
 ### 中文
