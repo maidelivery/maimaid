@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.runtime.Composable
@@ -72,6 +72,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 internal fun ConstantTableScreen(
     container: AppContainer,
     contentTopPadding: Dp,
+    listState: LazyListState,
     onOpenSong: (String) -> Unit,
 ) {
     val viewModel = viewModel<ConstantTableViewModel>(factory = ConstantTableViewModel.Factory(container))
@@ -80,8 +81,6 @@ internal fun ConstantTableScreen(
     val scope = rememberCoroutineScope()
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
     var isExporting by remember { mutableStateOf(false) }
-    val listState = rememberLazyListState()
-
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,

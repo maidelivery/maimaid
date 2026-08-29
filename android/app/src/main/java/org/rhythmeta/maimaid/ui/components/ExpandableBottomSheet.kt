@@ -61,6 +61,7 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawPlainBackdrop
 import com.kyant.backdrop.effects.blur
 import kotlinx.coroutines.launch
+import org.rhythmeta.maimaid.ui.theme.LocalEnableBlur
 import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.roundToInt
@@ -218,7 +219,7 @@ private fun ExpandableBottomSheetLayout(
         val visibleSheetHeight = sheetHeight - with(density) { offset.toDp() }
         val dimProgress = ((hiddenOffset - offset) / (hiddenOffset - halfExpandedOffset))
             .coerceIn(0f, 1f)
-        val sheetBackground = MiuixTheme.colorScheme.background
+        val sheetBackground = MiuixTheme.colorScheme.surface
         val sheetShape = remember { squircleShape(BottomSheetCornerRadius) }
         val sheetBackdrop = rememberLayerBackdrop {
             drawRect(sheetBackground)
@@ -285,6 +286,8 @@ private fun ExpandableBottomSheetHeader(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val enableBlur = LocalEnableBlur.current
+    val sheetBackground = MiuixTheme.colorScheme.surface
     val expanded = state.settledValue == BottomSheetAnchor.Expanded
     val actionLabel = if (expanded) collapseActionLabel else expandActionLabel
     val stateLabel = if (expanded) expandedStateDescription else halfExpandedStateDescription
@@ -296,10 +299,19 @@ private fun ExpandableBottomSheetHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .drawPlainBackdrop(
-                backdrop = backdrop,
-                shape = { RectangleShape },
-                effects = { blur(BottomSheetHeaderBlurRadius.toPx()) },
+            .then(
+                if (enableBlur) {
+                    Modifier.drawPlainBackdrop(
+                        backdrop = backdrop,
+                        shape = { RectangleShape },
+                        effects = { blur(BottomSheetHeaderBlurRadius.toPx()) },
+                        onDrawSurface = {
+                            drawRect(sheetBackground.copy(alpha = 0.52f))
+                        },
+                    )
+                } else {
+                    Modifier.background(sheetBackground)
+                },
             )
             .anchoredDraggable(
                 state = state,

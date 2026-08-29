@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -71,6 +72,7 @@ fun LiquidGlassTabBar(
     onSelected: (Int) -> Unit,
     backdrop: Backdrop,
     tabs: List<LiquidGlassTab>,
+    isBlurEnabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     require(tabs.isNotEmpty())
@@ -79,6 +81,7 @@ fun LiquidGlassTabBar(
     val accentColor = MiuixTheme.colorScheme.primary
     val tabContentColor = MiuixTheme.colorScheme.onSurfaceVariantSummary
     val containerColor = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
+    val opaqueSurfaceColor = MiuixTheme.colorScheme.surfaceContainer
     val tabsBackdrop = rememberLayerBackdrop()
     val combinedBackdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop)
     val density = LocalDensity.current
@@ -169,28 +172,34 @@ fun LiquidGlassTabBar(
         Row(
             modifier = Modifier
                 .graphicsLayer { translationX = panelOffset }
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { SquircleCapsule },
-                    effects = {
-                        vibrancy()
-                        blur(4.dp.toPx())
-                        lens(
-                            refractionHeight = 24.dp.toPx(),
-                            refractionAmount = 24.dp.toPx(),
+                .then(
+                    if (isBlurEnabled) {
+                        Modifier.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { SquircleCapsule },
+                            effects = {
+                                vibrancy()
+                                blur(4.dp.toPx())
+                                lens(
+                                    refractionHeight = 24.dp.toPx(),
+                                    refractionAmount = 24.dp.toPx(),
+                                )
+                            },
+                            layerBlock = {
+                                val width = size.width.coerceAtLeast(1f)
+                                val scale = lerp(
+                                    1f,
+                                    1f + 16.dp.toPx() / width,
+                                    dragAnimation.pressProgress,
+                                )
+                                scaleX = scale
+                                scaleY = scale
+                            },
+                            onDrawSurface = { drawRect(containerColor) },
                         )
+                    } else {
+                        Modifier.background(opaqueSurfaceColor, SquircleCapsule)
                     },
-                    layerBlock = {
-                        val width = size.width.coerceAtLeast(1f)
-                        val scale = lerp(
-                            1f,
-                            1f + 16.dp.toPx() / width,
-                            dragAnimation.pressProgress,
-                        )
-                        scaleX = scale
-                        scaleY = scale
-                    },
-                    onDrawSurface = { drawRect(containerColor) },
                 )
                 .fillMaxWidth()
                 .height(64.dp)
@@ -200,44 +209,46 @@ fun LiquidGlassTabBar(
             tabs.forEachIndexed { index, tab ->
                 LiquidGlassTabItem(
                     tab = tab,
-                    color = tabContentColor,
+                    color = if (!isBlurEnabled && index == currentIndex) accentColor else tabContentColor,
                     scale = { 1f },
                     onClick = { currentIndex = index },
                 )
             }
         }
 
-        Row(
-            modifier = Modifier
-                .clearAndSetSemantics { }
-                .alpha(0f)
-                .layerBackdrop(tabsBackdrop)
-                .graphicsLayer { translationX = panelOffset }
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { SquircleCapsule },
-                    effects = {
-                        vibrancy()
-                        blur(4.dp.toPx())
-                        lens(
-                            refractionHeight = 24.dp.toPx(),
-                            refractionAmount = 24.dp.toPx(),
-                        )
-                    },
-                    onDrawSurface = { drawRect(containerColor) },
-                )
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = horizontalPadding),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            tabs.forEachIndexed { index, tab ->
-                LiquidGlassTabItem(
-                    tab = tab,
-                    color = accentColor,
-                    scale = { lerp(1f, 1.2f, dragAnimation.pressProgress) },
-                    onClick = { currentIndex = index },
-                )
+        if (isBlurEnabled) {
+            Row(
+                modifier = Modifier
+                    .clearAndSetSemantics { }
+                    .alpha(0f)
+                    .layerBackdrop(tabsBackdrop)
+                    .graphicsLayer { translationX = panelOffset }
+                    .drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { SquircleCapsule },
+                        effects = {
+                            vibrancy()
+                            blur(4.dp.toPx())
+                            lens(
+                                refractionHeight = 24.dp.toPx(),
+                                refractionAmount = 24.dp.toPx(),
+                            )
+                        },
+                        onDrawSurface = { drawRect(containerColor) },
+                    )
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = horizontalPadding),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                tabs.forEach { tab ->
+                    LiquidGlassTabItem(
+                        tab = tab,
+                        color = accentColor,
+                        scale = { lerp(1f, 1.2f, dragAnimation.pressProgress) },
+                        onClick = { currentIndex = tabs.indexOf(tab) },
+                    )
+                }
             }
         }
 
@@ -252,48 +263,55 @@ fun LiquidGlassTabBar(
                     }
                 }
                 .then(dragAnimation.modifier)
-                .drawBackdrop(
-                    backdrop = combinedBackdrop,
-                    shape = { SquircleCapsule },
-                    effects = {
-                        val progress = dragAnimation.pressProgress
-                        lens(
-                            refractionHeight = 10.dp.toPx() * progress,
-                            refractionAmount = 14.dp.toPx() * progress,
-                            depthEffect = true,
-                            chromaticAberration = true,
-                        )
-                    },
-                    highlight = {
-                        Highlight.Default.copy(alpha = dragAnimation.pressProgress)
-                    },
-                    shadow = {
-                        Shadow(alpha = dragAnimation.pressProgress)
-                    },
-                    innerShadow = {
-                        InnerShadow(
-                            radius = 8.dp * dragAnimation.pressProgress,
-                            alpha = dragAnimation.pressProgress,
-                        )
-                    },
-                    layerBlock = {
-                        scaleX = dragAnimation.scaleX
-                        scaleY = dragAnimation.scaleY
-                        val velocity = dragAnimation.velocity / 10f
-                        scaleX /= 1f - (velocity * 0.75f).fastCoerceIn(-0.2f, 0.2f)
-                        scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
-                    },
-                    onDrawSurface = {
-                        val progress = dragAnimation.pressProgress
-                        drawRect(
-                            color = if (isLight) {
-                                Color.Black.copy(alpha = 0.1f)
-                            } else {
-                                Color.White.copy(alpha = 0.1f)
+                .then(
+                    if (isBlurEnabled) {
+                        Modifier.drawBackdrop(
+                            backdrop = combinedBackdrop,
+                            shape = { SquircleCapsule },
+                            effects = {
+                                val progress = dragAnimation.pressProgress
+                                lens(
+                                    refractionHeight = 10.dp.toPx() * progress,
+                                    refractionAmount = 14.dp.toPx() * progress,
+                                    depthEffect = true,
+                                    chromaticAberration = true,
+                                )
                             },
-                            alpha = 1f - progress,
+                            highlight = {
+                                Highlight.Default.copy(alpha = dragAnimation.pressProgress)
+                            },
+                            shadow = {
+                                Shadow(alpha = dragAnimation.pressProgress)
+                            },
+                            innerShadow = {
+                                InnerShadow(
+                                    radius = 8.dp * dragAnimation.pressProgress,
+                                    alpha = dragAnimation.pressProgress,
+                                )
+                            },
+                            layerBlock = {
+                                scaleX = dragAnimation.scaleX
+                                scaleY = dragAnimation.scaleY
+                                val velocity = dragAnimation.velocity / 10f
+                                scaleX /= 1f - (velocity * 0.75f).fastCoerceIn(-0.2f, 0.2f)
+                                scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
+                            },
+                            onDrawSurface = {
+                                val progress = dragAnimation.pressProgress
+                                drawRect(
+                                    color = if (isLight) {
+                                        Color.Black.copy(alpha = 0.1f)
+                                    } else {
+                                        Color.White.copy(alpha = 0.1f)
+                                    },
+                                    alpha = 1f - progress,
+                                )
+                                drawRect(Color.Black.copy(alpha = 0.03f * progress))
+                            },
                         )
-                        drawRect(Color.Black.copy(alpha = 0.03f * progress))
+                    } else {
+                        Modifier
+                            .background(accentColor.copy(alpha = 0.15f), SquircleCapsule)
                     },
                 )
                 .width(tabWidth)

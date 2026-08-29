@@ -1,6 +1,5 @@
 package org.rhythmeta.maimaid.ui.settings
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,20 +21,13 @@ import androidx.compose.material.icons.rounded.SetMeal
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.rhythmeta.maimaid.BuildConfig
 import org.rhythmeta.maimaid.R
-import org.rhythmeta.maimaid.ui.components.OpaqueColorPalette
-import org.rhythmeta.maimaid.ui.components.SquircleExtension
 import org.rhythmeta.maimaid.ui.navigation.AppDetail
-import org.rhythmeta.maimaid.ui.theme.AppThemeColorSource
-import org.rhythmeta.maimaid.ui.theme.AppThemeMode
-import org.rhythmeta.maimaid.ui.theme.toMutedThemeSeed
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
@@ -43,19 +35,11 @@ import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
-import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
-import top.yukonga.miuix.kmp.squircle.squircleBackground
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun SettingsScreen(
-    themeMode: AppThemeMode,
-    themeColorSource: AppThemeColorSource,
-    themeCustomColorArgb: Int,
     contentTopPadding: Dp,
-    onThemeModeChange: (AppThemeMode) -> Unit,
-    onThemeColorSourceChange: (AppThemeColorSource) -> Unit,
-    onThemeCustomColorChange: (Int) -> Unit,
     showScannerBoundingBoxes: Boolean,
     onShowScannerBoundingBoxesChange: (Boolean) -> Unit,
     thirdPartyScoreSyncEnabled: Boolean,
@@ -131,67 +115,13 @@ fun SettingsScreen(
             }
         }
         item {
-            val themeOptions = listOf(
-                stringResource(R.string.theme_system),
-                stringResource(R.string.theme_light),
-                stringResource(R.string.theme_dark),
-            )
-            val colorSourceOptions = listOf(
-                stringResource(R.string.theme_color_wallpaper),
-                stringResource(R.string.theme_color_custom),
-            )
-
             SettingsSection(title = stringResource(R.string.settings_appearance)) {
-                WindowDropdownPreference(
-                    items = themeOptions,
-                    selectedIndex = themeMode.ordinal,
+                SettingsRow(
+                    icon = Icons.Rounded.Palette,
                     title = stringResource(R.string.settings_theme),
                     summary = stringResource(R.string.settings_theme_description),
-                    startAction = {
-                        SettingsPreferenceIcon(Icons.Rounded.Palette)
-                    },
-                    onSelectedIndexChange = { index ->
-                        AppThemeMode.entries.getOrNull(index)?.let(onThemeModeChange)
-                    },
+                    onClick = { onOpenDetail(AppDetail.Appearance) },
                 )
-                WindowDropdownPreference(
-                    items = colorSourceOptions,
-                    selectedIndex = themeColorSource.ordinal,
-                    title = stringResource(R.string.settings_monet_colors),
-                    summary = stringResource(
-                        when (themeColorSource) {
-                            AppThemeColorSource.Wallpaper -> R.string.theme_color_wallpaper_summary
-                            AppThemeColorSource.Custom -> R.string.theme_color_custom_summary
-                        },
-                    ),
-                    startAction = {
-                        SettingsPreferenceIcon(Icons.Rounded.Palette)
-                    },
-                    onSelectedIndexChange = { index ->
-                        AppThemeColorSource.entries.getOrNull(index)?.let(onThemeColorSourceChange)
-                    },
-                )
-                if (themeColorSource == AppThemeColorSource.Custom) {
-                    BasicComponent(
-                        title = stringResource(R.string.theme_color_custom),
-                        startAction = {
-                            SettingsPreferenceIcon(Icons.Rounded.Palette)
-                        },
-                        endActions = {
-                            SettingsColorSwatch(
-                                color = Color(themeCustomColorArgb).toMutedThemeSeed(),
-                            )
-                        },
-                        bottomAction = {
-                            OpaqueColorPalette(
-                                color = Color(themeCustomColorArgb),
-                                onColorChanged = { color ->
-                                    onThemeCustomColorChange(color.toArgb())
-                                },
-                            )
-                        },
-                    )
-                }
                 SettingsToggleRow(
                     icon = Icons.Rounded.DocumentScanner,
                     title = stringResource(R.string.settings_scanner_boxes),
@@ -305,18 +235,5 @@ private fun SettingsPreferenceIcon(
             .padding(end = 6.dp)
             .size(24.dp),
         tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
-    )
-}
-
-@Composable
-private fun SettingsColorSwatch(color: Color) {
-    Box(
-        modifier = Modifier
-            .size(28.dp)
-            .squircleBackground(
-                color = color,
-                cornerRadius = 10.dp,
-                extension = SquircleExtension,
-            ),
     )
 }

@@ -8,6 +8,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -36,30 +39,28 @@ class MainActivity : ComponentActivity() {
             val mainViewModel: org.rhythmeta.maimaid.ui.MainViewModel = viewModel(
                 factory = org.rhythmeta.maimaid.ui.MainViewModel.Factory(maimaidApplication.container),
             )
-            val themeMode by mainViewModel.themeMode.collectAsStateWithLifecycle()
-            val themeColorSource by mainViewModel.themeColorSource.collectAsStateWithLifecycle()
-            val themeCustomColorArgb by mainViewModel.themeCustomColorArgb.collectAsStateWithLifecycle()
+            val themeSettings by mainViewModel.themeSettings.collectAsStateWithLifecycle()
             MaimaidTheme(
-                themeMode = themeMode,
-                colorSource = themeColorSource,
-                customColorArgb = themeCustomColorArgb,
+                settings = themeSettings,
             ) {
-                MaimaidApp(
-                    viewModel = mainViewModel,
-                    container = maimaidApplication.container,
-                    themeMode = themeMode,
-                    themeColorSource = themeColorSource,
-                    themeCustomColorArgb = themeCustomColorArgb,
-                    onThemeModeChange = mainViewModel::setThemeMode,
-                    onThemeColorSourceChange = mainViewModel::setThemeColorSource,
-                    onThemeCustomColorChange = mainViewModel::setThemeCustomColorArgb,
-                    onSendLogs = ::sendLogs,
-                    initialDetail = widgetDetail.value,
-                    resetToHome = widgetHomeRequest.value,
-                    pendingCollectionImport = pendingCollectionImport.value,
-                    onCollectionImportConfirmed = ::confirmCollectionImport,
-                    onCollectionImportDismissed = { pendingCollectionImport.value = null },
-                )
+                val baseDensity = LocalDensity.current
+                CompositionLocalProvider(
+                    LocalDensity provides Density(
+                        density = baseDensity.density * themeSettings.pageScale,
+                        fontScale = baseDensity.fontScale,
+                    ),
+                ) {
+                    MaimaidApp(
+                        viewModel = mainViewModel,
+                        container = maimaidApplication.container,
+                        onSendLogs = ::sendLogs,
+                        initialDetail = widgetDetail.value,
+                        resetToHome = widgetHomeRequest.value,
+                        pendingCollectionImport = pendingCollectionImport.value,
+                        onCollectionImportConfirmed = ::confirmCollectionImport,
+                        onCollectionImportDismissed = { pendingCollectionImport.value = null },
+                    )
+                }
             }
         }
     }

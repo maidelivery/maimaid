@@ -14,6 +14,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -38,7 +39,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -76,6 +76,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -162,7 +164,6 @@ import top.yukonga.miuix.kmp.basic.SnackbarDuration
 import top.yukonga.miuix.kmp.basic.SnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TabRowWithContour
@@ -364,7 +365,7 @@ fun SongDetailScreen(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            contentPadding = PaddingValues(
                 start = 16.dp,
                 top = contentTopPadding + 8.dp,
                 end = 16.dp,
@@ -596,6 +597,7 @@ private fun SongHeader(
     val jacketSavedMessage = stringResource(R.string.song_jacket_saved)
     val jacketActionFailedMessage = stringResource(R.string.song_jacket_action_failed)
     val shareChooserTitle = stringResource(R.string.song_jacket_share_chooser)
+    val jacketActionsLabel = stringResource(R.string.song_jacket_actions)
     val legacyDownloadLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("image/*"),
     ) { uri ->
@@ -639,7 +641,7 @@ private fun SongHeader(
                         extension = SquircleExtension,
                     )
                     .semantics {
-                        onLongClick(label = context.getString(R.string.song_jacket_actions)) {
+                        onLongClick(label = jacketActionsLabel) {
                             openJacketMenu()
                             true
                         }
@@ -965,11 +967,11 @@ private fun MetadataGrid(
 
 @Composable
 private fun MarqueeText(
+	  modifier: Modifier = Modifier,
     text: String,
     style: androidx.compose.ui.text.TextStyle,
     fontWeight: FontWeight? = null,
     color: Color = MiuixTheme.colorScheme.onSurface,
-    modifier: Modifier = Modifier,
     onTextLayout: ((androidx.compose.ui.text.TextLayoutResult) -> Unit)? = null,
 ) {
     Text(
@@ -1018,7 +1020,10 @@ private fun CommunityAliasSection(
         if (localizedMessage != null) onMessageConsumed()
     }
 
-    SongDetailCard(color = surfaceColor) {
+    SongDetailCard(
+        color = surfaceColor,
+        borderColor = accentColor.copy(alpha = 0.58f),
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -1176,7 +1181,10 @@ private fun RegionAvailability(
     val jp = charts.any(SheetEntity::regionJp)
     val intl = charts.any(SheetEntity::regionIntl)
     val cn = charts.any(SheetEntity::regionCn)
-    SongDetailCard(color = surfaceColor) {
+    SongDetailCard(
+        color = surfaceColor,
+        borderColor = accentColor.copy(alpha = 0.58f),
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -1237,7 +1245,10 @@ private fun ExternalSearch(title: String, surfaceColor: Color, accentColor: Colo
     val encodedTitle = android.net.Uri.encode(title)
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
     val brandColors = SongVisualUtils.externalSearchColors(darkTheme)
-    SongDetailCard(color = surfaceColor) {
+    SongDetailCard(
+        color = surfaceColor,
+        borderColor = accentColor.copy(alpha = 0.58f),
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -1359,6 +1370,11 @@ private fun MetadataChip(
                 cornerRadius = 50.dp,
                 extension = SquircleExtension,
             )
+            .border(
+                width = 0.5.dp,
+                color = accentColor.copy(alpha = 0.58f),
+                shape = CircleShape,
+            )
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.Center,
@@ -1373,7 +1389,8 @@ private fun MetadataChip(
         Spacer(Modifier.width(6.dp))
         Text(
             text = item.value,
-            style = MiuixTheme.textStyles.footnote2,
+//					<=12.sp is acceptable.
+					  fontSize = 12.sp,
             color = accentColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -1466,7 +1483,7 @@ private fun SongDetailButton(
     onClick: () -> Unit,
     surfaceColor: Color,
     modifier: Modifier = Modifier,
-    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit,
+    content: @Composable RowScope.() -> Unit,
 ) {
     CompositionLocalProvider(LocalContentColor provides MiuixTheme.colorScheme.onSurface) {
         Row(
@@ -2209,7 +2226,7 @@ private fun FaultToleranceCalculator(
     sheet: SheetEntity,
     accentColor: Color,
 ) {
-    var targetAchievement by rememberSaveable(sheet.sheetKey) { mutableStateOf(100.5) }
+    var targetAchievement by rememberSaveable(sheet.sheetKey) { mutableDoubleStateOf(100.5) }
     val tolerance = remember(sheet, targetAchievement) {
         ScoreToleranceCalculator.calculate(
             tapCount = sheet.tap ?: 0,
@@ -2347,7 +2364,7 @@ private fun PlayHistorySection(
     val sheetKey = records.first().sheetKey
     var expanded by rememberSaveable(sheetKey) { mutableStateOf(false) }
     var sortByDate by rememberSaveable(sheetKey) { mutableStateOf(true) }
-    var page by rememberSaveable(sheetKey) { mutableStateOf(1) }
+    var page by rememberSaveable(sheetKey) { mutableIntStateOf(1) }
     val sortedRecords = remember(records, sortByDate) {
         if (sortByDate) {
             records.sortedByDescending(PlayRecordEntity::playedAt)
@@ -2787,7 +2804,10 @@ internal fun ScoreEntrySheet(
                                     }
                                 }
                             },
-                            colors = appTextFieldColors(difficultyColor),
+                            colors = appTextFieldColors(
+                                accentColor = difficultyColor,
+                                backgroundColor = difficultyColor.copy(alpha = 0.3f),
+                            ),
                             label = stringResource(R.string.score_achievement_hint),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Decimal,
@@ -2809,7 +2829,10 @@ internal fun ScoreEntrySheet(
                                     }
                                 }
                             },
-                            colors = appTextFieldColors(difficultyColor),
+                            colors = appTextFieldColors(
+                                accentColor = difficultyColor,
+                                backgroundColor = difficultyColor.copy(alpha = 0.3f),
+                            ),
                             label = if (maxDxScore > 0) {
                                 stringResource(R.string.score_dx_hint_with_max, maxDxScore)
                             } else {
@@ -3048,7 +3071,7 @@ private fun acceptedDxScoreInput(value: String, maximum: Int): String? {
     if (value.isEmpty()) return value
     if (value.any { it !in '0'..'9' }) return null
     val parsed = value.toIntOrNull() ?: return null
-    if (maximum > 0 && parsed > maximum) return null
+    if (maximum in 1..<parsed) return null
     return value
 }
 

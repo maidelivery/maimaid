@@ -9,7 +9,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun appTextFieldColors(
     accentColor: Color = MiuixTheme.colorScheme.primary,
-    backgroundColor: Color = accentColor.copy(alpha = 0.3f),
+    backgroundColor: Color = MiuixTheme.colorScheme.secondaryContainer,
 ): TextFieldColors = TextFieldDefaults.textFieldColors(
     backgroundColor = backgroundColor,
     labelColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,

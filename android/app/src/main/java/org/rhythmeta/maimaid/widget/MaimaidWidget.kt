@@ -127,17 +127,11 @@ private suspend fun widgetAccentArgb(
     context: Context,
     container: org.rhythmeta.maimaid.core.AppContainer,
 ): Int {
-    val source = container.appPreferencesRepository.themeColorSource.first()
-    if (source == org.rhythmeta.maimaid.ui.theme.AppThemeColorSource.Custom) {
-        return container.appPreferencesRepository.themeCustomColorArgb.first()
-    }
-    val dark = when (container.appPreferencesRepository.themeMode.first()) {
-        org.rhythmeta.maimaid.ui.theme.AppThemeMode.Dark -> true
-        org.rhythmeta.maimaid.ui.theme.AppThemeMode.Light -> false
-        org.rhythmeta.maimaid.ui.theme.AppThemeMode.System ->
-            (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-                android.content.res.Configuration.UI_MODE_NIGHT_YES
-    }
+    val settings = container.appPreferencesRepository.themeSettings.first()
+    if (settings.keyColor != 0) return settings.keyColor
+    val dark = settings.colorMode.isDark || (settings.colorMode.isSystem &&
+        (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES)
     // The generated light/dark Monet primary uses the 600/200 tonal pair.
     val resource = if (dark) android.R.color.system_accent1_200 else android.R.color.system_accent1_600
     return runCatching { context.getColor(resource) }.getOrDefault(context.getColor(R.color.widget_accent))

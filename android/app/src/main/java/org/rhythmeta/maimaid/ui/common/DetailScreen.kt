@@ -76,6 +76,11 @@ import org.rhythmeta.maimaid.ui.settings.DivingFishImportScreen
 import org.rhythmeta.maimaid.ui.settings.LxnsImportScreen
 import org.rhythmeta.maimaid.ui.settings.OtogameImportScreen
 import org.rhythmeta.maimaid.ui.settings.OtogameLoginScreen
+import org.rhythmeta.maimaid.ui.settings.ThemeSettingsScreen
+import org.rhythmeta.maimaid.ui.theme.AppThemeSettings
+import org.rhythmeta.maimaid.ui.theme.ColorMode
+import com.materialkolor.PaletteStyle
+import com.materialkolor.dynamiccolor.ColorSpec
 import org.rhythmeta.maimaid.ui.collections.SongCollectionsScreen
 import org.rhythmeta.maimaid.ui.catalog.CatalogDisplayMode
 import org.rhythmeta.maimaid.core.data.CatalogSortOption
@@ -89,6 +94,7 @@ internal fun DetailScreen(
     container: AppContainer,
     songContentTopPadding: androidx.compose.ui.unit.Dp,
     communityAliasListState: LazyListState,
+    constantTableListState: LazyListState,
     recommendationSelectedPage: Int,
     danSelectedPage: Int,
     scoreQueryViewModel: ScoreQueryViewModel?,
@@ -121,6 +127,16 @@ internal fun DetailScreen(
     onCollectionsCreateRequestHandled: () -> Unit = {},
     onCollectionsImportRequestHandled: () -> Unit = {},
     onCollectionsRenameRequestHandled: () -> Unit = {},
+    themeSettings: AppThemeSettings? = null,
+    onColorModeChange: (ColorMode) -> Unit = {},
+    onKeyColorChange: (Int) -> Unit = {},
+    onPaletteStyleChange: (PaletteStyle) -> Unit = {},
+    onColorSpecChange: (ColorSpec.SpecVersion) -> Unit = {},
+    onEnableBlurChange: (Boolean) -> Unit = {},
+    onEnableFloatingBottomBarChange: (Boolean) -> Unit = {},
+    onEnableFloatingBottomBarBlurChange: (Boolean) -> Unit = {},
+    onEnablePredictiveBackChange: (Boolean) -> Unit = {},
+    onPageScaleChange: (Float) -> Unit = {},
 ) {
     when (detail) {
         AppDetail.Song -> SongDetailScreen(
@@ -153,6 +169,21 @@ internal fun DetailScreen(
             onImportRequestHandled = onCollectionsImportRequestHandled,
             onRenameRequestHandled = onCollectionsRenameRequestHandled,
         )
+        AppDetail.Appearance -> themeSettings?.let { settings ->
+            ThemeSettingsScreen(
+                settings = settings,
+                contentTopPadding = songContentTopPadding,
+                onColorModeChange = onColorModeChange,
+                onKeyColorChange = onKeyColorChange,
+                onPaletteStyleChange = onPaletteStyleChange,
+                onColorSpecChange = onColorSpecChange,
+                onEnableBlurChange = onEnableBlurChange,
+                onEnableFloatingBottomBarChange = onEnableFloatingBottomBarChange,
+                onEnableFloatingBottomBarBlurChange = onEnableFloatingBottomBarBlurChange,
+                onEnablePredictiveBackChange = onEnablePredictiveBackChange,
+                onPageScaleChange = onPageScaleChange,
+            )
+        }
         AppDetail.CollectionDetail -> SongCollectionsScreen(
             container = container,
             songs = state.songs,
@@ -221,6 +252,7 @@ internal fun DetailScreen(
         AppDetail.ConstantTable -> ConstantTableScreen(
             container = container,
             contentTopPadding = songContentTopPadding,
+            listState = constantTableListState,
             onOpenSong = onOpenSong,
         )
         AppDetail.PlateProgress -> PlateProgressScreen(

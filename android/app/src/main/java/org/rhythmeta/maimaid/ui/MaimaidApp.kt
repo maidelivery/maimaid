@@ -4,6 +4,7 @@ import android.os.Build
 import android.view.RoundedCorner
 import androidx.activity.BackEventCompat
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.List
@@ -28,12 +29,14 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -116,8 +119,11 @@ import org.rhythmeta.maimaid.ui.scanner.ScannerScreen
 import org.rhythmeta.maimaid.ui.settings.OtogameImportScreen
 import org.rhythmeta.maimaid.ui.settings.OtogameLoginScreen
 import org.rhythmeta.maimaid.ui.settings.SettingsScreen
-import org.rhythmeta.maimaid.ui.theme.AppThemeColorSource
-import org.rhythmeta.maimaid.ui.theme.AppThemeMode
+import org.rhythmeta.maimaid.ui.theme.AppThemeSettings
+import org.rhythmeta.maimaid.ui.theme.LocalEnableFloatingBottomBar
+import org.rhythmeta.maimaid.ui.theme.LocalEnableFloatingBottomBarBlur
+import org.rhythmeta.maimaid.ui.theme.LocalEnableBlur
+import org.rhythmeta.maimaid.ui.theme.LocalEnablePredictiveBack
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.DropdownImpl
@@ -132,6 +138,9 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.NavigationBar
+import top.yukonga.miuix.kmp.basic.NavigationBarItem
+import top.yukonga.miuix.kmp.basic.TopAppBarState
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowListPopup
 import top.yukonga.miuix.kmp.window.WindowDialog
@@ -145,12 +154,6 @@ import com.kyant.backdrop.effects.blur
 fun MaimaidApp(
     viewModel: MainViewModel,
     container: AppContainer,
-    themeMode: AppThemeMode,
-    themeColorSource: AppThemeColorSource,
-    themeCustomColorArgb: Int,
-    onThemeModeChange: (AppThemeMode) -> Unit,
-    onThemeColorSourceChange: (AppThemeColorSource) -> Unit,
-    onThemeCustomColorChange: (Int) -> Unit,
     onSendLogs: () -> Unit,
     initialDetail: AppDetail? = null,
     resetToHome: Boolean = false,
@@ -159,6 +162,8 @@ fun MaimaidApp(
     onCollectionImportDismissed: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val themeSettings by viewModel.themeSettings.collectAsStateWithLifecycle()
+    val enableBlur = LocalEnableBlur.current
     val collections by container.songCollectionRepository.collections.collectAsStateWithLifecycle(emptyList())
     val initialCatalogState by viewModel.initialCatalogState.collectAsStateWithLifecycle()
     val showScannerBoundingBoxes by viewModel.showScannerBoundingBoxes.collectAsStateWithLifecycle()
@@ -192,7 +197,18 @@ fun MaimaidApp(
     val communityAliasListState = rememberSaveable(saver = LazyListState.Saver) {
         LazyListState()
     }
+    val constantTableListState = rememberSaveable(saver = LazyListState.Saver) {
+        LazyListState()
+    }
     val communityAliasScrollBehavior = MiuixScrollBehavior()
+    val constantTableTopAppBarState = rememberSaveable(saver = TopAppBarState.Saver) {
+        TopAppBarState(
+            initialHeightOffsetLimit = -Float.MAX_VALUE,
+            initialHeightOffset = 0f,
+            initialContentOffset = 0f,
+        )
+    }
+    val constantTableScrollBehavior = MiuixScrollBehavior(state = constantTableTopAppBarState)
     var songDetailBackground by remember { mutableStateOf<Pair<String, Color>?>(null) }
     var songDetailTitle by remember { mutableStateOf<Pair<String, String>?>(null) }
     var catalogDisplayMode by rememberSaveable { mutableStateOf(CatalogDisplayMode.List) }
@@ -499,7 +515,7 @@ fun MaimaidApp(
         }
     }
 
-    PredictiveBackHandler(enabled = canHandleBack) { progress: Flow<BackEventCompat> ->
+    PredictiveBackHandler(enabled = canHandleBack && LocalEnablePredictiveBack.current) { progress: Flow<BackEventCompat> ->
         try {
             detailBackTransitionJob?.cancel()
             detailEntranceTransitionJob?.cancel()
@@ -620,6 +636,7 @@ fun MaimaidApp(
                 it == AppDetail.BestTable ||
                 it == AppDetail.Recommendations ||
                 it == AppDetail.ScoreQuery ||
+                it == AppDetail.ConstantTable ||
                 it == AppDetail.PlateProgress ||
                 it == AppDetail.DanDetail ||
                 it == AppDetail.Collections ||
@@ -700,13 +717,7 @@ fun MaimaidApp(
                 onOpenSong = openSong,
             )
             RootDestination.Settings -> SettingsScreen(
-                themeMode = themeMode,
-                themeColorSource = themeColorSource,
-                themeCustomColorArgb = themeCustomColorArgb,
                 contentTopPadding = contentTopPadding,
-                onThemeModeChange = onThemeModeChange,
-                onThemeColorSourceChange = onThemeColorSourceChange,
-                onThemeCustomColorChange = onThemeCustomColorChange,
                 showScannerBoundingBoxes = showScannerBoundingBoxes,
                 onShowScannerBoundingBoxesChange = viewModel::setShowScannerBoundingBoxes,
                 thirdPartyScoreSyncEnabled = thirdPartyScoreSyncEnabled,
@@ -781,6 +792,31 @@ fun MaimaidApp(
                     collectionsRenameRequested = false
                 }
                 backProgress.snapTo(0f)
+            }
+        }
+    }
+    if (!LocalEnablePredictiveBack.current) {
+        BackHandler(enabled = canHandleBack) {
+            if (detail != null) {
+                closeDetail()
+            } else if (destination != RootDestination.Home) {
+                animateRootDestinationChange = false
+                homeTabTransitionJob?.cancel()
+                homeTabTransitionActive = true
+                destination = RootDestination.Home
+                homeTabTransitionJob = coroutineScope.launch {
+                    homeTabTransitionProgress.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(
+                            durationMillis = 360,
+                            easing = FastOutSlowInEasing,
+                        ),
+                    )
+                    if (destination == RootDestination.Home) {
+                        displayedNonHomeDestination = null
+                        homeTabTransitionActive = false
+                    }
+                }
             }
         }
     }
@@ -937,9 +973,21 @@ fun MaimaidApp(
         collectionNestedNavigation -> detailEntranceProgress.value
         else -> detailSourceProgress
     }
+    val rootTabTransitionProgress = if (
+        detail == null &&
+        destination != RootDestination.Home &&
+        gestureInProgress
+    ) {
+        1f - backProgress.value
+    } else {
+        homeTabTransitionProgress.value
+    }
     val detailIsMoving = gestureInProgress || detailEntranceProgress.value > 0f
     val foregroundShape = squircleShape(rememberDeviceCornerRadius())
-    val backgroundColor = MiuixTheme.colorScheme.background
+    // KernelSU's Miuix scaffolds use the surface role as the page canvas:
+    // #F7F7F7 in light mode and #000000 in dark mode. Cards remain on the
+    // surfaceContainer role, preserving the intended contrast.
+    val backgroundColor = MiuixTheme.colorScheme.surface
     val songTopBarColor = songDetailBackground
         ?.takeIf { it.first == selectedSongId }
         ?.second
@@ -957,7 +1005,7 @@ fun MaimaidApp(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(backgroundColor),
     ) {
         Box(
             modifier = Modifier
@@ -975,13 +1023,8 @@ fun MaimaidApp(
                                     (1f - detailSourceProgress)
                                 alpha = 0.9f + 0.1f * detailSourceProgress
                             }
-                            detail == null && destination != RootDestination.Home && gestureInProgress -> {
-                                translationX = -size.width * 0.25f *
-                                    (1f - backProgress.value)
-                                alpha = 0.9f + 0.1f * backProgress.value
-                            }
                             else -> {
-                                translationX = -size.width * homeTabTransitionProgress.value
+                                translationX = -size.width * rootTabTransitionProgress
                                 alpha = 1f
                             }
                         }
@@ -998,13 +1041,8 @@ fun MaimaidApp(
                     .graphicsLayer {
                         if (detail != null && destination != RootDestination.Home) {
                             translationX = -size.width * 0.25f * (1f - detailSourceProgress)
-                        } else if (homeTabTransitionActive || destination == RootDestination.Home) {
-                            translationX = size.width * (1f - homeTabTransitionProgress.value)
-                        } else if (destination != RootDestination.Home) {
-                            translationX = size.width * backProgress.value
-                            shape = foregroundShape
-                            clip = gestureInProgress
-                            shadowElevation = if (gestureInProgress) 12.dp.toPx() else 0f
+                        } else {
+                            translationX = size.width * (1f - rootTabTransitionProgress)
                         }
                     },
                 transitionSpec = {
@@ -1115,8 +1153,13 @@ fun MaimaidApp(
             },
             modifier = Modifier
                 .align(androidx.compose.ui.Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .padding(bottom = 8.dp),
+                .then(
+                    if (LocalEnableFloatingBottomBar.current) {
+                        Modifier.navigationBarsPadding().padding(bottom = 8.dp)
+                    } else {
+                        Modifier
+                    },
+                ),
         )
 
         if (detail == AppDetail.RandomSong || songReturnDetail == AppDetail.RandomSong) {
@@ -1129,6 +1172,11 @@ fun MaimaidApp(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {},
+                    )
                     .graphicsLayer {
                         if (randomSongIsForeground) {
                             translationX = when {
@@ -1173,6 +1221,7 @@ fun MaimaidApp(
                             container = container,
                             songContentTopPadding = paddingValues.calculateTopPadding(),
                             communityAliasListState = communityAliasListState,
+                            constantTableListState = constantTableListState,
                             recommendationSelectedPage = recommendationSelectedPage,
                             danSelectedPage = danSelectedPage,
                             scoreQueryViewModel = null,
@@ -1407,11 +1456,13 @@ fun MaimaidApp(
             detail == AppDetail.BestTable ||
             detail == AppDetail.Recommendations ||
                 detail == AppDetail.ScoreQuery ||
+                detail == AppDetail.ConstantTable ||
                 detail == AppDetail.PlateProgress -> detail
             detail == AppDetail.Song && (
                 songReturnDetail == AppDetail.BestTable ||
                     songReturnDetail == AppDetail.Recommendations ||
                     songReturnDetail == AppDetail.ScoreQuery ||
+                    songReturnDetail == AppDetail.ConstantTable ||
                     songReturnDetail == AppDetail.PlateProgress ||
                     songReturnDetail == AppDetail.CommunityAliases
                 ) -> songReturnDetail
@@ -1458,8 +1509,10 @@ fun MaimaidApp(
                 DetailNavigationLayer(
                     title = detailTitle(sourceDetail),
                     onBack = closeDetail,
-                    scrollBehavior = communityAliasScrollBehavior.takeIf {
-                        sourceDetail == AppDetail.CommunityAliases
+                    scrollBehavior = when (sourceDetail) {
+                        AppDetail.CommunityAliases -> communityAliasScrollBehavior
+                        AppDetail.ConstantTable -> constantTableScrollBehavior
+                        else -> null
                     },
                     actions = {
                         if (sourceDetail == AppDetail.BestTable) {
@@ -1519,6 +1572,7 @@ fun MaimaidApp(
                         container = container,
                         songContentTopPadding = contentTopPadding,
                         communityAliasListState = communityAliasListState,
+                        constantTableListState = constantTableListState,
                         recommendationSelectedPage = recommendationSelectedPage,
                         danSelectedPage = danSelectedPage,
                         scoreQueryViewModel = scoreQueryViewModel,
@@ -1594,6 +1648,7 @@ fun MaimaidApp(
                         container = container,
                         songContentTopPadding = contentTopPadding,
                         communityAliasListState = communityAliasListState,
+                        constantTableListState = constantTableListState,
                         recommendationSelectedPage = recommendationSelectedPage,
                         danSelectedPage = danSelectedPage,
                         scoreQueryViewModel = null,
@@ -1672,6 +1727,7 @@ fun MaimaidApp(
                         container = container,
                         songContentTopPadding = contentTopPadding,
                         communityAliasListState = communityAliasListState,
+                        constantTableListState = constantTableListState,
                         recommendationSelectedPage = recommendationSelectedPage,
                         danSelectedPage = danSelectedPage,
                         scoreQueryViewModel = null,
@@ -1755,6 +1811,7 @@ fun MaimaidApp(
                         container = container,
                         songContentTopPadding = contentTopPadding,
                         communityAliasListState = communityAliasListState,
+                        constantTableListState = constantTableListState,
                         recommendationSelectedPage = recommendationSelectedPage,
                         danSelectedPage = danSelectedPage,
                         scoreQueryViewModel = null,
@@ -1799,6 +1856,7 @@ fun MaimaidApp(
                 it == AppDetail.BestTable ||
                 it == AppDetail.Recommendations ||
                 it == AppDetail.ScoreQuery ||
+                it == AppDetail.ConstantTable ||
                 it == AppDetail.PlateProgress ||
                 it == AppDetail.Dan ||
                 it == AppDetail.DanDetail ||
@@ -1806,10 +1864,9 @@ fun MaimaidApp(
                 it == AppDetail.OtogameLogin ||
                 it == AppDetail.Song
         }?.let { activeDetail ->
-            val detailScrollBehavior = if (activeDetail == AppDetail.CommunityAliases) {
-                communityAliasScrollBehavior
-            } else {
-                MiuixScrollBehavior()
+            val detailScrollBehavior = when (activeDetail) {
+                AppDetail.CommunityAliases -> communityAliasScrollBehavior
+                else -> MiuixScrollBehavior()
             }
             val scoreQueryViewModel = if (activeDetail == AppDetail.ScoreQuery) {
                 composeViewModel<ScoreQueryViewModel>(factory = ScoreQueryViewModel.Factory(container))
@@ -1835,7 +1892,9 @@ fun MaimaidApp(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(songTopBarColor),
+                        // Detail pages use the app theme surface. The song artwork
+                        // background is scoped to the song detail layer above.
+                        .background(backgroundColor),
                 )
                 Scaffold(
                     modifier = Modifier
@@ -1854,7 +1913,8 @@ fun MaimaidApp(
                                 activeDetail == AppDetail.CollectionDetail ||
                                 activeDetail == AppDetail.DivingFishImport ||
                                 activeDetail == AppDetail.LxnsImport ||
-                                activeDetail == AppDetail.OtogameImport
+                                activeDetail == AppDetail.OtogameImport ||
+                                activeDetail == AppDetail.Appearance
                             ) {
                                 Modifier
                                     .nestedScroll(detailScrollBehavior.nestedScrollConnection)
@@ -1902,9 +1962,9 @@ fun MaimaidApp(
                                 modifier = Modifier.drawPlainBackdrop(
                                     backdrop = detailBackdrop,
                                     shape = { TopBarBottomShape },
-                                    effects = { blur(24.dp.toPx()) },
+                                    effects = { if (enableBlur) blur(24.dp.toPx()) },
                                     onDrawSurface = {
-                                        drawRect(backgroundColor.copy(alpha = 0.52f))
+                                        drawRect(backgroundColor.copy(alpha = if (enableBlur) 0.52f else 1f))
                                     },
                                 ).clip(TopBarBottomShape),
                                 color = Color.Transparent,
@@ -1925,7 +1985,8 @@ fun MaimaidApp(
                             activeDetail == AppDetail.CollectionDetail ||
                             activeDetail == AppDetail.DivingFishImport ||
                             activeDetail == AppDetail.LxnsImport ||
-                            activeDetail == AppDetail.OtogameImport
+                            activeDetail == AppDetail.OtogameImport ||
+                            activeDetail == AppDetail.Appearance
                         ) {
                             val detailTitle = if (activeDetail == AppDetail.CollectionDetail && selectedCollectionTitle != null) {
                                 selectedCollectionTitle
@@ -1940,9 +2001,9 @@ fun MaimaidApp(
                                 modifier = Modifier.drawPlainBackdrop(
                                     backdrop = detailBackdrop,
                                     shape = { TopBarBottomShape },
-                                    effects = { blur(24.dp.toPx()) },
+                                    effects = { if (enableBlur) blur(24.dp.toPx()) },
                                     onDrawSurface = {
-                                        drawRect(backgroundColor.copy(alpha = 0.52f))
+                                        drawRect(backgroundColor.copy(alpha = if (enableBlur) 0.52f else 1f))
                                     },
                                 ).clip(TopBarBottomShape),
                                 color = Color.Transparent,
@@ -2027,6 +2088,7 @@ fun MaimaidApp(
                                     AppDetail.LxnsImport,
                                     AppDetail.OtogameImport,
                                     AppDetail.OtogameLogin,
+                                    AppDetail.Appearance,
                                     -> Modifier
                                         .layerBackdrop(detailBackdrop)
                                         .background(backgroundColor)
@@ -2048,6 +2110,7 @@ fun MaimaidApp(
                             container = container,
                             songContentTopPadding = paddingValues.calculateTopPadding(),
                             communityAliasListState = communityAliasListState,
+                            constantTableListState = constantTableListState,
                             recommendationSelectedPage = recommendationSelectedPage,
                             danSelectedPage = danSelectedPage,
                             scoreQueryViewModel = scoreQueryViewModel,
@@ -2081,6 +2144,16 @@ fun MaimaidApp(
                                     songDetailTitle = currentSongId to title
                                 }
                             },
+                            themeSettings = themeSettings,
+                            onColorModeChange = viewModel::setColorMode,
+                            onKeyColorChange = viewModel::setKeyColor,
+                            onPaletteStyleChange = viewModel::setPaletteStyle,
+                            onColorSpecChange = viewModel::setColorSpec,
+                            onEnableBlurChange = viewModel::setEnableBlur,
+                            onEnableFloatingBottomBarChange = viewModel::setEnableFloatingBottomBar,
+                            onEnableFloatingBottomBarBlurChange = viewModel::setEnableFloatingBottomBarBlur,
+                            onEnablePredictiveBackChange = viewModel::setEnablePredictiveBack,
+                            onPageScaleChange = viewModel::setPageScale,
                             collectionsDisplayMode = collectionsDisplayMode,
                             collectionsSortOption = collectionsSortOption,
                             collectionsSortAscending = collectionsSortAscending,
@@ -2143,7 +2216,8 @@ private fun DetailNavigationLayer(
     content: @Composable (Dp) -> Unit,
 ) {
     val resolvedScrollBehavior = scrollBehavior ?: MiuixScrollBehavior()
-    val backgroundColor = MiuixTheme.colorScheme.background
+    val enableBlur = LocalEnableBlur.current
+    val backgroundColor = MiuixTheme.colorScheme.surface
     val pageBackdrop = rememberLayerBackdrop()
     val scrollConnection = remember(resolvedScrollBehavior, scrollObserver) {
         val topBarConnection = resolvedScrollBehavior.nestedScrollConnection
@@ -2184,9 +2258,9 @@ private fun DetailNavigationLayer(
                 modifier = Modifier.drawPlainBackdrop(
                     backdrop = pageBackdrop,
                     shape = { TopBarBottomShape },
-                    effects = { blur(24.dp.toPx()) },
+                    effects = { if (enableBlur) blur(24.dp.toPx()) },
                     onDrawSurface = {
-                        drawRect(backgroundColor.copy(alpha = 0.52f))
+                        drawRect(backgroundColor.copy(alpha = if (enableBlur) 0.52f else 1f))
                     },
                 ).clip(TopBarBottomShape),
                 color = Color.Transparent,
@@ -2225,6 +2299,7 @@ private fun SongNavigationLayer(
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable (Dp) -> Unit,
 ) {
+    val enableBlur = LocalEnableBlur.current
     val pageBackdrop = rememberLayerBackdrop()
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -2235,7 +2310,10 @@ private fun SongNavigationLayer(
                 modifier = Modifier.drawPlainBackdrop(
                     backdrop = pageBackdrop,
                     shape = { TopBarBottomShape },
-                    effects = { blur(24.dp.toPx()) },
+                    effects = { if (enableBlur) blur(24.dp.toPx()) },
+                    onDrawSurface = {
+                        drawRect(backgroundColor.copy(alpha = if (enableBlur) 0.52f else 1f))
+                    },
                 ).clip(TopBarBottomShape),
                 color = Color.Transparent,
                 navigationIcon = {
@@ -2274,8 +2352,9 @@ private fun RootLayer(
     content: @Composable (RootDestination, Dp) -> Unit,
 ) {
     val title = rootTitle(destination)
+    val enableBlur = LocalEnableBlur.current
     val scrollBehavior = MiuixScrollBehavior()
-    val backgroundColor = MiuixTheme.colorScheme.background
+    val backgroundColor = MiuixTheme.colorScheme.surface
     val pageBackdrop = rememberLayerBackdrop()
     val rootScrollConnection = remember(scrollBehavior, scrollObserver) {
         val topBarConnection = scrollBehavior.nestedScrollConnection
@@ -2317,9 +2396,9 @@ private fun RootLayer(
                         modifier = Modifier.drawPlainBackdrop(
                             backdrop = pageBackdrop,
                             shape = { TopBarBottomShape },
-                            effects = { blur(24.dp.toPx()) },
+                            effects = { if (enableBlur) blur(24.dp.toPx()) },
                             onDrawSurface = {
-                                drawRect(backgroundColor.copy(alpha = 0.52f))
+                                drawRect(backgroundColor.copy(alpha = if (enableBlur) 0.52f else 1f))
                             },
                         ).clip(TopBarBottomShape),
                         color = Color.Transparent,
@@ -2377,18 +2456,34 @@ private fun AppNavigationBar(
     onDestinationSelected: (RootDestination) -> Unit,
 ) {
     val destinations = RootDestination.entries
-    LiquidGlassTabBar(
-        selectedIndex = destinations.indexOf(destination),
-        onSelected = { index -> onDestinationSelected(destinations[index]) },
-        backdrop = backdrop,
-        tabs = listOf(
-            LiquidGlassTab(Icons.Rounded.Home, stringResource(R.string.nav_home)),
-            LiquidGlassTab(Icons.Rounded.DocumentScanner, stringResource(R.string.nav_scan)),
-            LiquidGlassTab(Icons.Rounded.Search, stringResource(R.string.nav_library)),
-            LiquidGlassTab(Icons.Rounded.Settings, stringResource(R.string.nav_settings)),
-        ),
-        modifier = modifier,
+    val tabs = listOf(
+        LiquidGlassTab(Icons.Rounded.Home, stringResource(R.string.nav_home)),
+        LiquidGlassTab(Icons.Rounded.DocumentScanner, stringResource(R.string.nav_scan)),
+        LiquidGlassTab(Icons.Rounded.Search, stringResource(R.string.nav_library)),
+        LiquidGlassTab(Icons.Rounded.Settings, stringResource(R.string.nav_settings)),
     )
+    if (LocalEnableFloatingBottomBar.current) {
+        LiquidGlassTabBar(
+            selectedIndex = destinations.indexOf(destination),
+            onSelected = { index -> onDestinationSelected(destinations[index]) },
+            backdrop = backdrop,
+            tabs = tabs,
+            isBlurEnabled = LocalEnableFloatingBottomBarBlur.current,
+            modifier = modifier,
+        )
+    } else {
+        NavigationBar(modifier = modifier, color = MiuixTheme.colorScheme.surface) {
+            tabs.forEachIndexed { index, tab ->
+                NavigationBarItem(
+                    modifier = Modifier.weight(1f),
+                    icon = tab.icon,
+                    label = tab.label,
+                    selected = index == destinations.indexOf(destination),
+                    onClick = { onDestinationSelected(destinations[index]) },
+                )
+            }
+        }
+    }
 }
 
 @Composable

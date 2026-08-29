@@ -16,9 +16,11 @@ import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.CatalogSortOption
 import org.rhythmeta.maimaid.core.data.CatalogSyncStatus
-import org.rhythmeta.maimaid.ui.theme.AppThemeColorSource
-import org.rhythmeta.maimaid.ui.theme.AppThemeMode
-import org.rhythmeta.maimaid.ui.theme.DefaultThemeCustomColorArgb
+import com.materialkolor.PaletteStyle
+import com.materialkolor.dynamiccolor.ColorSpec
+import org.rhythmeta.maimaid.ui.theme.AppThemeSettings
+import org.rhythmeta.maimaid.ui.theme.ColorMode
+import org.rhythmeta.maimaid.ui.theme.DefaultAppThemeSettings
 
 class MainViewModel(
     private val container: AppContainer,
@@ -26,22 +28,10 @@ class MainViewModel(
     private val mutableInitialCatalogState = MutableStateFlow(InitialCatalogState.Determining)
     val initialCatalogState = mutableInitialCatalogState.asStateFlow()
 
-    val themeMode = container.appPreferencesRepository.themeMode.stateIn(
+    val themeSettings = container.appPreferencesRepository.themeSettings.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = AppThemeMode.System,
-    )
-
-    val themeColorSource = container.appPreferencesRepository.themeColorSource.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = AppThemeColorSource.Wallpaper,
-    )
-
-    val themeCustomColorArgb = container.appPreferencesRepository.themeCustomColorArgb.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = DefaultThemeCustomColorArgb,
+        initialValue = DefaultAppThemeSettings,
     )
 
     val showScannerBoundingBoxes = container.appPreferencesRepository.showScannerBoundingBoxes.stateIn(
@@ -187,21 +177,57 @@ class MainViewModel(
         }
     }
 
-    fun setThemeMode(themeMode: AppThemeMode) {
+    fun setColorMode(colorMode: ColorMode) {
         viewModelScope.launch {
-            container.appPreferencesRepository.setThemeMode(themeMode)
+            container.appPreferencesRepository.setColorMode(colorMode)
         }
     }
 
-    fun setThemeColorSource(source: AppThemeColorSource) {
+    fun setKeyColor(color: Int) {
         viewModelScope.launch {
-            container.appPreferencesRepository.setThemeColorSource(source)
+            container.appPreferencesRepository.setKeyColor(color)
         }
     }
 
-    fun setThemeCustomColorArgb(colorArgb: Int) {
+    fun setPaletteStyle(style: PaletteStyle) {
         viewModelScope.launch {
-            container.appPreferencesRepository.setThemeCustomColorArgb(colorArgb)
+            container.appPreferencesRepository.setPaletteStyle(style)
+        }
+    }
+
+    fun setColorSpec(spec: ColorSpec.SpecVersion) {
+        viewModelScope.launch {
+            container.appPreferencesRepository.setColorSpec(spec)
+        }
+    }
+
+    fun setEnableBlur(enabled: Boolean) {
+        viewModelScope.launch {
+            container.appPreferencesRepository.setEnableBlur(enabled)
+        }
+    }
+
+    fun setEnableFloatingBottomBar(enabled: Boolean) {
+        viewModelScope.launch {
+            container.appPreferencesRepository.setEnableFloatingBottomBar(enabled)
+        }
+    }
+
+    fun setEnableFloatingBottomBarBlur(enabled: Boolean) {
+        viewModelScope.launch {
+            container.appPreferencesRepository.setEnableFloatingBottomBarBlur(enabled)
+        }
+    }
+
+    fun setEnablePredictiveBack(enabled: Boolean) {
+        viewModelScope.launch {
+            container.appPreferencesRepository.setEnablePredictiveBack(enabled)
+        }
+    }
+
+    fun setPageScale(scale: Float) {
+        viewModelScope.launch {
+            container.appPreferencesRepository.setPageScale(scale)
         }
     }
 
