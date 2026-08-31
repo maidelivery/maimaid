@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -478,6 +479,12 @@ private fun homeTools(): List<HomeTool> = listOf(
         subtitle = R.string.home_collections_subtitle,
         icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
         detail = AppDetail.Collections,
+    ),
+    HomeTool(
+        title = R.string.home_letter_game,
+        subtitle = R.string.home_letter_game_subtitle,
+        icon = Icons.Rounded.Extension,
+        detail = AppDetail.LetterGame,
     ),
 )
 

@@ -667,4 +667,22 @@
 	<string name="cloud_logout_keep_local">Keep local data</string>
 	<string name="cloud_logout_clear_local">Clear local data</string>
 	<string name="cloud_local_data_cleared">Local data cleared</string>
+    <string name="home_letter_game">Letter Game</string>
+    <string name="home_letter_game_subtitle">Play a real-time song guessing room</string>
+    <string name="detail_letter_game">Letter Game</string>
+    <string name="letter_game_login_required">Sign in to play</string>
+    <string name="letter_game_login_required_summary">A maimaid account is required for multiplayer rooms.</string>
+    <string name="letter_game_join_title">Join or create a room</string>
+    <string name="letter_game_room_code">Room code</string>
+    <string name="letter_game_join">Join</string>
+    <string name="letter_game_create_private">Create private room</string>
+    <string name="letter_game_public_rooms">Public rooms</string>
+    <string name="letter_game_member_count">%1$d players</string>
+    <string name="letter_game_start">Start match</string>
+    <string name="letter_game_turn">Turn: %1$s</string>
+    <string name="letter_game_remaining">%1$d characters remaining</string>
+    <string name="letter_game_character">Character</string>
+    <string name="letter_game_open">Open</string>
+    <string name="letter_game_guess">Song title</string>
+    <string name="letter_game_submit">Guess</string>
 </resources>

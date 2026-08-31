@@ -59,8 +59,56 @@ enum ImportStatus {
 }
 
 enum MfaChallengePurpose {
-  login
-  passkey_registration
+	login
+	passkey_registration
+}
+
+enum LetterGameRoomVisibility {
+	public
+	private
+}
+
+enum LetterGameHostMode {
+	fixed
+	rotate
+}
+
+enum LetterGameRoomStatus {
+	open
+}
+
+enum LetterGameMemberStatus {
+	pending
+	accepted
+	left
+	kicked
+}
+
+enum LetterGameMatchStatus {
+	active
+	finished
+	abandoned
+}
+
+enum LetterGameSongStatus {
+	active
+	completed
+}
+
+enum LetterGameCompletionReason {
+	guessed
+	all_characters_revealed
+}
+
+enum LetterGameHintVisibility {
+	public
+	private
+}
+
+enum LetterGameHintType {
+	version
+	constant
+	white_chart
 }
 
 model User {
@@ -95,6 +143,152 @@ model User {
 
   @@map("users")
   @@unique([usernameNormalized, usernameDiscriminator])
+}
+
+model LetterGameRoom {
+	id                    String                   @id @default(uuid()) @db.Uuid
+	code                  String                   @unique @db.VarChar(6)
+	visibility            LetterGameRoomVisibility
+	hostMode              LetterGameHostMode      @default(fixed)
+	hostUserId            String                   @db.Uuid
+	status                LetterGameRoomStatus     @default(open)
+	turnDurationSeconds   Int                      @default(30)
+	stalledRoundLimit     Int                      @default(3)
+	songCountOverride     Int?
+	publicHintCost        Int                      @default(5)
+	privateHintCost       Int                      @default(10)
+	selectionMode         String                   @default("filtered_random")
+	selectionConfig       Json                     @default("{}")
+	createdAt             DateTime                 @default(now())
+	updatedAt             DateTime                 @updatedAt
+	members               LetterGameRoomMember[]
+	matches               LetterGameMatch[]
+
+	@@index([visibility, updatedAt])
+	@@index([hostUserId])
+	@@map("letter_game_rooms")
+}
+
+model LetterGameRoomMember {
+	id          String                 @id @default(uuid()) @db.Uuid
+	roomId      String                 @db.Uuid
+	userId      String                 @db.Uuid
+	seatOrder   Int                    @default(0)
+	status      LetterGameMemberStatus @default(pending)
+	joinedAt    DateTime               @default(now())
+	approvedAt  DateTime?
+	leftAt      DateTime?
+	kickedAt    DateTime?
+	lastSeenAt  DateTime?
+	room        LetterGameRoom         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+	@@unique([roomId, userId])
+	@@index([roomId, status, seatOrder])
+	@@index([userId, status])
+	@@map("letter_game_room_members")
+}
+
+model LetterGameMatch {
+	id                String                 @id @default(uuid()) @db.Uuid
+	roomId            String                 @db.Uuid
+	sequence          Int
+	status            LetterGameMatchStatus  @default(active)
+	sourceType        String
+	sourceConfig      Json                   @default("{}")
+	hostUserId        String                 @db.Uuid
+	turnOrder         Json                   @default("[]")
+	currentTurnIndex  Int                    @default(0)
+	noProgressRounds  Int                    @default(0)
+	revision          Int                    @default(0)
+	turnDeadline      DateTime?
+	startedAt         DateTime               @default(now())
+	endedAt           DateTime?
+	createdAt         DateTime               @default(now())
+	updatedAt         DateTime               @updatedAt
+	room              LetterGameRoom         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+	players           LetterGameMatchPlayer[]
+	songs             LetterGameMatchSong[]
+	facts             LetterGamePlayerFact[]
+	actions           LetterGameAction[]
+
+	@@unique([roomId, sequence])
+	@@index([roomId, status])
+	@@index([status, turnDeadline])
+	@@map("letter_game_matches")
+}
+
+model LetterGameMatchPlayer {
+	id              String            @id @default(uuid()) @db.Uuid
+	matchId         String            @db.Uuid
+	userId          String            @db.Uuid
+	turnOrder       Int
+	score           Int               @default(0)
+	scoringEligible Boolean           @default(true)
+	status          String            @default("active")
+	createdAt       DateTime          @default(now())
+	updatedAt       DateTime          @updatedAt
+	match           LetterGameMatch  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+	@@unique([matchId, userId])
+	@@unique([matchId, turnOrder])
+	@@index([userId, matchId])
+	@@map("letter_game_match_players")
+}
+
+model LetterGameMatchSong {
+	id                 String                   @id @default(uuid()) @db.Uuid
+	matchId            String                   @db.Uuid
+	slotId             String
+	songIdentifier     String
+	title              String
+	aliases            Json                     @default("[]")
+	revealedIndices    Json                     @default("[]")
+	status             LetterGameSongStatus     @default(active)
+	completionReason   LetterGameCompletionReason?
+	completedByUserId  String?                  @db.Uuid
+	completedAt        DateTime?
+	createdAt          DateTime                 @default(now())
+	updatedAt          DateTime                 @updatedAt
+	match              LetterGameMatch          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+	@@unique([matchId, slotId])
+	@@index([matchId, status])
+	@@map("letter_game_match_songs")
+}
+
+model LetterGamePlayerFact {
+	id             String                    @id @default(uuid()) @db.Uuid
+	matchId        String                    @db.Uuid
+	songId         String                    @db.Uuid
+	userId         String                    @db.Uuid
+	factType       LetterGameHintType
+	visibility     LetterGameHintVisibility
+	value          Json
+	cost           Int
+	createdAt      DateTime                  @default(now())
+	match          LetterGameMatch            @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+	@@unique([matchId, songId, userId, factType, visibility])
+	@@index([matchId, userId])
+	@@map("letter_game_player_facts")
+}
+
+model LetterGameAction {
+	id              String          @id @default(uuid()) @db.Uuid
+	matchId         String          @db.Uuid
+	actorId         String          @db.Uuid
+	idempotencyKey  String
+	sequence        Int
+	actionType      String
+	payload         Json
+	result          Json
+	createdAt       DateTime        @default(now())
+	match           LetterGameMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+	@@unique([matchId, actorId, idempotencyKey])
+	@@index([matchId, sequence])
+	@@index([actorId, createdAt])
+	@@map("letter_game_actions")
 }
 
 model OpaqueLoginChallenge {

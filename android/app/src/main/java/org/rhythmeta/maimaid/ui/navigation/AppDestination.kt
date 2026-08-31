@@ -29,4 +29,5 @@ enum class AppDetail {
     Song,
     Collections,
     CollectionDetail,
+    LetterGame,
 }

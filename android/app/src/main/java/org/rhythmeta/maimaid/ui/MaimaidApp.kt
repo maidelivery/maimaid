@@ -1914,7 +1914,8 @@ fun MaimaidApp(
                                 activeDetail == AppDetail.DivingFishImport ||
                                 activeDetail == AppDetail.LxnsImport ||
                                 activeDetail == AppDetail.OtogameImport ||
-                                activeDetail == AppDetail.Appearance
+                activeDetail == AppDetail.Appearance
+                                || activeDetail == AppDetail.LetterGame
                             ) {
                                 Modifier
                                     .nestedScroll(detailScrollBehavior.nestedScrollConnection)
@@ -1987,6 +1988,7 @@ fun MaimaidApp(
                             activeDetail == AppDetail.LxnsImport ||
                             activeDetail == AppDetail.OtogameImport ||
                             activeDetail == AppDetail.Appearance
+                            || activeDetail == AppDetail.LetterGame
                         ) {
                             val detailTitle = if (activeDetail == AppDetail.CollectionDetail && selectedCollectionTitle != null) {
                                 selectedCollectionTitle
@@ -2517,4 +2519,5 @@ private fun detailTitle(detail: AppDetail): String = when (detail) {
     AppDetail.Song -> ""
     AppDetail.Collections -> stringResource(R.string.settings_collections)
     AppDetail.CollectionDetail -> stringResource(R.string.settings_collections)
+    AppDetail.LetterGame -> stringResource(R.string.detail_letter_game)
 }

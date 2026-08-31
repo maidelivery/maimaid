@@ -84,6 +84,7 @@ import com.materialkolor.dynamiccolor.ColorSpec
 import org.rhythmeta.maimaid.ui.collections.SongCollectionsScreen
 import org.rhythmeta.maimaid.ui.catalog.CatalogDisplayMode
 import org.rhythmeta.maimaid.core.data.CatalogSortOption
+import org.rhythmeta.maimaid.ui.lettergame.LetterGameScreen
 
 @Composable
 internal fun DetailScreen(
@@ -293,6 +294,7 @@ internal fun DetailScreen(
             onCreateRequestHandled = onProfileCreateRequestHandled,
         )
         AppDetail.BackendAuth -> BackendAuthScreen(container = container)
+        AppDetail.LetterGame -> LetterGameScreen(container = container, contentTopPadding = songContentTopPadding)
         AppDetail.DivingFishImport -> DivingFishImportScreen(
             container = container,
             contentTopPadding = songContentTopPadding,

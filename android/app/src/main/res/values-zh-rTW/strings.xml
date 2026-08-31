@@ -637,4 +637,22 @@
 	<string name="cloud_logout_keep_local">保留本機資料</string>
 	<string name="cloud_logout_clear_local">清空本機資料</string>
 	<string name="cloud_local_data_cleared">本機資料已清空</string>
+    <string name="home_letter_game">開字母</string>
+    <string name="home_letter_game_subtitle">即時房間猜歌遊戲</string>
+    <string name="detail_letter_game">開字母</string>
+    <string name="letter_game_login_required">登入後遊玩</string>
+    <string name="letter_game_login_required_summary">多人房間需要 maimaid 帳號。</string>
+    <string name="letter_game_join_title">加入或建立房間</string>
+    <string name="letter_game_room_code">房間碼</string>
+    <string name="letter_game_join">加入</string>
+    <string name="letter_game_create_private">建立私人房</string>
+    <string name="letter_game_public_rooms">公開房</string>
+    <string name="letter_game_member_count">%1$d 名玩家</string>
+    <string name="letter_game_start">開始對局</string>
+    <string name="letter_game_turn">目前回合：%1$s</string>
+    <string name="letter_game_remaining">剩餘 %1$d 個字元</string>
+    <string name="letter_game_character">字元</string>
+    <string name="letter_game_open">開字母</string>
+    <string name="letter_game_guess">歌曲名稱</string>
+    <string name="letter_game_submit">猜歌</string>
 </resources>

@@ -21,6 +21,7 @@ import { adminV1Route } from "./routes/v1/admin.route.js";
 import { syncV1Route } from "./routes/v1/sync.route.js";
 import { jobsInternalRoute } from "./routes/internal/jobs.route.js";
 import { publicCollectionsV1Route } from "./routes/v1/public-collections.route.js";
+import { letterGameV1Route } from "./routes/v1/letter-game.route.js";
 import type { AppEnv } from "./types/hono.js";
 import type { Env } from "./env.js";
 import { TOKENS } from "./di/tokens.js";
@@ -83,6 +84,7 @@ export const createApp = (options: CreateAppOptions = {}) => {
 	app.route("/v1", adminV1Route);
 	app.route("/v1", syncV1Route);
 	app.route("/v1/public", publicCollectionsV1Route);
+	app.route("/v1/letter-game", letterGameV1Route);
 	app.route("/internal/jobs", jobsInternalRoute);
 
 	app.get("/", (c) =>

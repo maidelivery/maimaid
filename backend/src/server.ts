@@ -10,6 +10,8 @@ import { JobService } from "./services/job.service.js";
 import { container } from "tsyringe";
 import { getPrismaClient } from "./lib/node-prisma.js";
 import { buildOpenApiDocument } from "./openapi.js";
+import { LetterGameConnectionHub } from "./services/letter-game.connection.js";
+import { LetterGameTurnScheduler } from "./services/letter-game.scheduler.js";
 
 const env = getEnv();
 const prisma = getPrismaClient();
@@ -108,6 +110,9 @@ const start = async () => {
 			console.log(`maimaid-backend listening on http://${env.HOST}:${info.port}`);
 		},
 	);
+	container.resolve(LetterGameConnectionHub).attach(server as import("node:http").Server);
+	const letterGameScheduler = container.resolve(LetterGameTurnScheduler);
+	letterGameScheduler.start();
 
 	// The container stops the process with SIGTERM; without a handler Node exits
 	// immediately and an in-flight job stays stuck in 'running'.
@@ -119,6 +124,7 @@ const start = async () => {
 		shuttingDown = true;
 		console.log(`[shutdown] received ${signal}, closing server`);
 		stopJobDispatcher();
+		letterGameScheduler.stop();
 		server.close(() => {
 			void prisma.$disconnect().finally(() => process.exit(0));
 		});

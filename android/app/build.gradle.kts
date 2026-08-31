@@ -140,6 +140,7 @@ dependencies {
     implementation(libs.material.kolor)
     implementation(libs.coil.compose)
     implementation(libs.androidx.palette)
+    implementation(libs.okhttp)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

@@ -640,4 +640,22 @@
 	<string name="cloud_logout_keep_local">ローカルデータを保持</string>
 	<string name="cloud_logout_clear_local">ローカルデータを削除</string>
 	<string name="cloud_local_data_cleared">ローカルデータを削除しました</string>
+    <string name="home_letter_game">文字当て</string>
+    <string name="home_letter_game_subtitle">リアルタイム曲当てルーム</string>
+    <string name="detail_letter_game">文字当て</string>
+    <string name="letter_game_login_required">ログインしてプレイ</string>
+    <string name="letter_game_login_required_summary">マルチプレイヤールームには maimaid アカウントが必要です。</string>
+    <string name="letter_game_join_title">ルームに参加または作成</string>
+    <string name="letter_game_room_code">ルームコード</string>
+    <string name="letter_game_join">参加</string>
+    <string name="letter_game_create_private">プライベートルームを作成</string>
+    <string name="letter_game_public_rooms">公開ルーム</string>
+    <string name="letter_game_member_count">%1$d 人</string>
+    <string name="letter_game_start">対局開始</string>
+    <string name="letter_game_turn">手番：%1$s</string>
+    <string name="letter_game_remaining">残り %1$d 文字</string>
+    <string name="letter_game_character">文字</string>
+    <string name="letter_game_open">開く</string>
+    <string name="letter_game_guess">曲名</string>
+    <string name="letter_game_submit">回答</string>
 </resources>

@@ -20,6 +20,7 @@ import org.rhythmeta.maimaid.core.data.CoverImageStore
 import org.rhythmeta.maimaid.core.data.ConstantTableRepository
 import org.rhythmeta.maimaid.core.data.CommunityAliasService
 import org.rhythmeta.maimaid.core.data.CollectionSharingService
+import org.rhythmeta.maimaid.core.data.LetterGameRepository
 import org.rhythmeta.maimaid.core.data.DanRepository
 import org.rhythmeta.maimaid.core.data.DanStore
 import org.rhythmeta.maimaid.core.data.PlateProgressRepository
@@ -85,6 +86,11 @@ class AppContainer(context: Context) {
         tokenStore = BackendTokenStore(applicationContext, json),
     )
     val backendImportService = BackendImportService(
+        sessionManager = backendSessionManager,
+        json = json,
+    )
+    val letterGameRepository = LetterGameRepository(
+        apiClient = backendApiClient,
         sessionManager = backendSessionManager,
         json = json,
     )
