@@ -557,14 +557,14 @@ export class LetterGameService {
 				const songSheets = sheetsByIdentifier.get(song.songIdentifier) ?? [];
 				const publicWhiteFact = publicFacts.find((fact: any) => fact.songId === song.id && fact.factType === "white_chart");
 				const privateWhiteFact = match.facts.find((fact: any) => fact.songId === song.id && fact.userId === userId && fact.factType === "white_chart");
-				const showFullDetails = completed && song.completionReason === "guessed";
+					const showFullDetails = match.status !== "active" || completed;
 				const shownVersionFact = [...publicFacts, ...match.facts.filter((fact: any) => fact.userId === userId)].find((fact: any) => fact.songId === song.id && fact.factType === "version");
 				const masterSheet = songSheets.find((sheet: any) => sheet.difficulty.toLowerCase() === "master");
 				const remasterSheet = songSheets.find((sheet: any) => /remaster/iu.test(sheet.difficulty));
 				return {
 					slotId: song.slotId,
-					title: completed ? song.title : maskLetterTokens(tokens),
-					remainingCharacterCount: completed ? 0 : remainingCharacterCount(tokens),
+						title: showFullDetails ? song.title : maskLetterTokens(tokens),
+						remainingCharacterCount: showFullDetails ? 0 : remainingCharacterCount(tokens),
 					status: song.status,
 					completionReason: song.completionReason,
 					completedByUserId: song.completedByUserId,
@@ -575,7 +575,7 @@ export class LetterGameService {
 					artist: showFullDetails ? catalogSong?.artist ?? null : null,
 					version: showFullDetails ? catalogSong?.version ?? null : jsonString(shownVersionFact?.value),
 					chartTypes: showFullDetails ? [...new Set(songSheets.map((sheet: any) => String(sheet.chartType)))] : [],
-					hasRemaster: showFullDetails || publicWhiteFact?.value === true || privateWhiteFact?.value === true,
+						hasRemaster: publicWhiteFact?.value === true || privateWhiteFact?.value === true,
 					masterConstant: showFullDetails && masterSheet ? String(masterSheet.internalLevelValue ?? masterSheet.levelValue ?? "") : null,
 					remasterConstant: showFullDetails && remasterSheet ? String(remasterSheet.internalLevelValue ?? remasterSheet.levelValue ?? "") : null,
 				};

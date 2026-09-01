@@ -713,6 +713,8 @@
     <string name="letter_game_character_all_songs">为全部歌曲开字符</string>
     <string name="letter_game_log">游戏记录</string>
     <string name="letter_game_songs">歌曲</string>
+    <string name="letter_game_guessed_songs">猜出</string>
+    <string name="letter_game_unguessed_songs">未猜出</string>
     <string name="letter_game_reveal_all">为全部歌曲开字符</string>
     <string name="letter_game_guess_this_song">猜这首歌</string>
     <string name="letter_game_buy_hint">购买提示</string>
@@ -737,11 +739,11 @@
     <string name="letter_game_log_guess_incorrect">%1$s 猜歌错误</string>
     <string name="letter_game_log_buy_hint">%1$s 花费 %2$d 分购买了第 %3$d 首歌曲的%4$s提示</string>
     <string name="letter_game_unknown_song">?</string>
-    <string name="letter_game_match_results">对局结果</string>
-    <string name="letter_game_reopen">重开</string>
+    <string name="letter_game_match_results">排名</string>
+    <string name="letter_game_reopen">返回房间</string>
     <string name="letter_game_dismiss">关闭</string>
     <string name="letter_game_points">%1$d 分</string>
-    <string name="letter_game_rank">第 %1$d 名</string>
+    <string name="letter_game_rank">%1$d</string>
     <string name="letter_game_leave_room_confirm_title">确认离开房间？</string>
     <string name="letter_game_leave_room_confirm_summary">你将退出当前对局并离开房间座位。</string>
     <string name="letter_game_cancel">取消</string>

@@ -716,6 +716,8 @@
     <string name="letter_game_character_all_songs">全曲に文字を開く</string>
     <string name="letter_game_log">ゲームログ</string>
     <string name="letter_game_songs">曲</string>
+    <string name="letter_game_guessed_songs">正解した曲</string>
+    <string name="letter_game_unguessed_songs">未正解の曲</string>
     <string name="letter_game_reveal_all">全曲に文字を開く</string>
     <string name="letter_game_guess_this_song">この曲を回答</string>
     <string name="letter_game_buy_hint">ヒントを購入</string>
@@ -740,11 +742,11 @@
     <string name="letter_game_log_guess_incorrect">%1$s の回答は不正解</string>
     <string name="letter_game_log_buy_hint">%1$s が %2$d pt を使い、%3$d 曲目の%4$sヒントを購入</string>
     <string name="letter_game_unknown_song">?</string>
-    <string name="letter_game_match_results">対局結果</string>
-    <string name="letter_game_reopen">再開</string>
+    <string name="letter_game_match_results">ランキング</string>
+    <string name="letter_game_reopen">ルームに戻る</string>
     <string name="letter_game_dismiss">閉じる</string>
     <string name="letter_game_points">%1$d pt</string>
-    <string name="letter_game_rank">%1$d 位</string>
+    <string name="letter_game_rank">%1$d</string>
     <string name="letter_game_leave_room_confirm_title">ルームを退出しますか？</string>
     <string name="letter_game_leave_room_confirm_summary">現在の対局を退出し、ルームの席を離れます。</string>
     <string name="letter_game_cancel">キャンセル</string>

@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -94,9 +95,15 @@ import org.rhythmeta.maimaid.core.data.LetterGameMatchSong
 import org.rhythmeta.maimaid.core.data.LetterGameRepository
 import org.rhythmeta.maimaid.core.data.LetterGameRoom
 import org.rhythmeta.maimaid.core.data.LetterGameRoomMember
+import org.rhythmeta.maimaid.core.database.GameVersionEntity
+import org.rhythmeta.maimaid.ui.catalog.ChartTypeVersionBadge
 import org.rhythmeta.maimaid.ui.catalog.SongJacket
 import org.rhythmeta.maimaid.ui.components.appTextFieldColors
+import org.rhythmeta.maimaid.ui.components.SquircleExtension
+import org.rhythmeta.maimaid.ui.components.squircleShape
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
+import top.yukonga.miuix.kmp.squircle.squircleBorder
+import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -149,6 +156,7 @@ fun LetterGameScreen(
     var loading by remember { mutableStateOf(false) }
     var reconnectAttempt by remember { mutableIntStateOf(0) }
     var leftMatchId by remember(selectedRoom?.id) { mutableStateOf<String?>(null) }
+    var hiddenFinishedMatchId by rememberSaveable { mutableStateOf<String?>(null) }
     var showExitConfirmation by remember { mutableStateOf(false) }
     var showRoomSettings by remember { mutableStateOf(false) }
     var handledJoinRequestToken by remember { mutableIntStateOf(joinRequestToken) }
@@ -227,7 +235,8 @@ fun LetterGameScreen(
                     if (selectedRoom?.id == event.room.id) selectedRoom = event.room
                 }
                 is LetterGameEvent.Match -> {
-                    if (selectedRoom != null && (match?.matchId == null || match?.matchId == event.match.matchId)) {
+                    val isHiddenFinishedMatch = event.match.matchId == hiddenFinishedMatchId && event.match.status != "active"
+                    if (!isHiddenFinishedMatch && selectedRoom != null && (match?.matchId == null || match?.matchId == event.match.matchId)) {
                         match = event.match
                     }
                 }
@@ -236,7 +245,14 @@ fun LetterGameScreen(
                     if (event.code == "connection_failed" && selectedRoom != null) reconnectAttempt += 1
                     if (event.code == "stale_revision") {
                         match?.let { staleMatch ->
-                            scope.launch { runCatching { repository.getMatch(staleMatch.matchId) }.onSuccess { match = it } }
+                            if (staleMatch.matchId != hiddenFinishedMatchId) {
+                                scope.launch {
+                                    runCatching { repository.getMatch(staleMatch.matchId) }
+                                        .onSuccess { refreshed ->
+                                            if (refreshed.matchId != hiddenFinishedMatchId || refreshed.status == "active") match = refreshed
+                                        }
+                                }
+                            }
                         }
                     }
                 }
@@ -247,12 +263,16 @@ fun LetterGameScreen(
     LaunchedEffect(selectedRoom?.id, selectedRoom?.latestMatch?.id) {
         val room = selectedRoom ?: return@LaunchedEffect
         val latest = room.latestMatch ?: return@LaunchedEffect
+        if (latest.id == hiddenFinishedMatchId && latest.status != "active") return@LaunchedEffect
         runCatching { repository.getMatch(latest.id) }
-            .onSuccess { match = it }
+            .onSuccess { refreshed ->
+                if (hiddenFinishedMatchId != latest.id || refreshed.status == "active") match = refreshed
+            }
             .onFailure { errorMessage = it.message }
     }
     LaunchedEffect(match?.status) {
         if (match?.status != "active") leftMatchId = null
+        if (match?.status == "active") hiddenFinishedMatchId = null
     }
     LaunchedEffect(selectedRoom?.id) {
         val roomId = selectedRoom?.id ?: return@LaunchedEffect
@@ -372,6 +392,7 @@ fun LetterGameScreen(
 								socket = socket,
 								repository = repository,
 								coverImageStore = container.coverImageStore,
+								versions = gameVersions,
 								contentTopPadding = contentTopPadding,
 								errorMessage = errorMessage,
 								onShowSnackbar = { message ->
@@ -392,21 +413,28 @@ fun LetterGameScreen(
 								},
 								onMatchRefresh = { refreshed -> match = refreshed },
 							)
-							"finished", "abandoned" -> ResultsPage(
-								room = animatedRoom,
-								match = animatedMatch,
-								currentUserId = currentUserId,
-								contentTopPadding = contentTopPadding,
-								onReopen = {
-									scope.launch {
+								"finished", "abandoned" -> ResultsPage(
+									room = animatedRoom,
+									match = animatedMatch,
+									currentUserId = currentUserId,
+									coverImageStore = container.coverImageStore,
+									versions = gameVersions,
+									contentTopPadding = contentTopPadding,
+									onReopen = {
+										hiddenFinishedMatchId = animatedMatch.matchId
+										scope.launch {
 										runCatching { repository.reopenRoom(animatedRoom.id) }
-											.onSuccess {
-												savedRoomCode = it.code
-												selectedRoom = it
-												match = null
-												leftMatchId = null
-											}
-											.onFailure { errorMessage = it.message }
+												.onSuccess {
+													savedRoomCode = it.code
+													selectedRoom = it
+													hiddenFinishedMatchId = animatedMatch.matchId
+													match = null
+													leftMatchId = null
+												}
+													.onFailure {
+														hiddenFinishedMatchId = null
+													errorMessage = it.message
+												}
 									}
 								},
 								onExit = { showExitConfirmation = true },
@@ -427,7 +455,10 @@ fun LetterGameScreen(
 									scope.launch {
 										loading = true
 										runCatching { repository.startMatch(animatedRoom.id) }
-											.onSuccess { match = it }
+												.onSuccess {
+													hiddenFinishedMatchId = null
+													match = it
+												}
 											.onFailure { errorMessage = it.message }
 										loading = false
 									}
@@ -441,6 +472,7 @@ fun LetterGameScreen(
             state = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                .imePadding()
                 .navigationBarsPadding()
                 .padding(
                     start = 16.dp,
@@ -515,8 +547,9 @@ fun LetterGameScreen(
                                 showExitConfirmation = false
                                 savedRoomCode = null
                                 selectedRoom = null
-                                match = null
-                                leftMatchId = null
+								match = null
+								leftMatchId = null
+								hiddenFinishedMatchId = null
                             }
                             .onFailure { errorMessage = it.message }
                         loading = false
@@ -787,14 +820,17 @@ private fun RoomMembers(
         insideMargin = PaddingValues(14.dp),
         colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Icon(
                 imageVector = Icons.Rounded.Person,
                 contentDescription = null,
                 tint = MiuixTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp),
             )
-            SmallTitle(text = stringResource(R.string.letter_game_players))
+            SmallTitle(
+                text = stringResource(R.string.letter_game_players),
+                insideMargin = PaddingValues(0.dp),
+            )
         }
         Spacer(Modifier.height(8.dp))
         members.forEach { member ->
@@ -832,6 +868,7 @@ private fun PlayingPage(
     socket: WebSocket?,
     repository: LetterGameRepository,
     coverImageStore: org.rhythmeta.maimaid.core.data.CoverImageStore,
+    versions: List<GameVersionEntity>,
     contentTopPadding: Dp,
     errorMessage: String?,
     onLeave: () -> Unit,
@@ -842,7 +879,6 @@ private fun PlayingPage(
     var guessTarget by remember { mutableStateOf<LetterGameMatchSong?>(null) }
     var hintTarget by remember { mutableStateOf<LetterGameMatchSong?>(null) }
     var popupTarget by remember { mutableStateOf<LetterGameMatchSong?>(null) }
-    var openCharacterDialog by remember { mutableStateOf(false) }
     var guessText by remember { mutableStateOf("") }
     var hintType by remember { mutableStateOf("version") }
     var hintVisibility by remember { mutableStateOf("public") }
@@ -904,29 +940,12 @@ private fun PlayingPage(
         ) {
         if (errorMessage != null) item { ErrorBanner(errorMessage) }
         item { TurnStrip(match.players, match.turnUserId) }
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = 14.dp,
-                insideMargin = PaddingValues(12.dp),
-                colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Rounded.Timer, contentDescription = null, tint = if (isTurn) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                    Text(
-                        if (isTurn) stringResource(R.string.letter_game_your_turn, secondsLeft) else stringResource(R.string.letter_game_waiting_turn, displayName(match.players.firstOrNull { it.userId == match.turnUserId }), secondsLeft),
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-            }
-        }
-        item { SmallTitle(text = stringResource(R.string.letter_game_songs)) }
         items(match.songs, key = LetterGameMatchSong::slotId) { song ->
             Box {
                 LetterSongCard(
                     song = song,
                     coverImageStore = coverImageStore,
+                    versions = versions,
                     onLongClick = { popupTarget = song },
                 )
                 OverlayListPopup(
@@ -934,10 +953,6 @@ private fun PlayingPage(
                     onDismissRequest = { popupTarget = null },
                 ) {
                     ListPopupColumn {
-                        if (canAct && match.songs.any { it.status == "active" }) PopupAction(stringResource(R.string.letter_game_reveal_all), Icons.Rounded.Lightbulb) {
-                            popupTarget = null
-                            openCharacterDialog = true
-                        }
                         if (song.status == "active") {
                             PopupAction(stringResource(R.string.letter_game_guess_this_song), Icons.AutoMirrored.Rounded.Send) {
                                 popupTarget = null
@@ -976,67 +991,61 @@ private fun PlayingPage(
                 insideMargin = PaddingValues(10.dp),
                 colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TextField(
-                        value = character,
-                        onValueChange = { character = firstGrapheme(it) },
-                        label = stringResource(R.string.letter_game_character_all_songs),
-                        enabled = canAct,
-                        singleLine = true,
-                        colors = appTextFieldColors(),
-                        modifier = Modifier.weight(1f),
-                    )
-                    Button(
-                        onClick = {
-                            val value = character
-                            if (value.isNotEmpty()) {
-                                send(buildJsonObject { put("kind", "open_character"); put("character", value) })
-                                character = ""
-                            }
-                        },
-                        enabled = canAct && character.isNotEmpty(),
-                        colors = ButtonDefaults.buttonColorsPrimary(),
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null)
-                        Spacer(Modifier.width(5.dp))
-                        Text(stringResource(R.string.letter_game_open))
+                        Icon(
+                            Icons.Rounded.Timer,
+                            contentDescription = null,
+                            tint = if (isTurn) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+                        Text(
+                            if (isTurn) stringResource(R.string.letter_game_your_turn, secondsLeft)
+                            else stringResource(
+                                R.string.letter_game_waiting_turn,
+                                displayName(match.players.firstOrNull { it.userId == match.turnUserId }),
+                                secondsLeft,
+                            ),
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        TextField(
+                            value = character,
+                            onValueChange = { character = firstGrapheme(it) },
+                            label = stringResource(R.string.letter_game_character_all_songs),
+                            enabled = canAct,
+                            singleLine = true,
+                            colors = appTextFieldColors(),
+                            modifier = Modifier.weight(1f),
+                        )
+                        Button(
+                            onClick = {
+                                val value = character
+                                if (value.isNotEmpty()) {
+                                    send(buildJsonObject { put("kind", "open_character"); put("character", value) })
+                                    character = ""
+                                }
+                            },
+                            enabled = canAct && character.isNotEmpty(),
+                            colors = ButtonDefaults.buttonColorsPrimary(),
+                        ) {
+                            Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null)
+                            Spacer(Modifier.width(5.dp))
+                            Text(stringResource(R.string.letter_game_open))
+                        }
                     }
                 }
             }
-        }
-    }
-
-    if (openCharacterDialog) {
-        WindowDialog(show = true, title = stringResource(R.string.letter_game_open_character_title), onDismissRequest = { openCharacterDialog = false }) {
-            Text(stringResource(R.string.letter_game_open_character_summary), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-            Spacer(Modifier.height(10.dp))
-            TextField(
-                value = character,
-                onValueChange = { character = firstGrapheme(it) },
-                label = stringResource(R.string.letter_game_character),
-                enabled = canAct,
-                singleLine = true,
-                colors = appTextFieldColors(),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(12.dp))
-            Button(
-                onClick = {
-                    val value = character
-                    if (value.isNotEmpty()) {
-                        send(buildJsonObject { put("kind", "open_character"); put("character", value) })
-                        character = ""
-                        openCharacterDialog = false
-                    }
-                },
-                enabled = canAct && character.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColorsPrimary(),
-            ) { Text(stringResource(R.string.letter_game_open)) }
         }
     }
 
@@ -1164,59 +1173,101 @@ private fun TurnStrip(players: List<LetterGameMatchPlayer>, turnUserId: String?)
 private fun LetterSongCard(
     song: LetterGameMatchSong,
     coverImageStore: org.rhythmeta.maimaid.core.data.CoverImageStore?,
-    onLongClick: () -> Unit,
+    versions: List<GameVersionEntity>,
+    onLongClick: () -> Unit = {},
 ) {
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
     val masterColor = SongVisualUtils.difficultyColor("master", darkTheme = darkTheme, brightenDark = true)
     val remasterColor = SongVisualUtils.difficultyColor("remaster", darkTheme = darkTheme, brightenDark = true)
-    val guessed = song.completionReason == "guessed"
+    val completed = song.status == "completed"
+    val cardColor = SongVisualUtils.songCardSurfaceColor(MiuixTheme.colorScheme.surfaceContainer, darkTheme)
+    val difficultyColor = if (song.hasRemaster) remasterColor else masterColor
+    val versionText = song.version
+        ?.takeIf(String::isNotBlank)
+        ?.let { SongVisualUtils.versionAbbreviation(it, versions) }
+    val chartTypes = letterGameChartTypes(song.chartTypes)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(82.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(MiuixTheme.colorScheme.surfaceContainer)
+            .heightIn(min = 76.dp)
+            .squircleSurface(
+                color = cardColor,
+                cornerRadius = 14.dp,
+                extension = SquircleExtension,
+            )
+            .squircleBorder(
+                width = 1.dp,
+                color = difficultyColor.copy(alpha = 0.12f),
+                cornerRadius = 14.dp,
+                extension = SquircleExtension,
+            )
             .combinedClickable(onClick = {}, onLongClick = onLongClick)
-            .padding(vertical = 10.dp),
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.fillMaxHeight().width(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Box(Modifier.fillMaxWidth().weight(1f).background(masterColor))
-            if (song.hasRemaster) Box(Modifier.fillMaxWidth().weight(1f).background(remasterColor))
-        }
-        Spacer(Modifier.width(10.dp))
-        if (song.imageName != null && coverImageStore != null) {
-            SongJacket(song.imageName, coverImageStore, size = 58.dp, cornerRadius = 10.dp)
-        } else {
-            Box(Modifier.size(58.dp).clip(RoundedCornerShape(10.dp)).background(MiuixTheme.colorScheme.onSurface.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.letter_game_unknown_song), style = MiuixTheme.textStyles.title2, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-            }
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.SemiBold))
-            song.artist?.takeIf { guessed && it.isNotBlank() }?.let { artist ->
-                Text(artist, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-            }
-            val factLine = buildList {
-                song.facts.firstOrNull { it.type == "white_chart" }?.let { add(if (it.value.toString() == "true") "WHITE" else "NO WHITE") }
-                song.facts.filter { it.type == "constant" }.forEach { add("CONST ${it.value}") }
-                song.masterConstant?.let { add("MAS $it") }
-                song.remasterConstant?.let { add("RE $it") }
-                if (song.chartTypes.isNotEmpty()) add(song.chartTypes.joinToString(" · ").uppercase())
-            }.joinToString(" · ")
-            if (factLine.isNotBlank()) Text(factLine, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-        }
-        Spacer(Modifier.width(8.dp))
         Box(
-            modifier = Modifier.width(62.dp).height(20.dp).clip(RoundedCornerShape(4.dp)).background(MiuixTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .height(52.dp)
+                .width(4.dp)
+                .squircleSurface(color = difficultyColor, cornerRadius = 2.dp, extension = SquircleExtension),
+        )
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 10.dp, end = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            song.version?.takeIf(String::isNotBlank)?.let {
-                Text(it, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, maxLines = 1)
+            if (song.imageName != null && coverImageStore != null) {
+                SongJacket(song.imageName, coverImageStore, size = 52.dp, cornerRadius = 12.dp)
+            } else {
+                Box(
+                    Modifier
+                        .size(52.dp)
+                        .clip(squircleShape(12.dp))
+                        .background(MiuixTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(stringResource(R.string.letter_game_unknown_song), style = MiuixTheme.textStyles.title2, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                }
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Text(
+                    song.title,
+                    style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.SemiBold),
+                    color = MiuixTheme.colorScheme.onSurface,
+                )
+                song.artist?.takeIf(String::isNotBlank)?.let { artist ->
+                    Text(artist, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            versionText?.let {
+                ChartTypeVersionBadge(
+                    text = it,
+                    chartTypes = chartTypes,
+                    darkTheme = darkTheme,
+                )
             }
         }
-        Spacer(Modifier.width(12.dp))
+    }
+}
+
+private fun letterGameChartTypes(chartTypes: List<String>): List<String> {
+    val normalized = chartTypes.map { type ->
+        when (type.trim().lowercase()) {
+            "standard" -> "std"
+            else -> type.trim().lowercase()
+        }
+    }.toSet()
+    return when {
+        "std" in normalized && "dx" in normalized -> listOf("std", "dx")
+        "utage" in normalized -> listOf("utage")
+        "dx" in normalized -> listOf("dx")
+        else -> listOf("std")
     }
 }
 
@@ -1246,11 +1297,15 @@ private fun ResultsPage(
     room: LetterGameRoom,
     match: LetterGameMatchSnapshot,
     currentUserId: String?,
+    coverImageStore: org.rhythmeta.maimaid.core.data.CoverImageStore,
+    versions: List<GameVersionEntity>,
     contentTopPadding: Dp,
     onReopen: () -> Unit,
     onExit: () -> Unit,
 ) {
     val isHost = room.hostUserId == currentUserId
+    val guessedSongs = match.songs.filter { it.completionReason == "guessed" }
+    val unguessedSongs = match.songs.filterNot { it.completionReason == "guessed" }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, top = contentTopPadding + 8.dp, end = 16.dp, bottom = 96.dp),
@@ -1262,19 +1317,34 @@ private fun ResultsPage(
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(stringResource(R.string.letter_game_match_results), style = MiuixTheme.textStyles.title2.copy(fontWeight = FontWeight.Bold))
-                    Text(stringResource(R.string.letter_game_room_name, room.code), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                 }
             }
         }
         items(match.players.sortedByDescending(LetterGameMatchPlayer::score), key = LetterGameMatchPlayer::userId) { player ->
             Card(modifier = Modifier.fillMaxWidth(), cornerRadius = 12.dp, insideMargin = PaddingValues(12.dp), colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.letter_game_rank, match.players.sortedByDescending(LetterGameMatchPlayer::score).indexOf(player) + 1), modifier = Modifier.width(36.dp), style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.Bold))
+                    Text(
+                        stringResource(R.string.letter_game_rank, match.players.sortedByDescending(LetterGameMatchPlayer::score).indexOf(player) + 1),
+                        modifier = Modifier.width(36.dp),
+                        style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.Bold),
+                    )
                     PlayerAvatar(player.avatarUrl, player.displayName ?: player.userId, 42.dp)
                     Spacer(Modifier.width(10.dp))
                     Text(player.displayName ?: player.userId, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(stringResource(R.string.letter_game_points, player.score), style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.Bold))
                 }
+            }
+        }
+        if (guessedSongs.isNotEmpty()) {
+            item { SmallTitle(text = stringResource(R.string.letter_game_guessed_songs)) }
+            items(guessedSongs, key = LetterGameMatchSong::slotId) { song ->
+                LetterSongCard(song = song, coverImageStore = coverImageStore, versions = versions)
+            }
+        }
+        if (unguessedSongs.isNotEmpty()) {
+            item { SmallTitle(text = stringResource(R.string.letter_game_unguessed_songs)) }
+            items(unguessedSongs, key = LetterGameMatchSong::slotId) { song ->
+                LetterSongCard(song = song, coverImageStore = coverImageStore, versions = versions)
             }
         }
         item {
