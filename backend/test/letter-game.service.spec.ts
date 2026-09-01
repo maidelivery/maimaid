@@ -151,4 +151,47 @@ describe("LetterGameService room lifecycle", () => {
 		})).rejects.toMatchObject({ code: "invalid_character", status: 400 });
 		expect(transaction).not.toHaveBeenCalled();
 	});
+
+	it("advances a single-player turn after the deadline", async () => {
+		const update = vi.fn().mockResolvedValue(undefined);
+		const tx = {
+			$executeRawUnsafe: vi.fn().mockResolvedValue(undefined),
+			letterGameMatch: {
+				findUnique: vi.fn()
+					.mockResolvedValueOnce({ roomId: "room-1" })
+					.mockResolvedValueOnce({
+						id: "match-1",
+						status: "active",
+						turnDeadline: new Date(Date.now() - 1_000),
+						turnOrder: ["user-1"],
+						currentTurnIndex: 0,
+						noProgressRounds: 0,
+						players: [{ userId: "user-1", status: "active" }],
+					}),
+				update,
+			},
+			letterGameRoom: {
+				findUnique: vi.fn().mockResolvedValue({ stalledRoundLimit: 3, turnDurationSeconds: 30 }),
+			},
+		};
+		const root = {
+			letterGameMatch: {
+				findMany: vi.fn().mockResolvedValue([{ id: "match-1" }]),
+			},
+		};
+		const { service } = createTransactionService(tx, root);
+
+		await expect(service.expireDueMatches()).resolves.toEqual(["match-1"]);
+		expect(update).toHaveBeenCalledWith(expect.objectContaining({
+			where: { id: "match-1" },
+			data: expect.objectContaining({
+				currentTurnIndex: 0,
+				noProgressRounds: 1,
+				revision: { increment: 1 },
+			}),
+		}));
+		const updateData = update.mock.calls[0]?.[0]?.data as Record<string, unknown>;
+		expect(updateData.turnDeadline).toBeInstanceOf(Date);
+		expect(updateData.status).toBeUndefined();
+	});
 });

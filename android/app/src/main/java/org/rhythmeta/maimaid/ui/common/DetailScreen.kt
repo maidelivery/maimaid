@@ -121,6 +121,7 @@ internal fun DetailScreen(
     letterGameSettingsRequestToken: Int = 0,
     onLetterGameRoomPresenceChanged: (Boolean) -> Unit = {},
     onLetterGameRoomCodeChanged: (String?) -> Unit = {},
+    onLetterGameMatchActiveChanged: (Boolean) -> Unit = {},
     onLetterGameJoinActionAvailabilityChanged: (Boolean) -> Unit = {},
     onSongDetailBackgroundChanged: (androidx.compose.ui.graphics.Color?) -> Unit,
     onSongDetailTitleChanged: (String) -> Unit,
@@ -311,6 +312,7 @@ internal fun DetailScreen(
             settingsRequestToken = letterGameSettingsRequestToken,
             onRoomPresenceChanged = onLetterGameRoomPresenceChanged,
             onRoomCodeChanged = onLetterGameRoomCodeChanged,
+            onMatchActiveChanged = onLetterGameMatchActiveChanged,
             onJoinActionAvailabilityChanged = onLetterGameJoinActionAvailabilityChanged,
         )
         AppDetail.DivingFishImport -> DivingFishImportScreen(

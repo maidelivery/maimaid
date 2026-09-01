@@ -4,7 +4,6 @@ import { inject, injectable } from "tsyringe";
 import type { PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
-import { buildHandle } from "../lib/user-handle.js";
 import { CatalogService } from "./catalog.service.js";
 import {
 	buildLetterTokens,
@@ -474,12 +473,12 @@ export class LetterGameService {
 			}),
 			this.prisma.user.findMany({
 				where: { id: { in: userIds } },
-				select: { id: true, username: true, usernameDiscriminator: true },
+				select: { id: true, username: true },
 			}),
 		]);
 		const profileByUser = new Map(profiles.map((profile: any) => [profile.userId, profile]));
 		const handleByUser = new Map(
-			users.map((user: any) => [user.id, buildHandle(user.username, user.usernameDiscriminator)]),
+			users.map((user: any) => [user.id, user.username]),
 		);
 		const songIdentifiers = match.songs.map((song: any) => song.songIdentifier);
 		const [catalogSongs, sheets] = await Promise.all([
@@ -1091,7 +1090,7 @@ export class LetterGameService {
 			}),
 			this.prisma.user.findMany({
 				where: { id: { in: userIds } },
-				select: { id: true, username: true, usernameDiscriminator: true },
+				select: { id: true, username: true },
 			}),
 			collectionIds.length === 0
 				? Promise.resolve([])
@@ -1102,7 +1101,7 @@ export class LetterGameService {
 		]);
 		const profileByUser = new Map(profiles.map((profile: any) => [profile.userId, profile]));
 		const handleByUser = new Map(
-			users.map((user: any) => [user.id, buildHandle(user.username, user.usernameDiscriminator)]),
+			users.map((user: any) => [user.id, user.username]),
 		);
 		const collectionById = new Map(selectedCollections.map((collection: any) => [collection.id, collection]));
 		return {

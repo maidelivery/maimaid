@@ -131,6 +131,7 @@ fun LetterGameScreen(
     settingsRequestToken: Int = 0,
     onRoomPresenceChanged: (Boolean) -> Unit = {},
     onRoomCodeChanged: (String?) -> Unit = {},
+    onMatchActiveChanged: (Boolean) -> Unit = {},
     onJoinActionAvailabilityChanged: (Boolean) -> Unit = {},
 ) {
     val session by container.backendSessionManager.state.collectAsStateWithLifecycle()
@@ -293,13 +294,15 @@ fun LetterGameScreen(
         }
     }
 
+    val room = selectedRoom
+    val visibleMatch = match?.takeUnless { it.matchId == leftMatchId && it.status == "active" }
+    LaunchedEffect(visibleMatch?.status) {
+        onMatchActiveChanged(visibleMatch?.status == "active")
+    }
     if (!session.isAuthenticated) {
         LoginRequired(contentTopPadding, onOpenLogin)
         return
     }
-
-    val room = selectedRoom
-    val visibleMatch = match?.takeUnless { it.matchId == leftMatchId && it.status == "active" }
     Box(Modifier.fillMaxSize()) {
         AnimatedContent(
         targetState = room to visibleMatch,
@@ -387,6 +390,7 @@ fun LetterGameScreen(
 										leftMatchId = animatedMatch.matchId
 									}
 								},
+								onMatchRefresh = { refreshed -> match = refreshed },
 							)
 							"finished", "abandoned" -> ResultsPage(
 								room = animatedRoom,
@@ -832,6 +836,7 @@ private fun PlayingPage(
     errorMessage: String?,
     onLeave: () -> Unit,
     onShowSnackbar: (String) -> Unit,
+    onMatchRefresh: (LetterGameMatchSnapshot) -> Unit,
 ) {
     var character by remember { mutableStateOf("") }
     var guessTarget by remember { mutableStateOf<LetterGameMatchSong?>(null) }
@@ -864,11 +869,24 @@ private fun PlayingPage(
             }
         }
     }
-    LaunchedEffect(match.turnDeadline) {
+    LaunchedEffect(match.matchId, match.turnDeadline, match.revision) {
+        val deadline = match.turnDeadline?.let { runCatching { java.time.Instant.parse(it) }.getOrNull() }
+        if (deadline == null) {
+            secondsLeft = 0
+            return@LaunchedEffect
+        }
         while (true) {
-            val deadline = match.turnDeadline?.let { runCatching { java.time.Instant.parse(it) }.getOrNull() }
-            secondsLeft = deadline?.let { ((it.toEpochMilli() - System.currentTimeMillis()) / 1_000L).toInt().coerceAtLeast(0) } ?: 0
-            if (secondsLeft == 0) break
+            secondsLeft = ((deadline.toEpochMilli() - System.currentTimeMillis()) / 1_000L).toInt().coerceAtLeast(0)
+            if (secondsLeft > 0) {
+                delay(1_000.milliseconds)
+                continue
+            }
+            if (match.status != "active") break
+            val refreshed = runCatching { repository.getMatch(match.matchId) }.getOrNull()
+            if (refreshed != null && (refreshed.revision != match.revision || refreshed.turnDeadline != match.turnDeadline || refreshed.status != match.status)) {
+                onMatchRefresh(refreshed)
+                break
+            }
             delay(1_000.milliseconds)
         }
     }
@@ -944,45 +962,49 @@ private fun PlayingPage(
         }
         }
 
-        Card(
+        Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .imePadding()
                 .navigationBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            cornerRadius = 14.dp,
-            insideMargin = PaddingValues(10.dp),
-            colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
         ) {
-            Row(
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                cornerRadius = 14.dp,
+                insideMargin = PaddingValues(10.dp),
+                colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
             ) {
-                TextField(
-                    value = character,
-                    onValueChange = { character = firstGrapheme(it) },
-                    label = stringResource(R.string.letter_game_character_all_songs),
-                    enabled = canAct,
-                    singleLine = true,
-                    colors = appTextFieldColors(),
-                    modifier = Modifier.weight(1f),
-                )
-                Button(
-                    onClick = {
-                        val value = character
-                        if (value.isNotEmpty()) {
-                            send(buildJsonObject { put("kind", "open_character"); put("character", value) })
-                            character = ""
-                        }
-                    },
-                    enabled = canAct && character.isNotEmpty(),
-                    colors = ButtonDefaults.buttonColorsPrimary(),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null)
-                    Spacer(Modifier.width(5.dp))
-                    Text(stringResource(R.string.letter_game_open))
+                    TextField(
+                        value = character,
+                        onValueChange = { character = firstGrapheme(it) },
+                        label = stringResource(R.string.letter_game_character_all_songs),
+                        enabled = canAct,
+                        singleLine = true,
+                        colors = appTextFieldColors(),
+                        modifier = Modifier.weight(1f),
+                    )
+                    Button(
+                        onClick = {
+                            val value = character
+                            if (value.isNotEmpty()) {
+                                send(buildJsonObject { put("kind", "open_character"); put("character", value) })
+                                character = ""
+                            }
+                        },
+                        enabled = canAct && character.isNotEmpty(),
+                        colors = ButtonDefaults.buttonColorsPrimary(),
+                    ) {
+                        Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null)
+                        Spacer(Modifier.width(5.dp))
+                        Text(stringResource(R.string.letter_game_open))
+                    }
                 }
             }
         }

@@ -14,6 +14,7 @@ export class LetterGameTurnScheduler {
 
 	start() {
 		if (this.timer) return;
+		void this.tick();
 		this.timer = setInterval(() => {
 			void this.tick();
 		}, 1000);

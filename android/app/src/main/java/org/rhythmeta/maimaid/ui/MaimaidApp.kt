@@ -258,6 +258,7 @@ fun MaimaidApp(
     var communityAliasesSourceSongId by rememberSaveable { mutableStateOf<String?>(null) }
     var communityAliasesSourceReturnDetail by rememberSaveable { mutableStateOf<AppDetail?>(null) }
     var letterGameInRoom by rememberSaveable { mutableStateOf(false) }
+    var letterGameMatchActive by rememberSaveable { mutableStateOf(false) }
     var letterGameRoomCode by rememberSaveable { mutableStateOf<String?>(null) }
     var letterGameJoinActionAvailable by rememberSaveable { mutableStateOf(false) }
     var letterGameJoinRequestToken by rememberSaveable { mutableIntStateOf(0) }
@@ -522,6 +523,7 @@ fun MaimaidApp(
     LaunchedEffect(detail) {
         if (detail != AppDetail.LetterGame) {
             letterGameInRoom = false
+            letterGameMatchActive = false
             letterGameRoomCode = null
             letterGameJoinActionAvailable = false
         }
@@ -854,7 +856,7 @@ fun MaimaidApp(
     }
     val detailActions: @Composable RowScope.(AppDetail) -> Unit = { activeDetail ->
         if (activeDetail == AppDetail.LetterGame) {
-            if (letterGameRoomCode != null) {
+            if ((letterGameInRoom || letterGameRoomCode != null) && !letterGameMatchActive) {
                 IconButton(onClick = { letterGameCopyRequestToken += 1 }) {
                     Icon(Icons.Rounded.ContentCopy, contentDescription = stringResource(R.string.letter_game_copy_room_code))
                 }
@@ -2169,6 +2171,7 @@ fun MaimaidApp(
                             letterGameSettingsRequestToken = letterGameSettingsRequestToken,
                             onLetterGameRoomPresenceChanged = { letterGameInRoom = it },
                             onLetterGameRoomCodeChanged = { letterGameRoomCode = it },
+                            onLetterGameMatchActiveChanged = { letterGameMatchActive = it },
                             onLetterGameJoinActionAvailabilityChanged = { letterGameJoinActionAvailable = it },
                             onSongDetailBackgroundChanged = { color ->
                                 val currentSongId = selectedSongId

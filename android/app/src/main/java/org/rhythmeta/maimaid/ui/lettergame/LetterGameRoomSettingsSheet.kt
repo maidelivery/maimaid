@@ -37,6 +37,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -143,10 +146,18 @@ internal fun LetterGameRoomSettingsSheet(
         delay(350.milliseconds)
         val request = draft.toRequest(room, versions, selectedSongCount) ?: return@LaunchedEffect
         submitting = true
-        runCatching { onUpdate(request) }
-            .onSuccess { updated -> draft = updated.toSettingsDraft(acceptedPlayerCount) }
-            .onFailure { onError(it.message ?: "Request failed") }
-        submitting = false
+        try {
+            val updated = onUpdate(request)
+            if (currentCoroutineContext().isActive) {
+                draft = updated.toSettingsDraft(acceptedPlayerCount)
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            onError(error.message ?: "Request failed")
+        } finally {
+            if (currentCoroutineContext().isActive) submitting = false
+        }
     }
 
     fun edit(transform: (RoomSettingsDraft) -> RoomSettingsDraft) {

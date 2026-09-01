@@ -17,6 +17,8 @@ const env = getEnv();
 const prisma = getPrismaClient();
 container.register(TOKENS.Env, { useValue: env });
 container.register(TOKENS.Prisma, { useValue: prisma });
+// The WebSocket hub must be shared by the HTTP upgrade handler and the turn scheduler.
+container.registerSingleton(LetterGameConnectionHub);
 
 const app = createApp({
 	resolveDependencies: () => ({ env, prisma }),
