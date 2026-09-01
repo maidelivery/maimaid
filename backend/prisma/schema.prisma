@@ -266,12 +266,13 @@ model LetterGamePlayerFact {
 	userId         String                    @db.Uuid
 	factType       LetterGameHintType
 	visibility     LetterGameHintVisibility
+	hintKey        String                    @default("")
 	value          Json
 	cost           Int
 	createdAt      DateTime                  @default(now())
 	match          LetterGameMatch            @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
-	@@unique([matchId, songId, userId, factType, visibility])
+	@@unique([matchId, songId, userId, factType, visibility, hintKey])
 	@@index([matchId, userId])
 	@@map("letter_game_player_facts")
 }

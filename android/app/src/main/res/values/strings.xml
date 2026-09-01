@@ -685,7 +685,7 @@
 	<string name="letter_game_remaining">%1$d characters remaining</string>
 	<string name="letter_game_character">Character</string>
 	<string name="letter_game_open">Open</string>
-	<string name="letter_game_guess">Song title</string>
+	<string name="letter_game_guess">Guess</string>
 	<string name="letter_game_submit">Guess</string>
 	<string name="letter_game_lobby_summary">Create a room or join a public room</string>
 	<string name="letter_game_enter_room_code">Enter room code</string>
@@ -748,12 +748,16 @@
 	<string name="letter_game_waiting_turn_timer">Waiting · %1$ds</string>
 	<string name="letter_game_current_player">Current player: %1$s</string>
 	<string name="letter_game_character_all_songs">Character to open</string>
+	<string name="letter_game_input_placeholder">Character or song title</string>
+	<string name="letter_game_input_character_placeholder">Enter a character</string>
+	<string name="letter_game_input_guess_placeholder">Enter a song title or alias</string>
+	<string name="letter_game_submit_input">Submit</string>
+	<string name="letter_game_input_tip">Enter one character to open it across all songs, or type a song title or alias to guess. Long-press a song card to buy a hint.</string>
 	<string name="letter_game_log">Game log</string>
 	<string name="letter_game_songs">Songs</string>
 	<string name="letter_game_guessed_songs">Guessed songs</string>
 	<string name="letter_game_unguessed_songs">Unguessed songs</string>
 	<string name="letter_game_reveal_all">Reveal a character in all songs</string>
-	<string name="letter_game_guess_this_song">Guess this song</string>
 	<string name="letter_game_buy_hint">Buy a hint</string>
 	<string name="letter_game_leave_match">Leave match</string>
 	<string name="letter_game_open_character_title">Open a character</string>
@@ -765,6 +769,8 @@
 	<string name="letter_game_hint_white_chart">White chart</string>
 	<string name="letter_game_hint_constant">Constant</string>
 	<string name="letter_game_hint_type">Hint type</string>
+	<string name="letter_game_hint_already_known">You already know this hint.</string>
+	<string name="letter_game_ambiguous_guess">More than one active song matches. Enter a more complete title.</string>
 	<string name="letter_game_public">Public</string>
 	<string name="letter_game_private">Private</string>
     <string name="letter_game_purchase_with_balance">Purchase · %1$d pts · Balance %2$d pts</string>

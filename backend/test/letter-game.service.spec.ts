@@ -273,6 +273,110 @@ describe("LetterGameService room lifecycle", () => {
 		expect(transaction).not.toHaveBeenCalled();
 	});
 
+	it("matches a guess against every active song title and alias", async () => {
+		const songs = [
+			{ id: "song-1", slotId: "slot-1", songIdentifier: "song-1", title: "Alpha", aliases: ["A"], status: "active", revealedIndices: [] },
+			{ id: "song-2", slotId: "slot-2", songIdentifier: "song-2", title: "Beta", aliases: [], status: "active", revealedIndices: [] },
+		];
+		const songUpdate = vi.fn().mockResolvedValue(undefined);
+		const matchUpdate = vi.fn().mockResolvedValue({ revision: 1, status: "active" });
+		const actionCreate = vi.fn().mockResolvedValue(undefined);
+		const tx = {
+			$executeRawUnsafe: vi.fn().mockResolvedValue(undefined),
+			letterGameMatch: {
+				findUnique: vi.fn()
+					.mockResolvedValueOnce({ roomId: "room-1" })
+					.mockResolvedValueOnce({
+						id: "match-1",
+						status: "active",
+						revision: 0,
+						turnOrder: ["user-1"],
+						currentTurnIndex: 0,
+						noProgressRounds: 0,
+						players: [{ id: "player-1", userId: "user-1", status: "active", score: 0, scoringEligible: true }],
+						songs,
+					}),
+				update: matchUpdate,
+			},
+			letterGameRoom: { findUnique: vi.fn().mockResolvedValue({ status: "open", stalledRoundLimit: 3, turnDurationSeconds: 30 }) },
+			letterGameAction: { findFirst: vi.fn().mockResolvedValue(null), create: actionCreate },
+			letterGameMatchSong: { update: songUpdate, count: vi.fn().mockResolvedValue(1) },
+			letterGameMatchPlayer: { update: vi.fn().mockResolvedValue(undefined) },
+		};
+		const { service } = createTransactionService(tx);
+
+		await expect(service.applyAction("user-1", "match-1", "action-1", 0, {
+			kind: "guess_song",
+			guess: " a ",
+		})).resolves.toMatchObject({ correct: true, blind: true, points: 15 });
+		expect(songUpdate).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "song-1" } }));
+		expect(actionCreate).toHaveBeenCalled();
+	});
+
+	it("rejects ambiguous title or alias guesses without consuming the turn", async () => {
+		const songs = [
+			{ id: "song-1", slotId: "slot-1", songIdentifier: "song-1", title: "Alpha", aliases: ["Same"], status: "active", revealedIndices: [] },
+			{ id: "song-2", slotId: "slot-2", songIdentifier: "song-2", title: "Beta", aliases: ["Same"], status: "active", revealedIndices: [] },
+		];
+		const matchUpdate = vi.fn();
+		const tx = {
+			$executeRawUnsafe: vi.fn().mockResolvedValue(undefined),
+			letterGameMatch: {
+				findUnique: vi.fn()
+					.mockResolvedValueOnce({ roomId: "room-1" })
+					.mockResolvedValueOnce({
+						status: "active",
+						revision: 0,
+						turnOrder: ["user-1"],
+						currentTurnIndex: 0,
+						players: [{ id: "player-1", userId: "user-1", status: "active", score: 0, scoringEligible: true }],
+						songs,
+					}),
+				update: matchUpdate,
+			},
+			letterGameRoom: { findUnique: vi.fn().mockResolvedValue({ status: "open", stalledRoundLimit: 3, turnDurationSeconds: 30 }) },
+			letterGameAction: { findFirst: vi.fn().mockResolvedValue(null) },
+		};
+		const { service } = createTransactionService(tx);
+
+		await expect(service.applyAction("user-1", "match-1", "action-1", 0, {
+			kind: "guess_song",
+			guess: "same",
+		})).rejects.toMatchObject({ code: "ambiguous_song_guess", status: 409 });
+		expect(matchUpdate).not.toHaveBeenCalled();
+	});
+
+	it("rejects purchasing a hint that is already known publicly or privately", async () => {
+		const tx = {
+			$executeRawUnsafe: vi.fn().mockResolvedValue(undefined),
+			letterGameMatch: {
+				findUnique: vi.fn()
+					.mockResolvedValueOnce({ roomId: "room-1" })
+					.mockResolvedValueOnce({
+						status: "active",
+						revision: 0,
+						turnOrder: ["user-1"],
+						currentTurnIndex: 0,
+						players: [{ id: "player-1", userId: "user-1", status: "active", score: 100, scoringEligible: true }],
+						songs: [{ id: "song-1", slotId: "slot-1", songIdentifier: "song-1", status: "active", revealedIndices: [] }],
+					}),
+			},
+			letterGameRoom: { findUnique: vi.fn().mockResolvedValue({ status: "open", publicHintCost: 5, privateHintCost: 10 }) },
+			letterGameAction: { findFirst: vi.fn().mockResolvedValue(null) },
+			letterGamePlayerFact: { findMany: vi.fn().mockResolvedValue([{ factType: "version", visibility: "public", value: "DX" }]) },
+			letterGameMatchPlayer: { update: vi.fn() },
+		};
+		const { service } = createTransactionService(tx);
+
+		await expect(service.applyAction("user-1", "match-1", "action-1", 0, {
+			kind: "buy_hint",
+			slotId: "slot-1",
+			hintType: "version",
+			visibility: "private",
+		})).rejects.toMatchObject({ code: "hint_already_known", status: 409 });
+		expect(tx.letterGameMatchPlayer.update).not.toHaveBeenCalled();
+	});
+
 	it("advances a single-player turn after the deadline", async () => {
 		const update = vi.fn().mockResolvedValue(undefined);
 		const tx = {

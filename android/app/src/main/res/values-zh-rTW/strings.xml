@@ -654,7 +654,7 @@
     <string name="letter_game_remaining">剩餘 %1$d 個字元</string>
     <string name="letter_game_character">字元</string>
     <string name="letter_game_open">開字母</string>
-    <string name="letter_game_guess">歌曲名稱</string>
+    <string name="letter_game_guess">猜歌</string>
     <string name="letter_game_submit">猜歌</string>
     <string name="letter_game_lobby_summary">建立房間或加入公開房</string>
     <string name="letter_game_enter_room_code">輸入房間碼</string>
@@ -717,12 +717,16 @@
     <string name="letter_game_waiting_turn_timer">等待回合 · %1$d 秒</string>
     <string name="letter_game_current_player">目前玩家：%1$s</string>
     <string name="letter_game_character_all_songs">要開的字元</string>
+    <string name="letter_game_input_placeholder">字元或歌曲名稱</string>
+    <string name="letter_game_input_character_placeholder">輸入要開的字元</string>
+    <string name="letter_game_input_guess_placeholder">輸入歌曲名稱或別名</string>
+    <string name="letter_game_submit_input">提交</string>
+    <string name="letter_game_input_tip">輸入一個字元可為所有待猜歌曲開字母，輸入歌曲名稱或別名即可猜歌。長按歌曲卡片購買提示。</string>
     <string name="letter_game_log">遊戲紀錄</string>
     <string name="letter_game_songs">歌曲</string>
     <string name="letter_game_guessed_songs">猜出</string>
     <string name="letter_game_unguessed_songs">未猜出</string>
     <string name="letter_game_reveal_all">為全部歌曲開字元</string>
-    <string name="letter_game_guess_this_song">猜這首歌</string>
     <string name="letter_game_buy_hint">購買提示</string>
     <string name="letter_game_leave_match">離開對局</string>
     <string name="letter_game_open_character_title">開字元</string>
@@ -734,6 +738,8 @@
     <string name="letter_game_hint_white_chart">白譜</string>
     <string name="letter_game_hint_constant">定數</string>
     <string name="letter_game_hint_type">提示類型</string>
+    <string name="letter_game_hint_already_known">你已經知道這個提示了。</string>
+    <string name="letter_game_ambiguous_guess">有多首待猜歌曲符合，請輸入更完整的歌名。</string>
     <string name="letter_game_public">公開</string>
     <string name="letter_game_private">私密</string>
     <string name="letter_game_purchase_with_balance">購買 · %1$d 分 · 餘額 %2$d 分</string>

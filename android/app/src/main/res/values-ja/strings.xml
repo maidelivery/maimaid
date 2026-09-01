@@ -657,7 +657,7 @@
     <string name="letter_game_remaining">残り %1$d 文字</string>
     <string name="letter_game_character">文字</string>
     <string name="letter_game_open">開く</string>
-    <string name="letter_game_guess">曲名</string>
+    <string name="letter_game_guess">回答</string>
     <string name="letter_game_submit">回答</string>
     <string name="letter_game_lobby_summary">ルームを作成または公開ルームに参加</string>
     <string name="letter_game_enter_room_code">ルームコードを入力</string>
@@ -720,12 +720,16 @@
     <string name="letter_game_waiting_turn_timer">手番待ち · %1$d 秒</string>
     <string name="letter_game_current_player">現在のプレイヤー：%1$s</string>
     <string name="letter_game_character_all_songs">開く文字</string>
+    <string name="letter_game_input_placeholder">文字または曲名</string>
+    <string name="letter_game_input_character_placeholder">開く文字を入力</string>
+    <string name="letter_game_input_guess_placeholder">曲名または別名を入力</string>
+    <string name="letter_game_submit_input">送信</string>
+    <string name="letter_game_input_tip">1文字で全曲の文字を開き、曲名または別名で回答します。曲カードを長押しするとヒントを購入できます。</string>
     <string name="letter_game_log">ゲームログ</string>
     <string name="letter_game_songs">曲</string>
     <string name="letter_game_guessed_songs">正解した曲</string>
     <string name="letter_game_unguessed_songs">未正解の曲</string>
     <string name="letter_game_reveal_all">全曲に文字を開く</string>
-    <string name="letter_game_guess_this_song">この曲を回答</string>
     <string name="letter_game_buy_hint">ヒントを購入</string>
     <string name="letter_game_leave_match">対局を退出</string>
     <string name="letter_game_open_character_title">文字を開く</string>
@@ -737,6 +741,8 @@
     <string name="letter_game_hint_white_chart">白譜面</string>
     <string name="letter_game_hint_constant">定数</string>
     <string name="letter_game_hint_type">ヒントの種類</string>
+    <string name="letter_game_hint_already_known">このヒントはすでに知っています。</string>
+    <string name="letter_game_ambiguous_guess">複数の未回答曲に一致しました。曲名をもう少し詳しく入力してください。</string>
     <string name="letter_game_public">公開</string>
     <string name="letter_game_private">非公開</string>
     <string name="letter_game_purchase_with_balance">購入 · %1$d pt · 残高 %2$d pt</string>

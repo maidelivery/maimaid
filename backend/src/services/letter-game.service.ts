@@ -38,7 +38,7 @@ export type LetterGameRoomSettingsInput = {
 
 export type LetterGameActionInput =
 	| { kind: "open_character"; character: string }
-	| { kind: "guess_song"; slotId: string; guess: string }
+	| { kind: "guess_song"; guess: string }
 	| {
 			kind: "buy_hint";
 			slotId: string;
@@ -703,10 +703,12 @@ export class LetterGameService {
 					completedSongIds,
 				};
 			} else if (input.kind === "guess_song") {
-				const song = match.songs.find((item: any) => item.slotId === input.slotId && item.status === "active");
-				if (!song) throw new AppError(404, "song_slot_not_found", "Song slot not found or already completed.");
-				const aliases = jsonArray<string>(song.aliases);
-				if (!guessSongMatches(input.guess, song.title, aliases)) {
+				const activeSongs = match.songs.filter((item: any) => item.status === "active");
+				const matchingSongs = activeSongs.filter((song: any) => guessSongMatches(input.guess, song.title, jsonArray<string>(song.aliases)));
+				if (matchingSongs.length > 1)
+					throw new AppError(409, "ambiguous_song_guess", "More than one active song matches this title or alias.");
+				const song = matchingSongs[0];
+				if (!song) {
 					actionResult = { ...actionResult, correct: false };
 				} else {
 					const revealed = jsonArray<number>(song.revealedIndices);
@@ -726,41 +728,44 @@ export class LetterGameService {
 			} else {
 				const song = match.songs.find((item: any) => item.slotId === input.slotId && item.status === "active");
 				if (!song) throw new AppError(404, "song_slot_not_found", "Song slot not found or already completed.");
-				const cost = input.visibility === "public" ? room.publicHintCost : room.privateHintCost;
-				if (!actor.scoringEligible || actor.score < cost)
-					throw new AppError(400, "insufficient_score", "Not enough score for this hint.");
-				const previous = await tx.letterGamePlayerFact.findFirst({
+				const knownFacts = await tx.letterGamePlayerFact.findMany({
 					where: {
 						matchId,
 						songId: song.id,
 						factType: input.hintType,
-						visibility: input.visibility,
-						...(input.visibility === "private" ? { userId } : {}),
+						OR: [{ visibility: "public" }, { userId, visibility: "private" }],
 					},
 				});
-				if (previous) {
-					actionResult = {
-						...actionResult,
-						hint: {
-							type: previous.factType,
-							visibility: previous.visibility,
-							value: previous.value,
-							cost: 0,
-							alreadyPurchased: true,
-						},
-					};
-				} else {
-					const value = await this.resolveHintValue(input, song.songIdentifier, userId, matchId, song.id, tx);
-					await tx.letterGameMatchPlayer.update({ where: { id: actor.id }, data: { score: { decrement: cost } } });
-					balance -= cost;
-					const fact = await tx.letterGamePlayerFact.create({
-						data: { matchId, songId: song.id, userId, factType: input.hintType, visibility: input.visibility, value, cost },
-					});
-					actionResult = {
-						...actionResult,
-						hint: { type: fact.factType, visibility: fact.visibility, value: fact.value, cost },
-					};
-				}
+				const requestedDifficulty = input.difficulty?.trim().toLowerCase();
+				const alreadyKnown = knownFacts.some((fact: any) => {
+					if (input.hintType !== "constant") return true;
+					const value = jsonObject(fact.value);
+					return typeof value.difficulty === "string" && value.difficulty.trim().toLowerCase() === requestedDifficulty;
+				});
+				if (alreadyKnown)
+					throw new AppError(409, "hint_already_known", "This hint is already known and cannot be purchased again.");
+				const cost = input.visibility === "public" ? room.publicHintCost : room.privateHintCost;
+				if (!actor.scoringEligible || actor.score < cost)
+					throw new AppError(400, "insufficient_score", "Not enough score for this hint.");
+				const value = await this.resolveHintValue(input, song.songIdentifier, userId, matchId, song.id, tx);
+				await tx.letterGameMatchPlayer.update({ where: { id: actor.id }, data: { score: { decrement: cost } } });
+				balance -= cost;
+				const fact = await tx.letterGamePlayerFact.create({
+					data: {
+						matchId,
+						songId: song.id,
+						userId,
+						factType: input.hintType,
+						visibility: input.visibility,
+						hintKey: input.hintType === "constant" ? input.difficulty?.trim().toLowerCase() ?? "" : input.hintType,
+						value,
+						cost,
+					},
+				});
+				actionResult = {
+					...actionResult,
+					hint: { type: fact.factType, visibility: fact.visibility, value: fact.value, cost },
+				};
 			}
 			actionResult = { ...actionResult, balance };
 

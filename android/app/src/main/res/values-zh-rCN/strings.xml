@@ -654,7 +654,7 @@
     <string name="letter_game_remaining">剩余 %1$d 个字符</string>
     <string name="letter_game_character">字符</string>
     <string name="letter_game_open">开字母</string>
-    <string name="letter_game_guess">歌曲名</string>
+    <string name="letter_game_guess">猜歌</string>
     <string name="letter_game_submit">猜歌</string>
     <string name="letter_game_lobby_summary">创建房间或加入公开房</string>
     <string name="letter_game_enter_room_code">输入房间码</string>
@@ -717,12 +717,16 @@
     <string name="letter_game_waiting_turn_timer">等待回合 · %1$d 秒</string>
     <string name="letter_game_current_player">当前玩家：%1$s</string>
     <string name="letter_game_character_all_songs">要开的字符</string>
+    <string name="letter_game_input_placeholder">字符或歌曲名</string>
+    <string name="letter_game_input_character_placeholder">输入要开的字符</string>
+    <string name="letter_game_input_guess_placeholder">输入歌曲名或别名</string>
+    <string name="letter_game_submit_input">提交</string>
+    <string name="letter_game_input_tip">输入一个字符可为所有待猜歌曲开字母，输入歌曲名或别名即可猜歌。长按歌曲卡片购买提示。</string>
     <string name="letter_game_log">游戏记录</string>
     <string name="letter_game_songs">歌曲</string>
     <string name="letter_game_guessed_songs">猜出</string>
     <string name="letter_game_unguessed_songs">未猜出</string>
     <string name="letter_game_reveal_all">为全部歌曲开字符</string>
-    <string name="letter_game_guess_this_song">猜这首歌</string>
     <string name="letter_game_buy_hint">购买提示</string>
     <string name="letter_game_leave_match">离开对局</string>
     <string name="letter_game_open_character_title">开字符</string>
@@ -734,6 +738,8 @@
     <string name="letter_game_hint_white_chart">白谱</string>
     <string name="letter_game_hint_constant">定数</string>
     <string name="letter_game_hint_type">提示类型</string>
+    <string name="letter_game_hint_already_known">你已经知道这个提示了。</string>
+    <string name="letter_game_ambiguous_guess">有多首待猜歌曲匹配，请输入更完整的歌名。</string>
     <string name="letter_game_public">公开</string>
     <string name="letter_game_private">私密</string>
     <string name="letter_game_purchase_with_balance">购买 · %1$d 分 · 余额 %2$d 分</string>

@@ -26,7 +26,7 @@ const unauthorized = (socket: { write: (value: string) => void; destroy: () => v
 
 const actionPayloadSchema = z.discriminatedUnion("kind", [
 	z.object({ kind: z.literal("open_character"), character: z.string().min(1).max(256) }),
-	z.object({ kind: z.literal("guess_song"), slotId: z.string().min(1).max(128), guess: z.string().trim().min(1).max(256) }),
+	z.object({ kind: z.literal("guess_song"), guess: z.string().trim().min(1).max(256) }),
 	z.object({
 		kind: z.literal("buy_hint"),
 		slotId: z.string().min(1).max(128),

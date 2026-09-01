@@ -42,8 +42,8 @@ import androidx.compose.material.icons.rounded.AddHome
 import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -84,6 +84,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import okhttp3.WebSocket
@@ -91,6 +92,7 @@ import org.rhythmeta.maimaid.R
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.LetterGameCreateRequest
 import org.rhythmeta.maimaid.core.data.LetterGameEvent
+import org.rhythmeta.maimaid.core.data.LetterGameFact
 import org.rhythmeta.maimaid.core.data.LetterGameLogEntry
 import org.rhythmeta.maimaid.core.data.LetterGameMatchPlayer
 import org.rhythmeta.maimaid.core.data.LetterGameMatchSnapshot
@@ -123,7 +125,6 @@ import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
-import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.window.WindowListPopup
@@ -170,6 +171,8 @@ fun LetterGameScreen(
     var handledSettingsRequestToken by remember { mutableIntStateOf(settingsRequestToken) }
     val snackbarHostState = remember { SnackbarHostState() }
     val roomCodeCopiedMessage = stringResource(R.string.letter_game_room_code_copied)
+    val hintAlreadyKnownMessage = stringResource(R.string.letter_game_hint_already_known)
+    val ambiguousGuessMessage = stringResource(R.string.letter_game_ambiguous_guess)
     val gameVersions by container.catalogRepository.versions.collectAsStateWithLifecycle(emptyList())
     val songCategories by container.catalogRepository.categories.collectAsStateWithLifecycle(emptyList())
     val collections by container.songCollectionRepository.collections.collectAsStateWithLifecycle(emptyList())
@@ -246,7 +249,11 @@ fun LetterGameScreen(
                     }
                 }
                 is LetterGameEvent.Error -> {
-                    errorMessage = event.message ?: event.code
+                    errorMessage = when (event.code) {
+                        "hint_already_known" -> hintAlreadyKnownMessage
+                        "ambiguous_song_guess" -> ambiguousGuessMessage
+                        else -> event.message ?: event.code
+                    }
                     if (event.code == "connection_failed" && selectedRoom != null) reconnectAttempt += 1
                     if (event.code == "stale_revision") {
                         match?.let { staleMatch ->
@@ -875,11 +882,8 @@ private fun PlayingPage(
     onShowSnackbar: (String) -> Unit,
     onMatchRefresh: (LetterGameMatchSnapshot) -> Unit,
 ) {
-    var character by remember { mutableStateOf("") }
-    var guessTarget by remember { mutableStateOf<LetterGameMatchSong?>(null) }
+    var inputText by remember { mutableStateOf("") }
     var hintTarget by remember { mutableStateOf<LetterGameMatchSong?>(null) }
-    var popupTarget by remember { mutableStateOf<LetterGameMatchSong?>(null) }
-    var guessText by remember { mutableStateOf("") }
     var hintType by remember { mutableStateOf("version") }
     var hintVisibility by remember { mutableStateOf("public") }
     var hintDifficulty by remember { mutableStateOf("master") }
@@ -895,6 +899,18 @@ private fun PlayingPage(
     }
     var logBaselineEstablished by remember(match.matchId) { mutableStateOf(false) }
     var shownLogIds by remember(match.matchId) { mutableStateOf<Set<String>>(emptySet()) }
+    val isCharacterInput = inputText.isNotEmpty() && firstGrapheme(inputText) == inputText
+    val canSubmitInput = inputText.isNotEmpty() && (isCharacterInput || inputText.isNotBlank())
+    val inputLabel = when {
+        inputText.isEmpty() -> stringResource(R.string.letter_game_input_placeholder)
+        isCharacterInput -> stringResource(R.string.letter_game_input_character_placeholder)
+        else -> stringResource(R.string.letter_game_input_guess_placeholder)
+    }
+    val inputActionLabel = when {
+        inputText.isEmpty() -> stringResource(R.string.letter_game_submit_input)
+        isCharacterInput -> stringResource(R.string.letter_game_open)
+        else -> stringResource(R.string.letter_game_guess)
+    }
 
     LaunchedEffect(match.matchId, match.logs) {
         val currentIds = match.logs.mapTo(mutableSetOf(), LetterGameLogEntry::id)
@@ -942,36 +958,17 @@ private fun PlayingPage(
             contentPadding = PaddingValues(start = 16.dp, top = contentTopPadding + 8.dp, end = 16.dp, bottom = 136.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+        item { InputMechanismTip() }
         if (errorMessage != null) item { ErrorBanner(errorMessage) }
         item { TurnStrip(match.players, match.turnUserId) }
         if (englishOnly) item { EnglishLetterProgress(match.logs) }
         items(match.songs, key = LetterGameMatchSong::slotId) { song ->
-            Box {
-                LetterSongCard(
-                    song = song,
-                    coverImageStore = coverImageStore,
-                    versions = versions,
-                    onLongClick = { popupTarget = song },
-                )
-                OverlayListPopup(
-                    show = popupTarget?.slotId == song.slotId,
-                    onDismissRequest = { popupTarget = null },
-                ) {
-                    ListPopupColumn {
-                        if (song.status == "active") {
-                            PopupAction(stringResource(R.string.letter_game_guess_this_song), Icons.AutoMirrored.Rounded.Send) {
-                                popupTarget = null
-                                guessTarget = song
-                                guessText = ""
-                            }
-                            if (canBuyHint) PopupAction(stringResource(R.string.letter_game_buy_hint), Icons.Rounded.Lightbulb) {
-                                popupTarget = null
-                                hintTarget = song
-                            }
-                        }
-                    }
-                }
-            }
+            LetterSongCard(
+                song = song,
+                coverImageStore = coverImageStore,
+                versions = versions,
+                onLongClick = { if (song.status == "active") hintTarget = song },
+            )
         }
         }
 
@@ -1014,9 +1011,9 @@ private fun PlayingPage(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         TextField(
-                            value = character,
-                            onValueChange = { character = firstGrapheme(it) },
-                            label = stringResource(R.string.letter_game_character_all_songs),
+                            value = inputText,
+                            onValueChange = { inputText = it },
+                            label = inputLabel,
                             enabled = canAct,
                             singleLine = true,
                             colors = appTextFieldColors(),
@@ -1024,18 +1021,26 @@ private fun PlayingPage(
                         )
                         Button(
                             onClick = {
-                                val value = character
-                                if (value.isNotEmpty()) {
-                                    send(buildJsonObject { put("kind", "open_character"); put("character", value) })
-                                    character = ""
+                                val value = inputText
+                                if (canSubmitInput) {
+                                    send(buildJsonObject {
+                                        if (isCharacterInput) {
+                                            put("kind", "open_character")
+                                            put("character", value)
+                                        } else {
+                                            put("kind", "guess_song")
+                                            put("guess", value)
+                                        }
+                                    })
+                                    inputText = ""
                                 }
                             },
-                            enabled = canAct && character.isNotEmpty(),
+                            enabled = canAct && canSubmitInput,
                             colors = ButtonDefaults.buttonColorsPrimary(),
                         ) {
                             Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null)
                             Spacer(Modifier.width(5.dp))
-                            Text(stringResource(R.string.letter_game_open))
+                            Text(inputActionLabel)
                         }
                     }
                 }
@@ -1043,27 +1048,8 @@ private fun PlayingPage(
         }
     }
 
-    guessTarget?.let { target ->
-        WindowDialog(
-            show = true,
-            title = stringResource(R.string.letter_game_guess_song_title),
-            onDismissRequest = { guessTarget = null },
-        ) {
-            TextField(value = guessText, onValueChange = { guessText = it }, label = stringResource(R.string.letter_game_song_title_alias), colors = appTextFieldColors(), modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(12.dp))
-            Button(
-                onClick = {
-                    send(buildJsonObject { put("kind", "guess_song"); put("slotId", target.slotId); put("guess", guessText) })
-                    guessTarget = null
-                },
-                enabled = canAct && guessText.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColorsPrimary(),
-            ) { Text(stringResource(R.string.letter_game_submit_guess)) }
-        }
-    }
     hintTarget?.let { target ->
-        val hasWhiteChart = target.facts.any { it.type == "white_chart" && it.value.toString() == "true" }
+        val hasWhiteChart = target.facts.any { it.type == "white_chart" && it.value.jsonPrimitive.booleanOrNull == true }
         val hintOptions = buildList {
             add("version")
             add("white_chart")
@@ -1072,6 +1058,7 @@ private fun PlayingPage(
         val selectedHintType = hintType.takeIf { it in hintOptions } ?: hintOptions.first()
         val hintCost = if (hintVisibility == "public") publicHintCost else privateHintCost
         val canAffordHint = currentScore >= hintCost
+        val hintAlreadyKnown = target.facts.any { it.isKnownHint(selectedHintType, hintDifficulty) }
         WindowDialog(show = true, title = stringResource(R.string.letter_game_buy_hint), onDismissRequest = { hintTarget = null }) {
             HintDropdown(
                 title = stringResource(R.string.letter_game_hint_type),
@@ -1095,6 +1082,14 @@ private fun PlayingPage(
                 Spacer(Modifier.height(8.dp))
                 TextField(value = hintDifficulty, onValueChange = { hintDifficulty = it }, label = stringResource(R.string.letter_game_difficulty), colors = appTextFieldColors(), modifier = Modifier.fillMaxWidth())
             }
+            if (hintAlreadyKnown) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.letter_game_hint_already_known),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = MiuixTheme.textStyles.footnote1,
+                )
+            }
             Spacer(Modifier.height(12.dp))
             Button(
                 onClick = {
@@ -1107,7 +1102,7 @@ private fun PlayingPage(
                     })
                     hintTarget = null
                 },
-                enabled = canBuyHint && canAffordHint,
+                enabled = canBuyHint && canAffordHint && !hintAlreadyKnown,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColorsPrimary(),
             ) {
@@ -1160,6 +1155,34 @@ private fun localizedLogMessage(narration: LetterGameLogNarration): String {
         LetterGameLogTemplate.HINT_NORMAL_1 -> stringResource(R.string.letter_game_log_hint_normal_1, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
         LetterGameLogTemplate.HINT_NORMAL_2 -> stringResource(R.string.letter_game_log_hint_normal_2, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
         LetterGameLogTemplate.FALLBACK -> narration.fallbackMessage.orEmpty()
+    }
+}
+
+@Composable
+private fun InputMechanismTip() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .squircleSurface(
+                color = MiuixTheme.colorScheme.surfaceContainer,
+                cornerRadius = 12.dp,
+                extension = SquircleExtension,
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Info,
+            contentDescription = null,
+            tint = MiuixTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            text = stringResource(R.string.letter_game_input_tip),
+            style = MiuixTheme.textStyles.footnote1,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        )
     }
 }
 
@@ -1398,18 +1421,6 @@ private fun letterGameChartTypes(chartTypes: List<String>): List<String> {
 }
 
 @Composable
-private fun PopupAction(label: String, icon: ImageVector, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = null).padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, contentDescription = null, tint = MiuixTheme.colorScheme.onSurface)
-        Spacer(Modifier.width(12.dp))
-        Text(label)
-    }
-}
-
-@Composable
 private fun HintDropdown(
     title: String,
     selected: String,
@@ -1609,6 +1620,13 @@ private fun ErrorBanner(message: String, onDismiss: (() -> Unit)? = null) {
 }
 
 private fun displayName(player: LetterGameMatchPlayer?): String = player?.displayName ?: player?.userId ?: "player"
+
+private fun LetterGameFact.isKnownHint(type: String, difficulty: String): Boolean {
+    if (this.type != type) return false
+    if (type != "constant") return true
+    val knownDifficulty = (value as? JsonObject)?.get("difficulty")?.jsonPrimitive?.contentOrNull
+    return knownDifficulty?.trim()?.equals(difficulty.trim(), ignoreCase = true) == true
+}
 
 private fun firstGrapheme(value: String): String {
     val iterator = java.text.BreakIterator.getCharacterInstance()
