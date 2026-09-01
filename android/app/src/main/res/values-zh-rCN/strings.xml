@@ -668,6 +668,7 @@
     <string name="letter_game_settings_sheet_expanded">房间设置已展开</string>
     <string name="letter_game_settings_sheet_half">房间设置部分展开</string>
     <string name="letter_game_settings_match_locked">对局之间可修改设置。</string>
+    <string name="letter_game_settings_reset">重置房间设置</string>
     <string name="letter_game_host_rotation">房主模式</string>
     <string name="letter_game_fixed_host">固定房主</string>
     <string name="letter_game_rotate_host">轮换房主</string>
@@ -688,6 +689,8 @@
     <string name="letter_game_random_filters">随机筛选</string>
     <string name="letter_game_exclude_deleted">排除删除曲</string>
     <string name="letter_game_english_only">仅包含英文字符</string>
+    <string name="letter_game_filters_may_be_difficult">先生，这可能会很困难</string>
+    <string name="letter_game_alphabet_progress">字母进度</string>
     <string name="letter_game_version_range">版本范围</string>
     <string name="letter_game_versions_unavailable">版本数据暂不可用。</string>
     <string name="letter_game_number_range_error">请输入 %1$d 至 %2$d 的数值。</string>

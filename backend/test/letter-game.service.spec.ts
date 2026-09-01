@@ -215,6 +215,34 @@ describe("LetterGameService room lifecycle", () => {
 		expect(songs.map((song: { songIdentifier: string }) => song.songIdentifier)).toEqual(["song-english"]);
 	});
 
+	it("defaults filtered random selection to English titles", async () => {
+		catalogService.listAliases.mockResolvedValue([]);
+		const songFindMany = vi.fn()
+			.mockResolvedValueOnce([
+				{ songIdentifier: "song-english", title: "Bad Apple!!" },
+				{ songIdentifier: "song-cjk", title: "中文标题" },
+			])
+			.mockResolvedValueOnce([{ songIdentifier: "song-english", title: "Bad Apple!!" }]);
+		const service = new LetterGameService(
+			{
+				song: { findMany: songFindMany },
+				sheet: {
+					findMany: vi.fn().mockResolvedValue([
+						{ songIdentifier: "song-english", chartType: "standard" },
+						{ songIdentifier: "song-cjk", chartType: "standard" },
+					]),
+				},
+			} as never,
+			catalogService as never,
+		);
+
+		const songs = await (service as any).selectSongs("user-1", {
+			selectionMode: "filtered_random",
+			selectionConfig: {},
+		});
+		expect(songs.map((song: { songIdentifier: string }) => song.songIdentifier)).toEqual(["song-english"]);
+	});
+
 	it("excludes closed and empty rooms from the public lobby query", async () => {
 		const findMany = vi.fn().mockResolvedValue([]);
 		const service = new LetterGameService({ letterGameRoom: { findMany } } as never, catalogService as never);

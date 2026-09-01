@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.runtime.Composable
@@ -167,6 +168,12 @@ internal fun LetterGameRoomSettingsSheet(
         editRevision += 1
     }
 
+    fun resetSettings() {
+        if (!canEdit) return
+        draft = defaultRoomSettingsDraft(acceptedPlayerCount)
+        editRevision += 1
+    }
+
     ExpandableBottomSheet(
         visible = visible,
         onDismissRequest = onDismiss,
@@ -175,13 +182,25 @@ internal fun LetterGameRoomSettingsSheet(
         expandedStateDescription = stringResource(R.string.letter_game_settings_sheet_expanded),
         halfExpandedStateDescription = stringResource(R.string.letter_game_settings_sheet_half),
         header = {
+            IconButton(onClick = ::resetSettings, modifier = Modifier.align(Alignment.CenterStart)) {
+                Icon(
+                    imageVector = Icons.Rounded.RestartAlt,
+                    contentDescription = stringResource(R.string.letter_game_settings_reset),
+                    tint = if (canEdit) MiuixTheme.colorScheme.onSurface else MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+            }
             Text(
                 text = stringResource(R.string.letter_game_room_settings),
                 style = MiuixTheme.textStyles.title3,
                 modifier = Modifier.align(Alignment.Center),
+                maxLines = 1,
             )
             IconButton(onClick = onDismiss, modifier = Modifier.align(Alignment.CenterEnd)) {
-                Icon(Icons.Rounded.Check, contentDescription = stringResource(R.string.letter_game_dismiss))
+                Icon(
+                    imageVector = Icons.Rounded.Check,
+                    contentDescription = stringResource(R.string.letter_game_dismiss),
+                    tint = MiuixTheme.colorScheme.primary,
+                )
             }
         },
     ) { topInset ->
@@ -295,8 +314,18 @@ internal fun LetterGameRoomSettingsSheet(
                         )
                     }
                 }
+                if (!draft.excludeDeleted && !draft.englishOnly) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.letter_game_filters_may_be_difficult),
+                            style = MiuixTheme.textStyles.footnote2,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
+                    }
+                }
                 item {
-                    SettingsSection(stringResource(R.string.letter_game_version_range)) {
+                    SettingsCardSection(stringResource(R.string.letter_game_version_range)) {
                         VersionRangeSetting(
                             versions = versions,
                             minVersion = draft.minVersion,
@@ -309,7 +338,7 @@ internal fun LetterGameRoomSettingsSheet(
                     }
                 }
                 item {
-                    SettingsSection(stringResource(R.string.letter_game_filter_category)) {
+                    SettingsCardSection(stringResource(R.string.letter_game_filter_category)) {
                         FilterChips(
                             values = categories,
                             selected = draft.categories,
@@ -320,7 +349,7 @@ internal fun LetterGameRoomSettingsSheet(
                     }
                 }
                 item {
-                    SettingsSection(stringResource(R.string.letter_game_filter_type)) {
+                    SettingsCardSection(stringResource(R.string.letter_game_filter_type)) {
                         FilterChips(
                             values = listOf("standard", "dx"),
                             selected = draft.chartTypes,
@@ -445,6 +474,24 @@ private fun RoomSettingsDraft.toRequest(
 private fun versionBoundary(value: String?, defaultValue: String?): JsonElement =
     if (value == null || value == defaultValue) JsonNull else JsonPrimitive(value)
 
+private fun defaultRoomSettingsDraft(acceptedPlayerCount: Int): RoomSettingsDraft =
+    RoomSettingsDraft(
+        hostMode = "fixed",
+        turnSeconds = "30",
+        stalledRounds = "3",
+        songCount = (acceptedPlayerCount * 3).toString(),
+        publicHintCost = "5",
+        privateHintCost = "10",
+        selectionMode = "filtered_random",
+        excludeDeleted = true,
+        englishOnly = true,
+        minVersion = null,
+        maxVersion = null,
+        categories = emptySet(),
+        chartTypes = setOf("standard", "dx"),
+        collectionIds = emptySet(),
+    )
+
 private fun LetterGameRoom.toSettingsDraft(acceptedPlayerCount: Int): RoomSettingsDraft {
     val config = settings.selectionConfig
     val chartTypes = config.stringSet("chartTypes").ifEmpty { setOf("standard", "dx") }
@@ -457,7 +504,7 @@ private fun LetterGameRoom.toSettingsDraft(acceptedPlayerCount: Int): RoomSettin
         privateHintCost = settings.privateHintCost.toString(),
         selectionMode = settings.selectionMode,
         excludeDeleted = config["excludeDeleted"]?.jsonPrimitive?.booleanOrNull ?: true,
-        englishOnly = config["englishOnly"]?.jsonPrimitive?.booleanOrNull ?: false,
+        englishOnly = config["englishOnly"]?.jsonPrimitive?.booleanOrNull ?: true,
         minVersion = config["minVersion"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.contentOrNull,
         maxVersion = config["maxVersion"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.contentOrNull,
         categories = config.stringSet("categories"),
@@ -480,6 +527,21 @@ private fun SettingsSection(title: String, content: @Composable () -> Unit) {
         )
         Card(modifier = Modifier.fillMaxWidth(), cornerRadius = 16.dp, insideMargin = PaddingValues(16.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) { content() }
+        }
+    }
+}
+
+@Composable
+private fun SettingsCardSection(title: String, content: @Composable () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth(), cornerRadius = 16.dp, insideMargin = PaddingValues(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                text = title,
+                style = MiuixTheme.textStyles.footnote1,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                modifier = Modifier.padding(start = 4.dp),
+            )
+            content()
         }
     }
 }

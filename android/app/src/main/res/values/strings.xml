@@ -699,6 +699,7 @@
 	<string name="letter_game_settings_sheet_expanded">Room settings expanded</string>
 	<string name="letter_game_settings_sheet_half">Room settings partially expanded</string>
 	<string name="letter_game_settings_match_locked">Settings are available between matches.</string>
+	<string name="letter_game_settings_reset">Reset room settings</string>
 	<string name="letter_game_host_rotation">Host rotation</string>
 	<string name="letter_game_fixed_host">Fixed host</string>
 	<string name="letter_game_rotate_host">Rotate host</string>
@@ -719,6 +720,8 @@
 	<string name="letter_game_random_filters">Random filters</string>
 	<string name="letter_game_exclude_deleted">Exclude deleted songs</string>
 	<string name="letter_game_english_only">English titles only</string>
+	<string name="letter_game_filters_may_be_difficult">This may be difficult, Sensei.</string>
+	<string name="letter_game_alphabet_progress">Letter progress</string>
 	<string name="letter_game_version_range">Version range</string>
 	<string name="letter_game_versions_unavailable">Version data is unavailable.</string>
 	<string name="letter_game_number_range_error">Enter a value from %1$d to %2$d.</string>

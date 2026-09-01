@@ -999,7 +999,7 @@ export class LetterGameService {
 		const maxVersion = typeof config.maxVersion === "string" ? config.maxVersion.trim() || null : null;
 		return {
 			excludeDeleted: typeof config.excludeDeleted === "boolean" ? config.excludeDeleted : true,
-			englishOnly: typeof config.englishOnly === "boolean" ? config.englishOnly : false,
+			englishOnly: typeof config.englishOnly === "boolean" ? config.englishOnly : true,
 			minVersion,
 			maxVersion,
 			categories: normalizeSourceIds(config.categories),

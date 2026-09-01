@@ -671,6 +671,7 @@
     <string name="letter_game_settings_sheet_expanded">ルーム設定を展開中</string>
     <string name="letter_game_settings_sheet_half">ルーム設定を一部展開中</string>
     <string name="letter_game_settings_match_locked">対局の合間に設定を変更できます。</string>
+    <string name="letter_game_settings_reset">ルーム設定をリセット</string>
     <string name="letter_game_host_rotation">ホスト設定</string>
     <string name="letter_game_fixed_host">ホスト固定</string>
     <string name="letter_game_rotate_host">ホスト交代</string>
@@ -691,6 +692,8 @@
     <string name="letter_game_random_filters">ランダム条件</string>
     <string name="letter_game_exclude_deleted">削除曲を除外</string>
     <string name="letter_game_english_only">英字タイトルのみ</string>
+    <string name="letter_game_filters_may_be_difficult">先生、これは難しいかもしれません</string>
+    <string name="letter_game_alphabet_progress">英字の進捗</string>
     <string name="letter_game_version_range">バージョン範囲</string>
     <string name="letter_game_versions_unavailable">バージョンデータを利用できません。</string>
     <string name="letter_game_number_range_error">%1$d から %2$d の値を入力してください。</string>

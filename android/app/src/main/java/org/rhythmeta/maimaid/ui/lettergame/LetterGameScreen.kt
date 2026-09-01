@@ -35,7 +35,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.ExitToApp
 import androidx.compose.material.icons.automirrored.rounded.Send
@@ -51,6 +50,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -71,7 +71,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -83,7 +82,9 @@ import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import okhttp3.WebSocket
 import org.rhythmeta.maimaid.R
@@ -160,7 +161,6 @@ fun LetterGameScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
     var reconnectAttempt by remember { mutableIntStateOf(0) }
-    var leftMatchId by remember(selectedRoom?.id) { mutableStateOf<String?>(null) }
     var hiddenFinishedMatchId by rememberSaveable { mutableStateOf<String?>(null) }
     var showExitConfirmation by remember { mutableStateOf(false) }
     var showRoomSettings by remember { mutableStateOf(false) }
@@ -276,7 +276,6 @@ fun LetterGameScreen(
             .onFailure { errorMessage = it.message }
     }
     LaunchedEffect(match?.status) {
-        if (match?.status != "active") leftMatchId = null
         if (match?.status == "active") hiddenFinishedMatchId = null
     }
     LaunchedEffect(selectedRoom?.id) {
@@ -320,7 +319,7 @@ fun LetterGameScreen(
     }
 
     val room = selectedRoom
-    val visibleMatch = match?.takeUnless { it.matchId == leftMatchId && it.status == "active" }
+    val visibleMatch = match
     LaunchedEffect(visibleMatch?.status) {
         onMatchActiveChanged(visibleMatch?.status == "active")
     }
@@ -394,6 +393,7 @@ fun LetterGameScreen(
 						"active" -> PlayingPage(
 								match = animatedMatch,
 								currentUserId = currentUserId,
+								englishOnly = animatedRoom.settings.selectionConfig["englishOnly"]?.jsonPrimitive?.booleanOrNull == true,
 								publicHintCost = animatedRoom.settings.publicHintCost,
 								privateHintCost = animatedRoom.settings.privateHintCost,
 								socket = socket,
@@ -411,13 +411,6 @@ fun LetterGameScreen(
 										)
 									}
 								},
-								onLeave = {
-									val activeSocket = socket
-									if (activeSocket != null) {
-										repository.leaveMatch(activeSocket, animatedMatch.matchId)
-										leftMatchId = animatedMatch.matchId
-									}
-								},
 								onMatchRefresh = { refreshed -> match = refreshed },
 							)
 								"finished", "abandoned" -> ResultsPage(
@@ -432,12 +425,11 @@ fun LetterGameScreen(
 										scope.launch {
 										runCatching { repository.reopenRoom(animatedRoom.id) }
 												.onSuccess {
-													savedRoomCode = it.code
-													selectedRoom = it
-													hiddenFinishedMatchId = animatedMatch.matchId
-													match = null
-													leftMatchId = null
-												}
+														savedRoomCode = it.code
+														selectedRoom = it
+														hiddenFinishedMatchId = animatedMatch.matchId
+														match = null
+													}
 													.onFailure {
 														hiddenFinishedMatchId = null
 													errorMessage = it.message
@@ -555,7 +547,6 @@ fun LetterGameScreen(
                                 savedRoomCode = null
                                 selectedRoom = null
 								match = null
-								leftMatchId = null
 								hiddenFinishedMatchId = null
                             }
                             .onFailure { errorMessage = it.message }
@@ -571,9 +562,9 @@ fun LetterGameScreen(
         }
     }
 
-    if (room != null && showRoomSettings) {
+    if (room != null) {
         LetterGameRoomSettingsSheet(
-            visible = true,
+            visible = showRoomSettings,
             room = room,
             currentUserId = session.user?.id,
             matchInProgress = visibleMatch?.status == "active",
@@ -872,6 +863,7 @@ private fun RoomMembers(
 private fun PlayingPage(
     match: LetterGameMatchSnapshot,
     currentUserId: String?,
+    englishOnly: Boolean,
     publicHintCost: Int,
     privateHintCost: Int,
     socket: WebSocket?,
@@ -880,7 +872,6 @@ private fun PlayingPage(
     versions: List<GameVersionEntity>,
     contentTopPadding: Dp,
     errorMessage: String?,
-    onLeave: () -> Unit,
     onShowSnackbar: (String) -> Unit,
     onMatchRefresh: (LetterGameMatchSnapshot) -> Unit,
 ) {
@@ -950,6 +941,7 @@ private fun PlayingPage(
         ) {
         if (errorMessage != null) item { ErrorBanner(errorMessage) }
         item { TurnStrip(match.players, match.turnUserId) }
+        if (englishOnly) item { EnglishLetterProgress(match.logs) }
         items(match.songs, key = LetterGameMatchSong::slotId) { song ->
             Box {
                 LetterSongCard(
@@ -976,13 +968,6 @@ private fun PlayingPage(
                         }
                     }
                 }
-            }
-        }
-        item {
-            Button(onClick = onLeave, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors()) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.letter_game_leave_match))
             }
         }
         }
@@ -1227,6 +1212,72 @@ private fun TurnStrip(players: List<LetterGameMatchPlayer>, turnUserId: String?)
         }
     }
 }
+
+@Composable
+private fun EnglishLetterProgress(logs: List<LetterGameLogEntry>) {
+    val openedLetters = remember(logs) { openedEnglishLetters(logs) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.TextFields,
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+            SmallTitle(
+                text = stringResource(R.string.letter_game_alphabet_progress),
+                insideMargin = PaddingValues(0.dp),
+            )
+        }
+        ('A'..'Z').toList().chunked(13).forEach { rowLetters ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                rowLetters.forEach { letter ->
+                    val opened = letter in openedLetters
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(24.dp)
+                            .squircleSurface(
+                                color = if (opened) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface.copy(alpha = 0.07f),
+                                cornerRadius = 6.dp,
+                                extension = SquircleExtension,
+                            )
+                            .squircleBorder(
+                                width = 1.dp,
+                                color = if (opened) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                                cornerRadius = 6.dp,
+                                extension = SquircleExtension,
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = letter.toString(),
+                            style = MiuixTheme.textStyles.footnote1.copy(fontWeight = FontWeight.Bold),
+                            color = if (opened) Color.White else MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun openedEnglishLetters(logs: List<LetterGameLogEntry>): Set<Char> =
+    logs.asSequence()
+        .filter { it.actionType == "open_character" }
+        .mapNotNull { log ->
+            log.character
+                ?.firstOrNull()
+                ?.uppercaseChar()
+                ?.takeIf { it in 'A'..'Z' }
+        }
+        .toSet()
 
 @Composable
 private fun LetterSongCard(
