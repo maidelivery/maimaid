@@ -51,6 +51,7 @@ import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.TextFields
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -86,6 +87,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import okhttp3.WebSocket
@@ -130,6 +133,7 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.window.WindowListPopup
+import java.io.File
 import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -163,6 +167,7 @@ fun LetterGameScreen(
     var createVisibility by remember { mutableStateOf(RoomVisibility.Public) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
+    var leavingRoom by remember { mutableStateOf(false) }
     var isLobbyRefreshing by remember { mutableStateOf(false) }
     var reconnectAttempt by remember { mutableIntStateOf(0) }
     var hiddenFinishedMatchId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -177,10 +182,21 @@ fun LetterGameScreen(
     val roomCodeCopiedMessage = stringResource(R.string.letter_game_room_code_copied)
     val hintAlreadyKnownMessage = stringResource(R.string.letter_game_hint_already_known)
     val ambiguousGuessMessage = stringResource(R.string.letter_game_ambiguous_guess)
+    val removedFromRoomMessage = stringResource(R.string.letter_game_removed_from_room)
+    val roomDissolvedMessage = stringResource(R.string.letter_game_room_dissolved)
     val gameVersions by container.catalogRepository.versions.collectAsStateWithLifecycle(emptyList())
     val songCategories by container.catalogRepository.categories.collectAsStateWithLifecycle(emptyList())
     val collections by container.songCollectionRepository.collections.collectAsStateWithLifecycle(emptyList())
     val collectionItems by container.songCollectionRepository.items.collectAsStateWithLifecycle(emptyList())
+    val activeProfile by container.profileRepository.activeProfile.collectAsStateWithLifecycle(null)
+    val localAvatarModel = remember(activeProfile?.avatarPath, activeProfile?.avatarUrl) {
+        activeProfile?.avatarPath
+            ?.takeIf(String::isNotBlank)
+            ?.let(::File)
+            ?.takeIf(File::isFile)
+            ?: container.presetAvatarRepository.imageFileFor(activeProfile?.avatarUrl)
+            ?: activeProfile?.avatarUrl?.takeIf(String::isNotBlank)
+    }
 
     LaunchedEffect(Unit) { container.backendSessionManager.checkSession() }
     LaunchedEffect(joinRequestToken) {
@@ -267,6 +283,34 @@ fun LetterGameScreen(
                     rooms = rooms.map { if (it.id == event.room.id) event.room else it }
                     if (selectedRoom?.id == event.room.id) selectedRoom = event.room
                 }
+                is LetterGameEvent.MemberRemoved -> {
+                    if (!leavingRoom && (selectedRoom?.id == event.roomId || selectedRoom?.code == event.roomId)) {
+                        socket?.close(1000, "member_removed")
+                        socket = null
+                        selectedRoom = null
+                        savedRoomCode = null
+                        match = null
+                        errorMessage = null
+                        showRoomSettings = false
+                        showExitConfirmation = false
+                        hiddenFinishedMatchId = null
+                        scope.launch { snackbarHostState.showSnackbar(removedFromRoomMessage, duration = SnackbarDuration.Short) }
+                    }
+                }
+                is LetterGameEvent.RoomDissolved -> {
+                    if (!leavingRoom && (selectedRoom?.id == event.roomId || selectedRoom?.code == event.roomId)) {
+                        socket?.close(1000, "room_dissolved")
+                        socket = null
+                        selectedRoom = null
+                        savedRoomCode = null
+                        match = null
+                        errorMessage = null
+                        showRoomSettings = false
+                        showExitConfirmation = false
+                        hiddenFinishedMatchId = null
+                        scope.launch { snackbarHostState.showSnackbar(roomDissolvedMessage, duration = SnackbarDuration.Short) }
+                    }
+                }
                 is LetterGameEvent.Match -> {
                     val isHiddenFinishedMatch = event.match.matchId == hiddenFinishedMatchId && event.match.status != "active"
                     if (!isHiddenFinishedMatch && selectedRoom != null && (match?.matchId == null || match?.matchId == event.match.matchId)) {
@@ -311,6 +355,7 @@ fun LetterGameScreen(
         if (match?.status == "active") hiddenFinishedMatchId = null
     }
     LaunchedEffect(selectedRoom?.id) {
+        if (selectedRoom != null) leavingRoom = false
         val roomId = selectedRoom?.id ?: return@LaunchedEffect
         while (true) {
             delay(5_000.milliseconds)
@@ -426,8 +471,9 @@ fun LetterGameScreen(
 					when (animatedMatch?.status) {
 						"active" -> PlayingPage(
 								match = animatedMatch,
-								currentUserId = currentUserId,
-								englishOnly = animatedRoom.settings.selectionConfig["englishOnly"]?.jsonPrimitive?.booleanOrNull == true,
+									currentUserId = currentUserId,
+									localAvatarModel = localAvatarModel,
+									englishOnly = animatedRoom.settings.selectionConfig["englishOnly"]?.jsonPrimitive?.booleanOrNull == true,
 								publicHintCost = animatedRoom.settings.publicHintCost,
 								privateHintCost = animatedRoom.settings.privateHintCost,
 								socket = socket,
@@ -449,6 +495,8 @@ fun LetterGameScreen(
 							)
 								"finished", "abandoned" -> ResultsPage(
 									match = animatedMatch,
+									currentUserId = currentUserId,
+									localAvatarModel = localAvatarModel,
 									coverImageStore = container.coverImageStore,
 									versions = gameVersions,
 									contentTopPadding = contentTopPadding,
@@ -471,9 +519,10 @@ fun LetterGameScreen(
 								onExit = { showExitConfirmation = true },
 							)
 							else -> WaitingPage(
-								room = animatedRoom,
-								currentUserId = currentUserId,
-								contentTopPadding = contentTopPadding,
+									room = animatedRoom,
+									currentUserId = currentUserId,
+									localAvatarModel = localAvatarModel,
+									contentTopPadding = contentTopPadding,
 								repository = repository,
 								loading = loading,
 								errorMessage = errorMessage,
@@ -572,6 +621,7 @@ fun LetterGameScreen(
             Button(
                 onClick = {
                     scope.launch {
+                        leavingRoom = true
                         loading = true
                         runCatching { repository.leaveRoom(room.id) }
                             .onSuccess {
@@ -581,7 +631,10 @@ fun LetterGameScreen(
 								match = null
 								hiddenFinishedMatchId = null
                             }
-                            .onFailure { errorMessage = it.message }
+                            .onFailure {
+                                leavingRoom = false
+                                errorMessage = it.message
+                            }
                         loading = false
                     }
                 },
@@ -782,6 +835,7 @@ private fun PublicRoomRow(room: LetterGameRoom, onJoin: () -> Unit) {
 private fun WaitingPage(
     room: LetterGameRoom,
     currentUserId: String?,
+    localAvatarModel: Any?,
     contentTopPadding: Dp,
     repository: LetterGameRepository,
     loading: Boolean,
@@ -805,6 +859,7 @@ private fun WaitingPage(
                 members = room.members,
                 hostUserId = room.hostUserId,
                 currentUserId = currentUserId,
+                localAvatarModel = localAvatarModel,
                 isHost = isHost,
                 onApprove = { member ->
                     member.id?.let { memberId ->
@@ -840,15 +895,125 @@ private fun WaitingPage(
                 }
             }
         }
+        item { RoomSettingsSummary(room) }
         if (errorMessage != null) item { ErrorBanner(errorMessage) }
     }
 }
+
+@Composable
+private fun RoomSettingsSummary(room: LetterGameRoom) {
+    val settings = room.settings
+    val config = settings.selectionConfig
+    val listSeparator = stringResource(R.string.letter_game_summary_list_separator)
+    val hostMode = stringResource(
+        if (room.hostMode == "rotate") {
+            R.string.letter_game_summary_host_rotate
+        } else {
+            R.string.letter_game_summary_host_fixed
+        },
+    )
+    val source = if (settings.selectionMode == "collection") {
+        val collectionNames = settings.selectedCollections.joinToString(listSeparator) { it.name }
+			if (collectionNames.isBlank()) {
+            stringResource(R.string.letter_game_source_collection)
+        } else {
+            stringResource(R.string.letter_game_summary_source_collection, collectionNames)
+        }
+    } else {
+        stringResource(R.string.letter_game_summary_source_random)
+    }
+    val filters = mutableListOf<String>()
+    if (config["excludeDeleted"]?.jsonPrimitive?.booleanOrNull != false) {
+        filters += stringResource(R.string.letter_game_exclude_deleted)
+    }
+    if (config["englishOnly"]?.jsonPrimitive?.booleanOrNull != false) {
+        filters += stringResource(R.string.letter_game_english_only)
+    }
+    val minVersion = config.summaryString("minVersion")
+    val maxVersion = config.summaryString("maxVersion")
+    if (minVersion != null || maxVersion != null) {
+        filters += stringResource(
+            R.string.letter_game_summary_version_range,
+            minVersion ?: stringResource(R.string.letter_game_summary_earliest_version),
+            maxVersion ?: stringResource(R.string.letter_game_summary_latest_version),
+        )
+    }
+    val categories = config.summaryStrings("categories")
+    if (categories.isNotEmpty()) {
+        filters += stringResource(R.string.letter_game_summary_categories, categories.joinToString(listSeparator))
+    }
+    val chartTypes = config.summaryStrings("chartTypes")
+        .mapNotNull { type ->
+            when (type.lowercase()) {
+                "standard", "std", "sd" -> "STD"
+                "dx" -> "DX"
+                else -> null
+            }
+        }
+        .distinct()
+    if (chartTypes.isNotEmpty()) {
+        filters += stringResource(R.string.letter_game_summary_chart_types, chartTypes.joinToString(listSeparator))
+    }
+    val filterSummary = if (filters.isEmpty()) {
+        stringResource(R.string.letter_game_summary_no_filters)
+    } else {
+        stringResource(R.string.letter_game_summary_filters, filters.joinToString(listSeparator))
+    }
+    val acceptedPlayerCount = room.members.count { it.status == "accepted" }.coerceAtLeast(1)
+    val songCount = settings.songCountOverride ?: (acceptedPlayerCount * 3)
+    val overview = stringResource(
+        R.string.letter_game_room_settings_overview,
+        hostMode,
+        settings.turnDurationSeconds,
+        settings.stalledRoundLimit,
+        source,
+        songCount,
+        filterSummary,
+        settings.publicHintCost,
+        settings.privateHintCost,
+    )
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        cornerRadius = 14.dp,
+        insideMargin = PaddingValues(14.dp),
+        colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(
+                imageVector = Icons.Rounded.Tune,
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+            SmallTitle(
+                text = stringResource(R.string.letter_game_room_settings),
+                insideMargin = PaddingValues(0.dp),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = overview,
+            style = MiuixTheme.textStyles.body2,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        )
+    }
+}
+
+private fun Map<String, kotlinx.serialization.json.JsonElement>.summaryString(key: String): String? =
+    runCatching { get(key)?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank) }.getOrNull()
+
+private fun Map<String, kotlinx.serialization.json.JsonElement>.summaryStrings(key: String): List<String> =
+    runCatching {
+        get(key)?.jsonArray?.mapNotNull { value -> value.jsonPrimitive.contentOrNull?.takeIf(String::isNotBlank) }.orEmpty()
+    }.getOrDefault(emptyList())
 
 @Composable
 private fun RoomMembers(
     members: List<LetterGameRoomMember>,
     hostUserId: String,
     currentUserId: String?,
+    localAvatarModel: Any?,
     isHost: Boolean,
     onApprove: (LetterGameRoomMember) -> Unit,
     onKick: (LetterGameRoomMember) -> Unit,
@@ -872,9 +1037,14 @@ private fun RoomMembers(
             )
         }
         Spacer(Modifier.height(8.dp))
-        members.forEach { member ->
+        members.filter { it.status == "accepted" || it.status == "pending" }.forEach { member ->
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                PlayerAvatar(member.avatarUrl, member.displayName ?: member.userId, 36.dp)
+                PlayerAvatar(
+                    url = member.avatarUrl,
+                    name = member.displayName ?: member.userId,
+                    size = 36.dp,
+                    localModel = localAvatarModel.takeIf { member.userId == currentUserId },
+                )
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(member.displayName ?: member.userId, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -890,10 +1060,26 @@ private fun RoomMembers(
                     )
                 }
                 if (isHost && member.status == "pending") {
-                    IconButton(onClick = { onApprove(member) }) { Icon(Icons.Rounded.Check, contentDescription = stringResource(R.string.letter_game_approve)) }
+                    Button(
+                        onClick = { onApprove(member) },
+                        modifier = Modifier.heightIn(min = 36.dp),
+                        colors = ButtonDefaults.buttonColors(),
+                    ) {
+                        Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.letter_game_approve))
+                    }
                 }
                 if (isHost && member.userId != hostUserId && member.status == "accepted") {
-                    IconButton(onClick = { onKick(member) }) { Icon(Icons.AutoMirrored.Rounded.ExitToApp, contentDescription = stringResource(R.string.letter_game_remove)) }
+                    Button(
+                        onClick = { onKick(member) },
+                        modifier = Modifier.heightIn(min = 36.dp),
+                        colors = ButtonDefaults.buttonColors(),
+                    ) {
+                        Icon(Icons.AutoMirrored.Rounded.ExitToApp, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.letter_game_remove))
+                    }
                 }
             }
         }
@@ -904,6 +1090,7 @@ private fun RoomMembers(
 private fun PlayingPage(
     match: LetterGameMatchSnapshot,
     currentUserId: String?,
+    localAvatarModel: Any?,
     englishOnly: Boolean,
     publicHintCost: Int,
     privateHintCost: Int,
@@ -993,7 +1180,7 @@ private fun PlayingPage(
         ) {
         item { InputMechanismTip() }
         if (errorMessage != null) item { ErrorBanner(errorMessage) }
-        item { TurnStrip(match.players, match.turnUserId) }
+        item { TurnStrip(match.players, match.turnUserId, currentUserId, localAvatarModel) }
         if (englishOnly) item { EnglishLetterProgress(match.logs) }
         items(match.songs, key = LetterGameMatchSong::slotId) { song ->
             LetterSongCard(
@@ -1227,7 +1414,12 @@ private fun InputMechanismTip() {
 }
 
 @Composable
-private fun TurnStrip(players: List<LetterGameMatchPlayer>, turnUserId: String?) {
+private fun TurnStrip(
+    players: List<LetterGameMatchPlayer>,
+    turnUserId: String?,
+    currentUserId: String?,
+    localAvatarModel: Any?,
+) {
     val orderedPlayers = players.sortedBy(LetterGameMatchPlayer::turnOrder)
     val currentPlayer = orderedPlayers.firstOrNull { it.userId == turnUserId }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1265,7 +1457,12 @@ private fun TurnStrip(players: List<LetterGameMatchPlayer>, turnUserId: String?)
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
-                    PlayerAvatar(player.avatarUrl, player.displayName ?: player.userId, 42.dp)
+                    PlayerAvatar(
+                        url = player.avatarUrl,
+                        name = player.displayName ?: player.userId,
+                        size = 42.dp,
+                        localModel = localAvatarModel.takeIf { player.userId == currentUserId },
+                    )
                     Text(
                         stringResource(R.string.letter_game_points, player.score),
                         style = MiuixTheme.textStyles.footnote1.copy(fontWeight = FontWeight.Bold),
@@ -1287,7 +1484,12 @@ private fun TurnStrip(players: List<LetterGameMatchPlayer>, turnUserId: String?)
                     tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
                 val first = orderedPlayers.first()
-                PlayerAvatar(first.avatarUrl, first.displayName ?: first.userId, 30.dp)
+                PlayerAvatar(
+                    url = first.avatarUrl,
+                    name = first.displayName ?: first.userId,
+                    size = 30.dp,
+                    localModel = localAvatarModel.takeIf { first.userId == currentUserId },
+                )
             }
         }
     }
@@ -1448,7 +1650,7 @@ private fun LetterSongCard(
                     }
                     song.maxConstant?.takeIf(String::isNotBlank)?.let { constant ->
                         Text(
-                            text = constant,
+                            text = formatLetterGameConstant(constant),
                             style = MiuixTheme.textStyles.footnote1.copy(fontWeight = FontWeight.Bold),
                             color = difficultyColor,
                         )
@@ -1457,6 +1659,15 @@ private fun LetterSongCard(
             }
         }
     }
+}
+
+private fun formatLetterGameConstant(value: String): String {
+    val normalized = value.trim()
+    if (!normalized.matches(Regex("^[+-]?\\d+(?:\\.\\d+)?$"))) return value
+    val separator = normalized.indexOf('.')
+    if (separator < 0) return "$normalized.0"
+    val fraction = normalized.substring(separator + 1).trimEnd('0')
+    return normalized.substring(0, separator) + "." + fraction.ifEmpty { "0" }
 }
 
 private fun letterGameChartTypes(chartTypes: List<String>): List<String> {
@@ -1541,6 +1752,8 @@ private fun HintDropdown(
 @Composable
 private fun ResultsPage(
     match: LetterGameMatchSnapshot,
+    currentUserId: String?,
+    localAvatarModel: Any?,
     coverImageStore: org.rhythmeta.maimaid.core.data.CoverImageStore,
     versions: List<GameVersionEntity>,
     contentTopPadding: Dp,
@@ -1571,7 +1784,12 @@ private fun ResultsPage(
                         modifier = Modifier.width(21.dp),
                         style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.Bold),
                     )
-                    PlayerAvatar(player.avatarUrl, player.displayName ?: player.userId, 42.dp)
+                    PlayerAvatar(
+                        url = player.avatarUrl,
+                        name = player.displayName ?: player.userId,
+                        size = 42.dp,
+                        localModel = localAvatarModel.takeIf { player.userId == currentUserId },
+                    )
                     Spacer(Modifier.width(10.dp))
                     Text(player.displayName ?: player.userId, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(stringResource(R.string.letter_game_points, player.score), style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.Bold))
@@ -1644,14 +1862,15 @@ private fun LetterGameSectionTitle(
 }
 
 @Composable
-private fun PlayerAvatar(url: String?, name: String, size: Dp) {
-    if (url.isNullOrBlank()) {
+private fun PlayerAvatar(url: String?, name: String, size: Dp, localModel: Any? = null) {
+    val model = localModel ?: url?.takeIf(String::isNotBlank)
+    if (model == null) {
         Box(Modifier.size(size).clip(CircleShape).background(MiuixTheme.colorScheme.primary.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
             Icon(Icons.Rounded.Person, contentDescription = name, tint = MiuixTheme.colorScheme.primary, modifier = Modifier.size(size * 0.55f))
         }
     } else {
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current).data(url).build(),
+            model = ImageRequest.Builder(LocalContext.current).data(model).build(),
             contentDescription = name,
             contentScale = ContentScale.Crop,
             modifier = Modifier.size(size).clip(CircleShape),

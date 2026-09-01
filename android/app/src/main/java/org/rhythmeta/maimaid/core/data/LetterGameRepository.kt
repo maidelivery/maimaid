@@ -22,6 +22,8 @@ sealed interface LetterGameEvent {
     data class Room(val room: LetterGameRoom) : LetterGameEvent
     data class Match(val match: LetterGameMatchSnapshot) : LetterGameEvent
     data class ActionAccepted(val action: JsonElement) : LetterGameEvent
+    data class MemberRemoved(val roomId: String, val reason: String?) : LetterGameEvent
+    data class RoomDissolved(val roomId: String) : LetterGameEvent
     data class Error(val code: String, val message: String?) : LetterGameEvent
 }
 
@@ -139,6 +141,15 @@ class LetterGameRepository(
                 "room_snapshot" -> message["room"]?.let { mutableEvents.tryEmit(LetterGameEvent.Room(json.decodeFromJsonElement(LetterGameRoom.serializer(), it))) }
                 "match_snapshot" -> message["match"]?.let { mutableEvents.tryEmit(LetterGameEvent.Match(json.decodeFromJsonElement(LetterGameMatchSnapshot.serializer(), it))) }
                 "action_accepted" -> mutableEvents.tryEmit(LetterGameEvent.ActionAccepted(message["action"] ?: JsonObject(emptyMap())))
+                "member_removed" -> mutableEvents.tryEmit(
+                    LetterGameEvent.MemberRemoved(
+                        roomId = message["roomId"]?.toString()?.trim('"').orEmpty(),
+                        reason = message["reason"]?.toString()?.trim('"'),
+                    ),
+                )
+                "room_dissolved" -> mutableEvents.tryEmit(
+                    LetterGameEvent.RoomDissolved(message["roomId"]?.toString()?.trim('"').orEmpty()),
+                )
                 "action_rejected" -> mutableEvents.tryEmit(LetterGameEvent.Error(message["code"]?.toString()?.trim('"') ?: "action_failed", message["message"]?.toString()?.trim('"')))
             }
         }.onFailure { mutableEvents.tryEmit(LetterGameEvent.Error("invalid_message", it.message)) }

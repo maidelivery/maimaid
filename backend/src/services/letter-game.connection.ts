@@ -89,7 +89,19 @@ export class LetterGameConnectionHub {
 			.filter((connection) => connection.roomId === roomId);
 		await Promise.all(
 			connections.map(async (connection) => {
-				const room = await this.service.getRoom(connection.userId, roomId).catch(() => null);
+				let room;
+				try {
+					room = await this.service.getRoom(connection.userId, roomId);
+				} catch (error) {
+					const code = (error as { code?: string }).code;
+					if (code === "room_access_denied") {
+						send(connection.ws, { type: "member_removed", roomId, reason: "kicked" });
+					} else if (code === "room_closed") {
+						send(connection.ws, { type: "room_dissolved", roomId });
+					}
+					connection.ws.close(1000, code ?? "room_access_denied");
+					return;
+				}
 				if (room) {
 					send(connection.ws, { type: "room_snapshot", room });
 					const latestMatchId = room.latestMatch?.id;
@@ -97,8 +109,6 @@ export class LetterGameConnectionHub {
 						const match = await this.service.getMatchSnapshot(connection.userId, latestMatchId).catch(() => null);
 						if (match) send(connection.ws, { type: "match_snapshot", match });
 					}
-				} else {
-					connection.ws.close(1008, "room_access_denied");
 				}
 			}),
 		);

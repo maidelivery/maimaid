@@ -214,7 +214,7 @@ export class LetterGameService {
 		if (!room) throw new AppError(404, "room_not_found", "Letter game room not found.");
 		if (room.status !== "open") throw new AppError(410, "room_closed", "This letter game room has been dissolved.");
 		const member = room.members.find((item: any) => item.userId === userId && ["accepted", "pending"].includes(item.status));
-		if (room.visibility === "private" && !member) throw new AppError(403, "room_access_denied", "Join the private room first.");
+		if (!member) throw new AppError(403, "room_access_denied", "You are not a member of this room.");
 		return this.serializeRoom(room, room.members);
 	}
 
@@ -1274,7 +1274,8 @@ export class LetterGameService {
 	}
 
 	private async serializeRoom(room: any, members: any[]) {
-		const userIds = [...new Set<string>(members.map((member: any) => String(member.userId)))];
+		const visibleMembers = members.filter((member: any) => ["accepted", "pending"].includes(member.status));
+		const userIds = [...new Set<string>(visibleMembers.map((member: any) => String(member.userId)))];
 		const config = this.normalizeSelectionConfig(room.selectionMode, jsonObject(room.selectionConfig));
 		const collectionIds = room.selectionMode === "collection" ? normalizeSourceIds(config.collectionIds) : [];
 		const [profiles, users, selectedCollections] = await Promise.all([
@@ -1318,8 +1319,8 @@ export class LetterGameService {
 						: [];
 				}),
 			},
-			memberCount: members.filter((member) => member.status === "accepted").length,
-			members: members.map((member) => ({
+			memberCount: visibleMembers.filter((member: any) => member.status === "accepted").length,
+			members: visibleMembers.map((member: any) => ({
 				id: member.id ?? null,
 				userId: member.userId,
 				status: member.status,

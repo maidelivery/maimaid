@@ -282,19 +282,27 @@ internal fun LetterGameRoomSettingsSheet(
                 }
             }
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    cornerRadius = 16.dp,
-                    insideMargin = PaddingValues(16.dp),
-                ) {
-                    SettingsDropdown(
-                        title = "",
-                        value = draft.selectionMode,
-                        values = listOf("filtered_random", "collection"),
-                        valueLabel = { sourceModeLabel(it) },
-                        enabled = canEdit,
-                        onSelect = { value -> edit { it.copy(selectionMode = value) } },
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = stringResource(R.string.letter_game_song_source),
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        modifier = Modifier.padding(start = 4.dp),
                     )
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        cornerRadius = 16.dp,
+                        insideMargin = PaddingValues(16.dp),
+                    ) {
+                        SettingsDropdown(
+                            title = "",
+                            value = draft.selectionMode,
+                            values = listOf("filtered_random", "collection"),
+                            valueLabel = { sourceModeLabel(it) },
+                            enabled = canEdit,
+                            onSelect = { value -> edit { it.copy(selectionMode = value) } },
+                        )
+                    }
                 }
             }
             if (draft.selectionMode == "collection") {
@@ -345,19 +353,74 @@ internal fun LetterGameRoomSettingsSheet(
                 }
             }
             item {
-                SettingsSection(stringResource(R.string.letter_game_random_filters)) {
-                    SettingsSwitchRow(
-                        title = stringResource(R.string.letter_game_exclude_deleted),
-                        checked = draft.excludeDeleted,
-                        enabled = canEdit,
-                        onCheckedChange = { checked -> edit { it.copy(excludeDeleted = checked) } },
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = stringResource(R.string.letter_game_random_filters),
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        modifier = Modifier.padding(start = 4.dp),
                     )
-                    SettingsSwitchRow(
-                        title = stringResource(R.string.letter_game_english_only),
-                        checked = draft.englishOnly,
-                        enabled = canEdit,
-                        onCheckedChange = { checked -> edit { it.copy(englishOnly = checked) } },
-                    )
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        cornerRadius = 16.dp,
+                        insideMargin = PaddingValues(16.dp),
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            SettingsSwitchRow(
+                                title = stringResource(R.string.letter_game_exclude_deleted),
+                                checked = draft.excludeDeleted,
+                                enabled = canEdit,
+                                onCheckedChange = { checked -> edit { it.copy(excludeDeleted = checked) } },
+                            )
+                            SettingsSwitchRow(
+                                title = stringResource(R.string.letter_game_english_only),
+                                checked = draft.englishOnly,
+                                enabled = canEdit,
+                                onCheckedChange = { checked -> edit { it.copy(englishOnly = checked) } },
+                            )
+                            Text(
+                                text = stringResource(R.string.letter_game_version_range),
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                modifier = Modifier.padding(start = 4.dp),
+                            )
+                            VersionRangeSetting(
+                                versions = versions,
+                                minVersion = draft.minVersion,
+                                maxVersion = draft.maxVersion,
+                                enabled = canEdit,
+                                onChange = { minVersion, maxVersion ->
+                                    edit { it.copy(minVersion = minVersion, maxVersion = maxVersion) }
+                                },
+                            )
+                            Text(
+                                text = stringResource(R.string.letter_game_filter_category),
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                modifier = Modifier.padding(start = 4.dp),
+                            )
+                            FilterChips(
+                                values = categories,
+                                selected = draft.categories,
+                                enabled = canEdit,
+                                displayValue = { it },
+                                onToggle = { value -> edit { it.copy(categories = it.categories.toggled(value)) } },
+                            )
+                            Text(
+                                text = stringResource(R.string.letter_game_filter_type),
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                modifier = Modifier.padding(start = 4.dp),
+                            )
+                            FilterChips(
+                                values = listOf("standard", "dx"),
+                                selected = draft.chartTypes,
+                                enabled = canEdit,
+                                displayValue = { if (it == "standard") "STD" else "DX" },
+                                onToggle = { value -> edit { it.copy(chartTypes = it.chartTypes.toggled(value)) } },
+                            )
+                        }
+                    }
                 }
             }
             if (!draft.excludeDeleted && !draft.englishOnly) {
@@ -367,41 +430,6 @@ internal fun LetterGameRoomSettingsSheet(
                         style = MiuixTheme.textStyles.footnote2,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         modifier = Modifier.padding(start = 4.dp),
-                    )
-                }
-            }
-            item {
-                SettingsCardSection(stringResource(R.string.letter_game_version_range)) {
-                    VersionRangeSetting(
-                        versions = versions,
-                        minVersion = draft.minVersion,
-                        maxVersion = draft.maxVersion,
-                        enabled = canEdit,
-                        onChange = { minVersion, maxVersion ->
-                            edit { it.copy(minVersion = minVersion, maxVersion = maxVersion) }
-                        },
-                    )
-                }
-            }
-            item {
-                SettingsCardSection(stringResource(R.string.letter_game_filter_category)) {
-                    FilterChips(
-                        values = categories,
-                        selected = draft.categories,
-                        enabled = canEdit,
-                        displayValue = { it },
-                        onToggle = { value -> edit { it.copy(categories = it.categories.toggled(value)) } },
-                    )
-                }
-            }
-            item {
-                SettingsCardSection(stringResource(R.string.letter_game_filter_type)) {
-                    FilterChips(
-                        values = listOf("standard", "dx"),
-                        selected = draft.chartTypes,
-                        enabled = canEdit,
-                        displayValue = { if (it == "standard") "STD" else "DX" },
-                        onToggle = { value -> edit { it.copy(chartTypes = it.chartTypes.toggled(value)) } },
                     )
                 }
             }
@@ -526,21 +554,6 @@ private fun SettingsSection(title: String, content: @Composable () -> Unit) {
         )
         Card(modifier = Modifier.fillMaxWidth(), cornerRadius = 16.dp, insideMargin = PaddingValues(16.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) { content() }
-        }
-    }
-}
-
-@Composable
-private fun SettingsCardSection(title: String, content: @Composable () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), cornerRadius = 16.dp, insideMargin = PaddingValues(16.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(
-                text = title,
-                style = MiuixTheme.textStyles.footnote1,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                modifier = Modifier.padding(start = 4.dp),
-            )
-            content()
         }
     }
 }

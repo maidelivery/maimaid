@@ -354,6 +354,24 @@ describe("LetterGameService room lifecycle", () => {
 		await expect(service.getRoom("user-1", "ABC234")).rejects.toMatchObject({ code: "room_closed", status: 410 });
 	});
 
+	it("rejects reads for non-members of public rooms", async () => {
+		const service = new LetterGameService(
+			{
+				letterGameRoom: {
+					findFirst: vi.fn().mockResolvedValue({
+						status: "open",
+						visibility: "public",
+						members: [{ userId: "user-2", status: "accepted" }],
+						matches: [],
+					}),
+				},
+			} as never,
+			catalogService as never,
+		);
+
+		await expect(service.getRoom("user-1", "ABC234")).rejects.toMatchObject({ code: "room_access_denied", status: 403 });
+	});
+
 	it("lets every accepted player return to a finished room without reapproval", async () => {
 		const memberUpdateMany = vi.fn();
 		const roomUpdate = vi.fn();
