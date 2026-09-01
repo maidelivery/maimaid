@@ -84,7 +84,6 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import okhttp3.WebSocket
@@ -421,9 +420,7 @@ fun LetterGameScreen(
 								onMatchRefresh = { refreshed -> match = refreshed },
 							)
 								"finished", "abandoned" -> ResultsPage(
-									room = animatedRoom,
 									match = animatedMatch,
-									currentUserId = currentUserId,
 									coverImageStore = container.coverImageStore,
 									versions = gameVersions,
 									contentTopPadding = contentTopPadding,
@@ -886,7 +883,6 @@ private fun PlayingPage(
     var hintTarget by remember { mutableStateOf<LetterGameMatchSong?>(null) }
     var hintType by remember { mutableStateOf("version") }
     var hintVisibility by remember { mutableStateOf("public") }
-    var hintDifficulty by remember { mutableStateOf("master") }
     var secondsLeft by remember { mutableIntStateOf(0) }
     val isTurn = match.turnUserId == currentUserId
     val canAct = isTurn && socket != null
@@ -1049,16 +1045,15 @@ private fun PlayingPage(
     }
 
     hintTarget?.let { target ->
-        val hasWhiteChart = target.facts.any { it.type == "white_chart" && it.value.jsonPrimitive.booleanOrNull == true }
         val hintOptions = buildList {
             add("version")
             add("white_chart")
-            if (hasWhiteChart) add("constant")
+            add("constant")
         }
         val selectedHintType = hintType.takeIf { it in hintOptions } ?: hintOptions.first()
         val hintCost = if (hintVisibility == "public") publicHintCost else privateHintCost
         val canAffordHint = currentScore >= hintCost
-        val hintAlreadyKnown = target.facts.any { it.isKnownHint(selectedHintType, hintDifficulty) }
+        val hintAlreadyKnown = target.facts.any { it.isKnownHint(selectedHintType) }
         WindowDialog(show = true, title = stringResource(R.string.letter_game_buy_hint), onDismissRequest = { hintTarget = null }) {
             HintDropdown(
                 title = stringResource(R.string.letter_game_hint_type),
@@ -1068,7 +1063,7 @@ private fun PlayingPage(
                     when (option) {
                         "version" -> stringResource(R.string.letter_game_hint_version)
                         "white_chart" -> stringResource(R.string.letter_game_hint_white_chart)
-                        else -> stringResource(R.string.letter_game_hint_constant)
+                        else -> stringResource(R.string.letter_game_hint_max_constant)
                     }
                 },
                 onSelect = { hintType = it },
@@ -1080,7 +1075,11 @@ private fun PlayingPage(
             }
             if (selectedHintType == "constant") {
                 Spacer(Modifier.height(8.dp))
-                TextField(value = hintDifficulty, onValueChange = { hintDifficulty = it }, label = stringResource(R.string.letter_game_difficulty), colors = appTextFieldColors(), modifier = Modifier.fillMaxWidth())
+                Text(
+                    text = stringResource(R.string.letter_game_hint_max_constant),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = MiuixTheme.textStyles.footnote1,
+                )
             }
             if (hintAlreadyKnown) {
                 Spacer(Modifier.height(8.dp))
@@ -1098,7 +1097,6 @@ private fun PlayingPage(
                         put("slotId", target.slotId)
                         put("hintType", selectedHintType)
                         put("visibility", hintVisibility)
-                        if (selectedHintType == "constant") put("difficulty", hintDifficulty)
                     })
                     hintTarget = null
                 },
@@ -1117,9 +1115,14 @@ private fun localizedLogMessage(narration: LetterGameLogNarration): String {
     val template = narration.template
     val hintType = when (narration.hintType) {
         "version" -> stringResource(R.string.letter_game_hint_version)
-        "constant" -> stringResource(R.string.letter_game_hint_constant)
-        "white_chart" -> stringResource(R.string.letter_game_hint_white_chart)
+        "constant" -> stringResource(R.string.letter_game_hint_max_constant)
+        "white_chart" -> stringResource(R.string.letter_game_hint_remaster_log)
         else -> stringResource(R.string.letter_game_buy_hint)
+    }
+    val hintResult = when (narration.hintResult) {
+        true -> stringResource(R.string.letter_game_hint_remaster_yes)
+        false -> stringResource(R.string.letter_game_hint_remaster_no)
+        null -> ""
     }
     return when (template) {
         LetterGameLogTemplate.OPEN_NO_PROGRESS_1 -> stringResource(R.string.letter_game_log_open_no_progress_1, narration.actor, narration.character)
@@ -1146,14 +1149,14 @@ private fun localizedLogMessage(narration: LetterGameLogNarration): String {
         LetterGameLogTemplate.GUESS_INCORRECT_STREAK_2 -> stringResource(R.string.letter_game_log_guess_incorrect_streak_2, narration.actor, narration.streak)
         LetterGameLogTemplate.PROGRESS_RECOVERED_1 -> stringResource(R.string.letter_game_log_progress_recovered_1, narration.actor, narration.count, narration.points)
         LetterGameLogTemplate.PROGRESS_RECOVERED_2 -> stringResource(R.string.letter_game_log_progress_recovered_2, narration.actor, narration.count, narration.points)
-        LetterGameLogTemplate.HINT_PUBLIC_1 -> stringResource(R.string.letter_game_log_hint_public_1, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
-        LetterGameLogTemplate.HINT_PUBLIC_2 -> stringResource(R.string.letter_game_log_hint_public_2, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
-        LetterGameLogTemplate.HINT_PRIVATE_1 -> stringResource(R.string.letter_game_log_hint_private_1, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
-        LetterGameLogTemplate.HINT_PRIVATE_2 -> stringResource(R.string.letter_game_log_hint_private_2, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
-        LetterGameLogTemplate.HINT_LOW_SCORE_1 -> stringResource(R.string.letter_game_log_hint_low_score_1, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
-        LetterGameLogTemplate.HINT_LOW_SCORE_2 -> stringResource(R.string.letter_game_log_hint_low_score_2, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
-        LetterGameLogTemplate.HINT_NORMAL_1 -> stringResource(R.string.letter_game_log_hint_normal_1, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
-        LetterGameLogTemplate.HINT_NORMAL_2 -> stringResource(R.string.letter_game_log_hint_normal_2, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
+        LetterGameLogTemplate.HINT_PUBLIC_1 -> stringResource(R.string.letter_game_log_hint_public_1, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType, hintResult)
+        LetterGameLogTemplate.HINT_PUBLIC_2 -> stringResource(R.string.letter_game_log_hint_public_2, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType, hintResult)
+        LetterGameLogTemplate.HINT_PRIVATE_1 -> stringResource(R.string.letter_game_log_hint_private_1, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType, "")
+        LetterGameLogTemplate.HINT_PRIVATE_2 -> stringResource(R.string.letter_game_log_hint_private_2, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType, "")
+        LetterGameLogTemplate.HINT_LOW_SCORE_1 -> stringResource(R.string.letter_game_log_hint_low_score_1, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType, hintResult)
+        LetterGameLogTemplate.HINT_LOW_SCORE_2 -> stringResource(R.string.letter_game_log_hint_low_score_2, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType, hintResult)
+        LetterGameLogTemplate.HINT_NORMAL_1 -> stringResource(R.string.letter_game_log_hint_normal_1, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType, hintResult)
+        LetterGameLogTemplate.HINT_NORMAL_2 -> stringResource(R.string.letter_game_log_hint_normal_2, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType, hintResult)
         LetterGameLogTemplate.FALLBACK -> narration.fallbackMessage.orEmpty()
     }
 }
@@ -1394,12 +1397,26 @@ private fun LetterSongCard(
                 }
             }
             Spacer(Modifier.width(8.dp))
-            versionText?.let {
-                ChartTypeVersionBadge(
-                    text = it,
-                    chartTypes = chartTypes,
-                    darkTheme = darkTheme,
-                )
+            if (versionText != null || !song.maxConstant.isNullOrBlank()) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    versionText?.let {
+                        ChartTypeVersionBadge(
+                            text = it,
+                            chartTypes = chartTypes,
+                            darkTheme = darkTheme,
+                        )
+                    }
+                    song.maxConstant?.takeIf(String::isNotBlank)?.let { constant ->
+                        Text(
+                            text = constant,
+                            style = MiuixTheme.textStyles.footnote1.copy(fontWeight = FontWeight.Bold),
+                            color = difficultyColor,
+                        )
+                    }
+                }
             }
         }
     }
@@ -1462,7 +1479,7 @@ private fun HintDropdown(
             WindowListPopup(
                 show = expanded,
                 alignment = PopupPositionProvider.Align.End,
-                enableWindowDim = false,
+                enableWindowDim = true,
                 onDismissRequest = { expanded = false },
             ) {
                 ListPopupColumn {
@@ -1486,16 +1503,13 @@ private fun HintDropdown(
 
 @Composable
 private fun ResultsPage(
-    room: LetterGameRoom,
     match: LetterGameMatchSnapshot,
-    currentUserId: String?,
     coverImageStore: org.rhythmeta.maimaid.core.data.CoverImageStore,
     versions: List<GameVersionEntity>,
     contentTopPadding: Dp,
     onReopen: () -> Unit,
     onExit: () -> Unit,
 ) {
-    val isHost = room.hostUserId == currentUserId
     val guessedSongs = match.songs.filter { it.completionReason == "guessed" }
     val unguessedSongs = match.songs.filterNot { it.completionReason == "guessed" }
     LazyColumn(
@@ -1553,7 +1567,7 @@ private fun ResultsPage(
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                Button(onClick = onReopen, enabled = isHost, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColorsPrimary()) {
+                Button(onClick = onReopen, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColorsPrimary()) {
                     Icon(Icons.Rounded.Refresh, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.letter_game_reopen))
@@ -1621,12 +1635,7 @@ private fun ErrorBanner(message: String, onDismiss: (() -> Unit)? = null) {
 
 private fun displayName(player: LetterGameMatchPlayer?): String = player?.displayName ?: player?.userId ?: "player"
 
-private fun LetterGameFact.isKnownHint(type: String, difficulty: String): Boolean {
-    if (this.type != type) return false
-    if (type != "constant") return true
-    val knownDifficulty = (value as? JsonObject)?.get("difficulty")?.jsonPrimitive?.contentOrNull
-    return knownDifficulty?.trim()?.equals(difficulty.trim(), ignoreCase = true) == true
-}
+private fun LetterGameFact.isKnownHint(type: String): Boolean = this.type == type
 
 private fun firstGrapheme(value: String): String {
     val iterator = java.text.BreakIterator.getCharacterInstance()

@@ -84,6 +84,7 @@ data class LetterGameLogEntry(
     val hintType: String? = null,
     val hintVisibility: String? = null,
     val hintCost: Int? = null,
+    val hintResult: Boolean? = null,
     val songNumber: Int? = null,
 )
 
@@ -110,6 +111,7 @@ data class LetterGameMatchSong(
     val hasRemaster: Boolean = false,
     val masterConstant: String? = null,
     val remasterConstant: String? = null,
+    val maxConstant: String? = null,
 )
 
 @Serializable

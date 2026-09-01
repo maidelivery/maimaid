@@ -31,7 +31,7 @@ class LetterGameLogNarratorTest {
             log("wrong-2", actionType = "guess_song", correct = false),
             log("score", actionType = "open_character", character = "B", newlyRevealedCount = 5, points = 5),
             log("private-hint", actionType = "buy_hint", hintType = "version", hintVisibility = "private", hintCost = 2, points = 2, balance = 22),
-            log("low-hint", actionType = "buy_hint", hintType = "constant", hintVisibility = "public", hintCost = 10, points = 10),
+            log("low-hint", actionType = "buy_hint", hintType = "white_chart", hintVisibility = "public", hintCost = 10, points = 10, hintResult = true),
         )
 
         val narration = LetterGameLogNarrator.narrate(logs)
@@ -43,6 +43,7 @@ class LetterGameLogNarratorTest {
         assertEquals(1, narration[4].hintCount)
         assertEquals(2, narration[5].hintCount)
         assertEquals(22, narration[4].balance)
+        assertEquals(true, narration[5].hintResult)
     }
 
     @Test
@@ -90,6 +91,7 @@ class LetterGameLogNarratorTest {
         hintVisibility: String? = null,
         hintCost: Int? = null,
         balance: Int? = null,
+        hintResult: Boolean? = null,
         actorUserId: String? = "user-1",
         actorName: String? = "Mia",
     ) = LetterGameLogEntry(
@@ -107,5 +109,6 @@ class LetterGameLogNarratorTest {
         hintVisibility = hintVisibility,
         hintCost = hintCost,
         balance = balance,
+        hintResult = hintResult,
     )
 }

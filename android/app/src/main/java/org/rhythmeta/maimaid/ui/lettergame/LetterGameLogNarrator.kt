@@ -50,6 +50,7 @@ internal data class LetterGameLogNarration(
     val balance: Int = 0,
     val hintCount: Int = 0,
     val hintType: String = "hint",
+    val hintResult: Boolean? = null,
     val fallbackMessage: String? = null,
 )
 
@@ -254,6 +255,7 @@ internal object LetterGameLogNarrator {
                 balance = afterBalance,
                 hintCount = hintCount,
                 hintType = log.hintType.orEmpty().ifBlank { "hint" },
+                hintResult = log.hintResult,
             )
         }
 
@@ -269,6 +271,7 @@ internal object LetterGameLogNarrator {
             balance: Int = 0,
             hintCount: Int = 0,
             hintType: String = "hint",
+            hintResult: Boolean? = null,
         ): LetterGameLogNarration {
             val index = stableIndex("${log.id}|${log.actionType}|${templates.first()}", templates.size)
             return LetterGameLogNarration(
@@ -283,6 +286,7 @@ internal object LetterGameLogNarrator {
                 balance = balance,
                 hintCount = hintCount,
                 hintType = hintType,
+                hintResult = hintResult,
             )
         }
     }

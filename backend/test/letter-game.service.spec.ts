@@ -262,6 +262,32 @@ describe("LetterGameService room lifecycle", () => {
 		await expect(service.getRoom("user-1", "ABC234")).rejects.toMatchObject({ code: "room_closed", status: 410 });
 	});
 
+	it("lets every accepted player return to a finished room without reapproval", async () => {
+		const memberUpdateMany = vi.fn();
+		const roomUpdate = vi.fn();
+		const tx = {
+			$executeRawUnsafe: vi.fn().mockResolvedValue(undefined),
+			letterGameRoom: {
+				findUnique: vi.fn().mockResolvedValue({ status: "open", hostMode: "fixed", hostUserId: "host-1" }),
+				update: roomUpdate,
+			},
+			letterGameRoomMember: {
+				findUnique: vi.fn().mockResolvedValue({ status: "accepted" }),
+				findMany: vi.fn(),
+				updateMany: memberUpdateMany,
+			},
+			letterGameMatch: {
+				findFirst: vi.fn().mockResolvedValue({ status: "finished", hostUserId: "host-1" }),
+			},
+		};
+		const { service } = createTransactionService(tx);
+		vi.spyOn(service, "getRoom").mockResolvedValue({ code: "ABC234" } as never);
+
+		await expect(service.prepareReopen("player-2", "room-1")).resolves.toEqual({ code: "ABC234" });
+		expect(memberUpdateMany).not.toHaveBeenCalled();
+		expect(roomUpdate).not.toHaveBeenCalled();
+	});
+
 	it("rejects multi-grapheme character actions before starting a transaction", async () => {
 		const transaction = vi.fn();
 		const service = new LetterGameService({ $transaction: transaction } as never, catalogService as never);
@@ -375,6 +401,45 @@ describe("LetterGameService room lifecycle", () => {
 			visibility: "private",
 		})).rejects.toMatchObject({ code: "hint_already_known", status: 409 });
 		expect(tx.letterGameMatchPlayer.update).not.toHaveBeenCalled();
+	});
+
+	it("uses the master constant until remaster existence is known", async () => {
+		const findWhiteFact = vi.fn()
+			.mockResolvedValueOnce(null)
+			.mockResolvedValueOnce({ value: true });
+		const tx = {
+			letterGamePlayerFact: { findFirst: findWhiteFact },
+			sheet: {
+				findMany: vi.fn().mockResolvedValue([
+					{ difficulty: "Master", internalLevelValue: { toString: () => "13.5" }, levelValue: null },
+					{ difficulty: "Re:MASTER", internalLevelValue: { toString: () => "14.2" }, levelValue: null },
+				]),
+			},
+		};
+		const service = new LetterGameService({} as never, catalogService as never);
+		const input = { kind: "buy_hint", slotId: "slot-1", hintType: "constant", visibility: "public" } as const;
+
+		await expect((service as any).resolveHintValue(input, "song-1", "user-1", "match-1", "song-row-1", tx))
+			.resolves.toEqual({ difficulty: "Master", value: 13.5 });
+		await expect((service as any).resolveHintValue(input, "song-1", "user-1", "match-1", "song-row-1", tx))
+			.resolves.toEqual({ difficulty: "Re:MASTER", value: 14.2 });
+	});
+
+	it("returns the higher master or remaster constant after remaster is confirmed", async () => {
+		const tx = {
+			letterGamePlayerFact: { findFirst: vi.fn().mockResolvedValue({ value: true }) },
+			sheet: {
+				findMany: vi.fn().mockResolvedValue([
+					{ difficulty: "master", internalLevelValue: 14.4, levelValue: null },
+					{ difficulty: "remaster", internalLevelValue: 14.1, levelValue: null },
+				]),
+			},
+		};
+		const service = new LetterGameService({} as never, catalogService as never);
+		const input = { kind: "buy_hint", slotId: "slot-1", hintType: "constant", visibility: "private" } as const;
+
+		await expect((service as any).resolveHintValue(input, "song-1", "user-1", "match-1", "song-row-1", tx))
+			.resolves.toEqual({ difficulty: "master", value: 14.4 });
 	});
 
 	it("advances a single-player turn after the deadline", async () => {

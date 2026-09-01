@@ -581,7 +581,7 @@ private fun SettingsDropdown(
             WindowListPopup(
                 show = expanded,
                 alignment = PopupPositionProvider.Align.End,
-                enableWindowDim = false,
+                enableWindowDim = true,
                 onDismissRequest = { expanded = false },
             ) {
                 ListPopupColumn {

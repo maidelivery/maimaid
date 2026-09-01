@@ -86,6 +86,32 @@ const jsonString = (value: unknown): string | null => {
 const jsonNumber = (value: unknown): number | null =>
 	typeof value === "number" && Number.isFinite(value) ? value : null;
 
+const normalizeHintDifficulty = (value: string): string => value.trim().toLowerCase().replaceAll(/[^a-z0-9]/gu, "");
+
+const numericConstant = (value: unknown): number | null => {
+	if (value === null || value === undefined) return null;
+	const parsed = Number(value);
+	return Number.isFinite(parsed) ? parsed : null;
+};
+
+const chartConstant = (sheet: any) => {
+	const rawValue = sheet.internalLevelValue ?? sheet.levelValue ?? null;
+	const value = numericConstant(rawValue);
+	if (value === null) return null;
+	return { difficulty: String(sheet.difficulty), value, displayValue: String(rawValue) };
+};
+
+const selectMaxConstant = (
+	master: ReturnType<typeof chartConstant>,
+	remaster: ReturnType<typeof chartConstant>,
+	includeRemaster: boolean,
+) => {
+	const candidates = [master, includeRemaster ? remaster : null].filter(
+		(item): item is NonNullable<ReturnType<typeof chartConstant>> => item !== null,
+	);
+	return candidates.sort((left, right) => right.value - left.value || (normalizeHintDifficulty(left.difficulty) === "master" ? -1 : 1))[0] ?? null;
+};
+
 const isUtageChartType = (value: unknown): boolean => /utage|宴/iu.test(String(value));
 const isEnglishOnlyTitle = (value: unknown): boolean => {
 	const title = String(value);
@@ -464,28 +490,38 @@ export class LetterGameService {
 	}
 
 	async prepareReopen(actorId: string, roomId: string) {
-		await this.requireHost(actorId, roomId);
-		const active = await this.prisma.letterGameMatch.findFirst({ where: { roomId, status: "active" }, select: { id: true } });
-		if (active) throw new AppError(409, "match_active", "This room already has an active match.");
-		const room = await this.prisma.letterGameRoom.findUnique({ where: { id: roomId }, select: { hostMode: true, hostUserId: true } });
-		let nextHostUserId = room?.hostUserId ?? actorId;
-		if (room?.hostMode === "rotate") {
-			const accepted = await this.prisma.letterGameRoomMember.findMany({
-				where: { roomId, status: "accepted" },
-				orderBy: { seatOrder: "asc" },
-				select: { userId: true },
+		await this.prisma.$transaction(async (tx: any) => {
+			await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", roomId);
+			const room = await tx.letterGameRoom.findUnique({
+				where: { id: roomId },
+				select: { status: true, hostMode: true, hostUserId: true },
 			});
-			const currentIndex = accepted.findIndex((member: any) => member.userId === room.hostUserId);
-			const nextHost = accepted[(currentIndex + 1 + accepted.length) % accepted.length];
-			if (nextHost) {
-				nextHostUserId = nextHost.userId;
+			if (!room) throw new AppError(404, "room_not_found", "Letter game room not found.");
+			if (room.status !== "open") throw new AppError(410, "room_closed", "This letter game room has been dissolved.");
+			const member = await tx.letterGameRoomMember.findUnique({
+				where: { roomId_userId: { roomId, userId: actorId } },
+				select: { status: true },
+			});
+			if (!member || member.status !== "accepted") throw new AppError(403, "room_access_denied", "Join the room before returning to it.");
+			const latestMatch = await tx.letterGameMatch.findFirst({
+				where: { roomId },
+				orderBy: { sequence: "desc" },
+				select: { status: true, hostUserId: true },
+			});
+			if (latestMatch?.status === "active") throw new AppError(409, "match_active", "This room already has an active match.");
+
+			// Rotate once when the previous host returns; later players simply enter the same room.
+			if (room.hostMode === "rotate" && latestMatch?.hostUserId === actorId && room.hostUserId === actorId) {
+				const accepted = await tx.letterGameRoomMember.findMany({
+					where: { roomId, status: "accepted" },
+					orderBy: { seatOrder: "asc" },
+					select: { userId: true },
+				});
+				const currentIndex = accepted.findIndex((item: any) => item.userId === actorId);
+				const nextHost = accepted[(currentIndex + 1 + accepted.length) % accepted.length];
+				if (nextHost && nextHost.userId !== actorId)
+					await tx.letterGameRoom.update({ where: { id: roomId }, data: { hostUserId: nextHost.userId } });
 			}
-			if (nextHostUserId !== room.hostUserId)
-				await this.prisma.letterGameRoom.update({ where: { id: roomId }, data: { hostUserId: nextHostUserId } });
-		}
-		await this.prisma.letterGameRoomMember.updateMany({
-			where: { roomId, userId: { not: nextHostUserId }, status: "accepted" },
-			data: { status: "pending", approvedAt: null },
 		});
 		return this.getRoom(actorId, roomId);
 	}
@@ -573,6 +609,10 @@ export class LetterGameService {
 					hintType: kind === "buy_hint" ? jsonString(hint.type) : null,
 					hintVisibility: kind === "buy_hint" ? jsonString(payload.visibility) : null,
 					hintCost: kind === "buy_hint" ? jsonNumber(hint.cost) : null,
+					hintResult:
+						kind === "buy_hint" && payload.visibility === "public" && hint.type === "white_chart" && typeof hint.value === "boolean"
+							? hint.value
+							: null,
 					songNumber: kind === "buy_hint" ? songNumberById.get(action.songId) ?? (typeof payload.slotId === "string" ? match.songs.findIndex((song: any) => song.slotId === payload.slotId) + 1 : null) : null,
 				};
 			});
@@ -605,6 +645,20 @@ export class LetterGameService {
 				const shownVersionFact = [...publicFacts, ...match.facts.filter((fact: any) => fact.userId === userId)].find((fact: any) => fact.songId === song.id && fact.factType === "version");
 				const masterSheet = songSheets.find((sheet: any) => sheet.difficulty.toLowerCase() === "master");
 				const remasterSheet = songSheets.find((sheet: any) => /remaster/iu.test(sheet.difficulty));
+				const knownConstantFact = [...publicFacts, ...match.facts.filter((fact: any) => fact.userId === userId)].find(
+					(fact: any) => fact.songId === song.id && fact.factType === "constant",
+				);
+				const remasterKnown = publicWhiteFact?.value === true || privateWhiteFact?.value === true;
+				const masterValue = chartConstant(masterSheet);
+				const remasterValue = chartConstant(remasterSheet);
+				const revealedConstantValue = jsonObject(knownConstantFact?.value).value;
+				const knownConstant = numericConstant(revealedConstantValue);
+				const selectedMaxConstant = selectMaxConstant(masterValue, remasterValue, remasterKnown);
+				const maxConstant = knownConstant !== null
+					? String(revealedConstantValue)
+					: showFullDetails
+						? selectedMaxConstant?.displayValue ?? null
+						: null;
 				return {
 					slotId: song.slotId,
 						title: showFullDetails ? song.title : maskLetterTokens(tokens),
@@ -621,9 +675,10 @@ export class LetterGameService {
 					chartTypes: showFullDetails
 						? [...new Set(songSheets.map((sheet: any) => String(sheet.chartType)).filter((type: string) => !isUtageChartType(type)))]
 						: [],
-						hasRemaster: publicWhiteFact?.value === true || privateWhiteFact?.value === true,
+					hasRemaster: publicWhiteFact?.value === true || privateWhiteFact?.value === true,
 					masterConstant: showFullDetails && masterSheet ? String(masterSheet.internalLevelValue ?? masterSheet.levelValue ?? "") : null,
 					remasterConstant: showFullDetails && remasterSheet ? String(remasterSheet.internalLevelValue ?? remasterSheet.levelValue ?? "") : null,
+					maxConstant,
 				};
 			}),
 			logs,
@@ -736,12 +791,7 @@ export class LetterGameService {
 						OR: [{ visibility: "public" }, { userId, visibility: "private" }],
 					},
 				});
-				const requestedDifficulty = input.difficulty?.trim().toLowerCase();
-				const alreadyKnown = knownFacts.some((fact: any) => {
-					if (input.hintType !== "constant") return true;
-					const value = jsonObject(fact.value);
-					return typeof value.difficulty === "string" && value.difficulty.trim().toLowerCase() === requestedDifficulty;
-				});
+				const alreadyKnown = knownFacts.length > 0;
 				if (alreadyKnown)
 					throw new AppError(409, "hint_already_known", "This hint is already known and cannot be purchased again.");
 				const cost = input.visibility === "public" ? room.publicHintCost : room.privateHintCost;
@@ -757,7 +807,7 @@ export class LetterGameService {
 						userId,
 						factType: input.hintType,
 						visibility: input.visibility,
-						hintKey: input.hintType === "constant" ? input.difficulty?.trim().toLowerCase() ?? "" : input.hintType,
+						hintKey: input.hintType === "constant" ? "max" : input.hintType,
 						value,
 						cost,
 					},
@@ -1133,20 +1183,18 @@ export class LetterGameService {
 			return sheets.some((sheet: any) => /re\s*:??\s*master|remaster/iu.test(sheet.difficulty));
 		}
 		if (input.hintType === "constant") {
-			if (!input.difficulty?.trim())
-				throw new AppError(400, "difficulty_required", "Difficulty is required for a constant hint.");
 			const whiteKnowledge = await tx.letterGamePlayerFact.findFirst({
 				where: { matchId, songId, factType: "white_chart", OR: [{ userId, visibility: "private" }, { visibility: "public" }] },
 			});
-			if (!whiteKnowledge || whiteKnowledge.value !== true)
-				throw new AppError(400, "white_chart_unknown", "Reveal white chart availability before requesting a constant.");
-			const sheet = await tx.sheet.findFirst({
-				where: { songIdentifier, difficulty: input.difficulty.trim(), disabled: false },
-				select: { internalLevelValue: true, levelValue: true },
+			const sheets = await tx.sheet.findMany({
+				where: { songIdentifier, disabled: false },
+				select: { difficulty: true, internalLevelValue: true, levelValue: true },
 			});
-			if (!sheet) throw new AppError(404, "chart_not_found", "Chart difficulty was not found.");
-			const rawValue = sheet.internalLevelValue ?? sheet.levelValue ?? null;
-			return { difficulty: input.difficulty.trim(), value: rawValue === null ? null : Number(rawValue) };
+			const master = sheets.map(chartConstant).find((item: any) => item && normalizeHintDifficulty(item.difficulty) === "master") ?? null;
+			const remaster = sheets.map(chartConstant).find((item: any) => item && normalizeHintDifficulty(item.difficulty) === "remaster") ?? null;
+			const selected = selectMaxConstant(master, remaster, whiteKnowledge?.value === true);
+			if (!selected) throw new AppError(404, "chart_not_found", "Master chart was not found.");
+			return { difficulty: selected.difficulty, value: selected.value };
 		}
 		const [song, sheets, versions] = await Promise.all([
 			tx.song.findUnique({ where: { songIdentifier }, select: { version: true } }),
