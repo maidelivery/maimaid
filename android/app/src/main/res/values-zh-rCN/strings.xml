@@ -682,11 +682,12 @@
     <string name="letter_game_source_collection">收藏夹</string>
     <string name="letter_game_source_favorites">收藏歌曲</string>
     <string name="letter_game_filter_keyword">歌名关键词（可选）</string>
-    <string name="letter_game_filter_category">分类（可选）</string>
+    <string name="letter_game_filter_category">分类</string>
     <string name="letter_game_filter_version">版本（可选）</string>
     <string name="letter_game_filter_type">谱面类型</string>
     <string name="letter_game_random_filters">随机筛选</string>
     <string name="letter_game_exclude_deleted">排除删除曲</string>
+    <string name="letter_game_english_only">仅包含英文字符</string>
     <string name="letter_game_version_range">版本范围</string>
     <string name="letter_game_versions_unavailable">版本数据暂不可用。</string>
     <string name="letter_game_number_range_error">请输入 %1$d 至 %2$d 的数值。</string>
@@ -732,7 +733,7 @@
     <string name="letter_game_hint_type">提示类型</string>
     <string name="letter_game_public">公开</string>
     <string name="letter_game_private">私密</string>
-    <string name="letter_game_hint_cost_summary">需要 %1$d 分 · 你有 %2$d 分</string>
+    <string name="letter_game_purchase_with_balance">购买 · %1$d 分 · 余额 %2$d 分</string>
     <string name="letter_game_difficulty">难度</string>
     <string name="letter_game_purchase">购买</string>
     <string name="letter_game_room_name">房间 %1$s</string>

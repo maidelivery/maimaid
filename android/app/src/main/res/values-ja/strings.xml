@@ -685,11 +685,12 @@
     <string name="letter_game_source_collection">コレクション</string>
     <string name="letter_game_source_favorites">お気に入り</string>
     <string name="letter_game_filter_keyword">曲名キーワード（任意）</string>
-    <string name="letter_game_filter_category">カテゴリ（任意）</string>
+    <string name="letter_game_filter_category">カテゴリ</string>
     <string name="letter_game_filter_version">バージョン（任意）</string>
     <string name="letter_game_filter_type">譜面タイプ</string>
     <string name="letter_game_random_filters">ランダム条件</string>
     <string name="letter_game_exclude_deleted">削除曲を除外</string>
+    <string name="letter_game_english_only">英字タイトルのみ</string>
     <string name="letter_game_version_range">バージョン範囲</string>
     <string name="letter_game_versions_unavailable">バージョンデータを利用できません。</string>
     <string name="letter_game_number_range_error">%1$d から %2$d の値を入力してください。</string>
@@ -735,7 +736,7 @@
     <string name="letter_game_hint_type">ヒントの種類</string>
     <string name="letter_game_public">公開</string>
     <string name="letter_game_private">非公開</string>
-    <string name="letter_game_hint_cost_summary">必要 %1$d pt · 残高 %2$d pt</string>
+    <string name="letter_game_purchase_with_balance">購入 · %1$d pt · 残高 %2$d pt</string>
     <string name="letter_game_difficulty">難度</string>
     <string name="letter_game_purchase">購入</string>
     <string name="letter_game_room_name">ルーム %1$s</string>

@@ -87,6 +87,10 @@ const jsonNumber = (value: unknown): number | null =>
 	typeof value === "number" && Number.isFinite(value) ? value : null;
 
 const isUtageChartType = (value: unknown): boolean => /utage|宴/iu.test(String(value));
+const isEnglishOnlyTitle = (value: unknown): boolean => {
+	const title = String(value);
+	return title.length > 0 && /^[\x20-\x7E]+$/u.test(title);
+};
 
 const normalizeSourceIds = (value: unknown): string[] =>
 	Array.isArray(value)
@@ -995,6 +999,7 @@ export class LetterGameService {
 		const maxVersion = typeof config.maxVersion === "string" ? config.maxVersion.trim() || null : null;
 		return {
 			excludeDeleted: typeof config.excludeDeleted === "boolean" ? config.excludeDeleted : true,
+			englishOnly: typeof config.englishOnly === "boolean" ? config.englishOnly : false,
 			minVersion,
 			maxVersion,
 			categories: normalizeSourceIds(config.categories),
@@ -1037,7 +1042,11 @@ export class LetterGameService {
 				where.version = { in: versionNames.slice(firstIndex, lastIndex + 1) };
 			}
 			const rows = await database.song.findMany({ where, select: { songIdentifier: true, title: true } });
-			ids = shuffle(rows.map((row: any) => row.songIdentifier));
+			ids = shuffle(
+				rows
+					.filter((row: any) => !config.englishOnly || isEnglishOnlyTitle(row.title))
+					.map((row: any) => row.songIdentifier),
+			);
 		}
 		if (ids.length === 0) return [];
 		if (typeof database.sheet?.findMany === "function") {
@@ -1066,7 +1075,9 @@ export class LetterGameService {
 		const aliasesBySong = new Map<string, string[]>();
 		for (const alias of aliases)
 			aliasesBySong.set(alias.songIdentifier, [...(aliasesBySong.get(alias.songIdentifier) ?? []), alias.aliasText]);
-		return shuffle(songs).map((song: any) => ({ ...song, aliases: aliasesBySong.get(song.songIdentifier) ?? [] }));
+		return shuffle(songs)
+			.filter((song: any) => !config.englishOnly || isEnglishOnlyTitle(song.title))
+			.map((song: any) => ({ ...song, aliases: aliasesBySong.get(song.songIdentifier) ?? [] }));
 	}
 
 	private async collectionSongIds(

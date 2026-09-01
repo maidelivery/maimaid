@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -1104,11 +1103,6 @@ private fun PlayingPage(
                 Button(onClick = { hintVisibility = "public" }, modifier = Modifier.weight(1f), colors = if (hintVisibility == "public") ButtonDefaults.buttonColorsPrimary() else ButtonDefaults.buttonColors()) { Text(stringResource(R.string.letter_game_public)) }
                 Button(onClick = { hintVisibility = "private" }, modifier = Modifier.weight(1f), colors = if (hintVisibility == "private") ButtonDefaults.buttonColorsPrimary() else ButtonDefaults.buttonColors()) { Text(stringResource(R.string.letter_game_private)) }
             }
-            Text(
-                text = stringResource(R.string.letter_game_hint_cost_summary, hintCost, currentScore),
-                color = if (canAffordHint) MiuixTheme.colorScheme.onSurfaceVariantSummary else MiuixTheme.colorScheme.error,
-                style = MiuixTheme.textStyles.footnote1,
-            )
             if (selectedHintType == "constant") {
                 Spacer(Modifier.height(8.dp))
                 TextField(value = hintDifficulty, onValueChange = { hintDifficulty = it }, label = stringResource(R.string.letter_game_difficulty), colors = appTextFieldColors(), modifier = Modifier.fillMaxWidth())
@@ -1128,7 +1122,9 @@ private fun PlayingPage(
                 enabled = canBuyHint && canAffordHint,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColorsPrimary(),
-            ) { Text(stringResource(R.string.letter_game_purchase)) }
+            ) {
+                Text(stringResource(R.string.letter_game_purchase_with_balance, hintCost, currentScore))
+            }
         }
     }
 }
@@ -1442,9 +1438,8 @@ private fun ResultsPage(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         stringResource(R.string.letter_game_rank, match.players.sortedByDescending(LetterGameMatchPlayer::score).indexOf(player) + 1),
-                        modifier = Modifier.width(42.dp),
+                        modifier = Modifier.width(21.dp),
                         style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.Bold),
-                        textAlign = TextAlign.Center,
                     )
                     PlayerAvatar(player.avatarUrl, player.displayName ?: player.userId, 42.dp)
                     Spacer(Modifier.width(10.dp))

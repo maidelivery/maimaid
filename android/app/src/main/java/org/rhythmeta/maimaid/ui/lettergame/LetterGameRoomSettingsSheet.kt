@@ -91,6 +91,7 @@ private data class RoomSettingsDraft(
     val privateHintCost: String,
     val selectionMode: String,
     val excludeDeleted: Boolean,
+    val englishOnly: Boolean,
     val minVersion: String?,
     val maxVersion: String?,
     val categories: Set<String>,
@@ -262,7 +263,11 @@ internal fun LetterGameRoomSettingsSheet(
                 }
             }
             item {
-                SettingsSection(stringResource(R.string.letter_game_song_source)) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 16.dp,
+                    insideMargin = PaddingValues(16.dp),
+                ) {
                     SettingsDropdown(
                         title = stringResource(R.string.letter_game_song_source),
                         value = draft.selectionMode,
@@ -282,6 +287,16 @@ internal fun LetterGameRoomSettingsSheet(
                             enabled = canEdit,
                             onCheckedChange = { checked -> edit { it.copy(excludeDeleted = checked) } },
                         )
+                        SettingsSwitchRow(
+                            title = stringResource(R.string.letter_game_english_only),
+                            checked = draft.englishOnly,
+                            enabled = canEdit,
+                            onCheckedChange = { checked -> edit { it.copy(englishOnly = checked) } },
+                        )
+                    }
+                }
+                item {
+                    SettingsSection(stringResource(R.string.letter_game_version_range)) {
                         VersionRangeSetting(
                             versions = versions,
                             minVersion = draft.minVersion,
@@ -407,6 +422,7 @@ private fun RoomSettingsDraft.toRequest(
     } else {
         mapOf(
             "excludeDeleted" to JsonPrimitive(excludeDeleted),
+            "englishOnly" to JsonPrimitive(englishOnly),
             "minVersion" to versionBoundary(minVersion, versions.firstOrNull()),
             "maxVersion" to versionBoundary(maxVersion, versions.lastOrNull()),
             "categories" to JsonArray(categories.sorted().map(::JsonPrimitive)),
@@ -441,6 +457,7 @@ private fun LetterGameRoom.toSettingsDraft(acceptedPlayerCount: Int): RoomSettin
         privateHintCost = settings.privateHintCost.toString(),
         selectionMode = settings.selectionMode,
         excludeDeleted = config["excludeDeleted"]?.jsonPrimitive?.booleanOrNull ?: true,
+        englishOnly = config["englishOnly"]?.jsonPrimitive?.booleanOrNull ?: false,
         minVersion = config["minVersion"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.contentOrNull,
         maxVersion = config["maxVersion"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.contentOrNull,
         categories = config.stringSet("categories"),
@@ -582,11 +599,11 @@ private fun VersionRangeSetting(
     val start = minVersion?.let(versions::indexOf)?.takeIf { it >= 0 } ?: 0
     val end = maxVersion?.let(versions::indexOf)?.takeIf { it >= 0 } ?: lastIndex
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.letter_game_version_range), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-            Spacer(Modifier.weight(1f))
-            Text("${versions[start]} - ${versions[end]}", color = MiuixTheme.colorScheme.primary)
-        }
+        Text(
+            text = "${versions[start]} - ${versions[end]}",
+            color = MiuixTheme.colorScheme.primary,
+            style = MiuixTheme.textStyles.body1,
+        )
         if (lastIndex > 0) {
             RangeSlider(
                 value = start.toFloat()..end.toFloat(),

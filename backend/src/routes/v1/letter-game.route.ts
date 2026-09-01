@@ -13,6 +13,7 @@ const memberParamSchema = z.object({ roomId: z.uuid(), memberId: z.uuid() });
 const selectionConfigSchema = z
 	.object({
 		excludeDeleted: z.boolean().optional(),
+		englishOnly: z.boolean().optional(),
 		minVersion: z.string().trim().min(1).max(100).nullable().optional(),
 		maxVersion: z.string().trim().min(1).max(100).nullable().optional(),
 		categories: z.array(z.string().trim().min(1).max(100)).max(100).optional(),
