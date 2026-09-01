@@ -296,16 +296,16 @@ object ScannerSongMatcher {
         }
         val selected = (exact + partial).distinctBy(SongEntity::songIdentifier).take(4)
         val uniqueUtageKanjiSong = if (isUtage && !recognition.kanji.isNullOrBlank()) {
-            songsMatchingUtageTextConstraints(
-                recognition = recognition,
-                explicitTitleKanji = explicitTitleKanji,
-                catalog = catalog,
-            ).filter { song ->
-                sheetsFor(song, catalog).any { sheet ->
-                    hasNoisyUtageKanjiEvidence(recognition.kanji, sheet.difficulty)
-                }
-            }.singleOrNull()
-        } else {
+					songsMatchingUtageTextConstraints(
+						recognition = recognition,
+						explicitTitleKanji = explicitTitleKanji,
+						catalog = catalog,
+					).singleOrNull { song ->
+						sheetsFor(song, catalog).any { sheet ->
+							hasNoisyUtageKanjiEvidence(recognition.kanji, sheet.difficulty)
+						}
+					}
+				} else {
             null
         }
         val fallback = if (selected.isNotEmpty()) {
@@ -314,11 +314,11 @@ object ScannerSongMatcher {
             listOf(uniqueUtageKanjiSong)
         } else if (recognition.maxDxScore?.let { it > 0 } == true) {
             val maxDxScore = requireNotNull(recognition.maxDxScore)
-            effectiveEligibleSongs.filter { song ->
-                sheetsFor(song, catalog).any { sheet ->
-                    sheet.total?.times(3) == maxDxScore && validSheet(sheet, song)
-                }
-            }.singleOrNull()?.let(::listOf).orEmpty()
+					effectiveEligibleSongs.singleOrNull { song ->
+						sheetsFor(song, catalog).any { sheet ->
+							sheet.total?.times(3) == maxDxScore && validSheet(sheet, song)
+						}
+					}?.let(::listOf).orEmpty()
         } else {
             emptyList()
         }

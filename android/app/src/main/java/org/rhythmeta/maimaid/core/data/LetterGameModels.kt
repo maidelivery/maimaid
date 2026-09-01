@@ -58,9 +58,6 @@ data class LetterGameRoom(
 data class LetterGameRoomsResponse(val rooms: List<LetterGameRoom> = emptyList())
 
 @Serializable
-data class LetterGameRoomResponse(val room: LetterGameRoom)
-
-@Serializable
 data class LetterGameMatchPlayer(
     val userId: String,
     val score: Int,
@@ -77,13 +74,21 @@ data class LetterGameLogEntry(
     val message: String,
     val actorUserId: String? = null,
     val actorName: String? = null,
+    val actionType: String? = null,
+    val character: String? = null,
+    val newlyRevealedCount: Int? = null,
+    val points: Int? = null,
+    val correct: Boolean? = null,
+    val hintType: String? = null,
+    val hintCost: Int? = null,
+    val songNumber: Int? = null,
 )
 
 @Serializable
 data class LetterGameFact(
     val type: String,
     val visibility: String,
-    val value: kotlinx.serialization.json.JsonElement,
+    val value: JsonElement,
 )
 
 @Serializable
@@ -117,9 +122,6 @@ data class LetterGameMatchSnapshot(
     val roomCode: String? = null,
     val logs: List<LetterGameLogEntry> = emptyList(),
 )
-
-@Serializable
-data class LetterGameMatchResponse(val match: LetterGameMatchSnapshot)
 
 @Serializable
 data class LetterGameCreateRequest(

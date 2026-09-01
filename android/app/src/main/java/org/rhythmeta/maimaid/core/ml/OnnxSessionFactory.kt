@@ -15,11 +15,9 @@ class OnnxSessionFactory(
         val options = OrtSession.SessionOptions().apply {
             setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
         }
-        try {
-            environment.createSession(modelFile.path, options)
-        } finally {
-            options.close()
-        }
+			options.use { options ->
+				environment.createSession(modelFile.path, options)
+			}
     }
 
     suspend fun textCharactersFile() = modelStore.file(ModelAsset.TextCharacters)

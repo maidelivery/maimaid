@@ -21,6 +21,8 @@ import org.rhythmeta.maimaid.core.data.ConstantTableCalculator
 import org.rhythmeta.maimaid.core.data.ConstantTableSection
 import org.rhythmeta.maimaid.core.data.CoverImageStore
 import org.rhythmeta.maimaid.core.data.ScoreRules
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.withClip
 
 internal object ConstantTableImageExporter {
     suspend fun renderToCache(
@@ -77,7 +79,7 @@ internal object ConstantTableImageExporter {
         private val includeScores: Boolean,
         private val userName: String?,
         private val coverImageStore: CoverImageStore,
-        private val darkTheme: Boolean,
+        darkTheme: Boolean,
         private val labels: Labels,
     ) {
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG)
@@ -91,11 +93,7 @@ internal object ConstantTableImageExporter {
             val logicalHeight = HeaderHeight +
                 sections.sumOf { sectionHeight(it.entries.size) } +
                 FooterHeight
-            val bitmap = Bitmap.createBitmap(
-                CanvasWidth * OutputScale,
-                logicalHeight * OutputScale,
-                Bitmap.Config.ARGB_8888,
-            )
+            val bitmap = createBitmap(CanvasWidth * OutputScale, logicalHeight * OutputScale)
             val canvas = Canvas(bitmap)
             canvas.scale(OutputScale.toFloat(), OutputScale.toFloat())
             paint.shader = LinearGradient(
@@ -202,19 +200,30 @@ internal object ConstantTableImageExporter {
             val jacket = coverImageStore.fileFor(imageName)?.let { file ->
                 decodeSampledBitmap(file, jacketSize * OutputScale, jacketSize * OutputScale)
             }
-            canvas.save()
-            canvas.clipPath(Path().apply { addRoundRect(destination, 8f, 8f, Path.Direction.CW) })
-            if (jacket == null) {
-                paint.color = palette.emptyJacket
-                canvas.drawRect(destination, paint)
-                drawText(canvas, "♪", left + jacketSize * 0.32f, top + jacketSize * 0.66f, 20f, palette.secondary)
-            } else {
-                paint.alpha = 255
-                paint.isFilterBitmap = true
-                canvas.drawBitmap(jacket, centerCropSource(jacket.width, jacket.height), destination, paint)
-                jacket.recycle()
-            }
-            canvas.restore()
+            canvas.withClip(Path().apply { addRoundRect(destination, 8f, 8f, Path.Direction.CW) }) {
+							if (jacket == null) {
+								paint.color = palette.emptyJacket
+								drawRect(destination, paint)
+								drawText(
+			            this,
+			            "♪",
+			            left + jacketSize * 0.32f,
+			            top + jacketSize * 0.66f,
+			            20f,
+			            palette.secondary
+		            )
+							} else {
+								paint.alpha = 255
+								paint.isFilterBitmap = true
+								drawBitmap(
+			            jacket,
+			            centerCropSource(jacket.width, jacket.height),
+			            destination,
+			            paint
+		            )
+								jacket.recycle()
+							}
+						}
         }
 
         private fun drawScoreBadges(

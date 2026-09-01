@@ -113,14 +113,12 @@ internal fun ScannerCameraPreview(
             .build()
             .also { useCase ->
                 useCase.setAnalyzer(analysisExecutor) { image ->
-                    try {
-                        if (frameCounter.incrementAndGet() % AnalyzeEveryNthFrame == 0) {
-                            val bitmap = image.toUprightBitmap()
-                            onFrame(bitmap)
-                        }
-                    } finally {
-                        image.close()
-                    }
+									image.use { image ->
+										if (frameCounter.incrementAndGet() % AnalyzeEveryNthFrame == 0) {
+											val bitmap = image.toUprightBitmap()
+											onFrame(bitmap)
+										}
+									}
                 }
             }
         val capture = ImageCapture.Builder()

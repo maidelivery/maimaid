@@ -42,8 +42,7 @@ fun MaimaidTheme(
     val colorSpec = when (settings.colorSpec.effectiveFor(settings.paletteStyle)) {
         ColorSpec.SpecVersion.SPEC_2025 -> ThemeColorSpec.Spec2025
         ColorSpec.SpecVersion.SPEC_2021 -> ThemeColorSpec.Spec2021
-        else -> ThemeColorSpec.Spec2025
-    }
+		}
     // KernelSU leaves the seed unspecified for the built-in Miuix palette. A
     // system dynamic seed is only resolved for Monet modes.
     val resolvedKeyColor: Color? = when {

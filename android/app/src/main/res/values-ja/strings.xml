@@ -665,6 +665,7 @@
     <string name="letter_game_room_settings">ルーム設定</string>
     <string name="letter_game_room_title">ルーム：%1$s</string>
     <string name="letter_game_room_code_copied">ルームコードをコピーしました</string>
+    <string name="letter_game_restoring_room">ルームを復元しています...</string>
     <string name="letter_game_settings_expand">ルーム設定を展開</string>
     <string name="letter_game_settings_collapse">ルーム設定を折りたたむ</string>
     <string name="letter_game_settings_sheet_expanded">ルーム設定を展開中</string>
@@ -734,6 +735,10 @@
     <string name="letter_game_room_name">ルーム %1$s</string>
     <string name="letter_game_revision_summary">リビジョン %1$d · 停滞 %2$d ラウンド</string>
     <string name="letter_game_log_empty">操作履歴がここに表示されます。</string>
+    <string name="letter_game_log_open_character">%1$s が「%2$s」を開き、%3$d 文字を公開して %4$d pt 獲得</string>
+    <string name="letter_game_log_guess_correct">%1$s が曲を正解し、%2$d pt 獲得</string>
+    <string name="letter_game_log_guess_incorrect">%1$s の回答は不正解</string>
+    <string name="letter_game_log_buy_hint">%1$s が %2$d pt を使い、%3$d 曲目の%4$sヒントを購入</string>
     <string name="letter_game_unknown_song">?</string>
     <string name="letter_game_match_results">対局結果</string>
     <string name="letter_game_reopen">再開</string>

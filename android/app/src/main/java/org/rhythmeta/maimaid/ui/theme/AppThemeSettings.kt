@@ -16,8 +16,7 @@ enum class ColorMode(val value: Int) {
 
     val isSystem: Boolean get() = this == SYSTEM || this == MONET_SYSTEM
     val isDark: Boolean get() = this == DARK || this == MONET_DARK || this == DARK_AMOLED
-    val isLight: Boolean get() = !isSystem && !isDark
-    val isAmoled: Boolean get() = this == DARK_AMOLED
+	  val isAmoled: Boolean get() = this == DARK_AMOLED
     val isMonet: Boolean get() = value >= MONET_SYSTEM.value
 
     fun toNonMonetMode(): ColorMode = when (this) {

@@ -82,7 +82,7 @@ object RatingUtils {
     fun isAfterCircle(latestVersion: String?, versions: List<String>): Boolean {
         val circle = versions.indexOfFirst { it.contains("circle", ignoreCase = true) }
         val latest = latestVersion?.let { versionIndex(it, versions) } ?: return false
-        return circle >= 0 && latest >= circle
+        return circle in 0..latest
     }
 
     fun category(songVersion: String?, latestVersion: String?, server: String, activeRegion: Boolean, versions: List<String>): Boolean? {
@@ -96,7 +96,7 @@ object RatingUtils {
                 if (songIndex > latestIndex) null
                 else {
                     val circle = versions.indexOfFirst { it.equals("CiRCLE", ignoreCase = true) }
-                    val oldest = if (circle >= 0 && latestIndex >= circle) maxOf(0, latestIndex - 1) else latestIndex
+                    val oldest = if (circle in 0..latestIndex) maxOf(0, latestIndex - 1) else latestIndex
                     songIndex >= oldest
                 }
             }

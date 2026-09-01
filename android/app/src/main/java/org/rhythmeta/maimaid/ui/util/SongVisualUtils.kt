@@ -9,6 +9,7 @@ import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.core.database.SongEntity
 import kotlin.math.max
 import kotlin.math.roundToInt
+import androidx.core.graphics.scale
 
 internal object SongVisualUtils {
     data class DetailColors(
@@ -67,7 +68,7 @@ internal object SongVisualUtils {
         val sampledBitmap = if (sampledWidth == bitmap.width && sampledHeight == bitmap.height) {
             bitmap
         } else {
-            Bitmap.createScaledBitmap(bitmap, sampledWidth, sampledHeight, true)
+					  bitmap.scale(sampledWidth, sampledHeight)
         }
 
         return try {

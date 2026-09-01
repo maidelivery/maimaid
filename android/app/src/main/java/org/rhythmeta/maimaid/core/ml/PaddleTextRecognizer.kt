@@ -15,6 +15,7 @@ import kotlinx.serialization.json.Json
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
+import androidx.core.graphics.createBitmap
 
 internal data class OcrText(
     val text: String,
@@ -48,7 +49,7 @@ internal class PaddleTextRecognizer(
             targetWidth,
             max(1, (ModelHeight * bitmap.width.toFloat() / bitmap.height).toInt()),
         )
-        val resized = Bitmap.createBitmap(targetWidth, ModelHeight, Bitmap.Config.ARGB_8888)
+        val resized = createBitmap(targetWidth, ModelHeight)
         Canvas(resized).apply {
             drawColor(Color.BLACK)
             drawBitmap(

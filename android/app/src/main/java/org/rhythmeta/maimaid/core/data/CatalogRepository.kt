@@ -345,7 +345,7 @@ class CatalogRepository(
     private fun preserveNonEmptyText(value: String?): String {
         if (value == null) return ""
         val trimmed = value.trim()
-        return trimmed.ifEmpty { if (value.isNotEmpty()) value else "" }
+        return trimmed.ifEmpty { value.ifEmpty { "" } }
     }
 
     private inner class StageProgressReporter(

@@ -9,6 +9,7 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import androidx.core.content.edit
 
 data class ProfileCredentials(
     val lxnsToken: String = "",
@@ -25,17 +26,17 @@ class ProfileCredentialStore(context: Context) {
     )
 
     fun save(profileId: String, credentials: ProfileCredentials) {
-        preferences.edit()
-            .putString("$profileId.lxns", encrypt(credentials.lxnsToken))
-            .remove("$profileId.df")
-            .apply()
+        preferences.edit {
+					putString("$profileId.lxns", encrypt(credentials.lxnsToken))
+						.remove("$profileId.df")
+				}
     }
 
     fun delete(profileId: String) {
-        preferences.edit()
-            .remove("$profileId.df")
-            .remove("$profileId.lxns")
-            .apply()
+        preferences.edit {
+					remove("$profileId.df")
+						.remove("$profileId.lxns")
+				}
     }
 
     private fun encrypt(value: String): String? {

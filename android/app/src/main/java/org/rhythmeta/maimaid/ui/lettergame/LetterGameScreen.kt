@@ -1,5 +1,6 @@
 package org.rhythmeta.maimaid.ui.lettergame
 
+import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import androidx.compose.animation.AnimatedContent
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -55,6 +57,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -116,6 +119,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 private enum class RoomVisibility { Public, Private }
 
+@SuppressLint("SuspiciousIndentation")
 @Composable
 fun LetterGameScreen(
     container: AppContainer,
@@ -134,6 +138,7 @@ fun LetterGameScreen(
     val scope = rememberCoroutineScope()
     var rooms by remember { mutableStateOf(emptyList<LetterGameRoom>()) }
     var selectedRoom by remember { mutableStateOf<LetterGameRoom?>(null) }
+    var savedRoomCode by rememberSaveable { mutableStateOf<String?>(null) }
     var match by remember { mutableStateOf<LetterGameMatchSnapshot?>(null) }
     var socket by remember { mutableStateOf<WebSocket?>(null) }
     var showJoinDialog by remember { mutableStateOf(false) }
@@ -184,28 +189,34 @@ fun LetterGameScreen(
             if (selectedRoom != null) showRoomSettings = true
         }
     }
-    LaunchedEffect(selectedRoom != null, session.isAuthenticated) {
-        onRoomPresenceChanged(selectedRoom != null)
-        onRoomCodeChanged(selectedRoom?.code)
-        onJoinActionAvailabilityChanged(selectedRoom == null && session.isAuthenticated)
-    }
-    DisposableEffect(Unit) {
-        onDispose {
-            onRoomPresenceChanged(false)
-            onRoomCodeChanged(null)
-            onJoinActionAvailabilityChanged(false)
-        }
+    LaunchedEffect(selectedRoom?.code, savedRoomCode, session.isAuthenticated) {
+        val inRoom = selectedRoom != null || savedRoomCode != null
+        onRoomPresenceChanged(inRoom)
+        onRoomCodeChanged(selectedRoom?.code ?: savedRoomCode)
+        onJoinActionAvailabilityChanged(!inRoom && session.isAuthenticated)
     }
     LaunchedEffect(session.user?.id) {
         if (session.user == null) {
             rooms = emptyList()
             selectedRoom = null
+            savedRoomCode = null
             match = null
             return@LaunchedEffect
         }
         runCatching { repository.listPublicRooms() }
             .onSuccess { rooms = it }
             .onFailure { errorMessage = it.message }
+    }
+    LaunchedEffect(session.user?.id, savedRoomCode) {
+        val code = savedRoomCode ?: return@LaunchedEffect
+        if (!session.isAuthenticated) return@LaunchedEffect
+        runCatching { repository.getRoom(code) }
+            .onSuccess { selectedRoom = it }
+            .onFailure {
+                savedRoomCode = null
+                selectedRoom = null
+                match = null
+            }
     }
     LaunchedEffect(Unit) {
         repository.events.collect { event ->
@@ -308,7 +319,11 @@ fun LetterGameScreen(
         label = "letter-game-room-transition",
         ) { (animatedRoom, animatedMatch) ->
         if (animatedRoom == null) {
-            LobbyPage(
+            if (savedRoomCode != null) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(stringResource(R.string.letter_game_restoring_room), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                }
+            } else LobbyPage(
                 rooms = rooms,
                 contentTopPadding = contentTopPadding,
                 createVisibility = createVisibility,
@@ -323,7 +338,10 @@ fun LetterGameScreen(
                             repository.createRoom(
                                 LetterGameCreateRequest(visibility = createVisibility.name.lowercase()),
                             )
-                        }.onSuccess { selectedRoom = it }
+                        }.onSuccess {
+                            savedRoomCode = it.code
+                            selectedRoom = it
+                        }
                             .onFailure { errorMessage = it.message }
                         loading = false
                     }
@@ -333,7 +351,10 @@ fun LetterGameScreen(
                         loading = true
                         errorMessage = null
                         runCatching { repository.joinRoom(publicRoom.code) }
-                            .onSuccess { selectedRoom = it }
+                            .onSuccess {
+                                savedRoomCode = it.code
+                                selectedRoom = it
+                            }
                             .onFailure { errorMessage = it.message }
                         loading = false
                     }
@@ -342,8 +363,7 @@ fun LetterGameScreen(
         } else {
             val currentUserId = session.user?.id
 					when (animatedMatch?.status) {
-							"active" -> PlayingPage(
-								room = animatedRoom,
+						"active" -> PlayingPage(
 								match = animatedMatch,
 								currentUserId = currentUserId,
 								socket = socket,
@@ -351,6 +371,15 @@ fun LetterGameScreen(
 								coverImageStore = container.coverImageStore,
 								contentTopPadding = contentTopPadding,
 								errorMessage = errorMessage,
+								onShowSnackbar = { message ->
+									scope.launch {
+										snackbarHostState.showSnackbar(
+											message = message,
+											withDismissAction = true,
+											duration = SnackbarDuration.Custom(5_000),
+										)
+									}
+								},
 								onLeave = {
 									val activeSocket = socket
 									if (activeSocket != null) {
@@ -358,7 +387,6 @@ fun LetterGameScreen(
 										leftMatchId = animatedMatch.matchId
 									}
 								},
-								onExitRoom = { showExitConfirmation = true },
 							)
 							"finished", "abandoned" -> ResultsPage(
 								room = animatedRoom,
@@ -369,6 +397,7 @@ fun LetterGameScreen(
 									scope.launch {
 										runCatching { repository.reopenRoom(animatedRoom.id) }
 											.onSuccess {
+												savedRoomCode = it.code
 												selectedRoom = it
 												match = null
 												leftMatchId = null
@@ -385,7 +414,10 @@ fun LetterGameScreen(
 								repository = repository,
 								loading = loading,
 								errorMessage = errorMessage,
-								onUpdateRoom = { updated -> selectedRoom = updated },
+								onUpdateRoom = { updated ->
+									savedRoomCode = updated.code
+									selectedRoom = updated
+								},
 								onError = { errorMessage = it },
 								onStart = {
 									scope.launch {
@@ -406,7 +438,12 @@ fun LetterGameScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+                .padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 16.dp,
+                    bottom = if (visibleMatch?.status == "active") 112.dp else 16.dp,
+                ),
         )
     }
 
@@ -432,6 +469,7 @@ fun LetterGameScreen(
                         errorMessage = null
                         runCatching { repository.joinRoom(joinCode) }
                             .onSuccess {
+                                savedRoomCode = it.code
                                 selectedRoom = it
                                 showJoinDialog = false
                                 joinCode = ""
@@ -471,6 +509,7 @@ fun LetterGameScreen(
                         runCatching { repository.leaveRoom(room.id) }
                             .onSuccess {
                                 showExitConfirmation = false
+                                savedRoomCode = null
                                 selectedRoom = null
                                 match = null
                                 leftMatchId = null
@@ -500,7 +539,10 @@ fun LetterGameScreen(
             collectionItems = collectionItems,
             onDismiss = { showRoomSettings = false },
             onUpdate = { request ->
-                repository.updateRoom(room.id, request).also { selectedRoom = it }
+                repository.updateRoom(room.id, request).also {
+                    savedRoomCode = it.code
+                    selectedRoom = it
+                }
             },
             onError = { errorMessage = it },
         )
@@ -781,7 +823,6 @@ private fun RoomMembers(
 
 @Composable
 private fun PlayingPage(
-    room: LetterGameRoom,
     match: LetterGameMatchSnapshot,
     currentUserId: String?,
     socket: WebSocket?,
@@ -790,7 +831,7 @@ private fun PlayingPage(
     contentTopPadding: Dp,
     errorMessage: String?,
     onLeave: () -> Unit,
-    onExitRoom: () -> Unit,
+    onShowSnackbar: (String) -> Unit,
 ) {
     var character by remember { mutableStateOf("") }
     var guessTarget by remember { mutableStateOf<LetterGameMatchSong?>(null) }
@@ -806,6 +847,23 @@ private fun PlayingPage(
     val canAct = isTurn && socket != null
     val currentPlayer = match.players.firstOrNull { it.userId == currentUserId }
     val canBuyHint = canAct && currentPlayer?.scoringEligible == true
+    val snackbarMessages = match.logs.associate { log -> log.id to localizedLogMessage(log) }
+    var logBaselineEstablished by remember(match.matchId) { mutableStateOf(false) }
+    var shownLogIds by remember(match.matchId) { mutableStateOf<Set<String>>(emptySet()) }
+
+    LaunchedEffect(match.matchId, match.logs) {
+        val currentIds = match.logs.mapTo(mutableSetOf(), LetterGameLogEntry::id)
+        if (!logBaselineEstablished) {
+            shownLogIds = currentIds
+            logBaselineEstablished = true
+        } else {
+            val newLogs = match.logs.filterNot { it.id in shownLogIds }
+            shownLogIds = shownLogIds + currentIds
+            newLogs.forEach { log ->
+                onShowSnackbar(snackbarMessages[log.id] ?: log.message)
+            }
+        }
+    }
     LaunchedEffect(match.turnDeadline) {
         while (true) {
             val deadline = match.turnDeadline?.let { runCatching { java.time.Instant.parse(it) }.getOrNull() }
@@ -820,12 +878,12 @@ private fun PlayingPage(
         }
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, top = contentTopPadding + 8.dp, end = 16.dp, bottom = 96.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        item { PlayingHeader(room.code, match, onExitRoom) }
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, top = contentTopPadding + 8.dp, end = 16.dp, bottom = 136.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
         if (errorMessage != null) item { ErrorBanner(errorMessage) }
         item { TurnStrip(match.players, match.turnUserId) }
         item {
@@ -843,38 +901,8 @@ private fun PlayingPage(
                     )
                 }
                 Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    TextField(
-                        value = character,
-                        onValueChange = { character = firstGrapheme(it) },
-                        label = stringResource(R.string.letter_game_character_all_songs),
-                        enabled = canAct,
-                        singleLine = true,
-                        colors = appTextFieldColors(),
-                        modifier = Modifier.weight(1f),
-                    )
-                    Button(
-                        onClick = {
-                            val value = character
-                            if (value.isNotEmpty()) {
-                                send(buildJsonObject { put("kind", "open_character"); put("character", value) })
-                                character = ""
-                            }
-                        },
-                        enabled = canAct && character.isNotEmpty(),
-                        colors = ButtonDefaults.buttonColorsPrimary(),
-                    ) {
-                        Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null)
-                        Spacer(Modifier.width(5.dp))
-                        Text(stringResource(R.string.letter_game_open))
-                    }
-                }
             }
         }
-        item {
-            SmallTitle(text = stringResource(R.string.letter_game_log))
-        }
-        item { GameLog(match) }
         item { SmallTitle(text = stringResource(R.string.letter_game_songs)) }
         items(match.songs, key = LetterGameMatchSong::slotId) { song ->
             Box {
@@ -908,16 +936,53 @@ private fun PlayingPage(
             }
         }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                Button(onClick = onLeave, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors()) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = null)
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.letter_game_leave_match))
-                }
-                Button(onClick = onExitRoom, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors()) {
-                    Icon(Icons.AutoMirrored.Rounded.ExitToApp, contentDescription = null)
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.letter_game_leave_room))
+            Button(onClick = onLeave, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors()) {
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.letter_game_leave_match))
+            }
+        }
+        }
+
+        Card(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .imePadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            cornerRadius = 14.dp,
+            insideMargin = PaddingValues(10.dp),
+            colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TextField(
+                    value = character,
+                    onValueChange = { character = firstGrapheme(it) },
+                    label = stringResource(R.string.letter_game_character_all_songs),
+                    enabled = canAct,
+                    singleLine = true,
+                    colors = appTextFieldColors(),
+                    modifier = Modifier.weight(1f),
+                )
+                Button(
+                    onClick = {
+                        val value = character
+                        if (value.isNotEmpty()) {
+                            send(buildJsonObject { put("kind", "open_character"); put("character", value) })
+                            character = ""
+                        }
+                    },
+                    enabled = canAct && character.isNotEmpty(),
+                    colors = ButtonDefaults.buttonColorsPrimary(),
+                ) {
+                    Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null)
+                    Spacer(Modifier.width(5.dp))
+                    Text(stringResource(R.string.letter_game_open))
                 }
             }
         }
@@ -1011,13 +1076,34 @@ private fun PlayingPage(
 }
 
 @Composable
-private fun PlayingHeader(code: String, match: LetterGameMatchSnapshot, onExit: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(stringResource(R.string.letter_game_room_name, code), style = MiuixTheme.textStyles.title2.copy(fontWeight = FontWeight.Bold))
-            Text(stringResource(R.string.letter_game_revision_summary, match.revision, match.noProgressRounds), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+private fun localizedLogMessage(log: LetterGameLogEntry): String {
+    val actor = log.actorName ?: log.actorUserId.orEmpty()
+    return when (log.actionType) {
+        "open_character" -> stringResource(
+            R.string.letter_game_log_open_character,
+            actor,
+            log.character.orEmpty(),
+            log.newlyRevealedCount ?: 0,
+            log.points ?: 0,
+        )
+        "guess_song" -> if (log.correct == true) {
+            stringResource(R.string.letter_game_log_guess_correct, actor, log.points ?: 0)
+        } else {
+            stringResource(R.string.letter_game_log_guess_incorrect, actor)
         }
-        IconButton(onClick = onExit) { Icon(Icons.AutoMirrored.Rounded.ExitToApp, contentDescription = stringResource(R.string.letter_game_leave_room)) }
+        "buy_hint" -> stringResource(
+            R.string.letter_game_log_buy_hint,
+            actor,
+            log.hintCost ?: log.points ?: 0,
+            log.songNumber ?: 0,
+            when (log.hintType) {
+                "version" -> stringResource(R.string.letter_game_hint_version)
+                "constant" -> stringResource(R.string.letter_game_hint_constant)
+                "white_chart" -> stringResource(R.string.letter_game_hint_white_chart)
+                else -> stringResource(R.string.letter_game_buy_hint)
+            },
+        )
+        else -> log.message
     }
 }
 
@@ -1048,26 +1134,6 @@ private fun TurnStrip(players: List<LetterGameMatchPlayer>, turnUserId: String?)
             Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, tint = MiuixTheme.colorScheme.onSurfaceVariantSummary)
             val first = players.minByOrNull(LetterGameMatchPlayer::turnOrder)
             first?.let { PlayerAvatar(it.avatarUrl, it.displayName ?: it.userId, 30.dp) }
-        }
-    }
-}
-
-@Composable
-private fun GameLog(match: LetterGameMatchSnapshot) {
-    Card(
-        modifier = Modifier.fillMaxWidth().height(150.dp),
-        cornerRadius = 12.dp,
-        insideMargin = PaddingValues(10.dp),
-        colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
-    ) {
-        if (match.logs.isEmpty()) {
-            Text(stringResource(R.string.letter_game_log_empty), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(match.logs, key = LetterGameLogEntry::id) { log ->
-                    Text(log.message, style = MiuixTheme.textStyles.footnote1, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
-            }
         }
     }
 }

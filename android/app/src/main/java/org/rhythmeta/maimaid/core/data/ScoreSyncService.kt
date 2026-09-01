@@ -9,7 +9,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.rhythmeta.maimaid.core.database.MaimaidDatabase
 import org.rhythmeta.maimaid.core.database.ScoreEntity

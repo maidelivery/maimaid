@@ -11,6 +11,7 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import androidx.core.content.edit
 
 @Serializable
 data class BackendAuthUser(
@@ -50,13 +51,13 @@ class BackendTokenStore(
     }
 
     fun save(bundle: BackendTokenBundle) {
-        preferences.edit()
-            .putString(TokenKey, encrypt(json.encodeToString(BackendTokenBundle.serializer(), bundle)))
-            .apply()
+        preferences.edit {
+					putString(TokenKey, encrypt(json.encodeToString(BackendTokenBundle.serializer(), bundle)))
+				}
     }
 
     fun clear() {
-        preferences.edit().remove(TokenKey).apply()
+        preferences.edit { remove(TokenKey) }
     }
 
     private fun encrypt(value: String): String? = runCatching {

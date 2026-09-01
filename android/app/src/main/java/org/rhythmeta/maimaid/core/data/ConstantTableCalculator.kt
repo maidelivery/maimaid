@@ -98,7 +98,7 @@ object ConstantTableCalculator {
     private fun isUtage(song: SongEntity): Boolean =
         song.category.contains("utage", ignoreCase = true) || song.category.contains("宴")
 
-    private val entryComparator = compareBy<ConstantTableEntry>(
+    private val entryComparator = compareBy(
         { it.songTitle.lowercase(Locale.ROOT) },
         { -difficultyOrder(it.difficulty) },
         { it.type.lowercase(Locale.ROOT) },

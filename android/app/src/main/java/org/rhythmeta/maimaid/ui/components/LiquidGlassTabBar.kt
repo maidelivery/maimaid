@@ -68,12 +68,12 @@ data class LiquidGlassTab(
 
 @Composable
 fun LiquidGlassTabBar(
+	  modifier: Modifier = Modifier,
     selectedIndex: Int,
     onSelected: (Int) -> Unit,
     backdrop: Backdrop,
     tabs: List<LiquidGlassTab>,
     isBlurEnabled: Boolean = true,
-    modifier: Modifier = Modifier,
 ) {
     require(tabs.isNotEmpty())
 

@@ -1,5 +1,6 @@
 package org.rhythmeta.maimaid.ui.common
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -340,6 +341,7 @@ private sealed interface StaticDataUpdateState {
     data class Failed(val message: String) : StaticDataUpdateState
 }
 
+@SuppressLint("SuspiciousIndentation")
 @Composable
 private fun StaticDataDetail(
     state: MainUiState,

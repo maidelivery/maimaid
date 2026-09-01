@@ -126,13 +126,7 @@ class ScoreRepository(
         }
     }
 
-    suspend fun deleteScore(sheetKey: String) = database.withTransaction {
-        val profile = profileRepository.ensureActiveProfile()
-        scoreDao.deleteScore(profile.id, sheetKey)
-		syncStateStore?.markDataPending(profile.id, replace = true)
-    }
-
-    private suspend fun repairMissingPlayRecords(profileId: String, songIdentifier: String) {
+	private suspend fun repairMissingPlayRecords(profileId: String, songIdentifier: String) {
         database.withTransaction {
             val scores = scoreDao.scoresForSong(profileId, songIdentifier)
             if (scores.isEmpty()) return@withTransaction

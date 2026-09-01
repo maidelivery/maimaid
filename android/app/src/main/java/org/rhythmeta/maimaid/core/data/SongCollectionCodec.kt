@@ -21,9 +21,8 @@ data class SongCollectionExportEntry(
 object SongCollectionCodec {
     const val Prefix = "MMD2."
     const val WebBaseUrl = "https://maimaid.rhythmeta.org/collection/"
-    const val AppBaseUrl = "maimaid://collection/"
 
-    private const val MaxTextLength = 2_000_000
+	private const val MaxTextLength = 2_000_000
     private const val MaxCompressedBytes = 1_000_000
     private const val MaxRawBytes = 1_000_000
     private const val MaxEntriesPerCollection = 10_000
@@ -49,9 +48,7 @@ object SongCollectionCodec {
 
     fun webUrl(collection: SongCollectionExport): String = WebBaseUrl + encode(collection)
 
-    fun appUrl(collection: SongCollectionExport): String = AppBaseUrl + encode(collection)
-
-    fun decode(value: String): SongCollectionExport {
+	fun decode(value: String): SongCollectionExport {
         val token = extractToken(value) ?: throw IllegalArgumentException("Invalid collection sharing link")
         val compressed = Base64.getUrlDecoder().decode(token.removePrefix(Prefix))
         require(compressed.size <= MaxCompressedBytes)
@@ -85,13 +82,15 @@ object SongCollectionCodec {
 
     private fun extractSegment(value: String): String? {
         val uri = runCatching { java.net.URI(value) }.getOrNull() ?: return null
-        return when {
-            uri.scheme == "https" && uri.host == "maimaid.rhythmeta.org" ->
-                uri.path.removePrefix("/collection/").trim('/').takeIf(String::isNotEmpty)
-            uri.scheme == "maimaid" && uri.host == "collection" ->
-                uri.path.trim('/').takeIf(String::isNotEmpty)
-            else -> null
-        }
+        return when (uri.scheme) {
+					"https" if uri.host == "maimaid.rhythmeta.org" ->
+						uri.path.removePrefix("/collection/").trim('/').takeIf(String::isNotEmpty)
+
+					"maimaid" if uri.host == "collection" ->
+						uri.path.trim('/').takeIf(String::isNotEmpty)
+
+					else -> null
+				}
     }
 
     private fun compress(raw: ByteArray): ByteArray {

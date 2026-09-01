@@ -28,6 +28,7 @@ import org.rhythmeta.maimaid.core.ml.ScannerRecognitionEngine
 import org.rhythmeta.maimaid.core.ml.ScannerSongMatcher
 import org.rhythmeta.maimaid.core.ml.ScannerStabilizer
 import org.rhythmeta.maimaid.ui.song.ScoreSaveStatus
+import kotlin.time.Duration.Companion.milliseconds
 
 data class ScannerUiState(
     val modelState: ScannerModelState = ScannerModelState.Checking(),
@@ -227,11 +228,7 @@ class ScannerViewModel(
         }
     }
 
-    fun analyzePhoto(bitmap: Bitmap) {
-        analyzePhotoWhenReady(bitmap)
-    }
-
-    fun analyzePhotoWhenReady(bitmap: Bitmap) {
+	fun analyzePhotoWhenReady(bitmap: Bitmap) {
         if (!canRecognize(mutableState.value.modelState)) {
             bitmap.recycle()
             return
@@ -333,7 +330,7 @@ class ScannerViewModel(
 
     private fun schedulePhotoResultDismissal() {
         photoResultDismissJob = viewModelScope.launch {
-            delay(PhotoResultDurationMillis)
+            delay(PhotoResultDurationMillis.milliseconds)
             photoResultDismissJob = null
             clearResultAndResumeLiveRecognition()
         }

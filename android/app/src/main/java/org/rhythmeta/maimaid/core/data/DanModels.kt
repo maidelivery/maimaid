@@ -26,9 +26,8 @@ data class DanSheetReference(
     val type: String,
     val difficulty: String,
 ) {
-    val isPlaceholder: Boolean get() = type.isBlank() || difficulty.isBlank()
 
-    companion object {
+	companion object {
         fun parse(raw: String): DanSheetReference {
             val parts = raw.split('|')
             return if (parts.size >= 3) {

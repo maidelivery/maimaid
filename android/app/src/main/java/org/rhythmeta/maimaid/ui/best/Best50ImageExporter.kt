@@ -21,6 +21,8 @@ import org.rhythmeta.maimaid.core.data.Best50State
 import org.rhythmeta.maimaid.core.data.CoverImageStore
 import org.rhythmeta.maimaid.core.data.RatingUtils
 import org.rhythmeta.maimaid.core.data.ScoreRules
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.withClip
 
 internal object Best50ImageExporter {
     suspend fun renderToCache(
@@ -73,7 +75,7 @@ internal object Best50ImageExporter {
         private val userName: String?,
         private val version: String?,
         private val coverImageStore: CoverImageStore,
-        private val darkTheme: Boolean,
+        darkTheme: Boolean,
         private val labels: Labels,
     ) {
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG)
@@ -87,11 +89,7 @@ internal object Best50ImageExporter {
             val logicalHeight = HeaderHeight +
                 sections.sumOf { sectionHeight(it.entries.size) } +
                 FooterHeight
-            val bitmap = Bitmap.createBitmap(
-                CanvasWidth * OutputScale,
-                logicalHeight * OutputScale,
-                Bitmap.Config.ARGB_8888,
-            )
+            val bitmap = createBitmap(CanvasWidth * OutputScale, logicalHeight * OutputScale)
             val canvas = Canvas(bitmap)
             canvas.drawColor(palette.background)
             canvas.scale(OutputScale.toFloat(), OutputScale.toFloat())
@@ -335,20 +333,19 @@ internal object Best50ImageExporter {
                     JacketSize * OutputScale,
                 )
             }
-            canvas.save()
-            canvas.clipPath(Path().apply { addRoundRect(destination, 4f, 4f, Path.Direction.CW) })
-            if (jacket == null) {
-                paint.color = palette.emptyCard
-                canvas.drawRect(destination, paint)
-                drawText(canvas, "♪", left + 24f, top + 40f, 22f, palette.subtle)
-            } else {
-                val source = centerCropSource(jacket.width, jacket.height)
-                paint.alpha = 255
-                paint.isFilterBitmap = true
-                canvas.drawBitmap(jacket, source, destination, paint)
-                jacket.recycle()
-            }
-            canvas.restore()
+            canvas.withClip(Path().apply { addRoundRect(destination, 4f, 4f, Path.Direction.CW) }) {
+							if (jacket == null) {
+								paint.color = palette.emptyCard
+								drawRect(destination, paint)
+								drawText(this, "♪", left + 24f, top + 40f, 22f, palette.subtle)
+							} else {
+								val source = centerCropSource(jacket.width, jacket.height)
+								paint.alpha = 255
+								paint.isFilterBitmap = true
+								drawBitmap(jacket, source, destination, paint)
+								jacket.recycle()
+							}
+						}
             if (songId > 0) {
                 val idText = "#$songId"
                 setText(8f, Color.WHITE, bold = true, monospaced = true)

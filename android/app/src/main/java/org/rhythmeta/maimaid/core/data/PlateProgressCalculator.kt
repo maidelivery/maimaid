@@ -103,7 +103,11 @@ object PlateProgressCalculator {
         if (oldVersions.isNotEmpty()) {
             groups.add(
                 0,
-                VersionPlateGroup("舞代", "舞", oldVersions, true, true, true),
+                VersionPlateGroup("舞代", "舞", oldVersions,
+	                isOldFrame = true,
+	                hasSho = true,
+	                includeReMasterByDefault = true
+                ),
             )
         }
         return groups

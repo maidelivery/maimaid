@@ -1,7 +1,6 @@
 package org.rhythmeta.maimaid.ui.catalog
 
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -50,6 +49,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 internal fun SongCard(
+	  modifier: Modifier = Modifier,
     song: SongEntity,
     sheets: List<SheetEntity>,
     scoresBySheetKey: Map<String, ScoreEntity>,
@@ -59,7 +59,6 @@ internal fun SongCard(
     onLongClick: (() -> Unit)? = null,
     chartType: String? = null,
     actualSheet: SheetEntity? = null,
-    modifier: Modifier = Modifier,
 ) {
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
     val prioritizedSheets = remember(sheets) { CatalogQuery.prioritizedSheets(sheets) }
@@ -192,10 +191,10 @@ internal fun SongCard(
 
 @Composable
 internal fun ScoreEntrySongCard(
+	  modifier: Modifier = Modifier,
     song: SongEntity,
     sheet: SheetEntity,
     metadata: ResolvedSheetMetadata? = null,
-    modifier: Modifier = Modifier,
 ) {
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
     val difficultyColor = SongVisualUtils.difficultyColor(

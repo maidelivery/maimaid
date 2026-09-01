@@ -42,6 +42,7 @@ private val ProgressDotLightSurface = Color(0xFFF9F7FC)
 
 @Composable
 internal fun SongGridCell(
+	  modifier: Modifier = Modifier,
     song: SongEntity,
     sheets: List<SheetEntity>,
     scoresBySheetKey: Map<String, ScoreEntity>,
@@ -53,7 +54,6 @@ internal fun SongGridCell(
     onLongClick: (() -> Unit)? = null,
     showActualDifficultyIndicator: Boolean = true,
     actualSheet: SheetEntity? = null,
-    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
@@ -145,7 +145,7 @@ internal fun SongGridCell(
                             else -> 6.sp
                         },
                         fontWeight = FontWeight.Black,
-                        color = androidx.compose.ui.graphics.Color.White,
+                        color = Color.White,
                     )
                 } else {
                     prioritizedSheets.forEachIndexed { index, sheet ->

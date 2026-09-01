@@ -692,6 +692,7 @@
     <string name="letter_game_room_settings">Room settings</string>
     <string name="letter_game_room_title">Room: %1$s</string>
     <string name="letter_game_room_code_copied">Room code copied</string>
+    <string name="letter_game_restoring_room">Restoring room...</string>
     <string name="letter_game_settings_expand">Expand room settings</string>
     <string name="letter_game_settings_collapse">Collapse room settings</string>
     <string name="letter_game_settings_sheet_expanded">Room settings expanded</string>
@@ -761,6 +762,10 @@
     <string name="letter_game_room_name">Room %1$s</string>
     <string name="letter_game_revision_summary">Revision %1$d · %2$d stalled rounds</string>
     <string name="letter_game_log_empty">Actions will appear here.</string>
+    <string name="letter_game_log_open_character">%1$s opened &quot;%2$s&quot;, revealed %3$d characters, and earned %4$d points</string>
+    <string name="letter_game_log_guess_correct">%1$s guessed a song and earned %2$d points</string>
+    <string name="letter_game_log_guess_incorrect">%1$s guessed incorrectly</string>
+    <string name="letter_game_log_buy_hint">%1$s spent %2$d points on song #%3$d\'s %4$s hint</string>
     <string name="letter_game_unknown_song">?</string>
     <string name="letter_game_match_results">Match results</string>
     <string name="letter_game_reopen">Reopen</string>

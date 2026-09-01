@@ -18,6 +18,7 @@ import org.rhythmeta.maimaid.core.data.LxnsTokenExpiredException
 import org.rhythmeta.maimaid.core.data.ProfileCredentials
 import org.rhythmeta.maimaid.core.database.UserProfileEntity
 import org.rhythmeta.maimaid.core.network.BackendApiException
+import kotlin.time.Duration.Companion.milliseconds
 
 enum class ScoreImportPhase {
     Idle,
@@ -124,7 +125,7 @@ class ScoreImportViewModel(
                 if (!openAuthorization(authorization.authorizationUrl)) throw ImportBrowserUnavailableException()
                 val expiresAt = Instant.parse(authorization.expiresAt).toEpochMilli()
                 while (System.currentTimeMillis() < expiresAt) {
-                    delay(1_500)
+                    delay(1_500.milliseconds)
                     val status = container.backendImportService.divingFishAuthorizationStatus(
                         authorization.authorizationId,
                     )

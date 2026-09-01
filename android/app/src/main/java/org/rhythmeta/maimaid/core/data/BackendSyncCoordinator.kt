@@ -11,6 +11,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.rhythmeta.maimaid.core.database.MaimaidDatabase
 import org.rhythmeta.maimaid.core.database.PlayRecordEntity
@@ -20,6 +21,8 @@ import org.rhythmeta.maimaid.core.database.UserProfileEntity
 import org.rhythmeta.maimaid.core.database.SongCollectionEntity
 import org.rhythmeta.maimaid.core.database.SongCollectionItemEntity
 import org.rhythmeta.maimaid.core.network.BackendApiClient
+import java.net.URLEncoder
+import java.util.Locale
 
 private const val SyncBatchSize = 250
 
@@ -448,7 +451,7 @@ class BackendSyncCoordinator(
 		val scores = linkedMapOf<String, BackendRemoteScore>()
 		val records = linkedMapOf<String, BackendRemotePlayRecord>()
 		val collections = linkedMapOf<String, BackendRemoteCollection>()
-		var latest = initialRevision
+		var latest: String
 		do {
 			val responseElement = sessionManager.authorizedRequest(
 				path = "v1/sync:pull?sinceRevision=$cursor&includeSnapshot=true&limit=500",
@@ -895,7 +898,7 @@ class BackendSyncCoordinator(
             }
             apiClient.upload(upload.uploadUrl, contentType, withContext(Dispatchers.IO) { file.readBytes() })
             val avatarUrl = apiClient.endpoint("v1/profiles/${profile.id}/avatar") +
-                "?v=" + java.net.URLEncoder.encode(upload.updatedAt, Charsets.UTF_8.name())
+                "?v=" + URLEncoder.encode(upload.updatedAt, Charsets.UTF_8.name())
             val updated = profile.copy(avatarUrl = avatarUrl)
             profileDao.upsert(updated)
 			val profileResponse = sessionManager.authorizedRequest(
@@ -921,7 +924,7 @@ class BackendSyncCoordinator(
             sessionManager.authorizedRequest(
                 path = "v1/profiles/${profile.id}",
                 method = "PATCH",
-                body = kotlinx.serialization.json.buildJsonObject { put("isActive", false) },
+                body = buildJsonObject { put("isActive", false) },
             )
         }
         profiles.forEach { profile ->
@@ -972,7 +975,7 @@ class BackendSyncCoordinator(
             sessionManager.authorizedRequest(
                 path = "v1/profiles/${profile.id}",
                 method = "PATCH",
-                body = kotlinx.serialization.json.buildJsonObject { put("isActive", false) },
+                body = buildJsonObject { put("isActive", false) },
             )
         }
         profilesToDelete.forEach { profile ->
@@ -1156,7 +1159,7 @@ class BackendSyncCoordinator(
 
     private fun sameScoreValue(local: ScoreEntity, remote: BackendRemoteScore): Boolean =
         (local.achievement * 10_000).roundToLong() == (remote.achievements * 10_000).roundToLong() &&
-            local.rank.trim().lowercase() == remote.rank.trim().lowercase() &&
+					local.rank.trim().equals(remote.rank.trim(), ignoreCase = true) &&
             local.dxScore == remote.dxScore &&
             ScoreRules.canonicalFc(local.fc) == ScoreRules.canonicalFc(remote.fc) &&
             ScoreRules.canonicalFs(local.fs) == ScoreRules.canonicalFs(remote.fs)
@@ -1187,14 +1190,17 @@ class BackendSyncCoordinator(
         sheets.forEach { sheet ->
             val type = canonicalType(sheet.type)
             val difficulty = canonicalDifficulty(sheet.difficulty)
-            listOf(sheet.songIdentifier, sheet.providerSongId.takeIf { it > 0 }?.toString()).filterNotNull().forEach { id ->
+					listOfNotNull(
+						sheet.songIdentifier,
+						sheet.providerSongId.takeIf { it > 0 }?.toString()
+					).forEach { id ->
                 put("${id.lowercase()}|$type|$difficulty", sheet.sheetKey)
             }
         }
     }
 
     private fun resolveSheetKey(remote: BackendRemoteSheet, sheetMap: Map<String, String>): String? {
-        val ids = listOf(remote.songIdentifier, remote.songId.takeIf { it > 0 }?.toString()).filterNotNull()
+        val ids = listOfNotNull(remote.songIdentifier, remote.songId.takeIf { it > 0 }?.toString())
         val type = canonicalType(remote.chartType)
         val difficulty = canonicalDifficulty(remote.difficulty)
         return ids.firstNotNullOfOrNull { id -> sheetMap["${id.lowercase()}|$type|$difficulty"] }
@@ -1211,7 +1217,7 @@ class BackendSyncCoordinator(
         record.profileId,
         record.sheetKey,
         record.playedAt,
-        "%.4f".format(java.util.Locale.ROOT, record.achievement),
+        "%.4f".format(Locale.ROOT, record.achievement),
         record.dxScore,
         ScoreRules.canonicalFc(record.fc),
         ScoreRules.canonicalFs(record.fs),
@@ -1239,9 +1245,4 @@ class BackendSyncCoordinator(
     @Serializable
     private data class ProfilesResponse(val profiles: List<BackendRemoteProfile>)
 
-    @Serializable
-    private data class ScoresResponse(val scores: List<BackendRemoteScore>)
-
-    @Serializable
-    private data class RecordsResponse(val records: List<BackendRemotePlayRecord>)
 }

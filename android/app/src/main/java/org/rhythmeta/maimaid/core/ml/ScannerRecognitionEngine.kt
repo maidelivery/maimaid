@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import ai.onnxruntime.OrtSession
 import kotlin.math.roundToInt
+import androidx.core.graphics.get
 
 class ScannerRecognitionEngine(
     private val sessionFactory: OnnxSessionFactory,
@@ -151,7 +152,7 @@ class ScannerRecognitionEngine(
         val step = ((right - left).coerceAtMost(bottom - top) / 24).coerceAtLeast(1)
         for (y in top until bottom step step) {
             for (x in left until right step step) {
-                val pixel = bitmap.getPixel(x, y)
+                val pixel = bitmap[x, y]
                 red += Color.red(pixel)
                 green += Color.green(pixel)
                 blue += Color.blue(pixel)
@@ -163,7 +164,7 @@ class ScannerRecognitionEngine(
         Color.RGBToHSV((red / count).toInt(), (green / count).toInt(), (blue / count).toInt(), hsv)
         val hue = hsv[0]
         return when {
-            hue > 320f || hue < 20f -> "expert"
+            hue !in 20f..320f -> "expert"
             hue < 60f -> "advanced"
             hue < 160f -> "basic"
             hue in 260f..320f && hsv[2] > 0.75f && hsv[1] < 0.5f -> "remaster"

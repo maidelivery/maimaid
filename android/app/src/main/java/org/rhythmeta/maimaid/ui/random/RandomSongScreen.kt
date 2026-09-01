@@ -71,6 +71,7 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import kotlin.time.Duration.Companion.milliseconds
 
 @Stable
 internal class RandomSongSessionState {
@@ -177,7 +178,7 @@ internal fun RandomSongScreen(
             }
         }
         spinJob = scope.launch {
-            delay((BaseSpinDuration + (sessionState.songCount - 1) * ColumnDelay).toLong())
+            delay((BaseSpinDuration + (sessionState.songCount - 1) * ColumnDelay).toLong().milliseconds)
             finishSpin(pending)
         }
     }

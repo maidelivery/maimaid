@@ -16,7 +16,7 @@ import org.rhythmeta.maimaid.core.database.SheetEntity
 import org.rhythmeta.maimaid.ui.util.SongVisualUtils
 
 class SongDetailViewModel(
-    private val songIdentifier: String,
+    songIdentifier: String,
     private val container: AppContainer,
 ) : ViewModel() {
     private val entrySheetKey = MutableStateFlow<String?>(null)
@@ -42,7 +42,7 @@ class SongDetailViewModel(
             profileId = scoreData.profileId,
             charts = sheets
                 .sortedWith(
-                    compareByDescending<org.rhythmeta.maimaid.core.database.SheetEntity> {
+                    compareByDescending<SheetEntity> {
                         chartTypeOrder(it.type)
                     }.thenByDescending { SongVisualUtils.difficultyOrder(it.difficulty) },
                 )

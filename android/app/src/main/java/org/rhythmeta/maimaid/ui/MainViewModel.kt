@@ -18,7 +18,6 @@ import org.rhythmeta.maimaid.core.data.CatalogSortOption
 import org.rhythmeta.maimaid.core.data.CatalogSyncStatus
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
-import org.rhythmeta.maimaid.ui.theme.AppThemeSettings
 import org.rhythmeta.maimaid.ui.theme.ColorMode
 import org.rhythmeta.maimaid.ui.theme.DefaultAppThemeSettings
 

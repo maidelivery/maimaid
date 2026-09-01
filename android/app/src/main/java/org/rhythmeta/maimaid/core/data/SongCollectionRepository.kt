@@ -52,15 +52,7 @@ class SongCollectionRepository(private val dao: SongCollectionDao) {
         dao.upsertItem(item.copy(deletedAt = now, updatedAt = now, clientUpdatedAt = now))
     }
 
-    suspend fun reorderItems(collectionId: String, orderedIds: List<String>) {
-        val now = System.currentTimeMillis()
-        val byId = dao.itemsIncludingDeleted().associateBy(SongCollectionItemEntity::id)
-        orderedIds.forEachIndexed { position, id ->
-            byId[id]?.let { dao.upsertItem(it.copy(position = position, updatedAt = now, clientUpdatedAt = now)) }
-        }
-    }
-
-    suspend fun importCollection(source: SongCollectionExport): SongCollectionEntity {
+	suspend fun importCollection(source: SongCollectionExport): SongCollectionEntity {
         val existingCollections = dao.collectionsIncludingDeleted()
         val activeNames = existingCollections
             .asSequence()

@@ -662,6 +662,7 @@
     <string name="letter_game_room_settings">房间设置</string>
     <string name="letter_game_room_title">房间：%1$s</string>
     <string name="letter_game_room_code_copied">已复制房间码</string>
+    <string name="letter_game_restoring_room">正在恢复房间...</string>
     <string name="letter_game_settings_expand">展开房间设置</string>
     <string name="letter_game_settings_collapse">收起房间设置</string>
     <string name="letter_game_settings_sheet_expanded">房间设置已展开</string>
@@ -731,6 +732,10 @@
     <string name="letter_game_room_name">房间 %1$s</string>
     <string name="letter_game_revision_summary">版本 %1$d · 无进展 %2$d 轮</string>
     <string name="letter_game_log_empty">操作记录会显示在这里。</string>
+    <string name="letter_game_log_open_character">%1$s 开了“%2$s”，揭示 %3$d 个字符，获得 %4$d 分</string>
+    <string name="letter_game_log_guess_correct">%1$s 猜中歌曲，获得 %2$d 分</string>
+    <string name="letter_game_log_guess_incorrect">%1$s 猜歌错误</string>
+    <string name="letter_game_log_buy_hint">%1$s 花费 %2$d 分购买了第 %3$d 首歌曲的%4$s提示</string>
     <string name="letter_game_unknown_song">?</string>
     <string name="letter_game_match_results">对局结果</string>
     <string name="letter_game_reopen">重开</string>

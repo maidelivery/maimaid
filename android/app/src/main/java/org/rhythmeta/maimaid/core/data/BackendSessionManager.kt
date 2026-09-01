@@ -20,10 +20,10 @@ enum class BackendWebAuthMode(val queryValue: String) {
     Forgot("forgot"),
 }
 
-enum class BackendSessionNotice(val isError: Boolean) {
-    LoginSucceeded(false),
-    AuthLinkSucceeded(false),
-    AuthLinkFailed(true),
+enum class BackendSessionNotice {
+    LoginSucceeded,
+    AuthLinkSucceeded,
+    AuthLinkFailed,
 }
 
 data class BackendSessionState(

@@ -56,6 +56,7 @@ import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun InitialCatalogGate(
@@ -95,7 +96,7 @@ fun FirstLaunchScreen(
 
     LaunchedEffect(Unit) {
         showHero = true
-        delay(110)
+        delay(110.milliseconds)
         showFeatures = true
     }
 

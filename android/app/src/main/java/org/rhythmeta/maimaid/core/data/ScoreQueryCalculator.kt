@@ -132,7 +132,7 @@ object ScoreQueryCalculator {
                 (settings.selectedFs.isEmpty() || ScoreRules.displayFs(entry.fs) in settings.selectedFs)
         }
         val primary = when (sortMode) {
-            ScoreQuerySortMode.Rating -> compareBy<ScoreQueryEntry>(ScoreQueryEntry::rating)
+            ScoreQuerySortMode.Rating -> compareBy(ScoreQueryEntry::rating)
             ScoreQuerySortMode.Achievement -> compareBy(ScoreQueryEntry::achievement)
             ScoreQuerySortMode.Level -> compareBy(ScoreQueryEntry::level)
         }

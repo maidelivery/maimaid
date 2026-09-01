@@ -1,6 +1,5 @@
 package org.rhythmeta.maimaid.core.data
 
-import android.net.Uri
 import android.util.Base64
 import java.net.HttpURLConnection
 import java.net.URL
@@ -16,6 +15,7 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.rhythmeta.maimaid.core.network.BackendApiException
+import androidx.core.net.toUri
 
 @Serializable
 data class BackendImportRunResponse(
@@ -161,7 +161,7 @@ class BackendImportService(
             MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray(Charsets.UTF_8)),
             Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING,
         )
-        val url = Uri.parse(LxnsAuthorizeUrl).buildUpon()
+        val url = LxnsAuthorizeUrl.toUri().buildUpon()
             .appendQueryParameter("response_type", "code")
             .appendQueryParameter("client_id", LxnsClientId)
             .appendQueryParameter("redirect_uri", LxnsRedirectUri)

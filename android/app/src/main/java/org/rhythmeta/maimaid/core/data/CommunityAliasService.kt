@@ -1,5 +1,6 @@
 package org.rhythmeta.maimaid.core.data
 
+import kotlinx.coroutines.Dispatchers
 import java.net.URLEncoder
 import java.time.Instant
 import java.time.LocalDate
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -145,7 +147,9 @@ class CommunityAliasService(
     }
 
     suspend fun vote(candidateId: String, support: Boolean): CommunityAliasVoteResult {
-        val encodedId = URLEncoder.encode(candidateId, Charsets.UTF_8.name())
+        val encodedId = withContext(Dispatchers.IO) {
+					URLEncoder.encode(candidateId, Charsets.UTF_8.name())
+				}
         val payload = sessionManager.authorizedRequest(
             path = "v1/community/candidates/$encodedId:vote",
             method = "POST",

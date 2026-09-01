@@ -12,6 +12,7 @@ import java.nio.FloatBuffer
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import androidx.core.graphics.createBitmap
 
 internal data class LetterboxTransform(
     val scale: Float,
@@ -75,7 +76,7 @@ internal object YoloImageProcessor {
         val scaledHeight = max(1, (bitmap.height * scale).roundToInt())
         val offsetX = (InputSize - scaledWidth) / 2f
         val offsetY = (InputSize - scaledHeight) / 2f
-        val target = Bitmap.createBitmap(InputSize, InputSize, Bitmap.Config.ARGB_8888)
+        val target = createBitmap(InputSize, InputSize)
         Canvas(target).apply {
             drawColor(Color.rgb(114, 114, 114))
             drawBitmap(

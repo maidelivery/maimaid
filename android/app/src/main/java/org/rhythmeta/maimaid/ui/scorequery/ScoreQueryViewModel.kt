@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.rhythmeta.maimaid.core.AppContainer
 import org.rhythmeta.maimaid.core.data.ScoreQueryCalculator
@@ -21,6 +20,7 @@ import org.rhythmeta.maimaid.core.data.ScoreQueryFilterSettings
 import org.rhythmeta.maimaid.core.data.ScoreQueryResponse
 import org.rhythmeta.maimaid.core.data.ScoreQuerySortMode
 import org.rhythmeta.maimaid.core.data.ScoreQueryStats
+import kotlin.time.Duration.Companion.milliseconds
 
 data class ScoreQueryUiState(
     val isLoading: Boolean = true,
@@ -63,7 +63,7 @@ class ScoreQueryViewModel(
     }
 
     private val criteria = combine(
-        query.debounce(SearchDebounceMillis),
+        query.debounce(SearchDebounceMillis.milliseconds),
         filterSettings,
         preferences,
     ) { query, filterSettings, preferences ->

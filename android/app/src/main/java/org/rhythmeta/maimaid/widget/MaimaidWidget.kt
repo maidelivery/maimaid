@@ -89,8 +89,7 @@ class MaimaidWidget : GlanceAppWidget() {
             provideContent {
                 MaimaidWidgetContent(themedSnapshot, images)
             }
-            Log.d(TAG, "provideGlance content provided id=$id")
-        } catch (throwable: Throwable) {
+				} catch (throwable: Throwable) {
             Log.e(TAG, "provideGlance failed id=$id", throwable)
             throw throwable
         }

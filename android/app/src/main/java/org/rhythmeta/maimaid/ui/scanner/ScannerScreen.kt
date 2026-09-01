@@ -2,7 +2,6 @@ package org.rhythmeta.maimaid.ui.scanner
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.graphics.Paint
 import android.text.format.Formatter
@@ -96,6 +95,7 @@ import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.max
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun ScannerScreen(
@@ -165,7 +165,7 @@ fun ScannerScreen(
     }
     LaunchedEffect(state.message) {
         if (state.message != null) {
-            delay(MessageDurationMillis)
+            delay(MessageDurationMillis.milliseconds)
             viewModel.consumeMessage()
         }
     }

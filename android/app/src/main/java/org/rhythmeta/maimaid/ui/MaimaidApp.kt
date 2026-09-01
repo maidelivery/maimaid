@@ -854,7 +854,7 @@ fun MaimaidApp(
     }
     val detailActions: @Composable RowScope.(AppDetail) -> Unit = { activeDetail ->
         if (activeDetail == AppDetail.LetterGame) {
-            if (letterGameInRoom) {
+            if (letterGameRoomCode != null) {
                 IconButton(onClick = { letterGameCopyRequestToken += 1 }) {
                     Icon(Icons.Rounded.ContentCopy, contentDescription = stringResource(R.string.letter_game_copy_room_code))
                 }
@@ -1075,11 +1075,11 @@ fun MaimaidApp(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
-                        if (detail != null && destination != RootDestination.Home) {
-                            translationX = -size.width * 0.25f * (1f - detailSourceProgress)
-                        } else {
-                            translationX = size.width * (1f - rootTabTransitionProgress)
-                        }
+											translationX = if (detail != null && destination != RootDestination.Home) {
+												-size.width * 0.25f * (1f - detailSourceProgress)
+											} else {
+												size.width * (1f - rootTabTransitionProgress)
+											}
                     },
                 transitionSpec = {
                     if (!animateRootDestinationChange) {
@@ -1488,28 +1488,24 @@ fun MaimaidApp(
             }
         }
 
-        val retainedSongSourceDetail = when {
-            detail == AppDetail.BestTable ||
-            detail == AppDetail.Recommendations ||
-                detail == AppDetail.ScoreQuery ||
-                detail == AppDetail.ConstantTable ||
-                detail == AppDetail.PlateProgress -> detail
-            detail == AppDetail.Song && (
-                songReturnDetail == AppDetail.BestTable ||
-                    songReturnDetail == AppDetail.Recommendations ||
-                    songReturnDetail == AppDetail.ScoreQuery ||
-                    songReturnDetail == AppDetail.ConstantTable ||
-                    songReturnDetail == AppDetail.PlateProgress ||
-                    songReturnDetail == AppDetail.CommunityAliases
-                ) -> songReturnDetail
-            detail == AppDetail.CommunityAliases && communityAliasesFromSong && (
-                songReturnDetail == AppDetail.BestTable ||
-                    songReturnDetail == AppDetail.Recommendations ||
-                    songReturnDetail == AppDetail.ScoreQuery ||
-                    songReturnDetail == AppDetail.PlateProgress
-                ) -> songReturnDetail
-            else -> null
-        }
+        val retainedSongSourceDetail = when (detail) {
+						AppDetail.BestTable, AppDetail.Recommendations, AppDetail.ScoreQuery, AppDetail.ConstantTable, AppDetail.PlateProgress -> detail
+						AppDetail.Song if (
+										songReturnDetail == AppDetail.BestTable ||
+											songReturnDetail == AppDetail.Recommendations ||
+											songReturnDetail == AppDetail.ScoreQuery ||
+											songReturnDetail == AppDetail.ConstantTable ||
+											songReturnDetail == AppDetail.PlateProgress ||
+											songReturnDetail == AppDetail.CommunityAliases
+										) -> songReturnDetail
+						AppDetail.CommunityAliases if communityAliasesFromSong && (
+										songReturnDetail == AppDetail.BestTable ||
+											songReturnDetail == AppDetail.Recommendations ||
+											songReturnDetail == AppDetail.ScoreQuery ||
+											songReturnDetail == AppDetail.PlateProgress
+										) -> songReturnDetail
+						else -> null
+				}
 
         retainedSongSourceDetail?.let { sourceDetail ->
             val isForeground = detail == sourceDetail
@@ -1967,142 +1963,139 @@ fun MaimaidApp(
                             },
                         ),
                     topBar = {
-                        if (activeDetail == AppDetail.Song) {
-                            SmallTopAppBar(
-                                title = songDetailTitle
-                                    ?.takeIf { it.first == selectedSongId }
-                                    ?.second
-                                    ?: selectedSong?.title.orEmpty(),
-                                modifier = Modifier.drawPlainBackdrop(
-                                    backdrop = detailBackdrop,
-                                    shape = { TopBarBottomShape },
-                                    effects = {
-                                        blur(24.dp.toPx())
-                                    },
-                                ).clip(TopBarBottomShape),
-                                color = Color.Transparent,
-                                navigationIcon = detailNavigationIcon,
-                                actions = { detailActions(activeDetail) },
-                                defaultWindowInsetsPadding = true,
-                            )
-                        } else if (
-                            activeDetail == AppDetail.StaticData ||
-                            activeDetail == AppDetail.OtogameLogin
-                        ) {
-                            val detailTitle = detailTitle(activeDetail)
-                            SmallTopAppBar(
-                                title = detailTitle,
-                                modifier = Modifier.drawPlainBackdrop(
-                                    backdrop = detailBackdrop,
-                                    shape = { TopBarBottomShape },
-                                    effects = { if (enableBlur) blur(24.dp.toPx()) },
-                                    onDrawSurface = {
-                                        drawRect(backgroundColor.copy(alpha = if (enableBlur) 0.52f else 1f))
-                                    },
-                                ).clip(TopBarBottomShape),
-                                color = Color.Transparent,
-                                navigationIcon = detailNavigationIcon,
-                                actions = { detailActions(activeDetail) },
-                                defaultWindowInsetsPadding = true,
-                            )
-                        } else if (
-                            activeDetail == AppDetail.BestTable ||
-                            activeDetail == AppDetail.Recommendations ||
-                            activeDetail == AppDetail.ScoreQuery ||
-                            activeDetail == AppDetail.ConstantTable ||
-                            activeDetail == AppDetail.PlateProgress ||
-                            activeDetail == AppDetail.Dan ||
-                            activeDetail == AppDetail.DanDetail ||
-                            activeDetail == AppDetail.CommunityAliases ||
-                            activeDetail == AppDetail.Collections ||
-                            activeDetail == AppDetail.CollectionDetail ||
-                            activeDetail == AppDetail.DivingFishImport ||
-                            activeDetail == AppDetail.LxnsImport ||
-                            activeDetail == AppDetail.OtogameImport ||
-                            activeDetail == AppDetail.Appearance
-                            || activeDetail == AppDetail.LetterGame
-                        ) {
-                            val detailTitle = if (activeDetail == AppDetail.LetterGame && letterGameRoomCode != null) {
-                                stringResource(R.string.letter_game_room_title, letterGameRoomCode.orEmpty())
-                            } else if (activeDetail == AppDetail.CollectionDetail && selectedCollectionTitle != null) {
-                                selectedCollectionTitle
-                            } else if (activeDetail == AppDetail.DanDetail) {
-                                selectedDanCategoryTitle ?: detailTitle(AppDetail.Dan)
-                            } else {
-                                detailTitle(activeDetail)
-                            }
-                            TopAppBar(
-                                title = detailTitle,
-                                largeTitle = detailTitle,
-                                modifier = Modifier.drawPlainBackdrop(
-                                    backdrop = detailBackdrop,
-                                    shape = { TopBarBottomShape },
-                                    effects = { if (enableBlur) blur(24.dp.toPx()) },
-                                    onDrawSurface = {
-                                        drawRect(backgroundColor.copy(alpha = if (enableBlur) 0.52f else 1f))
-                                    },
-                                ).clip(TopBarBottomShape),
-                                color = Color.Transparent,
-                                navigationIcon = detailNavigationIcon,
-                                actions = {
-                                    if (activeDetail == AppDetail.ScoreQuery && scoreQueryState != null) {
-                                        ScoreQueryTopBarActions(
-                                            displayMode = scoreQueryState.displayMode,
-                                            sortMode = scoreQueryState.sortMode,
-                                            sortAscending = scoreQueryState.sortAscending,
-                                            filterActive = !scoreQueryState.filterSettings.isEmpty,
-                                            onDisplayModeChange = scoreQueryViewModel::setDisplayMode,
-                                            onSortModeChange = scoreQueryViewModel::setSortMode,
-                                            onSortAscendingChange = scoreQueryViewModel::setSortAscending,
-                                            onShowFilter = { showScoreQueryFilter = true },
-                                        )
-                                    } else {
-                                        detailActions(activeDetail)
-                                    }
-                                },
-                                scrollBehavior = detailScrollBehavior,
-                                defaultWindowInsetsPadding = true,
-                                bottomContent = {
-                                    if (activeDetail == AppDetail.Recommendations) {
-                                        RecommendationPageSwitcher(
-                                            selectedPage = recommendationSelectedPage,
-                                            visible = recommendationSwitcherVisible,
-                                            onSelectedPageChange = {
-                                                recommendationSelectedPage = it
-                                            },
-                                        )
-                                    } else if (
-                                        activeDetail == AppDetail.ScoreQuery &&
-                                        scoreQueryViewModel != null
-                                    ) {
-                                        CatalogSearchBar(
-                                            query = scoreQueryText,
-                                            onQueryChange = scoreQueryViewModel::setQuery,
-                                            expanded = scoreQuerySearchExpanded,
-                                            onExpandedChange = { scoreQuerySearchExpanded = it },
-                                            visible = scoreQuerySearchVisible ||
-                                                scoreQuerySearchFocused ||
-                                                restoreScoreQuerySearchFocus,
-                                            focusRequestToken = scoreQuerySearchFocusRequestToken,
-                                            backEnabled = detail == AppDetail.ScoreQuery &&
-                                                scoreQuerySearchFocused,
-                                            interactionSource = scoreQuerySearchInteractionSource,
-                                            labelResource = R.string.score_query_search_hint,
-                                        )
-                                    }
-                                },
-                            )
-                        } else {
-                            val detailTitle = detailTitle(activeDetail)
-                            TopAppBar(
-                                title = detailTitle,
-                                largeTitle = detailTitle,
-                                modifier = Modifier.clip(TopBarBottomShape),
-                                navigationIcon = detailNavigationIcon,
-                                actions = { detailActions(activeDetail) },
-                                defaultWindowInsetsPadding = true,
-                            )
-                        }
+											when (activeDetail) {
+												AppDetail.Song -> {
+													SmallTopAppBar(
+														title = songDetailTitle
+															?.takeIf { it.first == selectedSongId }
+															?.second
+															?: selectedSong?.title.orEmpty(),
+														modifier = Modifier.drawPlainBackdrop(
+															backdrop = detailBackdrop,
+															shape = { TopBarBottomShape },
+															effects = {
+																blur(24.dp.toPx())
+															},
+														).clip(TopBarBottomShape),
+														color = Color.Transparent,
+														navigationIcon = detailNavigationIcon,
+														actions = { detailActions(activeDetail) },
+														defaultWindowInsetsPadding = true,
+													)
+												}
+
+												AppDetail.StaticData, AppDetail.OtogameLogin
+													-> {
+													val detailTitle = detailTitle(activeDetail)
+													SmallTopAppBar(
+														title = detailTitle,
+														modifier = Modifier.drawPlainBackdrop(
+															backdrop = detailBackdrop,
+															shape = { TopBarBottomShape },
+															effects = { if (enableBlur) blur(24.dp.toPx()) },
+															onDrawSurface = {
+																drawRect(backgroundColor.copy(alpha = if (enableBlur) 0.52f else 1f))
+															},
+														).clip(TopBarBottomShape),
+														color = Color.Transparent,
+														navigationIcon = detailNavigationIcon,
+														actions = { detailActions(activeDetail) },
+														defaultWindowInsetsPadding = true,
+													)
+												}
+
+												AppDetail.BestTable, AppDetail.Recommendations, AppDetail.ScoreQuery, AppDetail.ConstantTable, AppDetail.PlateProgress, AppDetail.Dan, AppDetail.DanDetail, AppDetail.CommunityAliases, AppDetail.Collections, AppDetail.CollectionDetail, AppDetail.DivingFishImport, AppDetail.LxnsImport, AppDetail.OtogameImport, AppDetail.Appearance,
+												AppDetail.LetterGame
+													-> {
+													val detailTitle = when (activeDetail) {
+															AppDetail.LetterGame if letterGameRoomCode != null -> {
+																stringResource(R.string.letter_game_room_title, letterGameRoomCode.orEmpty())
+															}
+															AppDetail.CollectionDetail if selectedCollectionTitle != null -> {
+																selectedCollectionTitle
+															}
+															AppDetail.DanDetail -> {
+																selectedDanCategoryTitle ?: detailTitle(AppDetail.Dan)
+															}
+															else -> {
+																detailTitle(activeDetail)
+															}
+													}
+													TopAppBar(
+														title = detailTitle,
+														largeTitle = detailTitle,
+														modifier = Modifier.drawPlainBackdrop(
+															backdrop = detailBackdrop,
+															shape = { TopBarBottomShape },
+															effects = { if (enableBlur) blur(24.dp.toPx()) },
+															onDrawSurface = {
+																drawRect(backgroundColor.copy(alpha = if (enableBlur) 0.52f else 1f))
+															},
+														).clip(TopBarBottomShape),
+														color = Color.Transparent,
+														navigationIcon = detailNavigationIcon,
+														actions = {
+															if (activeDetail == AppDetail.ScoreQuery && scoreQueryState != null) {
+																ScoreQueryTopBarActions(
+																	displayMode = scoreQueryState.displayMode,
+																	sortMode = scoreQueryState.sortMode,
+																	sortAscending = scoreQueryState.sortAscending,
+																	filterActive = !scoreQueryState.filterSettings.isEmpty,
+																	onDisplayModeChange = scoreQueryViewModel::setDisplayMode,
+																	onSortModeChange = scoreQueryViewModel::setSortMode,
+																	onSortAscendingChange = scoreQueryViewModel::setSortAscending,
+																	onShowFilter = { showScoreQueryFilter = true },
+																)
+															} else {
+																detailActions(activeDetail)
+															}
+														},
+														scrollBehavior = detailScrollBehavior,
+														defaultWindowInsetsPadding = true,
+														bottomContent = {
+															if (activeDetail == AppDetail.Recommendations) {
+																RecommendationPageSwitcher(
+																	selectedPage = recommendationSelectedPage,
+																	visible = recommendationSwitcherVisible,
+																	onSelectedPageChange = {
+																		recommendationSelectedPage = it
+																	},
+																)
+															} else if (
+																activeDetail == AppDetail.ScoreQuery &&
+																scoreQueryViewModel != null
+															) {
+																CatalogSearchBar(
+																	query = scoreQueryText,
+																	onQueryChange = scoreQueryViewModel::setQuery,
+																	expanded = scoreQuerySearchExpanded,
+																	onExpandedChange = { scoreQuerySearchExpanded = it },
+																	visible = scoreQuerySearchVisible ||
+																		scoreQuerySearchFocused ||
+																		restoreScoreQuerySearchFocus,
+																	focusRequestToken = scoreQuerySearchFocusRequestToken,
+																	backEnabled = detail == AppDetail.ScoreQuery &&
+																		scoreQuerySearchFocused,
+																	interactionSource = scoreQuerySearchInteractionSource,
+																	labelResource = R.string.score_query_search_hint,
+																)
+															}
+														},
+													)
+												}
+
+												else -> {
+													val detailTitle = detailTitle(activeDetail)
+													TopAppBar(
+														title = detailTitle,
+														largeTitle = detailTitle,
+														modifier = Modifier.clip(TopBarBottomShape),
+														navigationIcon = detailNavigationIcon,
+														actions = { detailActions(activeDetail) },
+														defaultWindowInsetsPadding = true,
+													)
+												}
+											}
                     },
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 ) { paddingValues ->
@@ -2467,7 +2460,7 @@ private fun RootLayer(
 }
 
 @Composable
-private fun rememberDeviceCornerRadius(): androidx.compose.ui.unit.Dp {
+private fun rememberDeviceCornerRadius(): Dp {
     val view = LocalView.current
     val density = LocalDensity.current
     val orientation = LocalConfiguration.current.orientation

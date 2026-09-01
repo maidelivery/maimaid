@@ -65,6 +65,8 @@ import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.withTranslation
 
 @Composable
 internal fun AvatarCropEditor(
@@ -317,7 +319,7 @@ private fun renderCroppedAvatar(
     rotationDegrees: Float,
     guideDiameter: Float,
 ): Bitmap {
-    val output = Bitmap.createBitmap(AvatarExportSize, AvatarExportSize, Bitmap.Config.ARGB_8888)
+    val output = createBitmap(AvatarExportSize, AvatarExportSize)
     val canvas = Canvas(output)
     val exportSize = AvatarExportSize.toFloat()
     val exportRatio = exportSize / guideDiameter
@@ -343,22 +345,21 @@ private fun drawAvatarBitmap(
     offset: Offset,
     rotationDegrees: Float,
 ) {
-    canvas.save()
-    canvas.translate(center.x + offset.x, center.y + offset.y)
-    canvas.rotate(rotationDegrees)
-    canvas.scale(scale, scale)
-    canvas.drawBitmap(
-        bitmap,
-        null,
-        RectF(
-            -baseSize.x / 2f,
-            -baseSize.y / 2f,
-            baseSize.x / 2f,
-            baseSize.y / 2f,
-        ),
-        Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG),
-    )
-    canvas.restore()
+    canvas.withTranslation(center.x + offset.x, center.y + offset.y) {
+			rotate(rotationDegrees)
+			scale(scale, scale)
+			drawBitmap(
+				bitmap,
+				null,
+				RectF(
+					-baseSize.x / 2f,
+					-baseSize.y / 2f,
+					baseSize.x / 2f,
+					baseSize.y / 2f,
+				),
+				Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG),
+			)
+		}
 }
 
 private val GuideInset = 12.dp

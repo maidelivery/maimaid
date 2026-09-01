@@ -112,5 +112,4 @@ object SearchTextNormalizer {
         }.lowercase(Locale.ROOT)
     }
 
-    fun compact(value: String): String = normalize(value).filterNot(Char::isWhitespace)
 }
