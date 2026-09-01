@@ -83,6 +83,9 @@ const jsonString = (value: unknown): string | null => {
 	return null;
 };
 
+const jsonNumber = (value: unknown): number | null =>
+	typeof value === "number" && Number.isFinite(value) ? value : null;
+
 const normalizeSourceIds = (value: unknown): string[] =>
 	Array.isArray(value)
 		? [
@@ -515,7 +518,20 @@ export class LetterGameService {
 					const detail = hint.value === undefined ? "" : `: ${JSON.stringify(hint.value)}`;
 					message = `${actorName} spent ${String(hint.cost ?? 0)} points on song #${songNumber} ${String(hint.type ?? "hint")} hint${detail}`;
 				}
-				return { id: action.id, message, actorUserId: action.actorId, actorName };
+				return {
+					id: action.id,
+					message,
+					actorUserId: action.actorId,
+					actorName,
+					actionType: kind,
+					character: kind === "open_character" ? jsonString(payload.character) : null,
+					newlyRevealedCount: kind === "open_character" ? jsonNumber(result.newlyRevealedCount) : null,
+					points: kind === "open_character" || kind === "guess_song" ? jsonNumber(result.points) : jsonNumber(hint.cost),
+					correct: kind === "guess_song" && typeof result.correct === "boolean" ? result.correct : null,
+					hintType: kind === "buy_hint" ? jsonString(hint.type) : null,
+					hintCost: kind === "buy_hint" ? jsonNumber(hint.cost) : null,
+					songNumber: kind === "buy_hint" ? songNumberById.get(action.songId) ?? (typeof payload.slotId === "string" ? match.songs.findIndex((song: any) => song.slotId === payload.slotId) + 1 : null) : null,
+				};
 			});
 		return {
 			matchId: match.id,
