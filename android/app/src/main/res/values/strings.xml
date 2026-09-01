@@ -755,6 +755,7 @@
 	<string name="letter_game_you">You</string>
 	<string name="letter_game_ready">Ready</string>
 	<string name="letter_game_approve">Approve</string>
+	<string name="letter_game_reject">Reject</string>
 	<string name="letter_game_remove">Remove</string>
 	<string name="letter_game_removed_from_room">You were removed from the room.</string>
 	<string name="letter_game_room_dissolved">This room has been dissolved.</string>

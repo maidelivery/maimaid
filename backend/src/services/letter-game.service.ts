@@ -238,7 +238,6 @@ export class LetterGameService {
 			const existing = await tx.letterGameRoomMember.findUnique({
 				where: { roomId_userId: { roomId: room.id, userId } },
 			});
-			if (existing?.status === "kicked") throw new AppError(403, "member_kicked", "You were removed from this room.");
 			if (existing && ["accepted", "pending"].includes(existing.status)) return room.id;
 			const activeMatch = await tx.letterGameMatch.findFirst({
 				where: { roomId: room.id, status: "active" },
@@ -265,6 +264,7 @@ export class LetterGameService {
 				update: {
 					status: accepted ? "accepted" : "pending",
 					leftAt: null,
+					kickedAt: null,
 					lastSeenAt: new Date(),
 					approvedAt: accepted ? new Date() : null,
 				},
@@ -288,6 +288,23 @@ export class LetterGameService {
 			return tx.letterGameRoomMember.update({
 				where: { id: memberId },
 				data: { status: "accepted", approvedAt: new Date(), leftAt: null },
+			});
+		});
+		return { room: await this.getRoom(actorId, roomId), member };
+	}
+
+	async rejectMember(actorId: string, roomId: string, memberId: string) {
+		const member = await this.prisma.$transaction(async (tx: any) => {
+			await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", roomId);
+			const room = await tx.letterGameRoom.findUnique({ where: { id: roomId } });
+			if (!room) throw new AppError(404, "room_not_found", "Letter game room not found.");
+			if (room.status !== "open") throw new AppError(410, "room_closed", "This letter game room has been dissolved.");
+			if (room.hostUserId !== actorId) throw new AppError(403, "host_required", "Only the room host can perform this action.");
+			const pendingMember = await tx.letterGameRoomMember.findFirst({ where: { id: memberId, roomId, status: "pending" } });
+			if (!pendingMember) throw new AppError(409, "member_not_pending", "This member is no longer waiting for approval.");
+			return tx.letterGameRoomMember.update({
+				where: { id: memberId },
+				data: { status: "left", leftAt: new Date(), approvedAt: null },
 			});
 		});
 		return { room: await this.getRoom(actorId, roomId), member };

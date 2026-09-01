@@ -133,6 +133,18 @@ letterGameV1Route.post(
 );
 
 letterGameV1Route.post(
+	"/rooms/:roomId/members/:memberId/reject",
+	standardValidator("param", memberParamSchema, validationHook),
+	async (c) => {
+		const service = c.var.resolve(LetterGameService);
+		const params = c.req.valid("param");
+		const result = await service.rejectMember(requireUser(c), params.roomId, params.memberId);
+		await c.var.resolve(LetterGameConnectionHub).broadcastRoom(params.roomId);
+		return ok(c, result);
+	},
+);
+
+letterGameV1Route.post(
 	"/rooms/:roomId/members/:memberId/kick",
 	standardValidator("param", memberParamSchema, validationHook),
 	async (c) => {

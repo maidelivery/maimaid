@@ -58,6 +58,11 @@ class LetterGameRepository(
         return json.decodeFromJsonElement(LetterGameRoom.serializer(), payload.jsonObject["room"] ?: payload)
     }
 
+    suspend fun rejectMember(roomId: String, memberId: String): LetterGameRoom {
+        val payload = sessionManager.authorizedRequest("v1/letter-game/rooms/$roomId/members/$memberId/reject", "POST")
+        return json.decodeFromJsonElement(LetterGameRoom.serializer(), payload.jsonObject["room"] ?: payload)
+    }
+
     suspend fun getRoom(roomIdOrCode: String): LetterGameRoom {
         val payload = sessionManager.authorizedRequest("v1/letter-game/rooms/${roomIdOrCode.trim().uppercase()}")
         return json.decodeFromJsonElement(LetterGameRoom.serializer(), payload.jsonObject["room"] ?: payload)
@@ -106,6 +111,13 @@ class LetterGameRepository(
             override fun onMessage(webSocket: WebSocket, text: String) = handleMessage(text)
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 mutableEvents.tryEmit(LetterGameEvent.Error("connection_failed", t.message))
+            }
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                when {
+                    reason == "room_dissolved" -> mutableEvents.tryEmit(LetterGameEvent.RoomDissolved(roomCode))
+                    reason == "room_access_denied" || reason == "member_removed" ->
+                        mutableEvents.tryEmit(LetterGameEvent.MemberRemoved(roomCode, "kicked"))
+                }
             }
         })
     }

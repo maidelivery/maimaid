@@ -724,6 +724,7 @@
     <string name="letter_game_you">你</string>
     <string name="letter_game_ready">已准备</string>
     <string name="letter_game_approve">确认</string>
+    <string name="letter_game_reject">拒绝</string>
     <string name="letter_game_remove">移除</string>
     <string name="letter_game_removed_from_room">你已被移出房间</string>
     <string name="letter_game_room_dissolved">房间已解散</string>

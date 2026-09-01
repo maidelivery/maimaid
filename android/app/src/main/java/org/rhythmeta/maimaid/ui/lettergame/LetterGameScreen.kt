@@ -269,7 +269,19 @@ fun LetterGameScreen(
         val code = savedRoomCode ?: return@LaunchedEffect
         if (!session.isAuthenticated) return@LaunchedEffect
         runCatching { repository.getRoom(code) }
-            .onSuccess { selectedRoom = it }
+            .onSuccess { room ->
+                if (savedRoomCode != code || leavingRoom) return@onSuccess
+                val membership = room.members.firstOrNull { it.userId == session.user?.id }
+                if (!leavingRoom && membership != null && membership.status !in setOf("accepted", "pending")) {
+                    savedRoomCode = null
+                    selectedRoom = null
+                    match = null
+                    errorMessage = null
+                    scope.launch { snackbarHostState.showSnackbar(removedFromRoomMessage, duration = SnackbarDuration.Short) }
+                } else {
+                    selectedRoom = room
+                }
+            }
             .onFailure {
                 savedRoomCode = null
                 selectedRoom = null
@@ -281,7 +293,23 @@ fun LetterGameScreen(
             when (event) {
                 is LetterGameEvent.Room -> {
                     rooms = rooms.map { if (it.id == event.room.id) event.room else it }
-                    if (selectedRoom?.id == event.room.id) selectedRoom = event.room
+                    if (selectedRoom?.id == event.room.id) {
+                        val membership = event.room.members.firstOrNull { it.userId == session.user?.id }
+                        if (!leavingRoom && membership != null && membership.status !in setOf("accepted", "pending")) {
+                            socket?.close(1000, "member_removed")
+                            socket = null
+                            selectedRoom = null
+                            savedRoomCode = null
+                            match = null
+                            errorMessage = null
+                            showRoomSettings = false
+                            showExitConfirmation = false
+                            hiddenFinishedMatchId = null
+                            scope.launch { snackbarHostState.showSnackbar(removedFromRoomMessage, duration = SnackbarDuration.Short) }
+                        } else {
+                            selectedRoom = event.room
+                        }
+                    }
                 }
                 is LetterGameEvent.MemberRemoved -> {
                     if (!leavingRoom && (selectedRoom?.id == event.roomId || selectedRoom?.code == event.roomId)) {
@@ -359,9 +387,41 @@ fun LetterGameScreen(
         val roomId = selectedRoom?.id ?: return@LaunchedEffect
         while (true) {
             delay(5_000.milliseconds)
-            runCatching { repository.getRoom(roomId) }.onSuccess { refreshed ->
-                if (selectedRoom?.id == roomId) selectedRoom = refreshed
-            }
+            runCatching { repository.getRoom(roomId) }
+                .onSuccess { refreshed ->
+                    if (selectedRoom?.id != roomId) return@onSuccess
+                    val membership = refreshed.members.firstOrNull { it.userId == session.user?.id }
+                    if (!leavingRoom && membership != null && membership.status !in setOf("accepted", "pending")) {
+                        socket?.close(1000, "member_removed")
+                        socket = null
+                        selectedRoom = null
+                        savedRoomCode = null
+                        match = null
+                        errorMessage = null
+                        showRoomSettings = false
+                        showExitConfirmation = false
+                        hiddenFinishedMatchId = null
+                        scope.launch { snackbarHostState.showSnackbar(removedFromRoomMessage, duration = SnackbarDuration.Short) }
+                    } else {
+                        selectedRoom = refreshed
+                    }
+                }
+                .onFailure { error ->
+                    if ((error as? org.rhythmeta.maimaid.core.network.BackendApiException)?.code == "room_access_denied") {
+                        socket?.close(1000, "member_removed")
+                        socket = null
+                        selectedRoom = null
+                        savedRoomCode = null
+                        match = null
+                        errorMessage = null
+                        showRoomSettings = false
+                        showExitConfirmation = false
+                        hiddenFinishedMatchId = null
+                        scope.launch { snackbarHostState.showSnackbar(removedFromRoomMessage, duration = SnackbarDuration.Short) }
+                    } else {
+                        errorMessage = error.message
+                    }
+                }
         }
     }
     LaunchedEffect(selectedRoom?.code, reconnectAttempt) {
@@ -879,6 +939,15 @@ private fun WaitingPage(
                         }
                     }
                 },
+                onReject = { member ->
+                    member.id?.let { memberId ->
+                        scope.launch {
+                            runCatching { repository.rejectMember(room.id, memberId) }
+                                .onSuccess(onUpdateRoom)
+                                .onFailure { onError(it.message ?: "Request failed") }
+                        }
+                    }
+                },
             )
         }
         item {
@@ -1017,6 +1086,7 @@ private fun RoomMembers(
     isHost: Boolean,
     onApprove: (LetterGameRoomMember) -> Unit,
     onKick: (LetterGameRoomMember) -> Unit,
+    onReject: (LetterGameRoomMember) -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1060,14 +1130,25 @@ private fun RoomMembers(
                     )
                 }
                 if (isHost && member.status == "pending") {
-                    Button(
-                        onClick = { onApprove(member) },
-                        modifier = Modifier.heightIn(min = 36.dp),
-                        colors = ButtonDefaults.buttonColors(),
-                    ) {
-                        Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.letter_game_approve))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Button(
+                            onClick = { onApprove(member) },
+                            modifier = Modifier.heightIn(min = 36.dp),
+                            colors = ButtonDefaults.buttonColors(),
+                        ) {
+                            Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.letter_game_approve))
+                        }
+                        Button(
+                            onClick = { onReject(member) },
+                            modifier = Modifier.heightIn(min = 36.dp),
+                            colors = ButtonDefaults.buttonColors(),
+                        ) {
+                            Icon(Icons.Rounded.Cancel, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.letter_game_reject))
+                        }
                     }
                 }
                 if (isHost && member.userId != hostUserId && member.status == "accepted") {

@@ -727,6 +727,7 @@
     <string name="letter_game_you">あなた</string>
     <string name="letter_game_ready">準備完了</string>
     <string name="letter_game_approve">承認</string>
+    <string name="letter_game_reject">拒否</string>
     <string name="letter_game_remove">削除</string>
     <string name="letter_game_removed_from_room">ルームから退出させられました</string>
     <string name="letter_game_room_dissolved">ルームが解散しました</string>

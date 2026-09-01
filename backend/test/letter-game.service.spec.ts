@@ -398,6 +398,58 @@ describe("LetterGameService room lifecycle", () => {
 		expect(roomUpdate).not.toHaveBeenCalled();
 	});
 
+	it("allows a kicked member to join the room again", async () => {
+		const upsert = vi.fn().mockResolvedValue(undefined);
+		const tx = {
+			$executeRawUnsafe: vi.fn().mockResolvedValue(undefined),
+			letterGameRoom: {
+				findUnique: vi
+					.fn()
+					.mockResolvedValueOnce({ id: "room-1" })
+					.mockResolvedValueOnce({ id: "room-1", status: "open", visibility: "public" }),
+			},
+			letterGameRoomMember: {
+				findUnique: vi.fn().mockResolvedValue({ status: "kicked" }),
+				findFirst: vi.fn().mockResolvedValue({ seatOrder: 2 }),
+				upsert,
+			},
+			letterGameMatch: { findFirst: vi.fn().mockResolvedValue(null) },
+		};
+		const { service } = createTransactionService(tx);
+		vi.spyOn(service, "getRoom").mockResolvedValue({ id: "room-1" } as never);
+
+		await service.joinRoom("user-1", "ABC234");
+
+		expect(upsert).toHaveBeenCalledWith(
+			expect.objectContaining({
+				update: expect.objectContaining({ status: "pending", kickedAt: null, leftAt: null }),
+			}),
+		);
+	});
+
+	it("lets the host reject a pending member", async () => {
+		const update = vi.fn().mockResolvedValue({ id: "member-2", status: "left" });
+		const tx = {
+			$executeRawUnsafe: vi.fn().mockResolvedValue(undefined),
+			letterGameRoom: {
+				findUnique: vi.fn().mockResolvedValue({ id: "room-1", status: "open", hostUserId: "host-1" }),
+			},
+			letterGameRoomMember: {
+				findFirst: vi.fn().mockResolvedValue({ id: "member-2", status: "pending" }),
+				update,
+			},
+		};
+		const { service } = createTransactionService(tx);
+		vi.spyOn(service, "getRoom").mockResolvedValue({ id: "room-1" } as never);
+
+		await service.rejectMember("host-1", "room-1", "member-2");
+
+		expect(update).toHaveBeenCalledWith({
+			where: { id: "member-2" },
+			data: { status: "left", leftAt: expect.any(Date), approvedAt: null },
+		});
+	});
+
 	it("rejects multi-grapheme character actions before starting a transaction", async () => {
 		const transaction = vi.fn();
 		const service = new LetterGameService({ $transaction: transaction } as never, catalogService as never);
