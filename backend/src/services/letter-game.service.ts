@@ -568,7 +568,10 @@ export class LetterGameService {
 					newlyRevealedCount: kind === "open_character" ? jsonNumber(result.newlyRevealedCount) : null,
 					points: kind === "open_character" || kind === "guess_song" ? jsonNumber(result.points) : jsonNumber(hint.cost),
 					correct: kind === "guess_song" && typeof result.correct === "boolean" ? result.correct : null,
+					blind: kind === "guess_song" && typeof result.blind === "boolean" ? result.blind : null,
+					balance: jsonNumber(result.balance),
 					hintType: kind === "buy_hint" ? jsonString(hint.type) : null,
+					hintVisibility: kind === "buy_hint" ? jsonString(payload.visibility) : null,
 					hintCost: kind === "buy_hint" ? jsonNumber(hint.cost) : null,
 					songNumber: kind === "buy_hint" ? songNumberById.get(action.songId) ?? (typeof payload.slotId === "string" ? match.songs.findIndex((song: any) => song.slotId === payload.slotId) + 1 : null) : null,
 				};
@@ -662,6 +665,7 @@ export class LetterGameService {
 			const order = jsonArray<string>(match.turnOrder);
 			if (order[match.currentTurnIndex] !== userId) throw new AppError(409, "not_your_turn", "It is another player's turn.");
 			let progress = false;
+			let balance = Number(actor.score ?? 0);
 			let actionResult: Record<string, unknown> = { kind: input.kind, accepted: true };
 			if (input.kind === "open_character") {
 				const activeSongs = match.songs.filter((item: any) => item.status === "active");
@@ -690,6 +694,7 @@ export class LetterGameService {
 				}
 				if (actor.scoringEligible && newlyRevealedCount > 0)
 					await tx.letterGameMatchPlayer.update({ where: { id: actor.id }, data: { score: { increment: newlyRevealedCount } } });
+				if (actor.scoringEligible) balance += newlyRevealedCount;
 					actionResult = {
 						...actionResult,
 						newlyRevealedCount,
@@ -714,6 +719,7 @@ export class LetterGameService {
 					});
 					if (actor.scoringEligible)
 						await tx.letterGameMatchPlayer.update({ where: { id: actor.id }, data: { score: { increment: points } } });
+					if (actor.scoringEligible) balance += points;
 					progress = true;
 					actionResult = { ...actionResult, correct: true, blind, points, completionReason: "guessed" };
 				}
@@ -746,6 +752,7 @@ export class LetterGameService {
 				} else {
 					const value = await this.resolveHintValue(input, song.songIdentifier, userId, matchId, song.id, tx);
 					await tx.letterGameMatchPlayer.update({ where: { id: actor.id }, data: { score: { decrement: cost } } });
+					balance -= cost;
 					const fact = await tx.letterGamePlayerFact.create({
 						data: { matchId, songId: song.id, userId, factType: input.hintType, visibility: input.visibility, value, cost },
 					});
@@ -755,6 +762,7 @@ export class LetterGameService {
 					};
 				}
 			}
+			actionResult = { ...actionResult, balance };
 
 			const activeSongs = await tx.letterGameMatchSong.count({ where: { matchId, status: "active" } });
 			const matchFinished = activeSongs === 0;

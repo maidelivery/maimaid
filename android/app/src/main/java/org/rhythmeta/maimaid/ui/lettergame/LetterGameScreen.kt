@@ -889,7 +889,10 @@ private fun PlayingPage(
     val currentPlayer = match.players.firstOrNull { it.userId == currentUserId }
     val canBuyHint = canAct && currentPlayer?.scoringEligible == true
     val currentScore = currentPlayer?.score ?: 0
-    val snackbarMessages = match.logs.associate { log -> log.id to localizedLogMessage(log) }
+    val narratedLogs = remember(match.logs) { LetterGameLogNarrator.narrate(match.logs) }
+    val snackbarMessages = narratedLogs.associate { narration ->
+        narration.logId to localizedLogMessage(narration)
+    }
     var logBaselineEstablished by remember(match.matchId) { mutableStateOf(false) }
     var shownLogIds by remember(match.matchId) { mutableStateOf<Set<String>>(emptySet()) }
 
@@ -1115,34 +1118,48 @@ private fun PlayingPage(
 }
 
 @Composable
-private fun localizedLogMessage(log: LetterGameLogEntry): String {
-    val actor = log.actorName ?: log.actorUserId.orEmpty()
-    return when (log.actionType) {
-        "open_character" -> stringResource(
-            R.string.letter_game_log_open_character,
-            actor,
-            log.character.orEmpty(),
-            log.newlyRevealedCount ?: 0,
-            log.points ?: 0,
-        )
-        "guess_song" -> if (log.correct == true) {
-            stringResource(R.string.letter_game_log_guess_correct, actor, log.points ?: 0)
-        } else {
-            stringResource(R.string.letter_game_log_guess_incorrect, actor)
-        }
-        "buy_hint" -> stringResource(
-            R.string.letter_game_log_buy_hint,
-            actor,
-            log.hintCost ?: log.points ?: 0,
-            log.songNumber ?: 0,
-            when (log.hintType) {
-                "version" -> stringResource(R.string.letter_game_hint_version)
-                "constant" -> stringResource(R.string.letter_game_hint_constant)
-                "white_chart" -> stringResource(R.string.letter_game_hint_white_chart)
-                else -> stringResource(R.string.letter_game_buy_hint)
-            },
-        )
-        else -> log.message
+private fun localizedLogMessage(narration: LetterGameLogNarration): String {
+    val template = narration.template
+    val hintType = when (narration.hintType) {
+        "version" -> stringResource(R.string.letter_game_hint_version)
+        "constant" -> stringResource(R.string.letter_game_hint_constant)
+        "white_chart" -> stringResource(R.string.letter_game_hint_white_chart)
+        else -> stringResource(R.string.letter_game_buy_hint)
+    }
+    return when (template) {
+        LetterGameLogTemplate.OPEN_NO_PROGRESS_1 -> stringResource(R.string.letter_game_log_open_no_progress_1, narration.actor, narration.character)
+        LetterGameLogTemplate.OPEN_NO_PROGRESS_2 -> stringResource(R.string.letter_game_log_open_no_progress_2, narration.actor, narration.character)
+        LetterGameLogTemplate.OPEN_NO_PROGRESS_STREAK_1 -> stringResource(R.string.letter_game_log_open_no_progress_streak_1, narration.actor, narration.streak)
+        LetterGameLogTemplate.OPEN_NO_PROGRESS_STREAK_2 -> stringResource(R.string.letter_game_log_open_no_progress_streak_2, narration.actor, narration.streak)
+        LetterGameLogTemplate.OPEN_REPEATED_1 -> stringResource(R.string.letter_game_log_open_repeated_1, narration.actor, narration.character, narration.count, narration.points)
+        LetterGameLogTemplate.OPEN_REPEATED_2 -> stringResource(R.string.letter_game_log_open_repeated_2, narration.actor, narration.character, narration.count, narration.points)
+        LetterGameLogTemplate.OPEN_FEW_1 -> stringResource(R.string.letter_game_log_open_few_1, narration.actor, narration.count, narration.points)
+        LetterGameLogTemplate.OPEN_FEW_2 -> stringResource(R.string.letter_game_log_open_few_2, narration.actor, narration.count, narration.points)
+        LetterGameLogTemplate.OPEN_MANY_1 -> stringResource(R.string.letter_game_log_open_many_1, narration.actor, narration.count, narration.points)
+        LetterGameLogTemplate.OPEN_MANY_2 -> stringResource(R.string.letter_game_log_open_many_2, narration.actor, narration.count, narration.points)
+        LetterGameLogTemplate.OPEN_SUCCESS_STREAK_1 -> stringResource(R.string.letter_game_log_open_success_streak_1, narration.actor, narration.streak, narration.count, narration.points)
+        LetterGameLogTemplate.OPEN_SUCCESS_STREAK_2 -> stringResource(R.string.letter_game_log_open_success_streak_2, narration.actor, narration.streak, narration.count, narration.points)
+        LetterGameLogTemplate.GUESS_BLIND_1 -> stringResource(R.string.letter_game_log_guess_blind_1, narration.actor, narration.points)
+        LetterGameLogTemplate.GUESS_BLIND_2 -> stringResource(R.string.letter_game_log_guess_blind_2, narration.actor, narration.points)
+        LetterGameLogTemplate.GUESS_CORRECT_1 -> stringResource(R.string.letter_game_log_guess_correct_1, narration.actor, narration.points)
+        LetterGameLogTemplate.GUESS_CORRECT_2 -> stringResource(R.string.letter_game_log_guess_correct_2, narration.actor, narration.points)
+        LetterGameLogTemplate.GUESS_CORRECT_STREAK_1 -> stringResource(R.string.letter_game_log_guess_correct_streak_1, narration.actor, narration.streak, narration.points)
+        LetterGameLogTemplate.GUESS_CORRECT_STREAK_2 -> stringResource(R.string.letter_game_log_guess_correct_streak_2, narration.actor, narration.streak, narration.points)
+        LetterGameLogTemplate.GUESS_INCORRECT_1 -> stringResource(R.string.letter_game_log_guess_incorrect_1, narration.actor)
+        LetterGameLogTemplate.GUESS_INCORRECT_2 -> stringResource(R.string.letter_game_log_guess_incorrect_2, narration.actor)
+        LetterGameLogTemplate.GUESS_INCORRECT_STREAK_1 -> stringResource(R.string.letter_game_log_guess_incorrect_streak_1, narration.actor, narration.streak)
+        LetterGameLogTemplate.GUESS_INCORRECT_STREAK_2 -> stringResource(R.string.letter_game_log_guess_incorrect_streak_2, narration.actor, narration.streak)
+        LetterGameLogTemplate.PROGRESS_RECOVERED_1 -> stringResource(R.string.letter_game_log_progress_recovered_1, narration.actor, narration.count, narration.points)
+        LetterGameLogTemplate.PROGRESS_RECOVERED_2 -> stringResource(R.string.letter_game_log_progress_recovered_2, narration.actor, narration.count, narration.points)
+        LetterGameLogTemplate.HINT_PUBLIC_1 -> stringResource(R.string.letter_game_log_hint_public_1, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
+        LetterGameLogTemplate.HINT_PUBLIC_2 -> stringResource(R.string.letter_game_log_hint_public_2, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
+        LetterGameLogTemplate.HINT_PRIVATE_1 -> stringResource(R.string.letter_game_log_hint_private_1, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
+        LetterGameLogTemplate.HINT_PRIVATE_2 -> stringResource(R.string.letter_game_log_hint_private_2, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
+        LetterGameLogTemplate.HINT_LOW_SCORE_1 -> stringResource(R.string.letter_game_log_hint_low_score_1, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
+        LetterGameLogTemplate.HINT_LOW_SCORE_2 -> stringResource(R.string.letter_game_log_hint_low_score_2, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
+        LetterGameLogTemplate.HINT_NORMAL_1 -> stringResource(R.string.letter_game_log_hint_normal_1, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
+        LetterGameLogTemplate.HINT_NORMAL_2 -> stringResource(R.string.letter_game_log_hint_normal_2, narration.actor, narration.cost, narration.balance, narration.hintCount, hintType)
+        LetterGameLogTemplate.FALLBACK -> narration.fallbackMessage.orEmpty()
     }
 }
 

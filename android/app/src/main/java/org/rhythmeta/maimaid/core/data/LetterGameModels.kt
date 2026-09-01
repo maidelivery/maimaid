@@ -79,7 +79,10 @@ data class LetterGameLogEntry(
     val newlyRevealedCount: Int? = null,
     val points: Int? = null,
     val correct: Boolean? = null,
+    val blind: Boolean? = null,
+    val balance: Int? = null,
     val hintType: String? = null,
+    val hintVisibility: String? = null,
     val hintCost: Int? = null,
     val songNumber: Int? = null,
 )
