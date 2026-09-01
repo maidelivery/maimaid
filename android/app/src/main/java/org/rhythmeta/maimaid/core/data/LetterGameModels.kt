@@ -12,6 +12,14 @@ data class LetterGameRoomSettings(
     val privateHintCost: Int = 10,
     val selectionMode: String = "filtered_random",
     val selectionConfig: Map<String, JsonElement> = emptyMap(),
+    val selectedCollections: List<LetterGameCollectionSummary> = emptyList(),
+)
+
+@Serializable
+data class LetterGameCollectionSummary(
+    val id: String,
+    val name: String,
+    val songCount: Int,
 )
 
 @Serializable

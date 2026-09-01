@@ -4,6 +4,7 @@ import { inject, injectable } from "tsyringe";
 import type { PrismaClient } from "@prisma/client";
 import { TOKENS } from "../di/tokens.js";
 import { AppError } from "../lib/errors.js";
+import { buildHandle } from "../lib/user-handle.js";
 import { CatalogService } from "./catalog.service.js";
 import {
 	buildLetterTokens,
@@ -31,7 +32,7 @@ export type LetterGameRoomSettingsInput = {
 	songCount?: number | null | undefined;
 	publicHintCost?: number;
 	privateHintCost?: number;
-	selectionMode?: "filtered_random" | "collection" | "favorites" | undefined;
+	selectionMode?: "filtered_random" | "collection" | undefined;
 	selectionConfig?: Record<string, unknown>;
 };
 
@@ -107,6 +108,13 @@ export class LetterGameService {
 
 	async createRoom(userId: string, input: LetterGameRoomSettingsInput) {
 		const settings = this.validateSettings(input);
+		if (settings.selectionMode === "collection") {
+			const songIds = await this.collectionSongIds(userId, settings.selectionConfig);
+			if (songIds.length < 1 || songIds.length > 5000) {
+				throw new AppError(400, "invalid_collection_song_count", "Collections must contain between 1 and 5000 unique songs.");
+			}
+			settings.songCountOverride = songIds.length;
+		}
 		for (let attempt = 0; attempt < 5; attempt += 1) {
 			const code = makeRoomCode();
 			try {
@@ -240,6 +248,20 @@ export class LetterGameService {
 			selectionMode: (input.selectionMode ?? room.selectionMode) as LetterGameRoomSettingsInput["selectionMode"],
 			selectionConfig: input.selectionConfig ?? jsonObject(room.selectionConfig),
 		});
+		const acceptedMemberCount = await this.prisma.letterGameRoomMember.count({ where: { roomId, status: "accepted" } });
+		if (settings.selectionMode === "collection") {
+			const songIds = await this.collectionSongIds(actorId, settings.selectionConfig);
+			if (songIds.length > 5000) {
+				throw new AppError(
+					400,
+					"invalid_collection_song_count",
+					"Collections can contain at most 5000 unique songs.",
+				);
+			}
+			settings.songCountOverride = songIds.length;
+		} else if (settings.songCountOverride !== null && settings.songCountOverride < acceptedMemberCount) {
+			throw new AppError(400, "song_count_too_low", "Song count must be at least the number of accepted players.");
+		}
 		await this.prisma.letterGameRoom.update({
 			where: { id: roomId },
 			data: {
@@ -368,8 +390,7 @@ export class LetterGameService {
 						create: turnOrder.map((userId: string, turnOrderIndex: number) => ({
 							userId,
 							turnOrder: turnOrderIndex,
-							scoringEligible:
-								!(room.selectionMode === "collection" || room.selectionMode === "favorites") || userId !== room.hostUserId,
+							scoringEligible: room.selectionMode !== "collection" || userId !== room.hostUserId,
 						})),
 					},
 					songs: {
@@ -443,11 +464,20 @@ export class LetterGameService {
 			throw new AppError(403, "match_access_denied", "You are not an active player in this match.");
 		const publicFacts = match.facts.filter((fact: any) => fact.visibility === "public");
 		const userIds = [...new Set(match.players.map((item: any) => item.userId))];
-		const profiles = await this.prisma.profile.findMany({
-			where: { userId: { in: userIds }, isActive: true },
-			select: { userId: true, name: true, avatarUrl: true },
-		});
+		const [profiles, users] = await Promise.all([
+			this.prisma.profile.findMany({
+				where: { userId: { in: userIds }, isActive: true },
+				select: { userId: true, avatarUrl: true },
+			}),
+			this.prisma.user.findMany({
+				where: { id: { in: userIds } },
+				select: { id: true, username: true, usernameDiscriminator: true },
+			}),
+		]);
 		const profileByUser = new Map(profiles.map((profile: any) => [profile.userId, profile]));
+		const handleByUser = new Map(
+			users.map((user: any) => [user.id, buildHandle(user.username, user.usernameDiscriminator)]),
+		);
 		const songIdentifiers = match.songs.map((song: any) => song.songIdentifier);
 		const [catalogSongs, sheets] = await Promise.all([
 			this.prisma.song.findMany({
@@ -472,20 +502,20 @@ export class LetterGameService {
 				return payload.visibility !== "private" || action.actorId === userId;
 			})
 			.map((action: any) => {
-				const actor = profileByUser.get(action.actorId);
+				const actorName = handleByUser.get(action.actorId) ?? action.actorId;
 				const payload = jsonObject(action.payload);
 				const result = jsonObject(action.result);
 				const hint = jsonObject(result.hint);
 				const kind = action.actionType;
 				let message = kind;
-				if (kind === "open_character") message = `${actor?.name ?? action.actorId} opened ${String(payload.character ?? "?")} (${String(result.newlyRevealedCount ?? 0)} revealed, +${String(result.points ?? 0)} points)`;
-				if (kind === "guess_song") message = result.correct ? `${actor?.name ?? action.actorId} guessed a song (+${String(result.points ?? 0)})` : `${actor?.name ?? action.actorId} made an incorrect guess`;
+				if (kind === "open_character") message = `${actorName} opened ${String(payload.character ?? "?")} (${String(result.newlyRevealedCount ?? 0)} revealed, +${String(result.points ?? 0)} points)`;
+				if (kind === "guess_song") message = result.correct ? `${actorName} guessed a song (+${String(result.points ?? 0)})` : `${actorName} made an incorrect guess`;
 				if (kind === "buy_hint") {
 					const songNumber = songNumberById.get(action.songId) ?? (typeof payload.slotId === "string" ? match.songs.findIndex((song: any) => song.slotId === payload.slotId) + 1 : 0);
 					const detail = hint.value === undefined ? "" : `: ${JSON.stringify(hint.value)}`;
-					message = `${actor?.name ?? action.actorId} spent ${String(hint.cost ?? 0)} points on song #${songNumber} ${String(hint.type ?? "hint")} hint${detail}`;
+					message = `${actorName} spent ${String(hint.cost ?? 0)} points on song #${songNumber} ${String(hint.type ?? "hint")} hint${detail}`;
 				}
-				return { id: action.id, message, actorUserId: action.actorId, actorName: actor?.name ?? null };
+				return { id: action.id, message, actorUserId: action.actorId, actorName };
 			});
 		return {
 			matchId: match.id,
@@ -501,7 +531,7 @@ export class LetterGameService {
 				turnOrder: item.turnOrder,
 				status: item.status,
 				scoringEligible: item.scoringEligible,
-				displayName: profileByUser.get(item.userId)?.name ?? null,
+				displayName: handleByUser.get(item.userId) ?? null,
 				avatarUrl: profileByUser.get(item.userId)?.avatarUrl ?? null,
 			})),
 				songs: match.songs.map((song: any) => {
@@ -871,7 +901,30 @@ export class LetterGameService {
 			publicHintCost,
 			privateHintCost,
 			selectionMode: input.selectionMode ?? "filtered_random",
-			selectionConfig: input.selectionConfig ?? {},
+			selectionConfig: this.normalizeSelectionConfig(input.selectionMode ?? "filtered_random", input.selectionConfig),
+		};
+	}
+
+	private normalizeSelectionConfig(
+		mode: "filtered_random" | "collection",
+		value: Record<string, unknown> | undefined,
+	): Record<string, unknown> {
+		const config = jsonObject(value);
+		if (mode === "collection") {
+			return { collectionIds: normalizeSourceIds(config.collectionIds) };
+		}
+		const chartTypes = normalizeSourceIds(config.chartTypes).map((type) => type.toLowerCase());
+		if (chartTypes.some((type) => type !== "standard" && type !== "dx")) {
+			throw new AppError(400, "invalid_chart_types", "Chart types must contain only standard or dx.");
+		}
+		const minVersion = typeof config.minVersion === "string" ? config.minVersion.trim() || null : null;
+		const maxVersion = typeof config.maxVersion === "string" ? config.maxVersion.trim() || null : null;
+		return {
+			excludeDeleted: typeof config.excludeDeleted === "boolean" ? config.excludeDeleted : true,
+			minVersion,
+			maxVersion,
+			categories: normalizeSourceIds(config.categories),
+			chartTypes: [...new Set(chartTypes)],
 		};
 	}
 
@@ -884,30 +937,40 @@ export class LetterGameService {
 	}
 
 	private async selectSongs(userId: string, room: any, database: PrismaLike = this.prisma) {
-		const config = jsonObject(room.selectionConfig);
+		const config = this.normalizeSelectionConfig(room.selectionMode, jsonObject(room.selectionConfig));
 		let ids: string[] = [];
 		if (room.selectionMode === "collection") {
-			const collectionId = typeof config.collectionId === "string" ? config.collectionId : "";
-			const collection = await database.songCollection.findFirst({
-				where: { id: collectionId, userId, deletedAt: null },
-				include: { items: { where: { deletedAt: null }, select: { songId: true } } },
-			});
-			if (!collection) throw new AppError(404, "collection_not_found", "Selected collection was not found.");
-			ids = normalizeSourceIds(collection.items.map((item: any) => item.songId));
-		} else if (room.selectionMode === "favorites") {
-			ids = normalizeSourceIds(config.songIdentifiers);
+			ids = await this.collectionSongIds(userId, config, database);
 		} else {
-			const where: any = { disabled: false };
-			if (typeof config.category === "string" && config.category.trim()) where.category = config.category.trim();
-			if (typeof config.version === "string" && config.version.trim()) where.version = config.version.trim();
-			if (typeof config.keyword === "string" && config.keyword.trim())
-				where.title = { contains: config.keyword.trim(), mode: "insensitive" };
+			const where: any = {};
+			if (config.excludeDeleted !== false) where.disabled = false;
+			const categories = normalizeSourceIds(config.categories);
+			if (categories.length > 0) where.category = { in: categories };
+			const chartTypes = normalizeSourceIds(config.chartTypes);
+			if (chartTypes.length > 0) {
+				const databaseTypes = chartTypes.flatMap((type) => (type === "standard" ? ["standard", "std", "sd"] : ["dx"]));
+				where.sheets = { some: { chartType: { in: databaseTypes }, disabled: false } };
+			}
+			const minVersion = typeof config.minVersion === "string" ? config.minVersion : null;
+			const maxVersion = typeof config.maxVersion === "string" ? config.maxVersion : null;
+			if (minVersion !== null || maxVersion !== null) {
+				const versionNames = (await this.catalogService.listVersions()).map((version: any) => String(version.version));
+				const firstIndex = minVersion === null ? 0 : versionNames.indexOf(minVersion);
+				const lastIndex = maxVersion === null ? versionNames.length - 1 : versionNames.indexOf(maxVersion);
+				if (firstIndex < 0 || lastIndex < 0 || firstIndex > lastIndex) {
+					throw new AppError(400, "invalid_version_range", "The selected version range is invalid.");
+				}
+				where.version = { in: versionNames.slice(firstIndex, lastIndex + 1) };
+			}
 			const rows = await database.song.findMany({ where, select: { songIdentifier: true, title: true } });
 			ids = shuffle(rows.map((row: any) => row.songIdentifier));
 		}
 		if (ids.length === 0) return [];
 		const songs = await database.song.findMany({
-			where: { songIdentifier: { in: ids }, disabled: false },
+			where: {
+				songIdentifier: { in: ids },
+				...(room.selectionMode === "filtered_random" && config.excludeDeleted !== false ? { disabled: false } : {}),
+			},
 			select: { songIdentifier: true, title: true },
 		});
 		const aliases = (await this.catalogService.listAliases(undefined, undefined)).filter(
@@ -917,6 +980,23 @@ export class LetterGameService {
 		for (const alias of aliases)
 			aliasesBySong.set(alias.songIdentifier, [...(aliasesBySong.get(alias.songIdentifier) ?? []), alias.aliasText]);
 		return shuffle(songs).map((song: any) => ({ ...song, aliases: aliasesBySong.get(song.songIdentifier) ?? [] }));
+	}
+
+	private async collectionSongIds(
+		userId: string,
+		selectionConfig: Record<string, unknown>,
+		database: PrismaLike = this.prisma,
+	): Promise<string[]> {
+		const collectionIds = normalizeSourceIds(selectionConfig.collectionIds);
+		if (collectionIds.length === 0) return [];
+		const collections = await database.songCollection.findMany({
+			where: { id: { in: collectionIds }, userId, deletedAt: null },
+			include: { items: { where: { deletedAt: null }, select: { songId: true } } },
+		});
+		if (collections.length !== collectionIds.length) {
+			throw new AppError(404, "collection_not_found", "One or more selected collections were not found.");
+		}
+		return normalizeSourceIds(collections.flatMap((collection: any) => collection.items.map((item: any) => item.songId)));
 	}
 
 	private nextTurn(order: string[], currentIndex: number, players: any[]) {
@@ -985,11 +1065,30 @@ export class LetterGameService {
 	}
 
 	private async serializeRoom(room: any, members: any[]) {
-		const profiles = await this.prisma.profile.findMany({
-			where: { userId: { in: [...new Set(members.map((member: any) => member.userId))] }, isActive: true },
-			select: { userId: true, name: true, avatarUrl: true },
-		});
+		const userIds = [...new Set<string>(members.map((member: any) => String(member.userId)))];
+		const config = this.normalizeSelectionConfig(room.selectionMode, jsonObject(room.selectionConfig));
+		const collectionIds = room.selectionMode === "collection" ? normalizeSourceIds(config.collectionIds) : [];
+		const [profiles, users, selectedCollections] = await Promise.all([
+			this.prisma.profile.findMany({
+				where: { userId: { in: userIds }, isActive: true },
+				select: { userId: true, avatarUrl: true },
+			}),
+			this.prisma.user.findMany({
+				where: { id: { in: userIds } },
+				select: { id: true, username: true, usernameDiscriminator: true },
+			}),
+			collectionIds.length === 0
+				? Promise.resolve([])
+				: this.prisma.songCollection.findMany({
+						where: { id: { in: collectionIds }, userId: room.hostUserId, deletedAt: null },
+						select: { id: true, name: true, items: { where: { deletedAt: null }, select: { songId: true } } },
+					}),
+		]);
 		const profileByUser = new Map(profiles.map((profile: any) => [profile.userId, profile]));
+		const handleByUser = new Map(
+			users.map((user: any) => [user.id, buildHandle(user.username, user.usernameDiscriminator)]),
+		);
+		const collectionById = new Map(selectedCollections.map((collection: any) => [collection.id, collection]));
 		return {
 			id: room.id,
 			code: room.code,
@@ -1004,7 +1103,13 @@ export class LetterGameService {
 				publicHintCost: room.publicHintCost,
 				privateHintCost: room.privateHintCost,
 				selectionMode: room.selectionMode,
-				selectionConfig: room.selectionConfig,
+				selectionConfig: config,
+				selectedCollections: collectionIds.flatMap((id) => {
+					const collection = collectionById.get(id) as any;
+					return collection
+						? [{ id, name: collection.name, songCount: new Set(collection.items.map((item: any) => item.songId)).size }]
+						: [];
+				}),
 			},
 			memberCount: members.filter((member) => member.status === "accepted").length,
 			members: members.map((member) => ({
@@ -1012,7 +1117,7 @@ export class LetterGameService {
 				userId: member.userId,
 				status: member.status,
 				seatOrder: member.seatOrder,
-				displayName: profileByUser.get(member.userId)?.name ?? null,
+				displayName: handleByUser.get(member.userId) ?? null,
 				avatarUrl: profileByUser.get(member.userId)?.avatarUrl ?? null,
 			})),
 			latestMatch: room.matches?.[0] ?? null,

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,14 +31,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.ExitToApp
 import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.rounded.AddHome
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Lock
@@ -45,7 +45,6 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -62,11 +61,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -78,8 +77,6 @@ import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import okhttp3.WebSocket
@@ -105,6 +102,9 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.SnackbarDuration
+import top.yukonga.miuix.kmp.basic.SnackbarHost
+import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
@@ -123,7 +123,10 @@ fun LetterGameScreen(
     onOpenLogin: () -> Unit = {},
     joinRequestToken: Int = 0,
     exitRequestToken: Int = 0,
+    copyRequestToken: Int = 0,
+    settingsRequestToken: Int = 0,
     onRoomPresenceChanged: (Boolean) -> Unit = {},
+    onRoomCodeChanged: (String?) -> Unit = {},
     onJoinActionAvailabilityChanged: (Boolean) -> Unit = {},
 ) {
     val session by container.backendSessionManager.state.collectAsStateWithLifecycle()
@@ -141,8 +144,17 @@ fun LetterGameScreen(
     var reconnectAttempt by remember { mutableIntStateOf(0) }
     var leftMatchId by remember(selectedRoom?.id) { mutableStateOf<String?>(null) }
     var showExitConfirmation by remember { mutableStateOf(false) }
+    var showRoomSettings by remember { mutableStateOf(false) }
     var handledJoinRequestToken by remember { mutableIntStateOf(joinRequestToken) }
     var handledExitRequestToken by remember { mutableIntStateOf(exitRequestToken) }
+    var handledCopyRequestToken by remember { mutableIntStateOf(copyRequestToken) }
+    var handledSettingsRequestToken by remember { mutableIntStateOf(settingsRequestToken) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val roomCodeCopiedMessage = stringResource(R.string.letter_game_room_code_copied)
+    val gameVersions by container.catalogRepository.versions.collectAsStateWithLifecycle(emptyList())
+    val songCategories by container.catalogRepository.categories.collectAsStateWithLifecycle(emptyList())
+    val collections by container.songCollectionRepository.collections.collectAsStateWithLifecycle(emptyList())
+    val collectionItems by container.songCollectionRepository.items.collectAsStateWithLifecycle(emptyList())
 
     LaunchedEffect(Unit) { container.backendSessionManager.checkSession() }
     LaunchedEffect(joinRequestToken) {
@@ -157,13 +169,30 @@ fun LetterGameScreen(
             if (selectedRoom != null) showExitConfirmation = true
         }
     }
+    LaunchedEffect(copyRequestToken) {
+        if (copyRequestToken != handledCopyRequestToken) {
+            handledCopyRequestToken = copyRequestToken
+            selectedRoom?.let { room ->
+                copyRoomCode(container.applicationContext, room.code)
+                snackbarHostState.showSnackbar(roomCodeCopiedMessage, duration = SnackbarDuration.Short)
+            }
+        }
+    }
+    LaunchedEffect(settingsRequestToken) {
+        if (settingsRequestToken != handledSettingsRequestToken) {
+            handledSettingsRequestToken = settingsRequestToken
+            if (selectedRoom != null) showRoomSettings = true
+        }
+    }
     LaunchedEffect(selectedRoom != null, session.isAuthenticated) {
         onRoomPresenceChanged(selectedRoom != null)
+        onRoomCodeChanged(selectedRoom?.code)
         onJoinActionAvailabilityChanged(selectedRoom == null && session.isAuthenticated)
     }
     DisposableEffect(Unit) {
         onDispose {
             onRoomPresenceChanged(false)
+            onRoomCodeChanged(null)
             onJoinActionAvailabilityChanged(false)
         }
     }
@@ -260,7 +289,8 @@ fun LetterGameScreen(
 
     val room = selectedRoom
     val visibleMatch = match?.takeUnless { it.matchId == leftMatchId && it.status == "active" }
-    AnimatedContent(
+    Box(Modifier.fillMaxSize()) {
+        AnimatedContent(
         targetState = room to visibleMatch,
         contentKey = { (targetRoom, _) -> targetRoom?.id ?: "lobby" },
         modifier = Modifier.fillMaxSize(),
@@ -276,7 +306,7 @@ fun LetterGameScreen(
             }
         },
         label = "letter-game-room-transition",
-    ) { (animatedRoom, animatedMatch) ->
+        ) { (animatedRoom, animatedMatch) ->
         if (animatedRoom == null) {
             LobbyPage(
                 rooms = rooms,
@@ -370,6 +400,14 @@ fun LetterGameScreen(
 							)
 					}
         }
+        }
+        SnackbarHost(
+            state = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+        )
     }
 
     if (room == null && showJoinDialog) {
@@ -450,6 +488,24 @@ fun LetterGameScreen(
         }
     }
 
+    if (room != null && showRoomSettings) {
+        LetterGameRoomSettingsSheet(
+            visible = true,
+            room = room,
+            currentUserId = session.user?.id,
+            matchInProgress = visibleMatch?.status == "active",
+            gameVersions = gameVersions,
+            songCategories = songCategories,
+            collections = collections,
+            collectionItems = collectionItems,
+            onDismiss = { showRoomSettings = false },
+            onUpdate = { request ->
+                repository.updateRoom(room.id, request).also { selectedRoom = it }
+            },
+            onError = { errorMessage = it },
+        )
+    }
+
 }
 
 @Composable
@@ -488,9 +544,9 @@ private fun LobbyPage(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            SmallTitle(
+            LobbySectionTitle(
                 text = stringResource(R.string.letter_game_join_title),
-                insideMargin = PaddingValues(vertical = 8.dp),
+                icon = Icons.Rounded.AddHome,
             )
         }
         item {
@@ -526,9 +582,9 @@ private fun LobbyPage(
             }
         }
         item {
-            SmallTitle(
+            LobbySectionTitle(
                 text = stringResource(R.string.letter_game_public_rooms),
-                insideMargin = PaddingValues(vertical = 8.dp),
+                icon = Icons.Rounded.Public,
             )
         }
         if (rooms.isEmpty()) {
@@ -539,6 +595,27 @@ private fun LobbyPage(
             }
         }
         if (errorMessage != null) item { ErrorBanner(errorMessage) }
+    }
+}
+
+@Composable
+private fun LobbySectionTitle(text: String, icon: ImageVector) {
+    Row(
+        modifier = Modifier.padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MiuixTheme.colorScheme.onBackgroundVariant,
+        )
+        Text(
+            text = text,
+            style = MiuixTheme.textStyles.subtitle,
+            color = MiuixTheme.colorScheme.onBackgroundVariant,
+        )
     }
 }
 
@@ -599,35 +676,12 @@ private fun WaitingPage(
     val scope = rememberCoroutineScope()
     val isHost = room.hostUserId == currentUserId
     val matchInProgress = room.latestMatch?.status == "active"
-    var turnSeconds by remember(room.id, room.settings.turnDurationSeconds) { mutableStateOf(room.settings.turnDurationSeconds.toString()) }
-    var stalledRounds by remember(room.id, room.settings.stalledRoundLimit) { mutableStateOf(room.settings.stalledRoundLimit.toString()) }
-    var songCount by remember(room.id, room.settings.songCountOverride) { mutableStateOf(room.settings.songCountOverride?.toString().orEmpty()) }
-    var hostMode by remember(room.id, room.hostMode) { mutableStateOf(room.hostMode) }
-    var selectionMode by remember(room.id, room.settings.selectionMode) { mutableStateOf(room.settings.selectionMode) }
-    var filterKeyword by remember(room.id, room.settings.selectionConfig) {
-        mutableStateOf(room.settings.selectionConfig["keyword"]?.toString()?.trim('"').orEmpty())
-    }
-    var filterCategory by remember(room.id, room.settings.selectionConfig) {
-        mutableStateOf(room.settings.selectionConfig["category"]?.toString()?.trim('"').orEmpty())
-    }
-    var filterVersion by remember(room.id, room.settings.selectionConfig) {
-        mutableStateOf(room.settings.selectionConfig["version"]?.toString()?.trim('"').orEmpty())
-    }
-    var collectionId by remember(room.id, room.settings.selectionConfig) {
-        mutableStateOf(room.settings.selectionConfig["collectionId"]?.toString()?.trim('"').orEmpty())
-    }
-    var favoriteIds by remember(room.id, room.settings.selectionConfig) {
-        mutableStateOf(room.settings.selectionConfig["songIdentifiers"]?.toString()?.trim('[', ']')?.replace("\"", "") ?: "")
-    }
-    var publicHintCost by remember(room.id, room.settings.publicHintCost) { mutableStateOf(room.settings.publicHintCost.toString()) }
-    var privateHintCost by remember(room.id, room.settings.privateHintCost) { mutableStateOf(room.settings.privateHintCost.toString()) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, top = contentTopPadding + 8.dp, end = 16.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { RoomCodeHeader(room.code) }
         item {
             RoomMembers(
                 members = room.members,
@@ -655,103 +709,6 @@ private fun WaitingPage(
             )
         }
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = 14.dp,
-                insideMargin = PaddingValues(14.dp),
-                colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Rounded.Settings, contentDescription = null, tint = MiuixTheme.colorScheme.primary)
-                    SmallTitle(text = stringResource(R.string.letter_game_room_settings))
-                }
-                Spacer(Modifier.height(10.dp))
-                if (isHost) {
-                    Text(stringResource(R.string.letter_game_host_rotation), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { hostMode = "fixed" }, modifier = Modifier.weight(1f), colors = if (hostMode == "fixed") ButtonDefaults.buttonColorsPrimary() else ButtonDefaults.buttonColors()) { Text(stringResource(R.string.letter_game_fixed_host)) }
-                        Button(onClick = { hostMode = "rotate" }, modifier = Modifier.weight(1f), colors = if (hostMode == "rotate") ButtonDefaults.buttonColorsPrimary() else ButtonDefaults.buttonColors()) { Text(stringResource(R.string.letter_game_rotate_host)) }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    NumberField(stringResource(R.string.letter_game_turn_seconds), turnSeconds) { turnSeconds = it.filter(Char::isDigit).take(3) }
-                    Spacer(Modifier.height(8.dp))
-                    NumberField(stringResource(R.string.letter_game_stalled_rounds), stalledRounds) { stalledRounds = it.filter(Char::isDigit).take(2) }
-                    Spacer(Modifier.height(8.dp))
-                    NumberField(stringResource(R.string.letter_game_song_count_optional), songCount) { songCount = it.filter(Char::isDigit).take(4) }
-                    if (room.visibility == "private") {
-                        Spacer(Modifier.height(8.dp))
-                        NumberField(stringResource(R.string.letter_game_public_hint_cost), publicHintCost) { publicHintCost = it.filter(Char::isDigit).take(3) }
-                        Spacer(Modifier.height(8.dp))
-                        NumberField(stringResource(R.string.letter_game_private_hint_cost), privateHintCost) { privateHintCost = it.filter(Char::isDigit).take(3) }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text(stringResource(R.string.letter_game_song_source), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("filtered_random", "collection", "favorites").forEach { mode ->
-                            Button(
-                                onClick = { selectionMode = mode },
-                                modifier = Modifier.weight(1f),
-                                colors = if (selectionMode == mode) ButtonDefaults.buttonColorsPrimary() else ButtonDefaults.buttonColors(),
-                            ) { Text(sourceModeLabel(mode), maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                        }
-                    }
-                    if (selectionMode == "filtered_random") {
-                        Spacer(Modifier.height(8.dp))
-                        TextField(value = filterKeyword, onValueChange = { filterKeyword = it }, label = stringResource(R.string.letter_game_filter_keyword), colors = appTextFieldColors(), modifier = Modifier.fillMaxWidth())
-                        Spacer(Modifier.height(8.dp))
-                        TextField(value = filterCategory, onValueChange = { filterCategory = it }, label = stringResource(R.string.letter_game_filter_category), colors = appTextFieldColors(), modifier = Modifier.fillMaxWidth())
-                        Spacer(Modifier.height(8.dp))
-                        TextField(value = filterVersion, onValueChange = { filterVersion = it }, label = stringResource(R.string.letter_game_filter_version), colors = appTextFieldColors(), modifier = Modifier.fillMaxWidth())
-                    }
-                    if (selectionMode == "collection") {
-                        Spacer(Modifier.height(8.dp))
-                        TextField(value = collectionId, onValueChange = { collectionId = it }, label = stringResource(R.string.letter_game_collection_id), colors = appTextFieldColors(), modifier = Modifier.fillMaxWidth())
-                    }
-                    if (selectionMode == "favorites") {
-                        Spacer(Modifier.height(8.dp))
-                        TextField(value = favoriteIds, onValueChange = { favoriteIds = it }, label = stringResource(R.string.letter_game_song_ids), colors = appTextFieldColors(), modifier = Modifier.fillMaxWidth())
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                val request = LetterGameCreateRequest(
-                                    visibility = room.visibility,
-                                    hostMode = hostMode,
-                                    turnDurationSeconds = turnSeconds.toIntOrNull() ?: room.settings.turnDurationSeconds,
-                                    stalledRoundLimit = stalledRounds.toIntOrNull() ?: room.settings.stalledRoundLimit,
-                                    songCount = songCount.toIntOrNull(),
-                                    publicHintCost = publicHintCost.toIntOrNull() ?: room.settings.publicHintCost,
-                                    privateHintCost = privateHintCost.toIntOrNull() ?: room.settings.privateHintCost,
-                                    selectionMode = selectionMode,
-                                    selectionConfig = when (selectionMode) {
-                                        "filtered_random" -> buildMap {
-                                            if (filterKeyword.isNotBlank()) put("keyword", JsonPrimitive(filterKeyword.trim()))
-                                            if (filterCategory.isNotBlank()) put("category", JsonPrimitive(filterCategory.trim()))
-                                            if (filterVersion.isNotBlank()) put("version", JsonPrimitive(filterVersion.trim()))
-                                        }
-                                        "collection" -> mapOf("collectionId" to JsonPrimitive(collectionId))
-                                        "favorites" -> mapOf("songIdentifiers" to buildJsonArray {
-                                            favoriteIds.split(',').map(String::trim).filter(String::isNotEmpty).forEach { add(JsonPrimitive(it)) }
-                                        })
-                                        else -> emptyMap()
-                                    },
-                                )
-                                runCatching { repository.updateRoom(room.id, request) }
-                                    .onSuccess(onUpdateRoom)
-                                    .onFailure { onError(it.message ?: "Request failed") }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(),
-                    ) { Text(stringResource(R.string.letter_game_save_settings)) }
-                } else {
-                    Text(stringResource(R.string.letter_game_host_only), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                    Text(stringResource(R.string.letter_game_settings_summary, room.settings.turnDurationSeconds, room.settings.stalledRoundLimit, sourceModeLabel(room.settings.selectionMode)))
-                }
-            }
-        }
-        item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 Button(onClick = onStart, enabled = isHost && !loading && !matchInProgress, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColorsPrimary()) {
                     Icon(Icons.Rounded.PlayArrow, contentDescription = null)
@@ -770,25 +727,6 @@ private fun WaitingPage(
 }
 
 @Composable
-private fun RoomCodeHeader(code: String) {
-    val context = LocalContext.current
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        cornerRadius = 14.dp,
-        insideMargin = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
-        colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(stringResource(R.string.letter_game_room_code), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                Text(code, style = MiuixTheme.textStyles.title2.copy(fontWeight = FontWeight.Bold, letterSpacing = 2.sp))
-            }
-            IconButton(onClick = { copyRoomCode(context, code) }) { Icon(Icons.Rounded.ContentCopy, contentDescription = stringResource(R.string.letter_game_copy_room_code)) }
-        }
-    }
-}
-
-@Composable
 private fun RoomMembers(
     members: List<LetterGameRoomMember>,
     hostUserId: String,
@@ -803,7 +741,15 @@ private fun RoomMembers(
         insideMargin = PaddingValues(14.dp),
         colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
     ) {
-        SmallTitle(text = stringResource(R.string.letter_game_players))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(
+                imageVector = Icons.Rounded.Person,
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+            SmallTitle(text = stringResource(R.string.letter_game_players))
+        }
         Spacer(Modifier.height(8.dp))
         members.forEach { member ->
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
@@ -1187,7 +1133,7 @@ private fun LetterSongCard(
 }
 
 @Composable
-private fun PopupAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+private fun PopupAction(label: String, icon: ImageVector, onClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = null).padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1205,19 +1151,6 @@ private fun HintChoice(label: String, selected: Boolean, enabled: Boolean = true
         Spacer(Modifier.width(10.dp))
         Text(label, color = if (enabled) MiuixTheme.colorScheme.onSurface else MiuixTheme.colorScheme.onSurfaceVariantSummary)
     }
-}
-
-@Composable
-private fun NumberField(label: String, value: String, onValueChange: (String) -> Unit) {
-    TextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = label,
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        colors = appTextFieldColors(),
-        modifier = Modifier.fillMaxWidth(),
-    )
 }
 
 @Composable
@@ -1301,14 +1234,6 @@ private fun ErrorBanner(message: String, onDismiss: (() -> Unit)? = null) {
 }
 
 private fun displayName(player: LetterGameMatchPlayer?): String = player?.displayName ?: player?.userId ?: "player"
-
-@Composable
-private fun sourceModeLabel(mode: String): String = when (mode) {
-    "filtered_random" -> stringResource(R.string.letter_game_source_filtered_random)
-    "collection" -> stringResource(R.string.letter_game_source_collection)
-    "favorites" -> stringResource(R.string.letter_game_source_favorites)
-    else -> mode
-}
 
 private fun firstGrapheme(value: String): String {
     val iterator = java.text.BreakIterator.getCharacterInstance()

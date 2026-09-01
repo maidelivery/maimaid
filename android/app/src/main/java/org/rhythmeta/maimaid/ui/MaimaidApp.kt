@@ -8,7 +8,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.rounded.DocumentScanner
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
@@ -256,9 +258,12 @@ fun MaimaidApp(
     var communityAliasesSourceSongId by rememberSaveable { mutableStateOf<String?>(null) }
     var communityAliasesSourceReturnDetail by rememberSaveable { mutableStateOf<AppDetail?>(null) }
     var letterGameInRoom by rememberSaveable { mutableStateOf(false) }
+    var letterGameRoomCode by rememberSaveable { mutableStateOf<String?>(null) }
     var letterGameJoinActionAvailable by rememberSaveable { mutableStateOf(false) }
     var letterGameJoinRequestToken by rememberSaveable { mutableIntStateOf(0) }
     var letterGameExitRequestToken by rememberSaveable { mutableIntStateOf(0) }
+    var letterGameCopyRequestToken by rememberSaveable { mutableIntStateOf(0) }
+    var letterGameSettingsRequestToken by rememberSaveable { mutableIntStateOf(0) }
     val randomSongSessionState = remember { RandomSongSessionState() }
     val backProgress = remember { Animatable(0f) }
     val detailEntranceProgress = remember { Animatable(0f) }
@@ -517,6 +522,7 @@ fun MaimaidApp(
     LaunchedEffect(detail) {
         if (detail != AppDetail.LetterGame) {
             letterGameInRoom = false
+            letterGameRoomCode = null
             letterGameJoinActionAvailable = false
         }
     }
@@ -847,9 +853,18 @@ fun MaimaidApp(
         }
     }
     val detailActions: @Composable RowScope.(AppDetail) -> Unit = { activeDetail ->
-        if (activeDetail == AppDetail.LetterGame && letterGameJoinActionAvailable) {
-            IconButton(onClick = { letterGameJoinRequestToken += 1 }) {
-                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.letter_game_enter_room_code))
+        if (activeDetail == AppDetail.LetterGame) {
+            if (letterGameInRoom) {
+                IconButton(onClick = { letterGameCopyRequestToken += 1 }) {
+                    Icon(Icons.Rounded.ContentCopy, contentDescription = stringResource(R.string.letter_game_copy_room_code))
+                }
+                IconButton(onClick = { letterGameSettingsRequestToken += 1 }) {
+                    Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.letter_game_room_settings))
+                }
+            } else if (letterGameJoinActionAvailable) {
+                IconButton(onClick = { letterGameJoinRequestToken += 1 }) {
+                    Icon(Icons.AutoMirrored.Rounded.Login, contentDescription = stringResource(R.string.letter_game_enter_room_code))
+                }
             }
         } else if (activeDetail == AppDetail.Song && selectedSong != null) {
             IconButton(onClick = {
@@ -2007,7 +2022,9 @@ fun MaimaidApp(
                             activeDetail == AppDetail.Appearance
                             || activeDetail == AppDetail.LetterGame
                         ) {
-                            val detailTitle = if (activeDetail == AppDetail.CollectionDetail && selectedCollectionTitle != null) {
+                            val detailTitle = if (activeDetail == AppDetail.LetterGame && letterGameRoomCode != null) {
+                                stringResource(R.string.letter_game_room_title, letterGameRoomCode.orEmpty())
+                            } else if (activeDetail == AppDetail.CollectionDetail && selectedCollectionTitle != null) {
                                 selectedCollectionTitle
                             } else if (activeDetail == AppDetail.DanDetail) {
                                 selectedDanCategoryTitle ?: detailTitle(AppDetail.Dan)
@@ -2155,7 +2172,10 @@ fun MaimaidApp(
                             onOpenLogin = { openDetail(AppDetail.BackendAuth) },
                             letterGameJoinRequestToken = letterGameJoinRequestToken,
                             letterGameExitRequestToken = letterGameExitRequestToken,
+                            letterGameCopyRequestToken = letterGameCopyRequestToken,
+                            letterGameSettingsRequestToken = letterGameSettingsRequestToken,
                             onLetterGameRoomPresenceChanged = { letterGameInRoom = it },
+                            onLetterGameRoomCodeChanged = { letterGameRoomCode = it },
                             onLetterGameJoinActionAvailabilityChanged = { letterGameJoinActionAvailable = it },
                             onSongDetailBackgroundChanged = { color ->
                                 val currentSongId = selectedSongId

@@ -10,6 +10,16 @@ import type { AppEnv } from "../../types/hono.js";
 const roomParamSchema = z.object({ roomId: z.string().min(1).max(64) });
 const matchParamSchema = z.object({ matchId: z.uuid() });
 const memberParamSchema = z.object({ roomId: z.uuid(), memberId: z.uuid() });
+const selectionConfigSchema = z
+	.object({
+		excludeDeleted: z.boolean().optional(),
+		minVersion: z.string().trim().min(1).max(100).nullable().optional(),
+		maxVersion: z.string().trim().min(1).max(100).nullable().optional(),
+		categories: z.array(z.string().trim().min(1).max(100)).max(100).optional(),
+		chartTypes: z.array(z.enum(["standard", "dx"])).max(2).optional(),
+		collectionIds: z.array(z.uuid()).max(100).optional(),
+	})
+	.strict();
 const createRoomSchema = z.object({
 	visibility: z.enum(["public", "private"]),
 	hostMode: z.enum(["fixed", "rotate"]).default("fixed"),
@@ -18,8 +28,8 @@ const createRoomSchema = z.object({
 	songCount: z.number().int().min(1).max(5000).nullable().optional(),
 	publicHintCost: z.number().int().min(1).max(100).default(5),
 	privateHintCost: z.number().int().min(1).max(100).default(10),
-	selectionMode: z.enum(["filtered_random", "collection", "favorites"]).default("filtered_random"),
-	selectionConfig: z.record(z.string(), z.unknown()).default({}),
+	selectionMode: z.enum(["filtered_random", "collection"]).default("filtered_random"),
+	selectionConfig: selectionConfigSchema.default({}),
 });
 const joinSchema = z.object({ code: z.string().length(6) });
 
