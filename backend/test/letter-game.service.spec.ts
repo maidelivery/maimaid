@@ -122,6 +122,69 @@ describe("LetterGameService room lifecycle", () => {
 		}));
 	});
 
+	it("expires stale accepted members before closing their rooms", async () => {
+		const memberUpdate = vi.fn().mockResolvedValue(undefined);
+		const roomUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+		const tx = {
+			$executeRawUnsafe: vi.fn().mockResolvedValue(undefined),
+			letterGameRoom: {
+				findUnique: vi.fn().mockResolvedValue({ id: "room-1", status: "open", hostUserId: "user-1", turnDurationSeconds: 30 }),
+				findFirst: vi.fn(),
+				updateMany: roomUpdateMany,
+			},
+			letterGameRoomMember: {
+				findUnique: vi.fn().mockResolvedValue({ id: "member-1", userId: "user-1", status: "accepted", lastSeenAt: new Date(Date.now() - 180_000) }),
+				findFirst: vi.fn(),
+				update: memberUpdate,
+				updateMany: vi.fn(),
+				count: vi.fn().mockResolvedValue(0),
+			},
+			letterGameMatch: {
+				findFirst: vi.fn().mockResolvedValue(null),
+				findMany: vi.fn().mockResolvedValue([]),
+			},
+		};
+		const root = {
+			letterGameRoomMember: {
+				findMany: vi.fn().mockResolvedValue([{ roomId: "room-1", userId: "user-1" }]),
+			},
+			letterGameRoom: { findMany: vi.fn().mockResolvedValue([]) },
+		};
+		const { service } = createTransactionService(tx, root);
+
+		await expect(service.dissolveEmptyRooms()).resolves.toEqual(["room-1"]);
+		expect(memberUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: { status: "left", leftAt: expect.any(Date) } }));
+		expect(roomUpdateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "closed" }) }));
+	});
+
+	it("filters songs that only contain UTAGE charts from match selection", async () => {
+		catalogService.listAliases.mockResolvedValue([]);
+		const songFindMany = vi.fn()
+			.mockResolvedValueOnce([
+				{ songIdentifier: "song-standard", title: "Standard" },
+				{ songIdentifier: "song-utage", title: "宴" },
+			])
+			.mockResolvedValueOnce([{ songIdentifier: "song-standard", title: "Standard" }]);
+		const service = new LetterGameService(
+			{
+				song: { findMany: songFindMany },
+				sheet: {
+					findMany: vi.fn().mockResolvedValue([
+						{ songIdentifier: "song-standard", chartType: "standard" },
+						{ songIdentifier: "song-utage", chartType: "utage" },
+					]),
+				},
+			} as never,
+			catalogService as never,
+		);
+
+		const songs = await (service as any).selectSongs("user-1", {
+			selectionMode: "filtered_random",
+			selectionConfig: {},
+		});
+		expect(songs.map((song: { songIdentifier: string }) => song.songIdentifier)).toEqual(["song-standard"]);
+	});
+
 	it("excludes closed and empty rooms from the public lobby query", async () => {
 		const findMany = vi.fn().mockResolvedValue([]);
 		const service = new LetterGameService({ letterGameRoom: { findMany } } as never, catalogService as never);
@@ -193,5 +256,34 @@ describe("LetterGameService room lifecycle", () => {
 		const updateData = update.mock.calls[0]?.[0]?.data as Record<string, unknown>;
 		expect(updateData.turnDeadline).toBeInstanceOf(Date);
 		expect(updateData.status).toBeUndefined();
+	});
+
+	it("removes a member when a finished-match connection disappears", async () => {
+		const memberUpdate = vi.fn().mockResolvedValue(undefined);
+		const roomUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+		const tx = {
+			$executeRawUnsafe: vi.fn().mockResolvedValue(undefined),
+			letterGameRoom: {
+				findUnique: vi.fn().mockResolvedValue({ id: "room-1", status: "open", hostUserId: "user-1", turnDurationSeconds: 30 }),
+				findFirst: vi.fn(),
+				updateMany: roomUpdateMany,
+			},
+			letterGameRoomMember: {
+				findUnique: vi.fn().mockResolvedValue({ id: "member-1", userId: "user-1", status: "accepted" }),
+				findFirst: vi.fn(),
+				update: memberUpdate,
+				updateMany: vi.fn(),
+				count: vi.fn().mockResolvedValue(0),
+			},
+			letterGameMatch: {
+				findFirst: vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce({ status: "finished" }),
+				findMany: vi.fn().mockResolvedValue([]),
+			},
+		};
+		const { service } = createTransactionService(tx);
+
+		await expect(service.leaveFinishedRoomOnDisconnect("user-1", "room-1")).resolves.toEqual({ left: true, dissolved: true });
+		expect(memberUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: { status: "left", leftAt: expect.any(Date) } }));
+		expect(roomUpdateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "closed" }) }));
 	});
 });

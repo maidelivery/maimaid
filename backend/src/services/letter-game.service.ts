@@ -20,6 +20,7 @@ const DEFAULT_TURN_SECONDS = 30;
 const DEFAULT_STALLED_ROUNDS = 3;
 const DEFAULT_PUBLIC_HINT_COST = 5;
 const DEFAULT_PRIVATE_HINT_COST = 10;
+const MEMBER_STALE_AFTER_MS = 2 * 60 * 1000;
 
 type PrismaLike = PrismaClient & Record<string, any>;
 
@@ -84,6 +85,8 @@ const jsonString = (value: unknown): string | null => {
 
 const jsonNumber = (value: unknown): number | null =>
 	typeof value === "number" && Number.isFinite(value) ? value : null;
+
+const isUtageChartType = (value: unknown): boolean => /utage|宴/iu.test(String(value));
 
 const normalizeSourceIds = (value: unknown): string[] =>
 	Array.isArray(value)
@@ -169,6 +172,14 @@ export class LetterGameService {
 		const member = room.members.find((item: any) => item.userId === userId && ["accepted", "pending"].includes(item.status));
 		if (room.visibility === "private" && !member) throw new AppError(403, "room_access_denied", "Join the private room first.");
 		return this.serializeRoom(room, room.members);
+	}
+
+	/** Refreshes room presence while a client keeps its WebSocket alive. */
+	async touchMember(userId: string, roomId: string) {
+		await this.prisma.letterGameRoomMember.updateMany({
+			where: { roomId, userId, status: "accepted" },
+			data: { lastSeenAt: new Date() },
+		});
 	}
 
 	async joinRoom(userId: string, code: string) {
@@ -300,6 +311,18 @@ export class LetterGameService {
 	}
 
 	async leaveRoom(userId: string, roomId: string) {
+		return this.leaveRoomMember(userId, roomId);
+	}
+
+	async leaveFinishedRoomOnDisconnect(userId: string, roomId: string) {
+		return this.leaveRoomMember(userId, roomId, { requireFinishedMatch: true });
+	}
+
+	private async leaveRoomMember(
+		userId: string,
+		roomId: string,
+		options: { staleBefore?: Date; requireFinishedMatch?: boolean } = {},
+	) {
 		return this.prisma.$transaction(async (tx: any) => {
 			await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", roomId);
 			const room = await tx.letterGameRoom.findUnique({ where: { id: roomId } });
@@ -307,12 +330,26 @@ export class LetterGameService {
 			const member = await tx.letterGameRoomMember.findUnique({ where: { roomId_userId: { roomId, userId } } });
 			if (!member) throw new AppError(404, "member_not_found", "Room member not found.");
 			if (room.status !== "open") return { left: true, dissolved: true };
+			if (options.staleBefore && member.lastSeenAt && member.lastSeenAt >= options.staleBefore) {
+				return { left: false, dissolved: false };
+			}
 
 			const now = new Date();
 			const activeMatch = await tx.letterGameMatch.findFirst({
 				where: { roomId, status: "active" },
 				include: { players: true },
 			});
+			if (options.requireFinishedMatch) {
+				if (activeMatch) return { left: false, dissolved: false };
+				const latestMatch = await tx.letterGameMatch.findFirst({
+					where: { roomId },
+					orderBy: { sequence: "desc" },
+					select: { status: true },
+				});
+				if (!latestMatch || !["finished", "abandoned"].includes(latestMatch.status)) {
+					return { left: false, dissolved: false };
+				}
+			}
 			const player = activeMatch?.players.find((item: any) => item.userId === userId && item.status === "active");
 			if (activeMatch && player) {
 				await tx.letterGameMatchPlayer.update({ where: { id: player.id }, data: { status: "left" } });
@@ -574,7 +611,9 @@ export class LetterGameService {
 					imageName: showFullDetails ? catalogSong?.imageName ?? null : null,
 					artist: showFullDetails ? catalogSong?.artist ?? null : null,
 					version: showFullDetails ? catalogSong?.version ?? null : jsonString(shownVersionFact?.value),
-					chartTypes: showFullDetails ? [...new Set(songSheets.map((sheet: any) => String(sheet.chartType)))] : [],
+					chartTypes: showFullDetails
+						? [...new Set(songSheets.map((sheet: any) => String(sheet.chartType)).filter((type: string) => !isUtageChartType(type)))]
+						: [],
 						hasRemaster: publicWhiteFact?.value === true || privateWhiteFact?.value === true,
 					masterConstant: showFullDetails && masterSheet ? String(masterSheet.internalLevelValue ?? masterSheet.levelValue ?? "") : null,
 					remasterConstant: showFullDetails && remasterSheet ? String(remasterSheet.internalLevelValue ?? remasterSheet.levelValue ?? "") : null,
@@ -830,22 +869,42 @@ export class LetterGameService {
 		return expiredMatchIds;
 	}
 
-	async dissolveEmptyRooms(limit = 100) {
+	async dissolveEmptyRooms(limit = 100, onRoomChanged?: (roomId: string) => Promise<void>) {
+		const now = new Date();
+		const staleBefore = new Date(now.getTime() - MEMBER_STALE_AFTER_MS);
+		const dissolvedRoomIds = new Set<string>();
+		const staleMembers =
+			typeof this.prisma.letterGameRoomMember?.findMany === "function"
+				? await this.prisma.letterGameRoomMember.findMany({
+						where: {
+							status: "accepted",
+							room: { status: "open" },
+							OR: [{ lastSeenAt: null }, { lastSeenAt: { lt: staleBefore } }],
+						},
+						select: { roomId: true, userId: true },
+						take: limit,
+					})
+				: [];
+		for (const member of staleMembers) {
+			const result = await this.leaveRoomMember(member.userId, member.roomId, { staleBefore }).catch(() => null);
+			if (result?.dissolved) dissolvedRoomIds.add(member.roomId);
+			else if (result?.left) await onRoomChanged?.(member.roomId);
+		}
+
 		const candidates = await this.prisma.letterGameRoom.findMany({
 			where: { status: "open", members: { none: { status: "accepted" } } },
 			select: { id: true },
 			take: limit,
 		});
-		const dissolvedRoomIds: string[] = [];
 		for (const candidate of candidates) {
 			await this.prisma.$transaction(async (tx: any) => {
 				await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", candidate.id);
 				const room = await tx.letterGameRoom.findUnique({ where: { id: candidate.id }, select: { status: true } });
 				if (room?.status !== "open") return;
-				if (await this.closeRoomIfEmpty(tx, candidate.id, new Date())) dissolvedRoomIds.push(candidate.id);
+				if (await this.closeRoomIfEmpty(tx, candidate.id, now)) dissolvedRoomIds.add(candidate.id);
 			});
 		}
-		return dissolvedRoomIds;
+		return [...dissolvedRoomIds];
 	}
 
 	async history(userId: string, roomId: string) {
@@ -979,6 +1038,19 @@ export class LetterGameService {
 			}
 			const rows = await database.song.findMany({ where, select: { songIdentifier: true, title: true } });
 			ids = shuffle(rows.map((row: any) => row.songIdentifier));
+		}
+		if (ids.length === 0) return [];
+		if (typeof database.sheet?.findMany === "function") {
+			const playableSheets = await database.sheet.findMany({
+				where: { songIdentifier: { in: ids }, disabled: false },
+				select: { songIdentifier: true, chartType: true },
+			});
+			const playableIds = new Set(
+				playableSheets
+					.filter((sheet: any) => !isUtageChartType(sheet.chartType))
+					.map((sheet: any) => String(sheet.songIdentifier)),
+			);
+			ids = ids.filter((id) => playableIds.has(id));
 		}
 		if (ids.length === 0) return [];
 		const songs = await database.song.findMany({

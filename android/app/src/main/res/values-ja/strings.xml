@@ -713,7 +713,9 @@
     <string name="letter_game_remove">削除</string>
     <string name="letter_game_your_turn">あなたの手番 · %1$d 秒</string>
     <string name="letter_game_waiting_turn">%1$s の手番待ち · %2$d 秒</string>
-    <string name="letter_game_character_all_songs">全曲に文字を開く</string>
+    <string name="letter_game_waiting_turn_timer">手番待ち · %1$d 秒</string>
+    <string name="letter_game_current_player">現在のプレイヤー：%1$s</string>
+    <string name="letter_game_character_all_songs">開く文字</string>
     <string name="letter_game_log">ゲームログ</string>
     <string name="letter_game_songs">曲</string>
     <string name="letter_game_guessed_songs">正解した曲</string>
@@ -730,8 +732,10 @@
     <string name="letter_game_hint_version">バージョン</string>
     <string name="letter_game_hint_white_chart">白譜面</string>
     <string name="letter_game_hint_constant">定数</string>
+    <string name="letter_game_hint_type">ヒントの種類</string>
     <string name="letter_game_public">公開</string>
     <string name="letter_game_private">非公開</string>
+    <string name="letter_game_hint_cost_summary">必要 %1$d pt · 残高 %2$d pt</string>
     <string name="letter_game_difficulty">難度</string>
     <string name="letter_game_purchase">購入</string>
     <string name="letter_game_room_name">ルーム %1$s</string>

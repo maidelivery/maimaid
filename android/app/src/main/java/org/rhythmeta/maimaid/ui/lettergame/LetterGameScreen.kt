@@ -12,6 +12,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,8 +41,10 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.ExitToApp
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.AddHome
+import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Person
@@ -49,8 +52,6 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Timer
-import androidx.compose.material.icons.rounded.Visibility
-import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -69,7 +70,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -108,9 +111,11 @@ import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
+import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.SnackbarDuration
 import top.yukonga.miuix.kmp.basic.SnackbarHost
@@ -121,6 +126,7 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
+import top.yukonga.miuix.kmp.window.WindowListPopup
 import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -389,6 +395,8 @@ fun LetterGameScreen(
 						"active" -> PlayingPage(
 								match = animatedMatch,
 								currentUserId = currentUserId,
+								publicHintCost = animatedRoom.settings.publicHintCost,
+								privateHintCost = animatedRoom.settings.privateHintCost,
 								socket = socket,
 								repository = repository,
 								coverImageStore = container.coverImageStore,
@@ -865,6 +873,8 @@ private fun RoomMembers(
 private fun PlayingPage(
     match: LetterGameMatchSnapshot,
     currentUserId: String?,
+    publicHintCost: Int,
+    privateHintCost: Int,
     socket: WebSocket?,
     repository: LetterGameRepository,
     coverImageStore: org.rhythmeta.maimaid.core.data.CoverImageStore,
@@ -888,6 +898,7 @@ private fun PlayingPage(
     val canAct = isTurn && socket != null
     val currentPlayer = match.players.firstOrNull { it.userId == currentUserId }
     val canBuyHint = canAct && currentPlayer?.scoringEligible == true
+    val currentScore = currentPlayer?.score ?: 0
     val snackbarMessages = match.logs.associate { log -> log.id to localizedLogMessage(log) }
     var logBaselineEstablished by remember(match.matchId) { mutableStateOf(false) }
     var shownLogIds by remember(match.matchId) { mutableStateOf<Set<String>>(emptySet()) }
@@ -1003,11 +1014,7 @@ private fun PlayingPage(
                         )
                         Text(
                             if (isTurn) stringResource(R.string.letter_game_your_turn, secondsLeft)
-                            else stringResource(
-                                R.string.letter_game_waiting_turn,
-                                displayName(match.players.firstOrNull { it.userId == match.turnUserId }),
-                                secondsLeft,
-                            ),
+                            else stringResource(R.string.letter_game_waiting_turn_timer, secondsLeft),
                             modifier = Modifier.weight(1f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -1069,20 +1076,40 @@ private fun PlayingPage(
         }
     }
     hintTarget?.let { target ->
+        val hasWhiteChart = target.facts.any { it.type == "white_chart" && it.value.toString() == "true" }
+        val hintOptions = buildList {
+            add("version")
+            add("white_chart")
+            if (hasWhiteChart) add("constant")
+        }
+        val selectedHintType = hintType.takeIf { it in hintOptions } ?: hintOptions.first()
+        val hintCost = if (hintVisibility == "public") publicHintCost else privateHintCost
+        val canAffordHint = currentScore >= hintCost
         WindowDialog(show = true, title = stringResource(R.string.letter_game_buy_hint), onDismissRequest = { hintTarget = null }) {
-            HintChoice(stringResource(R.string.letter_game_hint_version), hintType == "version") { hintType = "version" }
-            HintChoice(stringResource(R.string.letter_game_hint_white_chart), hintType == "white_chart") { hintType = "white_chart" }
-            HintChoice(
-                label = stringResource(R.string.letter_game_hint_constant),
-                selected = hintType == "constant",
-                enabled = target.facts.any { it.type == "white_chart" && it.value.toString() == "true" },
-            ) { hintType = "constant" }
+            HintDropdown(
+                title = stringResource(R.string.letter_game_hint_type),
+                selected = selectedHintType,
+                options = hintOptions,
+                optionLabel = { option ->
+                    when (option) {
+                        "version" -> stringResource(R.string.letter_game_hint_version)
+                        "white_chart" -> stringResource(R.string.letter_game_hint_white_chart)
+                        else -> stringResource(R.string.letter_game_hint_constant)
+                    }
+                },
+                onSelect = { hintType = it },
+            )
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 Button(onClick = { hintVisibility = "public" }, modifier = Modifier.weight(1f), colors = if (hintVisibility == "public") ButtonDefaults.buttonColorsPrimary() else ButtonDefaults.buttonColors()) { Text(stringResource(R.string.letter_game_public)) }
                 Button(onClick = { hintVisibility = "private" }, modifier = Modifier.weight(1f), colors = if (hintVisibility == "private") ButtonDefaults.buttonColorsPrimary() else ButtonDefaults.buttonColors()) { Text(stringResource(R.string.letter_game_private)) }
             }
-            if (hintType == "constant") {
+            Text(
+                text = stringResource(R.string.letter_game_hint_cost_summary, hintCost, currentScore),
+                color = if (canAffordHint) MiuixTheme.colorScheme.onSurfaceVariantSummary else MiuixTheme.colorScheme.error,
+                style = MiuixTheme.textStyles.footnote1,
+            )
+            if (selectedHintType == "constant") {
                 Spacer(Modifier.height(8.dp))
                 TextField(value = hintDifficulty, onValueChange = { hintDifficulty = it }, label = stringResource(R.string.letter_game_difficulty), colors = appTextFieldColors(), modifier = Modifier.fillMaxWidth())
             }
@@ -1092,13 +1119,13 @@ private fun PlayingPage(
                     send(buildJsonObject {
                         put("kind", "buy_hint")
                         put("slotId", target.slotId)
-                        put("hintType", hintType)
+                        put("hintType", selectedHintType)
                         put("visibility", hintVisibility)
-                        if (hintType == "constant") put("difficulty", hintDifficulty)
+                        if (selectedHintType == "constant") put("difficulty", hintDifficulty)
                     })
                     hintTarget = null
                 },
-                enabled = canBuyHint,
+                enabled = canBuyHint && canAffordHint,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColorsPrimary(),
             ) { Text(stringResource(R.string.letter_game_purchase)) }
@@ -1140,31 +1167,67 @@ private fun localizedLogMessage(log: LetterGameLogEntry): String {
 
 @Composable
 private fun TurnStrip(players: List<LetterGameMatchPlayer>, turnUserId: String?) {
-    Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        players.sortedBy(LetterGameMatchPlayer::turnOrder).forEachIndexed { index, player ->
-            val active = player.userId == turnUserId
-            Column(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (active) MiuixTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent)
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                PlayerAvatar(player.avatarUrl, player.displayName ?: player.userId, 42.dp)
-                Text(player.displayName ?: player.userId, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MiuixTheme.textStyles.footnote1)
-                Text(stringResource(R.string.letter_game_points, player.score), style = MiuixTheme.textStyles.footnote1.copy(fontWeight = FontWeight.Bold), color = if (active) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceVariantSummary)
-            }
-            if (index < players.lastIndex) Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, tint = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+    val orderedPlayers = players.sortedBy(LetterGameMatchPlayer::turnOrder)
+    val currentPlayer = orderedPlayers.firstOrNull { it.userId == turnUserId }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Person,
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+            SmallTitle(
+                text = stringResource(
+                    R.string.letter_game_current_player,
+                    displayName(currentPlayer),
+                ),
+                insideMargin = PaddingValues(0.dp),
+            )
         }
-        if (players.isNotEmpty()) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, tint = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-            val first = players.minByOrNull(LetterGameMatchPlayer::turnOrder)
-            first?.let { PlayerAvatar(it.avatarUrl, it.displayName ?: it.userId, 30.dp) }
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            orderedPlayers.forEachIndexed { index, player ->
+                val active = player.userId == turnUserId
+                Column(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (active) MiuixTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent)
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    PlayerAvatar(player.avatarUrl, player.displayName ?: player.userId, 42.dp)
+                    Text(
+                        stringResource(R.string.letter_game_points, player.score),
+                        style = MiuixTheme.textStyles.footnote1.copy(fontWeight = FontWeight.Bold),
+                        color = if (active) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
+                }
+                if (index < orderedPlayers.lastIndex) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.ArrowForward,
+                        contentDescription = null,
+                        tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
+                }
+            }
+            if (orderedPlayers.isNotEmpty()) {
+                Icon(
+                    Icons.AutoMirrored.Rounded.ArrowForward,
+                    contentDescription = null,
+                    tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+                val first = orderedPlayers.first()
+                PlayerAvatar(first.avatarUrl, first.displayName ?: first.userId, 30.dp)
+            }
         }
     }
 }
@@ -1179,7 +1242,6 @@ private fun LetterSongCard(
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
     val masterColor = SongVisualUtils.difficultyColor("master", darkTheme = darkTheme, brightenDark = true)
     val remasterColor = SongVisualUtils.difficultyColor("remaster", darkTheme = darkTheme, brightenDark = true)
-    val completed = song.status == "completed"
     val cardColor = SongVisualUtils.songCardSurfaceColor(MiuixTheme.colorScheme.surfaceContainer, darkTheme)
     val difficultyColor = if (song.hasRemaster) remasterColor else masterColor
     val versionText = song.version
@@ -1284,11 +1346,66 @@ private fun PopupAction(label: String, icon: ImageVector, onClick: () -> Unit) {
 }
 
 @Composable
-private fun HintChoice(label: String, selected: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().combinedClickable(enabled = enabled, onClick = onClick, onLongClick = null).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(if (selected) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff, contentDescription = null, tint = if (selected) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceVariantSummary.copy(alpha = if (enabled) 1f else 0.45f))
-        Spacer(Modifier.width(10.dp))
-        Text(label, color = if (enabled) MiuixTheme.colorScheme.onSurface else MiuixTheme.colorScheme.onSurfaceVariantSummary)
+private fun HintDropdown(
+    title: String,
+    selected: String,
+    options: List<String>,
+    optionLabel: @Composable (String) -> String,
+    onSelect: (String) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = title,
+            style = MiuixTheme.textStyles.footnote1,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        )
+        Box(Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .squircleSurface(
+                        color = MiuixTheme.colorScheme.surfaceContainerHigh,
+                        cornerRadius = 14.dp,
+                        extension = SquircleExtension,
+                    )
+                    .clickable(role = Role.Button) { expanded = true }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = optionLabel(selected),
+                    modifier = Modifier.weight(1f),
+                    color = MiuixTheme.colorScheme.onSurface,
+                )
+                Icon(
+                    imageVector = Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+            }
+            WindowListPopup(
+                show = expanded,
+                alignment = PopupPositionProvider.Align.End,
+                enableWindowDim = false,
+                onDismissRequest = { expanded = false },
+            ) {
+                ListPopupColumn {
+                    options.forEachIndexed { index, option ->
+                        DropdownImpl(
+                            text = optionLabel(option),
+                            optionSize = options.size,
+                            isSelected = option == selected,
+                            index = index,
+                            onSelectedIndexChange = {
+                                onSelect(option)
+                                expanded = false
+                            },
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1325,8 +1442,9 @@ private fun ResultsPage(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         stringResource(R.string.letter_game_rank, match.players.sortedByDescending(LetterGameMatchPlayer::score).indexOf(player) + 1),
-                        modifier = Modifier.width(36.dp),
+                        modifier = Modifier.width(42.dp),
                         style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.Bold),
+                        textAlign = TextAlign.Center,
                     )
                     PlayerAvatar(player.avatarUrl, player.displayName ?: player.userId, 42.dp)
                     Spacer(Modifier.width(10.dp))
@@ -1336,13 +1454,25 @@ private fun ResultsPage(
             }
         }
         if (guessedSongs.isNotEmpty()) {
-            item { SmallTitle(text = stringResource(R.string.letter_game_guessed_songs)) }
+            item {
+                LetterGameSectionTitle(
+                    text = stringResource(R.string.letter_game_guessed_songs),
+                    icon = Icons.Rounded.Check,
+                    tint = MiuixTheme.colorScheme.primary,
+                )
+            }
             items(guessedSongs, key = LetterGameMatchSong::slotId) { song ->
                 LetterSongCard(song = song, coverImageStore = coverImageStore, versions = versions)
             }
         }
         if (unguessedSongs.isNotEmpty()) {
-            item { SmallTitle(text = stringResource(R.string.letter_game_unguessed_songs)) }
+            item {
+                LetterGameSectionTitle(
+                    text = stringResource(R.string.letter_game_unguessed_songs),
+                    icon = Icons.Rounded.Cancel,
+                    tint = MiuixTheme.colorScheme.error,
+                )
+            }
             items(unguessedSongs, key = LetterGameMatchSong::slotId) { song ->
                 LetterSongCard(song = song, coverImageStore = coverImageStore, versions = versions)
             }
@@ -1361,6 +1491,30 @@ private fun ResultsPage(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LetterGameSectionTitle(
+    text: String,
+    icon: ImageVector,
+    tint: Color,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(18.dp),
+        )
+        SmallTitle(
+            text = text,
+            insideMargin = PaddingValues(0.dp),
+        )
     }
 }
 

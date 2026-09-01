@@ -740,7 +740,9 @@
     <string name="letter_game_remove">Remove</string>
     <string name="letter_game_your_turn">Your turn · %1$ds</string>
     <string name="letter_game_waiting_turn">Waiting for %1$s · %2$ds</string>
-    <string name="letter_game_character_all_songs">Character for all songs</string>
+    <string name="letter_game_waiting_turn_timer">Waiting · %1$ds</string>
+    <string name="letter_game_current_player">Current player: %1$s</string>
+    <string name="letter_game_character_all_songs">Character to open</string>
     <string name="letter_game_log">Game log</string>
     <string name="letter_game_songs">Songs</string>
     <string name="letter_game_guessed_songs">Guessed songs</string>
@@ -757,8 +759,10 @@
     <string name="letter_game_hint_version">Version</string>
     <string name="letter_game_hint_white_chart">White chart</string>
     <string name="letter_game_hint_constant">Constant</string>
+    <string name="letter_game_hint_type">Hint type</string>
     <string name="letter_game_public">Public</string>
     <string name="letter_game_private">Private</string>
+    <string name="letter_game_hint_cost_summary">Cost %1$d pts · Your balance %2$d pts</string>
     <string name="letter_game_difficulty">Difficulty</string>
     <string name="letter_game_purchase">Purchase</string>
     <string name="letter_game_room_name">Room %1$s</string>

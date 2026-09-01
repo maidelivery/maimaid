@@ -710,7 +710,9 @@
     <string name="letter_game_remove">移除</string>
     <string name="letter_game_your_turn">你的回合 · %1$d 秒</string>
     <string name="letter_game_waiting_turn">等待 %1$s · %2$d 秒</string>
-    <string name="letter_game_character_all_songs">为全部歌曲开字符</string>
+    <string name="letter_game_waiting_turn_timer">等待回合 · %1$d 秒</string>
+    <string name="letter_game_current_player">当前玩家：%1$s</string>
+    <string name="letter_game_character_all_songs">要开的字符</string>
     <string name="letter_game_log">游戏记录</string>
     <string name="letter_game_songs">歌曲</string>
     <string name="letter_game_guessed_songs">猜出</string>
@@ -727,8 +729,10 @@
     <string name="letter_game_hint_version">版本</string>
     <string name="letter_game_hint_white_chart">白谱</string>
     <string name="letter_game_hint_constant">定数</string>
+    <string name="letter_game_hint_type">提示类型</string>
     <string name="letter_game_public">公开</string>
     <string name="letter_game_private">私密</string>
+    <string name="letter_game_hint_cost_summary">需要 %1$d 分 · 你有 %2$d 分</string>
     <string name="letter_game_difficulty">难度</string>
     <string name="letter_game_purchase">购买</string>
     <string name="letter_game_room_name">房间 %1$s</string>

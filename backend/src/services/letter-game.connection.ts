@@ -56,6 +56,7 @@ const directActionMessageSchema = z.object({
 export class LetterGameConnectionHub {
 	private readonly webSocketServer = new WebSocketServer({ noServer: true });
 	private readonly connections = new Map<string, Set<Connection>>();
+	private readonly disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
 	private readonly service = container.resolve(LetterGameService);
 	private readonly jwt = container.resolve(JwtService);
 
@@ -131,17 +132,40 @@ export class LetterGameConnectionHub {
 			ws.close(1008, "room_access_denied");
 			return;
 		}
+		await this.service.touchMember(userId, room.id);
 
 		const connection: Connection = { ws, userId, roomId: room.id, roomCode: room.code };
 		const roomConnections = this.connections.get(room.id) ?? new Set<Connection>();
 		roomConnections.add(connection);
 		this.connections.set(room.id, roomConnections);
+		const disconnectKey = `${room.id}:${userId}`;
+		const pendingDisconnect = this.disconnectTimers.get(disconnectKey);
+		if (pendingDisconnect) {
+			clearTimeout(pendingDisconnect);
+			this.disconnectTimers.delete(disconnectKey);
+		}
 		ws.on("close", () => {
 			roomConnections.delete(connection);
 			if (roomConnections.size === 0) this.connections.delete(room.id);
+			if ([...roomConnections].some((item) => item.userId === userId)) return;
+			const timer = setTimeout(() => {
+				this.disconnectTimers.delete(disconnectKey);
+				void this.service.leaveFinishedRoomOnDisconnect(userId, room.id).then(async (result) => {
+					if (!result?.left) return;
+					if (result.dissolved) this.closeRoom(room.id);
+					else await this.broadcastRoom(room.id);
+				}).catch((error) => {
+					console.error("[letter-game] disconnect cleanup failed", error);
+				});
+			}, 5_000);
+			timer.unref?.();
+			this.disconnectTimers.set(disconnectKey, timer);
 		});
 		ws.on("error", () => {
 			// Closing sockets can race with a broadcast during network changes.
+		});
+		ws.on("pong", () => {
+			void this.service.touchMember(userId, room.id);
 		});
 
 		const currentRoom = await this.service.getRoom(userId, room.id).catch(() => null);
