@@ -51,17 +51,23 @@ describe("LetterGameService room lifecycle", () => {
 		const { service } = createTransactionService(tx);
 
 		await expect(service.leaveRoom("user-1", "room-1")).resolves.toEqual({ left: true, dissolved: true });
-		expect(matchUpdate).toHaveBeenCalledWith(expect.objectContaining({
-			where: { id: "match-1" },
-			data: expect.objectContaining({ status: "abandoned", turnDeadline: null }),
-		}));
-		expect(memberUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
-			where: { roomId: "room-1", status: { in: ["accepted", "pending"] } },
-		}));
-		expect(roomUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
-			where: { id: "room-1", status: "open" },
-			data: expect.objectContaining({ status: "closed" }),
-		}));
+		expect(matchUpdate).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: { id: "match-1" },
+				data: expect.objectContaining({ status: "abandoned", turnDeadline: null }),
+			}),
+		);
+		expect(memberUpdateMany).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: { roomId: "room-1", status: { in: ["accepted", "pending"] } },
+			}),
+		);
+		expect(roomUpdateMany).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: { id: "room-1", status: "open" },
+				data: expect.objectContaining({ status: "closed" }),
+			}),
+		);
 	});
 
 	it("keeps the room open and transfers host ownership when another accepted member remains", async () => {
@@ -114,12 +120,16 @@ describe("LetterGameService room lifecycle", () => {
 		});
 
 		await expect(service.dissolveEmptyRooms()).resolves.toEqual(["room-1"]);
-		expect(matchPlayerUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
-			where: { matchId: { in: ["match-1"] }, status: "active" },
-		}));
-		expect(matchUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
-			data: expect.objectContaining({ status: "abandoned", revision: { increment: 1 } }),
-		}));
+		expect(matchPlayerUpdateMany).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: { matchId: { in: ["match-1"] }, status: "active" },
+			}),
+		);
+		expect(matchUpdateMany).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: expect.objectContaining({ status: "abandoned", revision: { increment: 1 } }),
+			}),
+		);
 	});
 
 	it("expires stale accepted members before closing their rooms", async () => {
@@ -133,7 +143,14 @@ describe("LetterGameService room lifecycle", () => {
 				updateMany: roomUpdateMany,
 			},
 			letterGameRoomMember: {
-				findUnique: vi.fn().mockResolvedValue({ id: "member-1", userId: "user-1", status: "accepted", lastSeenAt: new Date(Date.now() - 180_000) }),
+				findUnique: vi
+					.fn()
+					.mockResolvedValue({
+						id: "member-1",
+						userId: "user-1",
+						status: "accepted",
+						lastSeenAt: new Date(Date.now() - 180_000),
+					}),
 				findFirst: vi.fn(),
 				update: memberUpdate,
 				updateMany: vi.fn(),
@@ -154,12 +171,15 @@ describe("LetterGameService room lifecycle", () => {
 
 		await expect(service.dissolveEmptyRooms()).resolves.toEqual(["room-1"]);
 		expect(memberUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: { status: "left", leftAt: expect.any(Date) } }));
-		expect(roomUpdateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "closed" }) }));
+		expect(roomUpdateMany).toHaveBeenCalledWith(
+			expect.objectContaining({ data: expect.objectContaining({ status: "closed" }) }),
+		);
 	});
 
 	it("filters songs that only contain UTAGE charts from match selection", async () => {
 		catalogService.listAliases.mockResolvedValue([]);
-		const songFindMany = vi.fn()
+		const songFindMany = vi
+			.fn()
 			.mockResolvedValueOnce([
 				{ songIdentifier: "song-standard", title: "Standard" },
 				{ songIdentifier: "song-utage", title: "宴" },
@@ -187,7 +207,8 @@ describe("LetterGameService room lifecycle", () => {
 
 	it("keeps only ASCII English titles when the English-only filter is enabled", async () => {
 		catalogService.listAliases.mockResolvedValue([]);
-		const songFindMany = vi.fn()
+		const songFindMany = vi
+			.fn()
 			.mockResolvedValueOnce([
 				{ songIdentifier: "song-english", title: "Bad Apple!!" },
 				{ songIdentifier: "song-cjk", title: "中文标题" },
@@ -217,7 +238,8 @@ describe("LetterGameService room lifecycle", () => {
 
 	it("defaults filtered random selection to English titles", async () => {
 		catalogService.listAliases.mockResolvedValue([]);
-		const songFindMany = vi.fn()
+		const songFindMany = vi
+			.fn()
 			.mockResolvedValueOnce([
 				{ songIdentifier: "song-english", title: "Bad Apple!!" },
 				{ songIdentifier: "song-cjk", title: "中文标题" },
@@ -249,15 +271,20 @@ describe("LetterGameService room lifecycle", () => {
 
 		await service.listPublicRooms();
 
-		expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
-			where: { visibility: "public", status: "open", members: { some: { status: "accepted" } } },
-		}));
+		expect(findMany).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: { visibility: "public", status: "open", members: { some: { status: "accepted" } } },
+			}),
+		);
 	});
 
 	it("rejects reads for dissolved rooms", async () => {
-		const service = new LetterGameService({
-			letterGameRoom: { findFirst: vi.fn().mockResolvedValue({ status: "closed", members: [], matches: [] }) },
-		} as never, catalogService as never);
+		const service = new LetterGameService(
+			{
+				letterGameRoom: { findFirst: vi.fn().mockResolvedValue({ status: "closed", members: [], matches: [] }) },
+			} as never,
+			catalogService as never,
+		);
 
 		await expect(service.getRoom("user-1", "ABC234")).rejects.toMatchObject({ code: "room_closed", status: 410 });
 	});
@@ -292,17 +319,35 @@ describe("LetterGameService room lifecycle", () => {
 		const transaction = vi.fn();
 		const service = new LetterGameService({ $transaction: transaction } as never, catalogService as never);
 
-		await expect(service.applyAction("user-1", "match-1", "action-1", 0, {
-			kind: "open_character",
-			character: "AB",
-		})).rejects.toMatchObject({ code: "invalid_character", status: 400 });
+		await expect(
+			service.applyAction("user-1", "match-1", "action-1", 0, {
+				kind: "open_character",
+				character: "AB",
+			}),
+		).rejects.toMatchObject({ code: "invalid_character", status: 400 });
 		expect(transaction).not.toHaveBeenCalled();
 	});
 
 	it("matches a guess against every active song title and alias", async () => {
 		const songs = [
-			{ id: "song-1", slotId: "slot-1", songIdentifier: "song-1", title: "Alpha", aliases: ["A"], status: "active", revealedIndices: [] },
-			{ id: "song-2", slotId: "slot-2", songIdentifier: "song-2", title: "Beta", aliases: [], status: "active", revealedIndices: [] },
+			{
+				id: "song-1",
+				slotId: "slot-1",
+				songIdentifier: "song-1",
+				title: "Alpha",
+				aliases: ["A"],
+				status: "active",
+				revealedIndices: [],
+			},
+			{
+				id: "song-2",
+				slotId: "slot-2",
+				songIdentifier: "song-2",
+				title: "Beta",
+				aliases: [],
+				status: "active",
+				revealedIndices: [],
+			},
 		];
 		const songUpdate = vi.fn().mockResolvedValue(undefined);
 		const matchUpdate = vi.fn().mockResolvedValue({ revision: 1, status: "active" });
@@ -310,7 +355,8 @@ describe("LetterGameService room lifecycle", () => {
 		const tx = {
 			$executeRawUnsafe: vi.fn().mockResolvedValue(undefined),
 			letterGameMatch: {
-				findUnique: vi.fn()
+				findUnique: vi
+					.fn()
 					.mockResolvedValueOnce({ roomId: "room-1" })
 					.mockResolvedValueOnce({
 						id: "match-1",
@@ -324,31 +370,52 @@ describe("LetterGameService room lifecycle", () => {
 					}),
 				update: matchUpdate,
 			},
-			letterGameRoom: { findUnique: vi.fn().mockResolvedValue({ status: "open", stalledRoundLimit: 3, turnDurationSeconds: 30 }) },
+			letterGameRoom: {
+				findUnique: vi.fn().mockResolvedValue({ status: "open", stalledRoundLimit: 3, turnDurationSeconds: 30 }),
+			},
 			letterGameAction: { findFirst: vi.fn().mockResolvedValue(null), create: actionCreate },
 			letterGameMatchSong: { update: songUpdate, count: vi.fn().mockResolvedValue(1) },
 			letterGameMatchPlayer: { update: vi.fn().mockResolvedValue(undefined) },
 		};
 		const { service } = createTransactionService(tx);
 
-		await expect(service.applyAction("user-1", "match-1", "action-1", 0, {
-			kind: "guess_song",
-			guess: " a ",
-		})).resolves.toMatchObject({ correct: true, blind: true, points: 15 });
+		await expect(
+			service.applyAction("user-1", "match-1", "action-1", 0, {
+				kind: "guess_song",
+				guess: " a ",
+			}),
+		).resolves.toMatchObject({ correct: true, blind: true, points: 15 });
 		expect(songUpdate).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "song-1" } }));
 		expect(actionCreate).toHaveBeenCalled();
 	});
 
 	it("rejects ambiguous title or alias guesses without consuming the turn", async () => {
 		const songs = [
-			{ id: "song-1", slotId: "slot-1", songIdentifier: "song-1", title: "Alpha", aliases: ["Same"], status: "active", revealedIndices: [] },
-			{ id: "song-2", slotId: "slot-2", songIdentifier: "song-2", title: "Beta", aliases: ["Same"], status: "active", revealedIndices: [] },
+			{
+				id: "song-1",
+				slotId: "slot-1",
+				songIdentifier: "song-1",
+				title: "Alpha",
+				aliases: ["Same"],
+				status: "active",
+				revealedIndices: [],
+			},
+			{
+				id: "song-2",
+				slotId: "slot-2",
+				songIdentifier: "song-2",
+				title: "Beta",
+				aliases: ["Same"],
+				status: "active",
+				revealedIndices: [],
+			},
 		];
 		const matchUpdate = vi.fn();
 		const tx = {
 			$executeRawUnsafe: vi.fn().mockResolvedValue(undefined),
 			letterGameMatch: {
-				findUnique: vi.fn()
+				findUnique: vi
+					.fn()
 					.mockResolvedValueOnce({ roomId: "room-1" })
 					.mockResolvedValueOnce({
 						status: "active",
@@ -360,15 +427,19 @@ describe("LetterGameService room lifecycle", () => {
 					}),
 				update: matchUpdate,
 			},
-			letterGameRoom: { findUnique: vi.fn().mockResolvedValue({ status: "open", stalledRoundLimit: 3, turnDurationSeconds: 30 }) },
+			letterGameRoom: {
+				findUnique: vi.fn().mockResolvedValue({ status: "open", stalledRoundLimit: 3, turnDurationSeconds: 30 }),
+			},
 			letterGameAction: { findFirst: vi.fn().mockResolvedValue(null) },
 		};
 		const { service } = createTransactionService(tx);
 
-		await expect(service.applyAction("user-1", "match-1", "action-1", 0, {
-			kind: "guess_song",
-			guess: "same",
-		})).rejects.toMatchObject({ code: "ambiguous_song_guess", status: 409 });
+		await expect(
+			service.applyAction("user-1", "match-1", "action-1", 0, {
+				kind: "guess_song",
+				guess: "same",
+			}),
+		).rejects.toMatchObject({ code: "ambiguous_song_guess", status: 409 });
 		expect(matchUpdate).not.toHaveBeenCalled();
 	});
 
@@ -376,7 +447,8 @@ describe("LetterGameService room lifecycle", () => {
 		const tx = {
 			$executeRawUnsafe: vi.fn().mockResolvedValue(undefined),
 			letterGameMatch: {
-				findUnique: vi.fn()
+				findUnique: vi
+					.fn()
 					.mockResolvedValueOnce({ roomId: "room-1" })
 					.mockResolvedValueOnce({
 						status: "active",
@@ -389,24 +461,26 @@ describe("LetterGameService room lifecycle", () => {
 			},
 			letterGameRoom: { findUnique: vi.fn().mockResolvedValue({ status: "open", publicHintCost: 5, privateHintCost: 10 }) },
 			letterGameAction: { findFirst: vi.fn().mockResolvedValue(null) },
-			letterGamePlayerFact: { findMany: vi.fn().mockResolvedValue([{ factType: "version", visibility: "public", value: "DX" }]) },
+			letterGamePlayerFact: {
+				findMany: vi.fn().mockResolvedValue([{ factType: "version", visibility: "public", value: "DX" }]),
+			},
 			letterGameMatchPlayer: { update: vi.fn() },
 		};
 		const { service } = createTransactionService(tx);
 
-		await expect(service.applyAction("user-1", "match-1", "action-1", 0, {
-			kind: "buy_hint",
-			slotId: "slot-1",
-			hintType: "version",
-			visibility: "private",
-		})).rejects.toMatchObject({ code: "hint_already_known", status: 409 });
+		await expect(
+			service.applyAction("user-1", "match-1", "action-1", 0, {
+				kind: "buy_hint",
+				slotId: "slot-1",
+				hintType: "version",
+				visibility: "private",
+			}),
+		).rejects.toMatchObject({ code: "hint_already_known", status: 409 });
 		expect(tx.letterGameMatchPlayer.update).not.toHaveBeenCalled();
 	});
 
 	it("uses the master constant until remaster existence is known", async () => {
-		const findWhiteFact = vi.fn()
-			.mockResolvedValueOnce(null)
-			.mockResolvedValueOnce({ value: true });
+		const findWhiteFact = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce({ value: true });
 		const tx = {
 			letterGamePlayerFact: { findFirst: findWhiteFact },
 			sheet: {
@@ -419,10 +493,14 @@ describe("LetterGameService room lifecycle", () => {
 		const service = new LetterGameService({} as never, catalogService as never);
 		const input = { kind: "buy_hint", slotId: "slot-1", hintType: "constant", visibility: "public" } as const;
 
-		await expect((service as any).resolveHintValue(input, "song-1", "user-1", "match-1", "song-row-1", tx))
-			.resolves.toEqual({ difficulty: "Master", value: 13.5 });
-		await expect((service as any).resolveHintValue(input, "song-1", "user-1", "match-1", "song-row-1", tx))
-			.resolves.toEqual({ difficulty: "Re:MASTER", value: 14.2 });
+		await expect((service as any).resolveHintValue(input, "song-1", "user-1", "match-1", "song-row-1", tx)).resolves.toEqual({
+			difficulty: "Master",
+			value: 13.5,
+		});
+		await expect((service as any).resolveHintValue(input, "song-1", "user-1", "match-1", "song-row-1", tx)).resolves.toEqual({
+			difficulty: "Re:MASTER",
+			value: 14.2,
+		});
 	});
 
 	it("returns the higher master or remaster constant after remaster is confirmed", async () => {
@@ -438,8 +516,50 @@ describe("LetterGameService room lifecycle", () => {
 		const service = new LetterGameService({} as never, catalogService as never);
 		const input = { kind: "buy_hint", slotId: "slot-1", hintType: "constant", visibility: "private" } as const;
 
-		await expect((service as any).resolveHintValue(input, "song-1", "user-1", "match-1", "song-row-1", tx))
-			.resolves.toEqual({ difficulty: "master", value: 14.4 });
+		await expect((service as any).resolveHintValue(input, "song-1", "user-1", "match-1", "song-row-1", tx)).resolves.toEqual({
+			difficulty: "master",
+			value: 14.4,
+		});
+	});
+
+	it("serializes a match when the selected song has no master or remaster chart", async () => {
+		const match = {
+			id: "match-1",
+			room: { code: "ABC234" },
+			status: "active",
+			revision: 0,
+			turnOrder: ["user-1"],
+			currentTurnIndex: 0,
+			turnDeadline: null,
+			noProgressRounds: 0,
+			players: [{ userId: "user-1", score: 0, turnOrder: 0, status: "active", scoringEligible: true }],
+			songs: [
+				{
+					id: "song-row-1",
+					slotId: "slot-1",
+					songIdentifier: "song-1",
+					title: "ABC",
+					revealedIndices: [],
+					status: "active",
+					completionReason: null,
+					completedByUserId: null,
+				},
+			],
+			facts: [],
+			actions: [],
+		};
+		const prisma = {
+			letterGameMatch: { findUnique: vi.fn().mockResolvedValue(match) },
+			profile: { findMany: vi.fn().mockResolvedValue([]) },
+			user: { findMany: vi.fn().mockResolvedValue([{ id: "user-1", username: "tester" }]) },
+			song: { findMany: vi.fn().mockResolvedValue([]) },
+			sheet: { findMany: vi.fn().mockResolvedValue([]) },
+		};
+		const service = new LetterGameService(prisma as never, catalogService as never);
+
+		await expect(service.getMatchSnapshot("user-1", "match-1")).resolves.toMatchObject({
+			songs: [{ maxConstant: null, title: "***" }],
+		});
 	});
 
 	it("advances a single-player turn after the deadline", async () => {
@@ -447,7 +567,8 @@ describe("LetterGameService room lifecycle", () => {
 		const tx = {
 			$executeRawUnsafe: vi.fn().mockResolvedValue(undefined),
 			letterGameMatch: {
-				findUnique: vi.fn()
+				findUnique: vi
+					.fn()
 					.mockResolvedValueOnce({ roomId: "room-1" })
 					.mockResolvedValueOnce({
 						id: "match-1",
@@ -472,14 +593,16 @@ describe("LetterGameService room lifecycle", () => {
 		const { service } = createTransactionService(tx, root);
 
 		await expect(service.expireDueMatches()).resolves.toEqual(["match-1"]);
-		expect(update).toHaveBeenCalledWith(expect.objectContaining({
-			where: { id: "match-1" },
-			data: expect.objectContaining({
-				currentTurnIndex: 0,
-				noProgressRounds: 1,
-				revision: { increment: 1 },
+		expect(update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: { id: "match-1" },
+				data: expect.objectContaining({
+					currentTurnIndex: 0,
+					noProgressRounds: 1,
+					revision: { increment: 1 },
+				}),
 			}),
-		}));
+		);
 		const updateData = update.mock.calls[0]?.[0]?.data as Record<string, unknown>;
 		expect(updateData.turnDeadline).toBeInstanceOf(Date);
 		expect(updateData.status).toBeUndefined();
@@ -511,6 +634,8 @@ describe("LetterGameService room lifecycle", () => {
 
 		await expect(service.leaveFinishedRoomOnDisconnect("user-1", "room-1")).resolves.toEqual({ left: true, dissolved: true });
 		expect(memberUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: { status: "left", leftAt: expect.any(Date) } }));
-		expect(roomUpdateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "closed" }) }));
+		expect(roomUpdateMany).toHaveBeenCalledWith(
+			expect.objectContaining({ data: expect.objectContaining({ status: "closed" }) }),
+		);
 	});
 });

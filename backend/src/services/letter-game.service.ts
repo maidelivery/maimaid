@@ -83,10 +83,13 @@ const jsonString = (value: unknown): string | null => {
 	return null;
 };
 
-const jsonNumber = (value: unknown): number | null =>
-	typeof value === "number" && Number.isFinite(value) ? value : null;
+const jsonNumber = (value: unknown): number | null => (typeof value === "number" && Number.isFinite(value) ? value : null);
 
-const normalizeHintDifficulty = (value: string): string => value.trim().toLowerCase().replaceAll(/[^a-z0-9]/gu, "");
+const normalizeHintDifficulty = (value: string): string =>
+	value
+		.trim()
+		.toLowerCase()
+		.replaceAll(/[^a-z0-9]/gu, "");
 
 const numericConstant = (value: unknown): number | null => {
 	if (value === null || value === undefined) return null;
@@ -94,7 +97,9 @@ const numericConstant = (value: unknown): number | null => {
 	return Number.isFinite(parsed) ? parsed : null;
 };
 
-const chartConstant = (sheet: any) => {
+/** Returns a chart's numeric constant, or null when the chart is absent/invalid. */
+const chartConstant = (sheet: any | null | undefined) => {
+	if (!sheet || typeof sheet !== "object") return null;
 	const rawValue = sheet.internalLevelValue ?? sheet.levelValue ?? null;
 	const value = numericConstant(rawValue);
 	if (value === null) return null;
@@ -109,7 +114,11 @@ const selectMaxConstant = (
 	const candidates = [master, includeRemaster ? remaster : null].filter(
 		(item): item is NonNullable<ReturnType<typeof chartConstant>> => item !== null,
 	);
-	return candidates.sort((left, right) => right.value - left.value || (normalizeHintDifficulty(left.difficulty) === "master" ? -1 : 1))[0] ?? null;
+	return (
+		candidates.sort(
+			(left, right) => right.value - left.value || (normalizeHintDifficulty(left.difficulty) === "master" ? -1 : 1),
+		)[0] ?? null
+	);
 };
 
 const isUtageChartType = (value: unknown): boolean => /utage|宴/iu.test(String(value));
@@ -184,7 +193,9 @@ export class LetterGameService {
 			where: { visibility: "public", status: "open", members: { some: { status: "accepted" } } },
 			orderBy: { updatedAt: "desc" },
 			take: 100,
-			include: { members: { where: { status: "accepted" }, select: { id: true, userId: true, status: true, seatOrder: true } } },
+			include: {
+				members: { where: { status: "accepted" }, select: { id: true, userId: true, status: true, seatOrder: true } },
+			},
 		});
 		return Promise.all(rooms.map((room: any) => this.serializeRoom(room, room.members)));
 	}
@@ -193,7 +204,10 @@ export class LetterGameService {
 		const room = await this.prisma.letterGameRoom.findFirst({
 			where: roomIdOrCode.length === 36 ? { id: roomIdOrCode } : { code: roomIdOrCode.toUpperCase() },
 			include: {
-				members: { orderBy: { seatOrder: "asc" }, select: { id: true, userId: true, status: true, seatOrder: true, joinedAt: true } },
+				members: {
+					orderBy: { seatOrder: "asc" },
+					select: { id: true, userId: true, status: true, seatOrder: true, joinedAt: true },
+				},
 				matches: { orderBy: { sequence: "desc" }, take: 1, select: { id: true, sequence: true, status: true, revision: true } },
 			},
 		});
@@ -226,7 +240,10 @@ export class LetterGameService {
 			});
 			if (existing?.status === "kicked") throw new AppError(403, "member_kicked", "You were removed from this room.");
 			if (existing && ["accepted", "pending"].includes(existing.status)) return room.id;
-			const activeMatch = await tx.letterGameMatch.findFirst({ where: { roomId: room.id, status: "active" }, select: { id: true } });
+			const activeMatch = await tx.letterGameMatch.findFirst({
+				where: { roomId: room.id, status: "active" },
+				select: { id: true },
+			});
 			if (activeMatch) throw new AppError(409, "match_active", "This room cannot accept new players during a match.");
 			// Private rooms accept a code join immediately. Public rooms wait for host approval.
 			const accepted = room.visibility === "private";
@@ -295,11 +312,7 @@ export class LetterGameService {
 		if (settings.selectionMode === "collection") {
 			const songIds = await this.collectionSongIds(actorId, settings.selectionConfig);
 			if (songIds.length > 5000) {
-				throw new AppError(
-					400,
-					"invalid_collection_song_count",
-					"Collections can contain at most 5000 unique songs.",
-				);
+				throw new AppError(400, "invalid_collection_song_count", "Collections can contain at most 5000 unique songs.");
 			}
 			settings.songCountOverride = songIds.length;
 		} else if (settings.songCountOverride !== null && settings.songCountOverride < acceptedMemberCount) {
@@ -478,7 +491,7 @@ export class LetterGameService {
 					},
 				},
 			});
-			if (!selectedSongs.some((song: any) => buildLetterTokens(song.title).some((token) => token.value !== " " ))) {
+			if (!selectedSongs.some((song: any) => buildLetterTokens(song.title).some((token) => token.value !== " "))) {
 				await tx.letterGameMatch.update({
 					where: { id: match.id },
 					data: { status: "finished", endedAt: now, turnDeadline: null },
@@ -502,7 +515,8 @@ export class LetterGameService {
 				where: { roomId_userId: { roomId, userId: actorId } },
 				select: { status: true },
 			});
-			if (!member || member.status !== "accepted") throw new AppError(403, "room_access_denied", "Join the room before returning to it.");
+			if (!member || member.status !== "accepted")
+				throw new AppError(403, "room_access_denied", "Join the room before returning to it.");
 			const latestMatch = await tx.letterGameMatch.findFirst({
 				where: { roomId },
 				orderBy: { sequence: "desc" },
@@ -554,9 +568,7 @@ export class LetterGameService {
 			}),
 		]);
 		const profileByUser = new Map(profiles.map((profile: any) => [profile.userId, profile]));
-		const handleByUser = new Map(
-			users.map((user: any) => [user.id, user.username]),
-		);
+		const handleByUser = new Map(users.map((user: any) => [user.id, user.username]));
 		const songIdentifiers = match.songs.map((song: any) => song.songIdentifier);
 		const [catalogSongs, sheets] = await Promise.all([
 			this.prisma.song.findMany({
@@ -570,7 +582,8 @@ export class LetterGameService {
 		]);
 		const songByIdentifier = new Map(catalogSongs.map((song: any) => [song.songIdentifier, song]));
 		const sheetsByIdentifier = new Map<string, any[]>();
-		for (const sheet of sheets) sheetsByIdentifier.set(sheet.songIdentifier, [...(sheetsByIdentifier.get(sheet.songIdentifier) ?? []), sheet]);
+		for (const sheet of sheets)
+			sheetsByIdentifier.set(sheet.songIdentifier, [...(sheetsByIdentifier.get(sheet.songIdentifier) ?? []), sheet]);
 		const songNumberById = new Map(match.songs.map((song: any, index: number) => [song.id, index + 1]));
 		const logs = match.actions
 			.slice()
@@ -587,10 +600,16 @@ export class LetterGameService {
 				const hint = jsonObject(result.hint);
 				const kind = action.actionType;
 				let message = kind;
-				if (kind === "open_character") message = `${actorName} opened ${String(payload.character ?? "?")} (${String(result.newlyRevealedCount ?? 0)} revealed, +${String(result.points ?? 0)} points)`;
-				if (kind === "guess_song") message = result.correct ? `${actorName} guessed a song (+${String(result.points ?? 0)})` : `${actorName} made an incorrect guess`;
+				if (kind === "open_character")
+					message = `${actorName} opened ${String(payload.character ?? "?")} (${String(result.newlyRevealedCount ?? 0)} revealed, +${String(result.points ?? 0)} points)`;
+				if (kind === "guess_song")
+					message = result.correct
+						? `${actorName} guessed a song (+${String(result.points ?? 0)})`
+						: `${actorName} made an incorrect guess`;
 				if (kind === "buy_hint") {
-					const songNumber = songNumberById.get(action.songId) ?? (typeof payload.slotId === "string" ? match.songs.findIndex((song: any) => song.slotId === payload.slotId) + 1 : 0);
+					const songNumber =
+						songNumberById.get(action.songId) ??
+						(typeof payload.slotId === "string" ? match.songs.findIndex((song: any) => song.slotId === payload.slotId) + 1 : 0);
 					const detail = hint.value === undefined ? "" : `: ${JSON.stringify(hint.value)}`;
 					message = `${actorName} spent ${String(hint.cost ?? 0)} points on song #${songNumber} ${String(hint.type ?? "hint")} hint${detail}`;
 				}
@@ -610,10 +629,19 @@ export class LetterGameService {
 					hintVisibility: kind === "buy_hint" ? jsonString(payload.visibility) : null,
 					hintCost: kind === "buy_hint" ? jsonNumber(hint.cost) : null,
 					hintResult:
-						kind === "buy_hint" && payload.visibility === "public" && hint.type === "white_chart" && typeof hint.value === "boolean"
+						kind === "buy_hint" &&
+						payload.visibility === "public" &&
+						hint.type === "white_chart" &&
+						typeof hint.value === "boolean"
 							? hint.value
 							: null,
-					songNumber: kind === "buy_hint" ? songNumberById.get(action.songId) ?? (typeof payload.slotId === "string" ? match.songs.findIndex((song: any) => song.slotId === payload.slotId) + 1 : null) : null,
+					songNumber:
+						kind === "buy_hint"
+							? (songNumberById.get(action.songId) ??
+								(typeof payload.slotId === "string"
+									? match.songs.findIndex((song: any) => song.slotId === payload.slotId) + 1
+									: null))
+							: null,
 				};
 			});
 		return {
@@ -633,16 +661,20 @@ export class LetterGameService {
 				displayName: handleByUser.get(item.userId) ?? null,
 				avatarUrl: profileByUser.get(item.userId)?.avatarUrl ?? null,
 			})),
-				songs: match.songs.map((song: any) => {
+			songs: match.songs.map((song: any) => {
 				const revealedIndices = jsonArray<number>(song.revealedIndices);
 				const tokens = buildLetterTokens(song.title, revealedIndices);
 				const completed = song.status === "completed";
 				const catalogSong = songByIdentifier.get(song.songIdentifier);
 				const songSheets = sheetsByIdentifier.get(song.songIdentifier) ?? [];
 				const publicWhiteFact = publicFacts.find((fact: any) => fact.songId === song.id && fact.factType === "white_chart");
-				const privateWhiteFact = match.facts.find((fact: any) => fact.songId === song.id && fact.userId === userId && fact.factType === "white_chart");
-					const showFullDetails = match.status !== "active" || completed;
-				const shownVersionFact = [...publicFacts, ...match.facts.filter((fact: any) => fact.userId === userId)].find((fact: any) => fact.songId === song.id && fact.factType === "version");
+				const privateWhiteFact = match.facts.find(
+					(fact: any) => fact.songId === song.id && fact.userId === userId && fact.factType === "white_chart",
+				);
+				const showFullDetails = match.status !== "active" || completed;
+				const shownVersionFact = [...publicFacts, ...match.facts.filter((fact: any) => fact.userId === userId)].find(
+					(fact: any) => fact.songId === song.id && fact.factType === "version",
+				);
 				const masterSheet = songSheets.find((sheet: any) => sheet.difficulty.toLowerCase() === "master");
 				const remasterSheet = songSheets.find((sheet: any) => /remaster/iu.test(sheet.difficulty));
 				const knownConstantFact = [...publicFacts, ...match.facts.filter((fact: any) => fact.userId === userId)].find(
@@ -654,30 +686,39 @@ export class LetterGameService {
 				const revealedConstantValue = jsonObject(knownConstantFact?.value).value;
 				const knownConstant = numericConstant(revealedConstantValue);
 				const selectedMaxConstant = selectMaxConstant(masterValue, remasterValue, remasterKnown);
-				const maxConstant = knownConstant !== null
-					? String(revealedConstantValue)
-					: showFullDetails
-						? selectedMaxConstant?.displayValue ?? null
-						: null;
+				const maxConstant =
+					knownConstant !== null
+						? String(revealedConstantValue)
+						: showFullDetails
+							? (selectedMaxConstant?.displayValue ?? null)
+							: null;
 				return {
 					slotId: song.slotId,
-						title: showFullDetails ? song.title : maskLetterTokens(tokens),
-						remainingCharacterCount: showFullDetails ? 0 : remainingCharacterCount(tokens),
+					title: showFullDetails ? song.title : maskLetterTokens(tokens),
+					remainingCharacterCount: showFullDetails ? 0 : remainingCharacterCount(tokens),
 					status: song.status,
 					completionReason: song.completionReason,
 					completedByUserId: song.completedByUserId,
 					facts: [...publicFacts, ...match.facts.filter((fact: any) => fact.userId === userId && fact.songId === song.id)]
 						.filter((fact: any) => fact.songId === song.id)
 						.map((fact: any) => ({ type: fact.factType, visibility: fact.visibility, value: fact.value })),
-					imageName: showFullDetails ? catalogSong?.imageName ?? null : null,
-					artist: showFullDetails ? catalogSong?.artist ?? null : null,
-					version: showFullDetails ? catalogSong?.version ?? null : jsonString(shownVersionFact?.value),
+					imageName: showFullDetails ? (catalogSong?.imageName ?? null) : null,
+					artist: showFullDetails ? (catalogSong?.artist ?? null) : null,
+					version: showFullDetails ? (catalogSong?.version ?? null) : jsonString(shownVersionFact?.value),
 					chartTypes: showFullDetails
-						? [...new Set(songSheets.map((sheet: any) => String(sheet.chartType)).filter((type: string) => !isUtageChartType(type)))]
+						? [
+								...new Set(
+									songSheets.map((sheet: any) => String(sheet.chartType)).filter((type: string) => !isUtageChartType(type)),
+								),
+							]
 						: [],
 					hasRemaster: publicWhiteFact?.value === true || privateWhiteFact?.value === true,
-					masterConstant: showFullDetails && masterSheet ? String(masterSheet.internalLevelValue ?? masterSheet.levelValue ?? "") : null,
-					remasterConstant: showFullDetails && remasterSheet ? String(remasterSheet.internalLevelValue ?? remasterSheet.levelValue ?? "") : null,
+					masterConstant:
+						showFullDetails && masterSheet ? String(masterSheet.internalLevelValue ?? masterSheet.levelValue ?? "") : null,
+					remasterConstant:
+						showFullDetails && remasterSheet
+							? String(remasterSheet.internalLevelValue ?? remasterSheet.levelValue ?? "")
+							: null,
 					maxConstant,
 				};
 			}),
@@ -742,24 +783,29 @@ export class LetterGameService {
 										completionReason: "all_characters_revealed",
 										completedByUserId: userId,
 										completedAt: new Date(),
-									  }
+									}
 								: {}),
 						},
 					});
 				}
 				if (actor.scoringEligible && newlyRevealedCount > 0)
-					await tx.letterGameMatchPlayer.update({ where: { id: actor.id }, data: { score: { increment: newlyRevealedCount } } });
+					await tx.letterGameMatchPlayer.update({
+						where: { id: actor.id },
+						data: { score: { increment: newlyRevealedCount } },
+					});
 				if (actor.scoringEligible) balance += newlyRevealedCount;
-					actionResult = {
-						...actionResult,
-						newlyRevealedCount,
-						points: actor.scoringEligible ? newlyRevealedCount : 0,
-						completedSongCount: completedSongIds.length,
+				actionResult = {
+					...actionResult,
+					newlyRevealedCount,
+					points: actor.scoringEligible ? newlyRevealedCount : 0,
+					completedSongCount: completedSongIds.length,
 					completedSongIds,
 				};
 			} else if (input.kind === "guess_song") {
 				const activeSongs = match.songs.filter((item: any) => item.status === "active");
-				const matchingSongs = activeSongs.filter((song: any) => guessSongMatches(input.guess, song.title, jsonArray<string>(song.aliases)));
+				const matchingSongs = activeSongs.filter((song: any) =>
+					guessSongMatches(input.guess, song.title, jsonArray<string>(song.aliases)),
+				);
 				if (matchingSongs.length > 1)
 					throw new AppError(409, "ambiguous_song_guess", "More than one active song matches this title or alias.");
 				const song = matchingSongs[0];
@@ -822,7 +868,9 @@ export class LetterGameService {
 			const activeSongs = await tx.letterGameMatchSong.count({ where: { matchId, status: "active" } });
 			const matchFinished = activeSongs === 0;
 			const nextOrder = this.nextTurn(order, match.currentTurnIndex, players);
-			const wrapped = nextOrder.userId === userId || (nextOrder.index !== match.currentTurnIndex && nextOrder.index <= match.currentTurnIndex);
+			const wrapped =
+				nextOrder.userId === userId ||
+				(nextOrder.index !== match.currentTurnIndex && nextOrder.index <= match.currentTurnIndex);
 			const noProgressRounds = progress ? 0 : wrapped ? match.noProgressRounds + 1 : match.noProgressRounds;
 			const stalled = !matchFinished && noProgressRounds >= room.stalledRoundLimit;
 			const finished = matchFinished || stalled || !nextOrder.userId;
@@ -1106,9 +1154,7 @@ export class LetterGameService {
 			}
 			const rows = await database.song.findMany({ where, select: { songIdentifier: true, title: true } });
 			ids = shuffle(
-				rows
-					.filter((row: any) => !config.englishOnly || isEnglishOnlyTitle(row.title))
-					.map((row: any) => row.songIdentifier),
+				rows.filter((row: any) => !config.englishOnly || isEnglishOnlyTitle(row.title)).map((row: any) => row.songIdentifier),
 			);
 		}
 		if (ids.length === 0) return [];
@@ -1190,8 +1236,10 @@ export class LetterGameService {
 				where: { songIdentifier, disabled: false },
 				select: { difficulty: true, internalLevelValue: true, levelValue: true },
 			});
-			const master = sheets.map(chartConstant).find((item: any) => item && normalizeHintDifficulty(item.difficulty) === "master") ?? null;
-			const remaster = sheets.map(chartConstant).find((item: any) => item && normalizeHintDifficulty(item.difficulty) === "remaster") ?? null;
+			const master =
+				sheets.map(chartConstant).find((item: any) => item && normalizeHintDifficulty(item.difficulty) === "master") ?? null;
+			const remaster =
+				sheets.map(chartConstant).find((item: any) => item && normalizeHintDifficulty(item.difficulty) === "remaster") ?? null;
 			const selected = selectMaxConstant(master, remaster, whiteKnowledge?.value === true);
 			if (!selected) throw new AppError(404, "chart_not_found", "Master chart was not found.");
 			return { difficulty: selected.difficulty, value: selected.value };
@@ -1244,9 +1292,7 @@ export class LetterGameService {
 					}),
 		]);
 		const profileByUser = new Map(profiles.map((profile: any) => [profile.userId, profile]));
-		const handleByUser = new Map(
-			users.map((user: any) => [user.id, user.username]),
-		);
+		const handleByUser = new Map(users.map((user: any) => [user.id, user.username]));
 		const collectionById = new Map(selectedCollections.map((collection: any) => [collection.id, collection]));
 		return {
 			id: room.id,
