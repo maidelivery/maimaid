@@ -75,6 +75,7 @@ enum LetterGameHostMode {
 
 enum LetterGameRoomStatus {
 	open
+	closed
 }
 
 enum LetterGameMemberStatus {
@@ -159,12 +160,14 @@ model LetterGameRoom {
 	privateHintCost       Int                      @default(10)
 	selectionMode         String                   @default("filtered_random")
 	selectionConfig       Json                     @default("{}")
+	closedAt              DateTime?
 	createdAt             DateTime                 @default(now())
 	updatedAt             DateTime                 @updatedAt
 	members               LetterGameRoomMember[]
 	matches               LetterGameMatch[]
 
 	@@index([visibility, updatedAt])
+	@@index([status, updatedAt])
 	@@index([hostUserId])
 	@@map("letter_game_rooms")
 }

@@ -8,10 +8,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.List
-import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
@@ -36,7 +34,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -80,7 +77,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel as composeViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.NonCancellable
@@ -119,7 +115,6 @@ import org.rhythmeta.maimaid.ui.scanner.ScannerScreen
 import org.rhythmeta.maimaid.ui.settings.OtogameImportScreen
 import org.rhythmeta.maimaid.ui.settings.OtogameLoginScreen
 import org.rhythmeta.maimaid.ui.settings.SettingsScreen
-import org.rhythmeta.maimaid.ui.theme.AppThemeSettings
 import org.rhythmeta.maimaid.ui.theme.LocalEnableFloatingBottomBar
 import org.rhythmeta.maimaid.ui.theme.LocalEnableFloatingBottomBarBlur
 import org.rhythmeta.maimaid.ui.theme.LocalEnableBlur
@@ -260,6 +255,10 @@ fun MaimaidApp(
     var communityAliasesFromSong by rememberSaveable { mutableStateOf(false) }
     var communityAliasesSourceSongId by rememberSaveable { mutableStateOf<String?>(null) }
     var communityAliasesSourceReturnDetail by rememberSaveable { mutableStateOf<AppDetail?>(null) }
+    var letterGameInRoom by rememberSaveable { mutableStateOf(false) }
+    var letterGameJoinActionAvailable by rememberSaveable { mutableStateOf(false) }
+    var letterGameJoinRequestToken by rememberSaveable { mutableIntStateOf(0) }
+    var letterGameExitRequestToken by rememberSaveable { mutableIntStateOf(0) }
     val randomSongSessionState = remember { RandomSongSessionState() }
     val backProgress = remember { Animatable(0f) }
     val detailEntranceProgress = remember { Animatable(0f) }
@@ -515,7 +514,18 @@ fun MaimaidApp(
         }
     }
 
-    PredictiveBackHandler(enabled = canHandleBack && LocalEnablePredictiveBack.current) { progress: Flow<BackEventCompat> ->
+    LaunchedEffect(detail) {
+        if (detail != AppDetail.LetterGame) {
+            letterGameInRoom = false
+            letterGameJoinActionAvailable = false
+        }
+    }
+
+    PredictiveBackHandler(
+        enabled = canHandleBack &&
+            LocalEnablePredictiveBack.current &&
+            !(detail == AppDetail.LetterGame && letterGameInRoom),
+    ) { progress: Flow<BackEventCompat> ->
         try {
             detailBackTransitionJob?.cancel()
             detailEntranceTransitionJob?.cancel()
@@ -795,8 +805,11 @@ fun MaimaidApp(
             }
         }
     }
+    BackHandler(enabled = detail == AppDetail.LetterGame && letterGameInRoom) {
+        letterGameExitRequestToken += 1
+    }
     if (!LocalEnablePredictiveBack.current) {
-        BackHandler(enabled = canHandleBack) {
+        BackHandler(enabled = canHandleBack && !(detail == AppDetail.LetterGame && letterGameInRoom)) {
             if (detail != null) {
                 closeDetail()
             } else if (destination != RootDestination.Home) {
@@ -823,14 +836,22 @@ fun MaimaidApp(
     val detailNavigationIcon: @Composable () -> Unit = {
         if (detail != null) {
             IconButton(onClick = {
-                closeDetail()
+                if (detail == AppDetail.LetterGame && letterGameInRoom) {
+                    letterGameExitRequestToken += 1
+                } else {
+                    closeDetail()
+                }
             }) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back))
             }
         }
     }
     val detailActions: @Composable RowScope.(AppDetail) -> Unit = { activeDetail ->
-        if (activeDetail == AppDetail.Song && selectedSong != null) {
+        if (activeDetail == AppDetail.LetterGame && letterGameJoinActionAvailable) {
+            IconButton(onClick = { letterGameJoinRequestToken += 1 }) {
+                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.letter_game_enter_room_code))
+            }
+        } else if (activeDetail == AppDetail.Song && selectedSong != null) {
             IconButton(onClick = {
                 viewModel.setSongFavorite(selectedSong.songIdentifier, !selectedSong.isFavorite)
             }) {
@@ -1101,7 +1122,7 @@ fun MaimaidApp(
             }
         }
 
-        AppNavigationBar(
+        if (detail != AppDetail.LetterGame) AppNavigationBar(
             destination = destination,
             backdrop = navigationBackdrop,
             onDestinationSelected = { nextDestination ->
@@ -1752,10 +1773,8 @@ fun MaimaidApp(
                         collectionsSortAscending = collectionsSortAscending,
                         selectedCollectionId = selectedCollectionId,
                         collectionsRenameRequested = collectionsRenameRequested,
-                        collectionsDetailOnly = false,
-                        onSelectedCollectionIdChange = { id -> id?.let(openCollection) },
-                        onCollectionsDisplayModeChange = { collectionsDisplayMode = it },
-                        collectionsCreateRequested = collectionsCreateRequested,
+											onSelectedCollectionIdChange = { id -> id?.let(openCollection) },
+											collectionsCreateRequested = collectionsCreateRequested,
                         collectionsImportRequested = collectionsImportRequested,
                         onCollectionsCreateRequestHandled = { collectionsCreateRequested = false },
                         onCollectionsImportRequestHandled = { collectionsImportRequested = false },
@@ -1836,10 +1855,8 @@ fun MaimaidApp(
                         collectionsSortAscending = collectionsSortAscending,
                         selectedCollectionId = selectedCollectionId,
                         collectionsRenameRequested = collectionsRenameRequested,
-                        collectionsDetailOnly = true,
-                        onSelectedCollectionIdChange = {},
-                        onCollectionsDisplayModeChange = { collectionsDisplayMode = it },
-                        collectionsCreateRequested = false,
+											onSelectedCollectionIdChange = {},
+											collectionsCreateRequested = false,
                         collectionsImportRequested = false,
                         onCollectionsCreateRequestHandled = {},
                         onCollectionsImportRequestHandled = {},
@@ -2091,6 +2108,7 @@ fun MaimaidApp(
                                     AppDetail.OtogameImport,
                                     AppDetail.OtogameLogin,
                                     AppDetail.Appearance,
+                                    AppDetail.LetterGame,
                                     -> Modifier
                                         .layerBackdrop(detailBackdrop)
                                         .background(backgroundColor)
@@ -2134,6 +2152,11 @@ fun MaimaidApp(
                             },
                             onOpenCommunityAliases = openCommunityAliasesFromSong,
                             onOpenOtogameLogin = { openDetail(AppDetail.OtogameLogin) },
+                            onOpenLogin = { openDetail(AppDetail.BackendAuth) },
+                            letterGameJoinRequestToken = letterGameJoinRequestToken,
+                            letterGameExitRequestToken = letterGameExitRequestToken,
+                            onLetterGameRoomPresenceChanged = { letterGameInRoom = it },
+                            onLetterGameJoinActionAvailabilityChanged = { letterGameJoinActionAvailable = it },
                             onSongDetailBackgroundChanged = { color ->
                                 val currentSongId = selectedSongId
                                 if (detail == AppDetail.Song && currentSongId != null) {
@@ -2161,10 +2184,8 @@ fun MaimaidApp(
                             collectionsSortAscending = collectionsSortAscending,
                             selectedCollectionId = selectedCollectionId,
                             collectionsRenameRequested = collectionsRenameRequested,
-                            collectionsDetailOnly = selectedCollectionId != null,
-                            onSelectedCollectionIdChange = { id -> id?.let(openCollection) },
-                            onCollectionsDisplayModeChange = { collectionsDisplayMode = it },
-                            collectionsCreateRequested = collectionsCreateRequested,
+													onSelectedCollectionIdChange = { id -> id?.let(openCollection) },
+													collectionsCreateRequested = collectionsCreateRequested,
                             collectionsImportRequested = collectionsImportRequested,
                             onCollectionsCreateRequestHandled = { collectionsCreateRequested = false },
                             onCollectionsImportRequestHandled = { collectionsImportRequested = false },

@@ -15,6 +15,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import java.util.concurrent.TimeUnit
 import org.rhythmeta.maimaid.core.network.BackendApiClient
 
 sealed interface LetterGameEvent {
@@ -29,7 +30,9 @@ class LetterGameRepository(
     private val sessionManager: BackendSessionManager,
     private val json: Json,
 ) {
-    private val httpClient = OkHttpClient.Builder().build()
+    private val httpClient = OkHttpClient.Builder()
+        .pingInterval(20, TimeUnit.SECONDS)
+        .build()
     private val mutableEvents = MutableSharedFlow<LetterGameEvent>(extraBufferCapacity = 32)
     val events: SharedFlow<LetterGameEvent> = mutableEvents.asSharedFlow()
 
@@ -53,8 +56,42 @@ class LetterGameRepository(
         return json.decodeFromJsonElement(LetterGameRoom.serializer(), payload.jsonObject["room"] ?: payload)
     }
 
+    suspend fun getRoom(roomIdOrCode: String): LetterGameRoom {
+        val payload = sessionManager.authorizedRequest("v1/letter-game/rooms/${roomIdOrCode.trim().uppercase()}")
+        return json.decodeFromJsonElement(LetterGameRoom.serializer(), payload.jsonObject["room"] ?: payload)
+    }
+
     suspend fun startMatch(roomId: String): LetterGameMatchSnapshot {
         val payload = sessionManager.authorizedRequest("v1/letter-game/rooms/$roomId/start", "POST")
+        return json.decodeFromJsonElement(LetterGameMatchSnapshot.serializer(), payload.jsonObject["match"] ?: payload)
+    }
+
+    suspend fun updateRoom(roomId: String, request: LetterGameCreateRequest): LetterGameRoom {
+        val payload = sessionManager.authorizedRequest("v1/letter-game/rooms/$roomId", "PATCH", json.encodeToJsonElement(request))
+        return json.decodeFromJsonElement(LetterGameRoom.serializer(), payload.jsonObject["room"] ?: payload)
+    }
+
+    suspend fun reopenRoom(roomId: String): LetterGameRoom {
+        val payload = sessionManager.authorizedRequest("v1/letter-game/rooms/$roomId/reopen", "POST")
+        return json.decodeFromJsonElement(LetterGameRoom.serializer(), payload.jsonObject["room"] ?: payload)
+    }
+
+    suspend fun approveMember(roomId: String, memberId: String): LetterGameRoom {
+        val payload = sessionManager.authorizedRequest("v1/letter-game/rooms/$roomId/members/$memberId/approve", "POST")
+        return json.decodeFromJsonElement(LetterGameRoom.serializer(), payload.jsonObject["room"] ?: payload)
+    }
+
+    suspend fun kickMember(roomId: String, memberId: String): LetterGameRoom {
+        val payload = sessionManager.authorizedRequest("v1/letter-game/rooms/$roomId/members/$memberId/kick", "POST")
+        return json.decodeFromJsonElement(LetterGameRoom.serializer(), payload.jsonObject["room"] ?: payload)
+    }
+
+    suspend fun leaveRoom(roomId: String) {
+        sessionManager.authorizedRequest("v1/letter-game/rooms/$roomId/leave", "POST")
+    }
+
+    suspend fun getMatch(matchId: String): LetterGameMatchSnapshot {
+        val payload = sessionManager.authorizedRequest("v1/letter-game/matches/$matchId")
         return json.decodeFromJsonElement(LetterGameMatchSnapshot.serializer(), payload.jsonObject["match"] ?: payload)
     }
 
@@ -89,6 +126,13 @@ class LetterGameRepository(
         }))
     }
 
+    fun leaveMatch(webSocket: WebSocket, matchId: String) {
+        webSocket.send(json.encodeToString(JsonObject.serializer(), buildJsonObject {
+            put("type", "leave_match")
+            put("matchId", matchId)
+        }))
+    }
+
     private fun handleMessage(text: String) {
         runCatching { json.parseToJsonElement(text).jsonObject }.onSuccess { message ->
             when (message["type"]?.toString()?.trim('"')) {
@@ -100,4 +144,3 @@ class LetterGameRepository(
         }.onFailure { mutableEvents.tryEmit(LetterGameEvent.Error("invalid_message", it.message)) }
     }
 }
-

@@ -1,6 +1,7 @@
 package org.rhythmeta.maimaid.core.data
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class LetterGameRoomSettings(
@@ -10,13 +11,17 @@ data class LetterGameRoomSettings(
     val publicHintCost: Int = 5,
     val privateHintCost: Int = 10,
     val selectionMode: String = "filtered_random",
+    val selectionConfig: Map<String, JsonElement> = emptyMap(),
 )
 
 @Serializable
 data class LetterGameRoomMember(
+    val id: String? = null,
     val userId: String,
     val status: String,
     val seatOrder: Int,
+    val displayName: String? = null,
+    val avatarUrl: String? = null,
 )
 
 @Serializable
@@ -54,6 +59,16 @@ data class LetterGameMatchPlayer(
     val turnOrder: Int,
     val status: String,
     val scoringEligible: Boolean = true,
+    val displayName: String? = null,
+    val avatarUrl: String? = null,
+)
+
+@Serializable
+data class LetterGameLogEntry(
+    val id: String,
+    val message: String,
+    val actorUserId: String? = null,
+    val actorName: String? = null,
 )
 
 @Serializable
@@ -72,6 +87,13 @@ data class LetterGameMatchSong(
     val completionReason: String? = null,
     val completedByUserId: String? = null,
     val facts: List<LetterGameFact> = emptyList(),
+    val imageName: String? = null,
+    val artist: String? = null,
+    val version: String? = null,
+    val chartTypes: List<String> = emptyList(),
+    val hasRemaster: Boolean = false,
+    val masterConstant: String? = null,
+    val remasterConstant: String? = null,
 )
 
 @Serializable
@@ -84,6 +106,8 @@ data class LetterGameMatchSnapshot(
     val noProgressRounds: Int = 0,
     val players: List<LetterGameMatchPlayer> = emptyList(),
     val songs: List<LetterGameMatchSong> = emptyList(),
+    val roomCode: String? = null,
+    val logs: List<LetterGameLogEntry> = emptyList(),
 )
 
 @Serializable
@@ -99,6 +123,5 @@ data class LetterGameCreateRequest(
     val publicHintCost: Int = 5,
     val privateHintCost: Int = 10,
     val selectionMode: String = "filtered_random",
-    val selectionConfig: Map<String, String> = emptyMap(),
+    val selectionConfig: Map<String, JsonElement> = emptyMap(),
 )
-

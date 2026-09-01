@@ -113,6 +113,11 @@ internal fun DetailScreen(
     onOpenDanCategory: (String, String) -> Unit,
     onOpenCommunityAliases: () -> Unit,
     onOpenOtogameLogin: () -> Unit,
+    onOpenLogin: () -> Unit = {},
+    letterGameJoinRequestToken: Int = 0,
+    letterGameExitRequestToken: Int = 0,
+    onLetterGameRoomPresenceChanged: (Boolean) -> Unit = {},
+    onLetterGameJoinActionAvailabilityChanged: (Boolean) -> Unit = {},
     onSongDetailBackgroundChanged: (androidx.compose.ui.graphics.Color?) -> Unit,
     onSongDetailTitleChanged: (String) -> Unit,
     collectionsDisplayMode: CatalogDisplayMode = CatalogDisplayMode.List,
@@ -120,9 +125,7 @@ internal fun DetailScreen(
     collectionsSortAscending: Boolean = true,
     selectedCollectionId: String? = null,
     collectionsRenameRequested: Boolean = false,
-    collectionsDetailOnly: Boolean = false,
     onSelectedCollectionIdChange: (String?) -> Unit = {},
-    onCollectionsDisplayModeChange: (CatalogDisplayMode) -> Unit = {},
     collectionsCreateRequested: Boolean = false,
     collectionsImportRequested: Boolean = false,
     onCollectionsCreateRequestHandled: () -> Unit = {},
@@ -294,7 +297,15 @@ internal fun DetailScreen(
             onCreateRequestHandled = onProfileCreateRequestHandled,
         )
         AppDetail.BackendAuth -> BackendAuthScreen(container = container)
-        AppDetail.LetterGame -> LetterGameScreen(container = container, contentTopPadding = songContentTopPadding)
+        AppDetail.LetterGame -> LetterGameScreen(
+            container = container,
+            contentTopPadding = songContentTopPadding,
+            onOpenLogin = onOpenLogin,
+            joinRequestToken = letterGameJoinRequestToken,
+            exitRequestToken = letterGameExitRequestToken,
+            onRoomPresenceChanged = onLetterGameRoomPresenceChanged,
+            onJoinActionAvailabilityChanged = onLetterGameJoinActionAvailabilityChanged,
+        )
         AppDetail.DivingFishImport -> DivingFishImportScreen(
             container = container,
             contentTopPadding = songContentTopPadding,
@@ -313,10 +324,8 @@ internal fun DetailScreen(
             contentTopPadding = songContentTopPadding,
         )
         AppDetail.About -> AboutDetail()
-        else -> FeatureDetail(state = state)
-    }
+		}
 }
-
 private sealed interface StaticDataUpdateState {
     data object Idle : StaticDataUpdateState
     data object Checking : StaticDataUpdateState
@@ -392,8 +401,7 @@ private fun StaticDataDetail(
         is StaticDataUpdateState.Available -> MiuixTheme.colorScheme.onTertiaryContainer
         is StaticDataUpdateState.Failed -> MiuixTheme.colorScheme.onErrorContainer
     }
-    val currentUpdateState = updateState
-    val statusTitle = when (currentUpdateState) {
+	val statusTitle = when (val currentUpdateState = updateState) {
         StaticDataUpdateState.Idle -> stringResource(R.string.static_update_ready)
         StaticDataUpdateState.Checking -> stringResource(R.string.static_update_checking)
         is StaticDataUpdateState.UpToDate -> stringResource(R.string.static_update_up_to_date)
@@ -604,30 +612,5 @@ private fun AboutDetail() {
         )
         Spacer(Modifier.height(8.dp))
         Text(text = stringResource(R.string.about_runtime), color = MiuixTheme.colorScheme.onBackgroundVariant)
-    }
-}
-
-@Composable
-private fun FeatureDetail(state: MainUiState) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = stringResource(R.string.detail_catalog_summary, state.songCount, state.sheetCount),
-            style = MiuixTheme.textStyles.title3,
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = if (state.songCount == 0) {
-                stringResource(R.string.detail_catalog_required)
-            } else {
-                stringResource(R.string.detail_foundation_ready)
-            },
-            color = MiuixTheme.colorScheme.onBackgroundVariant,
-        )
     }
 }
