@@ -153,11 +153,11 @@ export class LetterGameService {
 	async createRoom(userId: string, input: LetterGameRoomSettingsInput) {
 		const settings = this.validateSettings(input);
 		if (settings.selectionMode === "collection") {
-			const songIds = await this.collectionSongIds(userId, settings.selectionConfig);
-			if (songIds.length < 1 || songIds.length > 5000) {
+			const songs = await this.selectSongs(userId, { selectionMode: "collection", selectionConfig: settings.selectionConfig });
+			if (songs.length < 1 || songs.length > 5000) {
 				throw new AppError(400, "invalid_collection_song_count", "Collections must contain between 1 and 5000 unique songs.");
 			}
-			settings.songCountOverride = songIds.length;
+			settings.songCountOverride = songs.length;
 		}
 		for (let attempt = 0; attempt < 5; attempt += 1) {
 			const code = makeRoomCode();
@@ -310,11 +310,14 @@ export class LetterGameService {
 		});
 		const acceptedMemberCount = await this.prisma.letterGameRoomMember.count({ where: { roomId, status: "accepted" } });
 		if (settings.selectionMode === "collection") {
-			const songIds = await this.collectionSongIds(actorId, settings.selectionConfig);
-			if (songIds.length > 5000) {
+			const songs = await this.selectSongs(actorId, { selectionMode: "collection", selectionConfig: settings.selectionConfig });
+			if (songs.length > 5000) {
 				throw new AppError(400, "invalid_collection_song_count", "Collections can contain at most 5000 unique songs.");
 			}
-			settings.songCountOverride = songIds.length;
+			if (songs.length < 1) {
+				throw new AppError(400, "invalid_collection_song_count", "Collections must contain at least one song after filtering.");
+			}
+			settings.songCountOverride = songs.length;
 		} else if (settings.songCountOverride !== null && settings.songCountOverride < acceptedMemberCount) {
 			throw new AppError(400, "song_count_too_low", "Song count must be at least the number of accepted players.");
 		}
@@ -1099,9 +1102,6 @@ export class LetterGameService {
 		value: Record<string, unknown> | undefined,
 	): Record<string, unknown> {
 		const config = jsonObject(value);
-		if (mode === "collection") {
-			return { collectionIds: normalizeSourceIds(config.collectionIds) };
-		}
 		const chartTypes = normalizeSourceIds(config.chartTypes).map((type) => type.toLowerCase());
 		if (chartTypes.some((type) => type !== "standard" && type !== "dx")) {
 			throw new AppError(400, "invalid_chart_types", "Chart types must contain only standard or dx.");
@@ -1115,6 +1115,7 @@ export class LetterGameService {
 			maxVersion,
 			categories: normalizeSourceIds(config.categories),
 			chartTypes: [...new Set(chartTypes)],
+			...(mode === "collection" ? { collectionIds: normalizeSourceIds(config.collectionIds) } : {}),
 		};
 	}
 
@@ -1128,35 +1129,32 @@ export class LetterGameService {
 
 	private async selectSongs(userId: string, room: any, database: PrismaLike = this.prisma) {
 		const config = this.normalizeSelectionConfig(room.selectionMode, jsonObject(room.selectionConfig));
-		let ids: string[] = [];
-		if (room.selectionMode === "collection") {
-			ids = await this.collectionSongIds(userId, config, database);
-		} else {
-			const where: any = {};
-			if (config.excludeDeleted !== false) where.disabled = false;
-			const categories = normalizeSourceIds(config.categories);
-			if (categories.length > 0) where.category = { in: categories };
-			const chartTypes = normalizeSourceIds(config.chartTypes);
-			if (chartTypes.length > 0) {
-				const databaseTypes = chartTypes.flatMap((type) => (type === "standard" ? ["standard", "std", "sd"] : ["dx"]));
-				where.sheets = { some: { chartType: { in: databaseTypes }, disabled: false } };
-			}
-			const minVersion = typeof config.minVersion === "string" ? config.minVersion : null;
-			const maxVersion = typeof config.maxVersion === "string" ? config.maxVersion : null;
-			if (minVersion !== null || maxVersion !== null) {
-				const versionNames = (await this.catalogService.listVersions()).map((version: any) => String(version.version));
-				const firstIndex = minVersion === null ? 0 : versionNames.indexOf(minVersion);
-				const lastIndex = maxVersion === null ? versionNames.length - 1 : versionNames.indexOf(maxVersion);
-				if (firstIndex < 0 || lastIndex < 0 || firstIndex > lastIndex) {
-					throw new AppError(400, "invalid_version_range", "The selected version range is invalid.");
-				}
-				where.version = { in: versionNames.slice(firstIndex, lastIndex + 1) };
-			}
-			const rows = await database.song.findMany({ where, select: { songIdentifier: true, title: true } });
-			ids = shuffle(
-				rows.filter((row: any) => !config.englishOnly || isEnglishOnlyTitle(row.title)).map((row: any) => row.songIdentifier),
-			);
+		const collectionIds = room.selectionMode === "collection" ? await this.collectionSongIds(userId, config, database) : null;
+		const where: any = {};
+		if (collectionIds !== null) where.songIdentifier = { in: collectionIds };
+		if (config.excludeDeleted !== false) where.disabled = false;
+		const categories = normalizeSourceIds(config.categories);
+		if (categories.length > 0) where.category = { in: categories };
+		const chartTypes = normalizeSourceIds(config.chartTypes);
+		const databaseTypes = chartTypes.flatMap((type) => (type === "standard" ? ["standard", "std", "sd"] : ["dx"]));
+		if (databaseTypes.length > 0) {
+			where.sheets = { some: { chartType: { in: databaseTypes }, disabled: false } };
 		}
+		const minVersion = typeof config.minVersion === "string" ? config.minVersion : null;
+		const maxVersion = typeof config.maxVersion === "string" ? config.maxVersion : null;
+		if (minVersion !== null || maxVersion !== null) {
+			const versionNames = (await this.catalogService.listVersions()).map((version: any) => String(version.version));
+			const firstIndex = minVersion === null ? 0 : versionNames.indexOf(minVersion);
+			const lastIndex = maxVersion === null ? versionNames.length - 1 : versionNames.indexOf(maxVersion);
+			if (firstIndex < 0 || lastIndex < 0 || firstIndex > lastIndex) {
+				throw new AppError(400, "invalid_version_range", "The selected version range is invalid.");
+			}
+			where.version = { in: versionNames.slice(firstIndex, lastIndex + 1) };
+		}
+		const rows = await database.song.findMany({ where, select: { songIdentifier: true, title: true } });
+		let ids = shuffle(
+			rows.filter((row: any) => !config.englishOnly || isEnglishOnlyTitle(row.title)).map((row: any) => row.songIdentifier),
+		);
 		if (ids.length === 0) return [];
 		if (typeof database.sheet?.findMany === "function") {
 			const playableSheets = await database.sheet.findMany({
@@ -1165,7 +1163,11 @@ export class LetterGameService {
 			});
 			const playableIds = new Set(
 				playableSheets
-					.filter((sheet: any) => !isUtageChartType(sheet.chartType))
+					.filter(
+						(sheet: any) =>
+							!isUtageChartType(sheet.chartType) &&
+							(databaseTypes.length === 0 || databaseTypes.includes(String(sheet.chartType).toLowerCase())),
+					)
 					.map((sheet: any) => String(sheet.songIdentifier)),
 			);
 			ids = ids.filter((id) => playableIds.has(id));

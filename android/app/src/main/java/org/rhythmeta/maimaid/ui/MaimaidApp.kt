@@ -1139,7 +1139,7 @@ fun MaimaidApp(
             }
         }
 
-        if (detail != AppDetail.LetterGame) AppNavigationBar(
+        if (detail != AppDetail.LetterGame || !letterGameMatchActive) AppNavigationBar(
             destination = destination,
             backdrop = navigationBackdrop,
             onDestinationSelected = { nextDestination ->

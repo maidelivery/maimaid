@@ -81,6 +81,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
@@ -117,6 +119,7 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
+import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.SnackbarDuration
 import top.yukonga.miuix.kmp.basic.SnackbarHost
@@ -160,6 +163,7 @@ fun LetterGameScreen(
     var createVisibility by remember { mutableStateOf(RoomVisibility.Public) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
+    var isLobbyRefreshing by remember { mutableStateOf(false) }
     var reconnectAttempt by remember { mutableIntStateOf(0) }
     var hiddenFinishedMatchId by rememberSaveable { mutableStateOf<String?>(null) }
     var showExitConfirmation by remember { mutableStateOf(false) }
@@ -169,6 +173,7 @@ fun LetterGameScreen(
     var handledCopyRequestToken by remember { mutableIntStateOf(copyRequestToken) }
     var handledSettingsRequestToken by remember { mutableIntStateOf(settingsRequestToken) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val roomRefreshMutex = remember { Mutex() }
     val roomCodeCopiedMessage = stringResource(R.string.letter_game_room_code_copied)
     val hintAlreadyKnownMessage = stringResource(R.string.letter_game_hint_already_known)
     val ambiguousGuessMessage = stringResource(R.string.letter_game_ambiguous_guess)
@@ -211,6 +216,22 @@ fun LetterGameScreen(
         onRoomCodeChanged(selectedRoom?.code ?: savedRoomCode)
         onJoinActionAvailabilityChanged(!inRoom && session.isAuthenticated)
     }
+    suspend fun refreshPublicRooms(showIndicator: Boolean) {
+        roomRefreshMutex.withLock {
+            if (showIndicator) isLobbyRefreshing = true
+            try {
+                runCatching { repository.listPublicRooms() }
+                    .onSuccess {
+                        rooms = it
+                        if (showIndicator) errorMessage = null
+                    }
+                    .onFailure { errorMessage = it.message }
+            } finally {
+                if (showIndicator) isLobbyRefreshing = false
+            }
+        }
+    }
+
     LaunchedEffect(session.user?.id) {
         if (session.user == null) {
             rooms = emptyList()
@@ -219,9 +240,14 @@ fun LetterGameScreen(
             match = null
             return@LaunchedEffect
         }
-        runCatching { repository.listPublicRooms() }
-            .onSuccess { rooms = it }
-            .onFailure { errorMessage = it.message }
+        refreshPublicRooms(showIndicator = false)
+    }
+    LaunchedEffect(session.user?.id, selectedRoom?.id, savedRoomCode) {
+        if (!session.isAuthenticated || selectedRoom != null || savedRoomCode != null) return@LaunchedEffect
+        while (true) {
+            delay(5_000.milliseconds)
+            refreshPublicRooms(showIndicator = false)
+        }
     }
     LaunchedEffect(session.user?.id, savedRoomCode) {
         val code = savedRoomCode ?: return@LaunchedEffect
@@ -361,8 +387,10 @@ fun LetterGameScreen(
                 contentTopPadding = contentTopPadding,
                 createVisibility = createVisibility,
                 loading = loading,
+                isRefreshing = isLobbyRefreshing,
                 errorMessage = errorMessage,
                 onVisibilityChange = { createVisibility = it },
+                onRefresh = { scope.launch { refreshPublicRooms(showIndicator = true) } },
                 onCreate = {
                     scope.launch {
                         loading = true
@@ -614,68 +642,77 @@ private fun LobbyPage(
     contentTopPadding: Dp,
     createVisibility: RoomVisibility,
     loading: Boolean,
+    isRefreshing: Boolean,
     errorMessage: String?,
     onVisibilityChange: (RoomVisibility) -> Unit,
+    onRefresh: () -> Unit,
     onCreate: () -> Unit,
     onJoinPublic: (LetterGameRoom) -> Unit,
 ) {
-    LazyColumn(
+    PullToRefresh(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, top = contentTopPadding + 8.dp, end = 16.dp, bottom = 96.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(top = contentTopPadding),
     ) {
-        item {
-            LobbySectionTitle(
-                text = stringResource(R.string.letter_game_join_title),
-                icon = Icons.Rounded.AddHome,
-            )
-        }
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = 14.dp,
-                insideMargin = PaddingValues(14.dp),
-                colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    VisibilityButton(RoomVisibility.Public, createVisibility == RoomVisibility.Public, onVisibilityChange, Modifier.weight(1f))
-                    VisibilityButton(RoomVisibility.Private, createVisibility == RoomVisibility.Private, onVisibilityChange, Modifier.weight(1f))
-                }
-                Spacer(Modifier.height(10.dp))
-                Button(
-                    onClick = onCreate,
-                    enabled = !loading,
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, top = contentTopPadding + 8.dp, end = 16.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item {
+                LobbySectionTitle(
+                    text = stringResource(R.string.letter_game_join_title),
+                    icon = Icons.Rounded.AddHome,
+                )
+            }
+            item {
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColorsPrimary(),
+                    cornerRadius = 14.dp,
+                    insideMargin = PaddingValues(14.dp),
+                    colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
                 ) {
-                    Icon(if (createVisibility == RoomVisibility.Public) Icons.Rounded.Public else Icons.Rounded.Lock, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        stringResource(
-                            if (createVisibility == RoomVisibility.Public) {
-                                R.string.letter_game_create_public
-                            } else {
-                                R.string.letter_game_create_private
-                            },
-                        ),
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        VisibilityButton(RoomVisibility.Public, createVisibility == RoomVisibility.Public, onVisibilityChange, Modifier.weight(1f))
+                        VisibilityButton(RoomVisibility.Private, createVisibility == RoomVisibility.Private, onVisibilityChange, Modifier.weight(1f))
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Button(
+                        onClick = onCreate,
+                        enabled = !loading,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColorsPrimary(),
+                    ) {
+                        Icon(if (createVisibility == RoomVisibility.Public) Icons.Rounded.Public else Icons.Rounded.Lock, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(
+                                if (createVisibility == RoomVisibility.Public) {
+                                    R.string.letter_game_create_public
+                                } else {
+                                    R.string.letter_game_create_private
+                                },
+                            ),
+                        )
+                    }
                 }
             }
-        }
-        item {
-            LobbySectionTitle(
-                text = stringResource(R.string.letter_game_public_rooms),
-                icon = Icons.Rounded.Public,
-            )
-        }
-        if (rooms.isEmpty()) {
-            item { Text(stringResource(R.string.letter_game_no_public_rooms), color = MiuixTheme.colorScheme.onSurfaceVariantSummary) }
-        } else {
-            items(rooms, key = LetterGameRoom::id) { room ->
-                PublicRoomRow(room = room, onJoin = { onJoinPublic(room) })
+            item {
+                LobbySectionTitle(
+                    text = stringResource(R.string.letter_game_public_rooms),
+                    icon = Icons.Rounded.Public,
+                )
             }
+            if (rooms.isEmpty()) {
+                item { Text(stringResource(R.string.letter_game_no_public_rooms), color = MiuixTheme.colorScheme.onSurfaceVariantSummary) }
+            } else {
+                items(rooms, key = LetterGameRoom::id) { room ->
+                    PublicRoomRow(room = room, onJoin = { onJoinPublic(room) })
+                }
+            }
+            if (errorMessage != null) item { ErrorBanner(errorMessage) }
         }
-        if (errorMessage != null) item { ErrorBanner(errorMessage) }
     }
 }
 

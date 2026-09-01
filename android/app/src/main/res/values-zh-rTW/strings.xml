@@ -679,14 +679,14 @@
     <string name="letter_game_public_hint_cost">公開提示費用（1–100）</string>
     <string name="letter_game_private_hint_cost">私密提示費用（1–100）</string>
     <string name="letter_game_song_source">歌曲來源</string>
-    <string name="letter_game_source_filtered_random">篩選隨機</string>
+    <string name="letter_game_source_filtered_random">隨機</string>
     <string name="letter_game_source_collection">收藏夾</string>
     <string name="letter_game_source_favorites">收藏歌曲</string>
     <string name="letter_game_filter_keyword">歌曲名稱關鍵字（可選）</string>
     <string name="letter_game_filter_category">分類</string>
     <string name="letter_game_filter_version">版本（可選）</string>
     <string name="letter_game_filter_type">譜面類型</string>
-    <string name="letter_game_random_filters">隨機篩選</string>
+    <string name="letter_game_random_filters">篩選</string>
     <string name="letter_game_exclude_deleted">排除刪除曲</string>
     <string name="letter_game_english_only">僅包含英文字符</string>
     <string name="letter_game_filters_may_be_difficult">老師，這可能會很困難</string>

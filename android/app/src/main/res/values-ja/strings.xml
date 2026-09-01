@@ -682,14 +682,14 @@
     <string name="letter_game_public_hint_cost">公開ヒント費用（1–100）</string>
     <string name="letter_game_private_hint_cost">非公開ヒント費用（1–100）</string>
     <string name="letter_game_song_source">曲の出典</string>
-    <string name="letter_game_source_filtered_random">条件付きランダム</string>
+    <string name="letter_game_source_filtered_random">ランダム</string>
     <string name="letter_game_source_collection">コレクション</string>
     <string name="letter_game_source_favorites">お気に入り</string>
     <string name="letter_game_filter_keyword">曲名キーワード（任意）</string>
     <string name="letter_game_filter_category">カテゴリ</string>
     <string name="letter_game_filter_version">バージョン（任意）</string>
     <string name="letter_game_filter_type">譜面タイプ</string>
-    <string name="letter_game_random_filters">ランダム条件</string>
+    <string name="letter_game_random_filters">フィルター</string>
     <string name="letter_game_exclude_deleted">削除曲を除外</string>
     <string name="letter_game_english_only">英字タイトルのみ</string>
     <string name="letter_game_filters_may_be_difficult">先生、これは難しいかもしれません</string>

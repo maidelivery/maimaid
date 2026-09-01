@@ -679,14 +679,14 @@
     <string name="letter_game_public_hint_cost">公开提示费用（1–100）</string>
     <string name="letter_game_private_hint_cost">私密提示费用（1–100）</string>
     <string name="letter_game_song_source">曲目来源</string>
-    <string name="letter_game_source_filtered_random">筛选随机</string>
+    <string name="letter_game_source_filtered_random">随机</string>
     <string name="letter_game_source_collection">收藏夹</string>
     <string name="letter_game_source_favorites">收藏歌曲</string>
     <string name="letter_game_filter_keyword">歌名关键词（可选）</string>
     <string name="letter_game_filter_category">分类</string>
     <string name="letter_game_filter_version">版本（可选）</string>
     <string name="letter_game_filter_type">谱面类型</string>
-    <string name="letter_game_random_filters">随机筛选</string>
+    <string name="letter_game_random_filters">筛选</string>
     <string name="letter_game_exclude_deleted">排除删除曲</string>
     <string name="letter_game_english_only">仅包含英文字符</string>
     <string name="letter_game_filters_may_be_difficult">先生，这可能会很困难</string>

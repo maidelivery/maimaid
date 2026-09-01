@@ -288,7 +288,7 @@ internal fun LetterGameRoomSettingsSheet(
                     insideMargin = PaddingValues(16.dp),
                 ) {
                     SettingsDropdown(
-                        title = stringResource(R.string.letter_game_song_source),
+                        title = "",
                         value = draft.selectionMode,
                         values = listOf("filtered_random", "collection"),
                         valueLabel = { sourceModeLabel(it) },
@@ -297,69 +297,7 @@ internal fun LetterGameRoomSettingsSheet(
                     )
                 }
             }
-            if (draft.selectionMode == "filtered_random") {
-                item {
-                    SettingsSection(stringResource(R.string.letter_game_random_filters)) {
-                        SettingsSwitchRow(
-                            title = stringResource(R.string.letter_game_exclude_deleted),
-                            checked = draft.excludeDeleted,
-                            enabled = canEdit,
-                            onCheckedChange = { checked -> edit { it.copy(excludeDeleted = checked) } },
-                        )
-                        SettingsSwitchRow(
-                            title = stringResource(R.string.letter_game_english_only),
-                            checked = draft.englishOnly,
-                            enabled = canEdit,
-                            onCheckedChange = { checked -> edit { it.copy(englishOnly = checked) } },
-                        )
-                    }
-                }
-                if (!draft.excludeDeleted && !draft.englishOnly) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.letter_game_filters_may_be_difficult),
-                            style = MiuixTheme.textStyles.footnote2,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            modifier = Modifier.padding(start = 4.dp),
-                        )
-                    }
-                }
-                item {
-                    SettingsCardSection(stringResource(R.string.letter_game_version_range)) {
-                        VersionRangeSetting(
-                            versions = versions,
-                            minVersion = draft.minVersion,
-                            maxVersion = draft.maxVersion,
-                            enabled = canEdit,
-                            onChange = { minVersion, maxVersion ->
-                                edit { it.copy(minVersion = minVersion, maxVersion = maxVersion) }
-                            },
-                        )
-                    }
-                }
-                item {
-                    SettingsCardSection(stringResource(R.string.letter_game_filter_category)) {
-                        FilterChips(
-                            values = categories,
-                            selected = draft.categories,
-                            enabled = canEdit,
-                            displayValue = { it },
-                            onToggle = { value -> edit { it.copy(categories = it.categories.toggled(value)) } },
-                        )
-                    }
-                }
-                item {
-                    SettingsCardSection(stringResource(R.string.letter_game_filter_type)) {
-                        FilterChips(
-                            values = listOf("standard", "dx"),
-                            selected = draft.chartTypes,
-                            enabled = canEdit,
-                            displayValue = { if (it == "standard") "STD" else "DX" },
-                            onToggle = { value -> edit { it.copy(chartTypes = it.chartTypes.toggled(value)) } },
-                        )
-                    }
-                }
-            } else {
+            if (draft.selectionMode == "collection") {
                 item {
                     SettingsSection(stringResource(R.string.letter_game_source_collection)) {
                         if (room.hostUserId == currentUserId) {
@@ -406,6 +344,67 @@ internal fun LetterGameRoomSettingsSheet(
                     }
                 }
             }
+            item {
+                SettingsSection(stringResource(R.string.letter_game_random_filters)) {
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.letter_game_exclude_deleted),
+                        checked = draft.excludeDeleted,
+                        enabled = canEdit,
+                        onCheckedChange = { checked -> edit { it.copy(excludeDeleted = checked) } },
+                    )
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.letter_game_english_only),
+                        checked = draft.englishOnly,
+                        enabled = canEdit,
+                        onCheckedChange = { checked -> edit { it.copy(englishOnly = checked) } },
+                    )
+                }
+            }
+            if (!draft.excludeDeleted && !draft.englishOnly) {
+                item {
+                    Text(
+                        text = stringResource(R.string.letter_game_filters_may_be_difficult),
+                        style = MiuixTheme.textStyles.footnote2,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        modifier = Modifier.padding(start = 4.dp),
+                    )
+                }
+            }
+            item {
+                SettingsCardSection(stringResource(R.string.letter_game_version_range)) {
+                    VersionRangeSetting(
+                        versions = versions,
+                        minVersion = draft.minVersion,
+                        maxVersion = draft.maxVersion,
+                        enabled = canEdit,
+                        onChange = { minVersion, maxVersion ->
+                            edit { it.copy(minVersion = minVersion, maxVersion = maxVersion) }
+                        },
+                    )
+                }
+            }
+            item {
+                SettingsCardSection(stringResource(R.string.letter_game_filter_category)) {
+                    FilterChips(
+                        values = categories,
+                        selected = draft.categories,
+                        enabled = canEdit,
+                        displayValue = { it },
+                        onToggle = { value -> edit { it.copy(categories = it.categories.toggled(value)) } },
+                    )
+                }
+            }
+            item {
+                SettingsCardSection(stringResource(R.string.letter_game_filter_type)) {
+                    FilterChips(
+                        values = listOf("standard", "dx"),
+                        selected = draft.chartTypes,
+                        enabled = canEdit,
+                        displayValue = { if (it == "standard") "STD" else "DX" },
+                        onToggle = { value -> edit { it.copy(chartTypes = it.chartTypes.toggled(value)) } },
+                    )
+                }
+            }
         }
     }
 }
@@ -444,19 +443,19 @@ private fun RoomSettingsDraft.toRequest(
     versions: List<String>,
     selectedSongCount: Int,
 ): LetterGameCreateRequest? {
+    if (selectionMode == "collection" && collectionIds.isEmpty()) return null
     val validation = validate(room.members.count { it.status == "accepted" }.coerceAtLeast(1), selectedSongCount)
     if (!validation.valid) return null
-    val selectionConfig = if (selectionMode == "collection") {
-        mapOf("collectionIds" to JsonArray(collectionIds.sorted().map(::JsonPrimitive)))
-    } else {
-        mapOf(
-            "excludeDeleted" to JsonPrimitive(excludeDeleted),
-            "englishOnly" to JsonPrimitive(englishOnly),
-            "minVersion" to versionBoundary(minVersion, versions.firstOrNull()),
-            "maxVersion" to versionBoundary(maxVersion, versions.lastOrNull()),
-            "categories" to JsonArray(categories.sorted().map(::JsonPrimitive)),
-            "chartTypes" to JsonArray(chartTypes.sorted().map(::JsonPrimitive)),
-        )
+    val selectionConfig = buildMap {
+        put("excludeDeleted", JsonPrimitive(excludeDeleted))
+        put("englishOnly", JsonPrimitive(englishOnly))
+        put("minVersion", versionBoundary(minVersion, versions.firstOrNull()))
+        put("maxVersion", versionBoundary(maxVersion, versions.lastOrNull()))
+        put("categories", JsonArray(categories.sorted().map(::JsonPrimitive)))
+        put("chartTypes", JsonArray(chartTypes.sorted().map(::JsonPrimitive)))
+        if (selectionMode == "collection") {
+            put("collectionIds", JsonArray(collectionIds.sorted().map(::JsonPrimitive)))
+        }
     }
     return LetterGameCreateRequest(
         visibility = room.visibility,
@@ -557,7 +556,9 @@ private fun SettingsDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(text = title, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+        if (title.isNotBlank()) {
+            Text(text = title, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+        }
         Box(Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier

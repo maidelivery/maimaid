@@ -265,6 +265,71 @@ describe("LetterGameService room lifecycle", () => {
 		expect(songs.map((song: { songIdentifier: string }) => song.songIdentifier)).toEqual(["song-english"]);
 	});
 
+	it("deduplicates collection songs before applying the shared filters", async () => {
+		catalogService.listAliases.mockResolvedValue([]);
+		catalogService.listVersions.mockResolvedValue([
+			{ version: "maimai" },
+			{ version: "maimai PLUS" },
+			{ version: "GreeN" },
+			{ version: "GreeN PLUS" },
+		]);
+		const songFindMany = vi
+			.fn()
+			.mockResolvedValueOnce([
+				{ songIdentifier: "song-english", title: "Bad Apple!!" },
+				{ songIdentifier: "song-cjk", title: "中文标题" },
+			])
+			.mockResolvedValueOnce([{ songIdentifier: "song-english", title: "Bad Apple!!" }]);
+		const collectionFindMany = vi.fn().mockResolvedValue([
+			{ items: [{ songId: "song-english" }, { songId: "song-cjk" }] },
+			{ items: [{ songId: "song-english" }, { songId: "song-outside-range" }] },
+		]);
+		const service = new LetterGameService(
+			{
+				song: { findMany: songFindMany },
+				sheet: {
+					findMany: vi.fn().mockResolvedValue([
+						{ songIdentifier: "song-english", chartType: "standard" },
+						{ songIdentifier: "song-cjk", chartType: "standard" },
+					]),
+				},
+				songCollection: { findMany: collectionFindMany },
+			} as never,
+			catalogService as never,
+		);
+
+		const songs = await (service as any).selectSongs("user-1", {
+			selectionMode: "collection",
+			selectionConfig: {
+				collectionIds: ["collection-1", "collection-2"],
+				excludeDeleted: true,
+				englishOnly: true,
+				minVersion: "maimai PLUS",
+				maxVersion: "GreeN",
+				categories: ["POPS＆ANIME"],
+				chartTypes: ["standard"],
+			},
+		});
+
+		expect(collectionFindMany).toHaveBeenCalledWith(
+			expect.objectContaining({ where: { id: { in: ["collection-1", "collection-2"] }, userId: "user-1", deletedAt: null } }),
+		);
+		expect(songFindMany).toHaveBeenNthCalledWith(
+			1,
+			{
+				where: {
+					songIdentifier: { in: ["song-english", "song-cjk", "song-outside-range"] },
+					disabled: false,
+					category: { in: ["POPS＆ANIME"] },
+					sheets: { some: { chartType: { in: ["standard", "std", "sd"] }, disabled: false } },
+					version: { in: ["maimai PLUS", "GreeN"] },
+				},
+				select: { songIdentifier: true, title: true },
+			},
+		);
+		expect(songs.map((song: { songIdentifier: string }) => song.songIdentifier)).toEqual(["song-english"]);
+	});
+
 	it("excludes closed and empty rooms from the public lobby query", async () => {
 		const findMany = vi.fn().mockResolvedValue([]);
 		const service = new LetterGameService({ letterGameRoom: { findMany } } as never, catalogService as never);

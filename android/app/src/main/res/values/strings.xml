@@ -710,14 +710,14 @@
 	<string name="letter_game_public_hint_cost">Public hint cost (1–100)</string>
 	<string name="letter_game_private_hint_cost">Private hint cost (1–100)</string>
 	<string name="letter_game_song_source">Song source</string>
-	<string name="letter_game_source_filtered_random">Filtered random</string>
+	<string name="letter_game_source_filtered_random">Random</string>
 	<string name="letter_game_source_collection">Collection</string>
 	<string name="letter_game_source_favorites">Favorites</string>
 	<string name="letter_game_filter_keyword">Title keyword (optional)</string>
 	<string name="letter_game_filter_category">Category</string>
 	<string name="letter_game_filter_version">Version (optional)</string>
 	<string name="letter_game_filter_type">Chart type</string>
-	<string name="letter_game_random_filters">Random filters</string>
+	<string name="letter_game_random_filters">Filters</string>
 	<string name="letter_game_exclude_deleted">Exclude deleted songs</string>
 	<string name="letter_game_english_only">English titles only</string>
 	<string name="letter_game_filters_may_be_difficult">This may be difficult, Sensei.</string>
