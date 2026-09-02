@@ -95,7 +95,7 @@ class ScoreRepository(
             now = now,
         )
         scoreDao.upsertScore(merged)
-		syncStateStore?.markDataPending(profile.id)
+        syncStateStore?.markDataPending(profile.id)
         merged
     }
 
@@ -105,7 +105,7 @@ class ScoreRepository(
         if (record.profileId != profile.id) return@withTransaction
 
         scoreDao.deletePlayRecord(record)
-		syncStateStore?.markDataPending(profile.id, replace = true)
+        syncStateStore?.markDataPending(profile.id, replace = true)
         val currentScore = scoreDao.score(profile.id, record.sheetKey) ?: return@withTransaction
         if (!ScoreRules.deletedRecordWasBest(currentScore, record)) return@withTransaction
 
@@ -126,7 +126,7 @@ class ScoreRepository(
         }
     }
 
-	private suspend fun repairMissingPlayRecords(profileId: String, songIdentifier: String) {
+    private suspend fun repairMissingPlayRecords(profileId: String, songIdentifier: String) {
         database.withTransaction {
             val scores = scoreDao.scoresForSong(profileId, songIdentifier)
             if (scores.isEmpty()) return@withTransaction

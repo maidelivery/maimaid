@@ -148,7 +148,7 @@ class OtogameImportViewModel(
                 }
             } catch (error: Exception) {
                 Log.e(
-                    DiagnosticTag,
+                    DIAGNOSTIC_TAG,
                     "Import failed: ${error.exceptionTypeChain()}; ${error.sanitizedDiagnosticMessage()}",
                 )
                 mutableState.update {
@@ -183,6 +183,6 @@ class OtogameImportViewModel(
             .orEmpty()
 
     private companion object {
-        const val DiagnosticTag = "OtogameImport"
+        const val DIAGNOSTIC_TAG = "OtogameImport"
     }
 }

@@ -1,7 +1,6 @@
 package org.rhythmeta.maimaid.core.data
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.rhythmeta.maimaid.core.database.ScoreEntity
 import org.rhythmeta.maimaid.core.database.SheetEntity

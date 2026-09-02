@@ -62,10 +62,10 @@ class RatingUtilsTest {
             testSong("circle", "CiRCLE", "2026-06-01"),
         )
         val sheets = listOf(
-            testSheet("prism", "PRiSM", jp = true, intl = true, cn = true),
-            testSheet("prism-plus-released", "PRiSM PLUS", jp = true, intl = true, cn = false),
-            testSheet("prism-plus-future", "PRiSM PLUS", jp = true, intl = false, cn = false),
-            testSheet("circle", "CiRCLE", jp = true, intl = false, cn = false),
+            testSheet("prism", "PRiSM", intl = true, cn = true),
+            testSheet("prism-plus-released", "PRiSM PLUS", intl = true, cn = false),
+            testSheet("prism-plus-future", "PRiSM PLUS", intl = false, cn = false),
+            testSheet("circle", "CiRCLE", intl = false, cn = false),
         )
         val currentDate = LocalDate.of(2026, 8, 12)
 
@@ -101,7 +101,6 @@ class RatingUtilsTest {
     private fun testSheet(
         songId: String,
         version: String,
-        jp: Boolean,
         intl: Boolean,
         cn: Boolean = false,
     ) = SheetEntity(
@@ -121,7 +120,7 @@ class RatingUtilsTest {
         touch = null,
         breakCount = null,
         total = null,
-        regionJp = jp,
+        regionJp = true,
         regionIntl = intl,
         regionUsa = false,
         regionCn = cn,

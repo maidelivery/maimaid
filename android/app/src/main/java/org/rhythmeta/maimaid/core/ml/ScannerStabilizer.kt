@@ -35,7 +35,7 @@ class ScannerStabilizer(
             }
         }
         val locked = lockedMatch
-        if (locked != null && clock() - lastSeenAt > DisappearanceTimeoutMillis) {
+        if (locked != null && clock() - lastSeenAt > DISAPPEARANCE_TIMEOUT_MILLIS) {
             reset()
         }
         return StabilizedScannerResult(
@@ -53,7 +53,7 @@ class ScannerStabilizer(
         lockedMatch = match
         lastSeenAt = clock()
         recognitionVotes.clear()
-        recognitionVotes[match.song.songIdentifier] = LockThreshold
+        recognitionVotes[match.song.songIdentifier] = LOCK_THRESHOLD
         achievementBuffer.clear()
         dxScoreBuffer.clear()
         maxDxScoreBuffer.clear()
@@ -90,16 +90,16 @@ class ScannerStabilizer(
 
     private fun <T> vote(buffer: ArrayDeque<T>, value: T): T {
         buffer += value
-        if (buffer.size > BufferSize) buffer.removeFirst()
+        if (buffer.size > BUFFER_SIZE) buffer.removeFirst()
         val best = buffer.groupingBy { it }.eachCount().maxByOrNull(Map.Entry<T, Int>::value)
-        return if (best != null && best.value >= StabilizationThreshold) best.key else buffer.last()
+        return if (best != null && best.value >= STABILIZATION_THRESHOLD) best.key else buffer.last()
     }
 
     private companion object {
-        const val BufferSize = 5
-        const val StabilizationThreshold = 3
-        const val DisappearanceTimeoutMillis = 4_000L
-        const val LockThreshold = 18
+        const val BUFFER_SIZE = 5
+        const val STABILIZATION_THRESHOLD = 3
+        const val DISAPPEARANCE_TIMEOUT_MILLIS = 4_000L
+        const val LOCK_THRESHOLD = 18
         val CandidateVoteWeights = listOf(6, 3, 2, 1)
     }
 }

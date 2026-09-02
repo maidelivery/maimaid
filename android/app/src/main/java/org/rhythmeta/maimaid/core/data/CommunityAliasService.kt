@@ -191,7 +191,7 @@ class CommunityAliasService(
     suspend fun syncApprovedAliasesIfNeeded() = approvedSyncMutex.withLock {
         val now = Instant.now()
         val previousSync = lastApprovedSyncAt
-        if (previousSync != null && now.isBefore(previousSync.plusSeconds(ApprovedSyncIntervalSeconds))) {
+        if (previousSync != null && now.isBefore(previousSync.plusSeconds(APPROVED_SYNC_INTERVAL_SECONDS))) {
             return@withLock
         }
         val rows = runCatching {
@@ -220,7 +220,7 @@ class CommunityAliasService(
     }
 
     private companion object {
-        const val ApprovedSyncIntervalSeconds = 10L * 60L
+        const val APPROVED_SYNC_INTERVAL_SECONDS = 10L * 60L
 
         fun List<CommunityAliasMyCandidate>.toSearchAliases(): List<SongAliasEntity> =
             asSequence()

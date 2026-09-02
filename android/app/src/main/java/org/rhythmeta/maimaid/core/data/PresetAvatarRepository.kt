@@ -60,7 +60,7 @@ class PresetAvatarRepository(
 
     private suspend fun fetchRemoteAvatars(): List<PresetAvatar> {
         return runCatching {
-            apiClient.requestAbsolute(LxnsIconListUrl).toAvatars()
+            apiClient.requestAbsolute(LXNS_ICON_LIST_URL).toAvatars()
         }.getOrDefault(emptyList())
     }
 
@@ -70,7 +70,7 @@ class PresetAvatarRepository(
             .sortedBy(PresetAvatar::id)
 
     private companion object {
-        const val LxnsIconListUrl = "https://maimai.lxns.net/api/v0/maimai/icon/list"
+        const val LXNS_ICON_LIST_URL = "https://maimai.lxns.net/api/v0/maimai/icon/list"
     }
 }
 

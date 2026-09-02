@@ -349,18 +349,19 @@ private fun PlateJacket(
     }
     val saturation = if (chart.achieved) 1f else 0.08f
     val status = stringResource(if (chart.achieved) R.string.plate_status_completed else R.string.plate_status_incomplete)
+    val accessibilityDescription = stringResource(
+        R.string.plate_chart_accessibility,
+        chart.song.title,
+        difficultyName(chart.sheet.difficulty),
+        status,
+    )
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
             .semantics {
-                contentDescription = context.getString(
-                    R.string.plate_chart_accessibility,
-                    chart.song.title,
-                    difficultyName(chart.sheet.difficulty),
-                    status,
-                )
+                contentDescription = accessibilityDescription
             }
             .clip(squircleShape(10.dp))
             .clickable(onClick = onClick),

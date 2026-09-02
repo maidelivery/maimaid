@@ -26,7 +26,7 @@ class ChartFitStore(
     }
 
     suspend fun save(payload: StaticBundleResponse.ChartFitPayload) = withContext(Dispatchers.IO) {
-        val temporary = File(cacheFile.parentFile, "${cacheFile.name}.tmp")
+        val temporary = cacheFile.resolveSibling("${cacheFile.name}.tmp")
         try {
             temporary.writeText(json.encodeToString(StaticBundleResponse.ChartFitPayload.serializer(), payload))
             Files.move(
@@ -38,5 +38,5 @@ class ChartFitStore(
         } finally {
             temporary.delete()
         }
-    }
+    }!!
 }

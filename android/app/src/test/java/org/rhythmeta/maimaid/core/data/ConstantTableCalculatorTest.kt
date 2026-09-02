@@ -12,12 +12,12 @@ class ConstantTableCalculatorTest {
     fun `build excludes utage and prefers internal level`() {
         val normal = song("normal", "Song")
         val utage = song("utage", "宴", "宴会場")
-        val normalSheet = sheet("normal", "master", 13.0, 13.4)
-        val utageSheet = sheet("utage", "master", 14.0, 14.9, type = "utage")
+        val normalSheet = sheet("normal", 13.0, 13.4)
+        val utageSheet = sheet("utage", 14.0, 14.9, type = "utage")
         val result = ConstantTableCalculator.build(
             songs = listOf(normal, utage),
             sheets = listOf(normalSheet, utageSheet),
-            scores = listOf(score(normalSheet, 100.5)),
+            scores = listOf(score(normalSheet)),
         )
 
         assertEquals(1, result.entries.size)
@@ -29,11 +29,11 @@ class ConstantTableCalculatorTest {
     fun `cn build uses cn constant and excludes charts unavailable in cn`() {
         val cnSong = song("cn", "CN Song")
         val jpOnlySong = song("jp", "JP Song")
-        val cnSheet = sheet("cn", "master", 13.0, 13.9).copy(
+        val cnSheet = sheet("cn", 13.0, 13.9).copy(
             cnLevelValue = 13.8,
             regionCn = true,
         )
-        val jpOnlySheet = sheet("jp", "master", 13.0, 13.9).copy(regionCn = false)
+        val jpOnlySheet = sheet("jp", 13.0, 13.9).copy(regionCn = false)
 
         val result = ConstantTableCalculator.build(
             songs = listOf(cnSong, jpOnlySong),
@@ -72,23 +72,36 @@ class ConstantTableCalculatorTest {
     }
 
     private fun song(id: String, title: String, category: String = "maimai") = SongEntity(
-        id, category, title, "", "$id.png", null, null, 0, null, false, false, null,
+        songIdentifier = id,
+        category = category,
+        title = title,
+        artist = "",
+        imageName = "$id.png",
+        version = null,
+        releaseDate = null,
+        sortOrder = 0,
+        bpm = null,
+        isNew = false,
+        isLocked = false,
+        comment = null,
     )
 
     private fun sheet(
         songId: String,
-        difficulty: String,
         level: Double,
         internal: Double?,
         type: String = "dx",
     ) = SheetEntity(
-        "$songId-$type-$difficulty", songId, type, difficulty, null, level.toString(), level,
+        "$songId-$type-master", songId, type, "master", null, level.toString(), level,
         internal?.toString(), internal, null, null, null, null, null, null, null,
-        true, true, true, true,
+        regionJp = true,
+        regionIntl = true,
+        regionUsa = true,
+        regionCn = true,
     )
 
-    private fun score(sheet: SheetEntity, achievement: Double) = ScoreEntity(
-        "profile", sheet.sheetKey, achievement, ScoreRules.calculateRank(achievement), 0, null, null, 0,
+    private fun score(sheet: SheetEntity) = ScoreEntity(
+        "profile", sheet.sheetKey, 100.5, ScoreRules.calculateRank(100.5), 0, null, null, 0,
     )
 
     private fun entry(id: String, title: String, level: Double, difficulty: String = "master") =

@@ -4,7 +4,7 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
 internal object OtogameImportPolicy {
-    const val PlaylogPageLimit = 4
+    const val PLAYLOG_PAGE_LIMIT = 4
 
     fun isEligibleServer(server: String?): Boolean = server?.trim()?.equals("jp", ignoreCase = true) == true
 

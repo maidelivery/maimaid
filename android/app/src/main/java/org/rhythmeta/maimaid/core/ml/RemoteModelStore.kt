@@ -52,13 +52,13 @@ class RemoteModelStore internal constructor(
     private val json: Json,
 ) {
     constructor(context: Context, baseUrl: String, json: Json) : this(
-        modelDirectory = File(context.applicationContext.filesDir, ModelDirectoryName),
+        modelDirectory = File(context.applicationContext.filesDir, MODEL_DIRECTORY_NAME),
         transport = HttpModelAssetTransport(baseUrl, json),
         json = json,
     )
 
     private val operationMutex = Mutex()
-    private val activeManifestFile = File(modelDirectory, ActiveManifestFilename)
+    private val activeManifestFile = File(modelDirectory, ACTIVE_MANIFEST_FILENAME)
     private var pendingManifest: List<ModelManifestEntry>? = null
 
     init {
@@ -165,7 +165,7 @@ class RemoteModelStore internal constructor(
 
     private fun writeActiveManifest(entries: List<ModelManifestEntry>) {
         modelDirectory.mkdirs()
-        val temporary = File(modelDirectory, "$ActiveManifestFilename.download")
+        val temporary = File(modelDirectory, "$ACTIVE_MANIFEST_FILENAME.download")
         temporary.writeText(json.encodeToString(entries))
         moveAtomically(temporary, activeManifestFile)
     }
@@ -218,8 +218,8 @@ class RemoteModelStore internal constructor(
     }
 
     private companion object {
-        const val ModelDirectoryName = "onnx-models"
-        const val ActiveManifestFilename = "active-manifest.json"
+        const val MODEL_DIRECTORY_NAME = "onnx-models"
+        const val ACTIVE_MANIFEST_FILENAME = "active-manifest.json"
 
         fun sha256(file: File): String {
             val digest = MessageDigest.getInstance("SHA-256")

@@ -21,7 +21,7 @@ class StaticBundleClient(
     private val baseUrl: String,
     private val json: Json,
 ) {
-    suspend fun fetchManifest(): StaticManifest = get<StaticManifest>("/manifest.json").also {
+    suspend fun fetchManifest(): StaticManifest = get<StaticManifest>().also {
         StaticAssetUrls.configure(it.assets)
     }
 
@@ -101,7 +101,7 @@ class StaticBundleClient(
             temporary.parentFile?.mkdirs()
             connection.inputStream.use { input ->
                 temporary.outputStream().use { output ->
-                    val buffer = ByteArray(TransferBufferSize)
+                    val buffer = ByteArray(TRANSFER_BUFFER_SIZE)
                     while (true) {
                         val byteCount = input.read(buffer)
                         if (byteCount < 0) break
@@ -122,9 +122,8 @@ class StaticBundleClient(
     }
 
     private suspend inline fun <reified T> get(
-        path: String,
         noinline onTransfer: ((downloadedBytes: Long, totalBytes: Long?) -> Unit)? = null,
-    ): T = getUrl("${baseUrl.trimEnd('/')}$path", onTransfer)
+    ): T = getUrl("${baseUrl.trimEnd('/')}/manifest.json", onTransfer)
 
     @OptIn(ExperimentalSerializationApi::class)
     private suspend inline fun <reified T> getUrl(
@@ -171,7 +170,7 @@ class StaticBundleClient(
     private companion object {
         const val CONNECT_TIMEOUT_MILLIS = 15_000
         const val READ_TIMEOUT_MILLIS = 60_000
-        const val TransferBufferSize = 64 * 1_024
+        const val TRANSFER_BUFFER_SIZE = 64 * 1_024
     }
 
     private class TransferInputStream(

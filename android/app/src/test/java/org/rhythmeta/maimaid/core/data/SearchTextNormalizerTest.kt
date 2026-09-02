@@ -24,7 +24,7 @@ class SearchTextNormalizerTest {
 
         pairs.forEach { (variant, canonical) ->
             assertEquals(
-                "${variant} should match ${canonical}",
+                "$variant should match $canonical",
                 SearchTextNormalizer.normalize(canonical),
                 SearchTextNormalizer.normalize(variant),
             )

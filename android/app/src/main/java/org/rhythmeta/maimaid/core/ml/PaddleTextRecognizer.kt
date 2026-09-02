@@ -42,27 +42,27 @@ internal class PaddleTextRecognizer(
 
     private fun recognizeCrop(bitmap: Bitmap): OcrText? {
         val targetWidth = min(
-            ModelWidth,
-            max(MinimumWidth, ceil(ModelHeight * bitmap.width.toFloat() / bitmap.height).toInt()),
+            MODEL_WIDTH,
+            max(MINIMUM_WIDTH, ceil(MODEL_HEIGHT * bitmap.width.toFloat() / bitmap.height).toInt()),
         )
         val resizedWidth = min(
             targetWidth,
-            max(1, (ModelHeight * bitmap.width.toFloat() / bitmap.height).toInt()),
+            max(1, (MODEL_HEIGHT * bitmap.width.toFloat() / bitmap.height).toInt()),
         )
-        val resized = createBitmap(targetWidth, ModelHeight)
+        val resized = createBitmap(targetWidth, MODEL_HEIGHT)
         Canvas(resized).apply {
             drawColor(Color.BLACK)
             drawBitmap(
                 bitmap,
                 null,
-                RectF(0f, 0f, resizedWidth.toFloat(), ModelHeight.toFloat()),
+                RectF(0f, 0f, resizedWidth.toFloat(), MODEL_HEIGHT.toFloat()),
                 Paint(Paint.FILTER_BITMAP_FLAG),
             )
         }
-        val pixels = IntArray(targetWidth * ModelHeight)
-        resized.getPixels(pixels, 0, targetWidth, 0, 0, targetWidth, ModelHeight)
+        val pixels = IntArray(targetWidth * MODEL_HEIGHT)
+        resized.getPixels(pixels, 0, targetWidth, 0, 0, targetWidth, MODEL_HEIGHT)
         resized.recycle()
-        val planeSize = targetWidth * ModelHeight
+        val planeSize = targetWidth * MODEL_HEIGHT
         val input = FloatArray(planeSize * 3)
         pixels.forEachIndexed { index, pixel ->
             input[index] = Color.blue(pixel) / 127.5f - 1f
@@ -73,7 +73,7 @@ internal class PaddleTextRecognizer(
         OnnxTensor.createTensor(
             environment,
             FloatBuffer.wrap(input),
-            longArrayOf(1, 3, ModelHeight.toLong(), targetWidth.toLong()),
+            longArrayOf(1, 3, MODEL_HEIGHT.toLong(), targetWidth.toLong()),
         ).use { tensor ->
             session.run(mapOf(session.inputNames.first() to tensor)).use { result ->
                 val batch = result[0].value as Array<*>
@@ -86,7 +86,7 @@ internal class PaddleTextRecognizer(
 
     private fun decodeCtc(timesteps: Array<FloatArray>): OcrText? {
         val text = StringBuilder()
-        var previousIndex = BlankIndex
+        var previousIndex = BLANK_INDEX
         var confidenceSum = 0f
         var characterCount = 0
         timesteps.forEach { probabilities ->
@@ -98,7 +98,7 @@ internal class PaddleTextRecognizer(
                     bestProbability = probabilities[index]
                 }
             }
-            if (bestIndex != BlankIndex && bestIndex != previousIndex) {
+            if (bestIndex != BLANK_INDEX && bestIndex != previousIndex) {
                 characters.getOrNull(bestIndex - 1)?.let { character ->
                     text.append(character)
                     confidenceSum += bestProbability
@@ -126,10 +126,10 @@ internal class PaddleTextRecognizer(
     }
 
     private companion object {
-        const val ModelHeight = 48
-        const val ModelWidth = 320
-        const val MinimumWidth = 32
-        const val BlankIndex = 0
+        const val MODEL_HEIGHT = 48
+        const val MODEL_WIDTH = 320
+        const val MINIMUM_WIDTH = 32
+        const val BLANK_INDEX = 0
     }
 }
 

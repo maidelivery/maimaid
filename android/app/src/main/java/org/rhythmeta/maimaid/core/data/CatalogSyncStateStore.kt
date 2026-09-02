@@ -15,18 +15,18 @@ class CatalogSyncStateStore(
     suspend fun currentMd5(): String? = context.catalogSyncDataStore.data.first()[CatalogMd5Key]
 
     suspend fun isCurrentSchema(): Boolean =
-        (context.catalogSyncDataStore.data.first()[CatalogSchemaVersionKey] ?: 0) >= CurrentCatalogSchemaVersion
+        (context.catalogSyncDataStore.data.first()[CatalogSchemaVersionKey] ?: 0) >= CURRENT_CATALOG_SCHEMA_VERSION
 
     suspend fun save(version: String, md5: String) {
         context.catalogSyncDataStore.edit { preferences ->
             preferences[CatalogVersionKey] = version
             preferences[CatalogMd5Key] = md5
-            preferences[CatalogSchemaVersionKey] = CurrentCatalogSchemaVersion
+            preferences[CatalogSchemaVersionKey] = CURRENT_CATALOG_SCHEMA_VERSION
         }
     }
 
     private companion object {
-        const val CurrentCatalogSchemaVersion = 2
+        const val CURRENT_CATALOG_SCHEMA_VERSION = 2
         val CatalogVersionKey = stringPreferencesKey("catalog_version")
         val CatalogMd5Key = stringPreferencesKey("catalog_md5")
         val CatalogSchemaVersionKey = intPreferencesKey("catalog_schema_version")

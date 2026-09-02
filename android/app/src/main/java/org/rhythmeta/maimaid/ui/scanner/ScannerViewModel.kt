@@ -330,7 +330,7 @@ class ScannerViewModel(
 
     private fun schedulePhotoResultDismissal() {
         photoResultDismissJob = viewModelScope.launch {
-            delay(PhotoResultDurationMillis.milliseconds)
+            delay(PHOTO_RESULT_DURATION_MILLIS.milliseconds)
             photoResultDismissJob = null
             clearResultAndResumeLiveRecognition()
         }
@@ -399,7 +399,7 @@ class ScannerViewModel(
     }
 
     private companion object {
-        const val PhotoResultDurationMillis = 5_000L
+        const val PHOTO_RESULT_DURATION_MILLIS = 5_000L
 
         fun canRecognize(state: ScannerModelState): Boolean = when (state) {
             is ScannerModelState.Ready,

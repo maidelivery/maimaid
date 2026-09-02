@@ -21,7 +21,7 @@ object StaticAssetUrls {
     ): List<String> = buildList {
         value?.coverBaseUrl?.let { add(appending(it, imageName)) }
         value?.coverFallbackBaseUrl?.let { add(appending(it, imageName)) }
-        add(appending(LegacyCoverBaseUrl, imageName))
+        add(appending(LEGACY_COVER_BASE_URL, imageName))
     }.distinct()
 
     fun presetAvatarCandidates(
@@ -31,7 +31,7 @@ object StaticAssetUrls {
         val name = "$id.png"
         value?.presetAvatarBaseUrl?.let { add(appending(it, name)) }
         value?.presetAvatarFallbackBaseUrl?.let { add(appending(it, name)) }
-        add(appending(LegacyPresetAvatarBaseUrl, name))
+        add(appending(LEGACY_PRESET_AVATAR_BASE_URL, name))
     }.distinct()
 
     fun presetAvatarId(url: String?): Int? {
@@ -59,6 +59,6 @@ object StaticAssetUrls {
         .replace("/cdn-cgi/image/format=webp/", "/cdn-cgi/image/format=png/")
         .replace("/cdn-cgi/image/f=webp/", "/cdn-cgi/image/format=png/")
 
-    private const val LegacyCoverBaseUrl = "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/"
-    private const val LegacyPresetAvatarBaseUrl = "https://assets2.lxns.net/maimai/icon/"
+    private const val LEGACY_COVER_BASE_URL = "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/"
+    private const val LEGACY_PRESET_AVATAR_BASE_URL = "https://assets2.lxns.net/maimai/icon/"
 }

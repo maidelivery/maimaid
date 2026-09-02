@@ -8,6 +8,7 @@ package org.rhythmeta.maimaid.sharing;
 /**
  * Protobuf type {@code org.rhythmeta.maimaid.sharing.SongCollectionEntry}
  */
+@SuppressWarnings("all")
 public  final class SongCollectionEntry extends
     com.google.protobuf.GeneratedMessageLite<
         SongCollectionEntry, SongCollectionEntry.Builder> implements

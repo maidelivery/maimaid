@@ -23,7 +23,7 @@ internal data class LetterboxTransform(
 )
 
 internal object YoloImageProcessor {
-    const val InputSize = 640
+    const val INPUT_SIZE = 640
 
     fun runDetector(
         bitmap: Bitmap,
@@ -36,7 +36,7 @@ internal object YoloImageProcessor {
         OnnxTensor.createTensor(
             environment,
             FloatBuffer.wrap(input),
-            longArrayOf(1, 3, InputSize.toLong(), InputSize.toLong()),
+            longArrayOf(1, 3, INPUT_SIZE.toLong(), INPUT_SIZE.toLong()),
         ).use { tensor ->
             session.run(mapOf(session.inputNames.first() to tensor)).use { result ->
                 val output = result[0].value as Array<*>
@@ -61,7 +61,7 @@ internal object YoloImageProcessor {
         OnnxTensor.createTensor(
             environment,
             FloatBuffer.wrap(input),
-            longArrayOf(1, 3, InputSize.toLong(), InputSize.toLong()),
+            longArrayOf(1, 3, INPUT_SIZE.toLong(), INPUT_SIZE.toLong()),
         ).use { tensor ->
             session.run(mapOf(session.inputNames.first() to tensor)).use { result ->
                 val output = result[0].value as Array<*>
@@ -71,12 +71,12 @@ internal object YoloImageProcessor {
     }
 
     private fun createLetterboxInput(bitmap: Bitmap): Pair<FloatArray, LetterboxTransform> {
-        val scale = min(InputSize.toFloat() / bitmap.width, InputSize.toFloat() / bitmap.height)
+        val scale = min(INPUT_SIZE.toFloat() / bitmap.width, INPUT_SIZE.toFloat() / bitmap.height)
         val scaledWidth = max(1, (bitmap.width * scale).roundToInt())
         val scaledHeight = max(1, (bitmap.height * scale).roundToInt())
-        val offsetX = (InputSize - scaledWidth) / 2f
-        val offsetY = (InputSize - scaledHeight) / 2f
-        val target = createBitmap(InputSize, InputSize)
+        val offsetX = (INPUT_SIZE - scaledWidth) / 2f
+        val offsetY = (INPUT_SIZE - scaledHeight) / 2f
+        val target = createBitmap(INPUT_SIZE, INPUT_SIZE)
         Canvas(target).apply {
             drawColor(Color.rgb(114, 114, 114))
             drawBitmap(
@@ -86,10 +86,10 @@ internal object YoloImageProcessor {
                 Paint(Paint.FILTER_BITMAP_FLAG),
             )
         }
-        val pixels = IntArray(InputSize * InputSize)
-        target.getPixels(pixels, 0, InputSize, 0, 0, InputSize, InputSize)
+        val pixels = IntArray(INPUT_SIZE * INPUT_SIZE)
+        target.getPixels(pixels, 0, INPUT_SIZE, 0, 0, INPUT_SIZE, INPUT_SIZE)
         target.recycle()
-        val planeSize = InputSize * InputSize
+        val planeSize = INPUT_SIZE * INPUT_SIZE
         val input = FloatArray(planeSize * 3)
         pixels.forEachIndexed { index, pixel ->
             input[index] = Color.red(pixel) / 255f

@@ -27,9 +27,9 @@ class RandomSongQueryTest {
         val result = RandomSongQuery.filter(
             songs = listOf(match, wrongType, unavailable),
             sheetsBySong = mapOf(
-                match.songIdentifier to listOf(sheet(match, "dx", 13.5, true)),
-                wrongType.songIdentifier to listOf(sheet(wrongType, "std", 13.5, true)),
-                unavailable.songIdentifier to listOf(sheet(unavailable, "dx", 13.5, false)),
+                match.songIdentifier to listOf(sheet(match, "dx", true)),
+                wrongType.songIdentifier to listOf(sheet(wrongType, "std", true)),
+                unavailable.songIdentifier to listOf(sheet(unavailable, "dx", false)),
             ),
             versions = listOf(GameVersionEntity("V1", "V1", "2020-01-01", 0)),
             settings = settings,
@@ -71,7 +71,6 @@ class RandomSongQueryTest {
     private fun sheet(
         song: SongEntity,
         type: String,
-        constant: Double,
         playable: Boolean,
     ) = SheetEntity(
         sheetKey = "${song.songIdentifier}-$type",
@@ -79,10 +78,10 @@ class RandomSongQueryTest {
         type = type,
         difficulty = "master",
         version = song.version,
-        level = constant.toString(),
-        levelValue = constant,
-        internalLevel = constant.toString(),
-        internalLevelValue = constant,
+        level = "13.5",
+        levelValue = 13.5,
+        internalLevel = "13.5",
+        internalLevelValue = 13.5,
         noteDesigner = null,
         tap = null,
         hold = null,

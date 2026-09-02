@@ -5,6 +5,7 @@
 
 package org.rhythmeta.maimaid.sharing;
 
+@SuppressWarnings("all")
 public final class SongCollectionOuterClass {
   private SongCollectionOuterClass() {}
   public static void registerAllExtensions(

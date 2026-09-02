@@ -2,9 +2,10 @@ package org.rhythmeta.maimaid.core.ml
 
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Comparator
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -156,7 +157,7 @@ class RemoteModelStoreTest {
         prefix: String,
         operation: suspend (Path) -> Unit,
     ) {
-        val directory = Files.createTempDirectory(prefix)
+        val directory = withContext(Dispatchers.IO) { Files.createTempDirectory(prefix) }
         try {
             operation(directory)
         } finally {
@@ -192,7 +193,7 @@ class RemoteModelStoreTest {
     private class FailingTransport : ModelAssetTransport {
         override suspend fun fetchManifest(): List<ModelManifestEntry> = error("offline")
 
-        override suspend fun download(entry: ModelManifestEntry, destination: java.io.File, onBytes: (Long) -> Unit) =
+        override suspend fun download() =
             error("offline")
     }
 

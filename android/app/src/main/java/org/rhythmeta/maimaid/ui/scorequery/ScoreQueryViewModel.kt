@@ -63,7 +63,7 @@ class ScoreQueryViewModel(
     }
 
     private val criteria = combine(
-        query.debounce(SearchDebounceMillis.milliseconds),
+        query.debounce(SEARCH_DEBOUNCE_MILLIS.milliseconds),
         filterSettings,
         preferences,
     ) { query, filterSettings, preferences ->
@@ -153,6 +153,6 @@ class ScoreQueryViewModel(
     }
 
     private companion object {
-        const val SearchDebounceMillis = 300L
+        const val SEARCH_DEBOUNCE_MILLIS = 300L
     }
 }

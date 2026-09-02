@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="UnusedResources,PluralsCandidate">
 	<string name="app_name">maimaid</string>
 	<string name="default_profile_name">Player</string>
 	<string name="nav_home">Home</string>
@@ -693,7 +693,7 @@
 	<string name="letter_game_room_settings">Room settings</string>
 	<string name="letter_game_room_title">Room: %1$s</string>
 	<string name="letter_game_room_code_copied">Room code copied</string>
-	<string name="letter_game_restoring_room">Restoring room...</string>
+	<string name="letter_game_restoring_room">Restoring room…</string>
 	<string name="letter_game_settings_expand">Expand room settings</string>
 	<string name="letter_game_settings_collapse">Collapse room settings</string>
 	<string name="letter_game_settings_sheet_expanded">Room settings expanded</string>
@@ -836,7 +836,7 @@
 	<string name="letter_game_log_hint_low_score_2">%1$s paid %2$d points for %5$s%6$s while running low: %3$d left. That was hint #%4$d.</string>
 	<string name="letter_game_log_hint_normal_1">%1$s purchased %5$s intel%6$s for %2$d points. Balance: %3$d. Hint number %4$d.</string>
 	<string name="letter_game_log_hint_normal_2">%1$s invested %2$d points in %5$s intel%6$s and has %3$d left. Hint #%4$d.</string>
-	<string name="letter_game_unknown_song">?</string>
+	<string name="letter_game_unknown_song">&#63;</string>
 	<string name="letter_game_match_results">Ranking</string>
 	<string name="letter_game_reopen">Return to room</string>
 	<string name="letter_game_dismiss">Dismiss</string>

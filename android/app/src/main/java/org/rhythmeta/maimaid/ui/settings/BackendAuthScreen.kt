@@ -95,6 +95,8 @@ fun BackendAuthScreen(container: AppContainer) {
     }
 
     val restoreSucceeded = stringResource(R.string.cloud_message_restore_success)
+    val resolutionSucceeded = stringResource(R.string.cloud_resolution_success)
+    val localDataCleared = stringResource(R.string.cloud_local_data_cleared)
 
     fun performRestore(removeLocalProfilesAbsentFromCloud: Boolean) {
         scope.launch {
@@ -268,7 +270,6 @@ fun BackendAuthScreen(container: AppContainer) {
 
     accountConflict?.let { conflict ->
         AccountConflictDialog(
-            show = true,
             conflict = conflict,
             isApplying = operation == CloudOperation.Resolve,
             onSelect = { resolution ->
@@ -277,7 +278,7 @@ fun BackendAuthScreen(container: AppContainer) {
                     runCatching { container.backendSyncCoordinator.resolveAccountConflict(resolution) }
                         .onSuccess {
                             accountConflict = null
-                            showMessage(context.getString(R.string.cloud_resolution_success))
+                            showMessage(resolutionSucceeded)
                         }
                         .onFailure { showMessage(it.localizedMessage ?: it.javaClass.simpleName) }
                     operation = null
@@ -287,7 +288,6 @@ fun BackendAuthScreen(container: AppContainer) {
     }
     profileConflict?.let { conflict ->
         ProfileConflictDialog(
-            show = true,
             count = conflict.profileIds.size,
             isApplying = operation == CloudOperation.Resolve,
             onDismiss = { profileConflict = null },
@@ -297,7 +297,7 @@ fun BackendAuthScreen(container: AppContainer) {
                     runCatching { container.backendSyncCoordinator.resolveProfileConflict(resolution) }
                         .onSuccess {
                             profileConflict = null
-                            showMessage(context.getString(R.string.cloud_resolution_success))
+                            showMessage(resolutionSucceeded)
                         }
                         .onFailure { showMessage(it.localizedMessage ?: it.javaClass.simpleName) }
                     operation = null
@@ -307,7 +307,6 @@ fun BackendAuthScreen(container: AppContainer) {
     }
     restorePreview?.let { preview ->
         RestoreLocalProfilesDialog(
-            show = true,
             profileCount = preview.localOnlyProfiles.size,
             isApplying = operation == CloudOperation.Restore,
             onDismiss = { restorePreview = null },
@@ -332,7 +331,7 @@ fun BackendAuthScreen(container: AppContainer) {
                     container.backendSessionManager.logout()
                 showLogoutOptions = false
                 operation = null
-                if (clearLocal) showMessage(context.getString(R.string.cloud_local_data_cleared))
+                if (clearLocal) showMessage(localDataCleared)
             }
         },
     )
@@ -448,13 +447,12 @@ private fun MonochromeIcon(icon: ImageVector) {
 
 @Composable
 private fun AccountConflictDialog(
-    show: Boolean,
     conflict: BackendAccountConflict,
     isApplying: Boolean,
     onSelect: (BackendAccountResolution) -> Unit,
 ) {
     WindowDialog(
-        show = show,
+        show = true,
         title = stringResource(R.string.cloud_resolution_title),
         summary = stringResource(R.string.cloud_resolution_account_message),
         onDismissRequest = null,
@@ -468,14 +466,13 @@ private fun AccountConflictDialog(
 
 @Composable
 private fun ProfileConflictDialog(
-    show: Boolean,
     count: Int,
     isApplying: Boolean,
     onDismiss: () -> Unit,
     onSelect: (BackendAccountResolution) -> Unit,
 ) {
     WindowDialog(
-        show = show,
+        show = true,
         title = stringResource(R.string.cloud_profile_conflict_title),
         summary = stringResource(R.string.cloud_profile_conflict_message, count),
         onDismissRequest = onDismiss,
@@ -487,7 +484,6 @@ private fun ProfileConflictDialog(
 
 @Composable
 private fun RestoreLocalProfilesDialog(
-    show: Boolean,
     profileCount: Int,
     isApplying: Boolean,
     onDismiss: () -> Unit,
@@ -495,7 +491,7 @@ private fun RestoreLocalProfilesDialog(
     onRemove: () -> Unit,
 ) {
     WindowDialog(
-        show = show,
+        show = true,
         title = stringResource(R.string.cloud_restore_local_profiles_title),
         summary = stringResource(R.string.cloud_restore_local_profiles_summary, profileCount),
         onDismissRequest = onDismiss,

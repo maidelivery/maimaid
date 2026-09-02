@@ -113,7 +113,7 @@ object ScoreRules {
         records.maxWithOrNull(compareBy<PlayRecordEntity> { it.achievement }.thenBy { it.playedAt })
 
     fun deletedRecordWasBest(score: ScoreEntity, deleted: PlayRecordEntity): Boolean =
-        abs(score.achievement - deleted.achievement) < AchievementEpsilon
+        abs(score.achievement - deleted.achievement) < ACHIEVEMENT_EPSILON
 
     private fun bestFc(first: String?, second: String?): String? =
         if (fcOrder(first) >= fcOrder(second)) canonicalFc(first) else canonicalFc(second)
@@ -143,5 +143,5 @@ object ScoreRules {
         ?.lowercase()
         ?.takeIf(String::isNotEmpty)
 
-    private const val AchievementEpsilon = 0.0001
+    private const val ACHIEVEMENT_EPSILON = 0.0001
 }

@@ -49,7 +49,7 @@ android {
         minSdk = 28
         targetSdk = 37
         versionCode = maimaidBuildNumber.get()
-		versionName = "1.2.6.2"
+		    versionName = "1.2.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "BACKEND_URL", "\"${maimaidBackendUrl.get()}\"")
@@ -144,6 +144,7 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="UnusedResources,PluralsCandidate">
 	<string name="app_name">maimaid</string>
 	<string name="default_profile_name">玩家</string>
 	<string name="nav_home">主页</string>
@@ -662,7 +662,7 @@
     <string name="letter_game_room_settings">房间设置</string>
     <string name="letter_game_room_title">房间：%1$s</string>
     <string name="letter_game_room_code_copied">已复制房间码</string>
-    <string name="letter_game_restoring_room">正在恢复房间...</string>
+    <string name="letter_game_restoring_room">正在恢复房间…</string>
     <string name="letter_game_settings_expand">展开房间设置</string>
     <string name="letter_game_settings_collapse">收起房间设置</string>
     <string name="letter_game_settings_sheet_expanded">房间设置已展开</string>
@@ -804,7 +804,7 @@
     <string name="letter_game_log_hint_low_score_2">%1$s 低分购买%5$s情报%6$s，支付 %2$d 分后只剩 %3$d 分。这是第 %4$d 次提示。</string>
     <string name="letter_game_log_hint_normal_1">%1$s 花费 %2$d 分购买%5$s情报%6$s，余额 %3$d 分。第 %4$d 次提示。</string>
     <string name="letter_game_log_hint_normal_2">%1$s 投资 %2$d 分购买%5$s情报%6$s，剩余 %3$d 分。这是第 %4$d 次提示。</string>
-    <string name="letter_game_unknown_song">?</string>
+    <string name="letter_game_unknown_song">&#63;</string>
     <string name="letter_game_match_results">排名</string>
     <string name="letter_game_reopen">返回房间</string>
     <string name="letter_game_dismiss">关闭</string>

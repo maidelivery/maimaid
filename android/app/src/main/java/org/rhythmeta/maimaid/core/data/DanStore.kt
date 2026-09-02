@@ -27,7 +27,7 @@ class DanStore(
     }
 
     suspend fun save(categories: List<DanCategory>) = withContext(Dispatchers.IO) {
-        val temporary = File(cacheFile.parentFile, "${cacheFile.name}.tmp")
+        val temporary = cacheFile.resolveSibling("${cacheFile.name}.tmp")
         try {
             temporary.writeText(json.encodeToString(serializer, categories))
             Files.move(
@@ -39,5 +39,5 @@ class DanStore(
         } finally {
             temporary.delete()
         }
-    }
+    }!!
 }

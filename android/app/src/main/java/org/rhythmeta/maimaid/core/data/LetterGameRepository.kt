@@ -113,9 +113,9 @@ class LetterGameRepository(
                 mutableEvents.tryEmit(LetterGameEvent.Error("connection_failed", t.message))
             }
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                when {
-                    reason == "room_dissolved" -> mutableEvents.tryEmit(LetterGameEvent.RoomDissolved(roomCode))
-                    reason == "room_access_denied" || reason == "member_removed" ->
+                when (reason) {
+                    "room_dissolved" -> mutableEvents.tryEmit(LetterGameEvent.RoomDissolved(roomCode))
+                    "room_access_denied", "member_removed" ->
                         mutableEvents.tryEmit(LetterGameEvent.MemberRemoved(roomCode, "kicked"))
                 }
             }
@@ -140,14 +140,7 @@ class LetterGameRepository(
         }))
     }
 
-    fun leaveMatch(webSocket: WebSocket, matchId: String) {
-        webSocket.send(json.encodeToString(JsonObject.serializer(), buildJsonObject {
-            put("type", "leave_match")
-            put("matchId", matchId)
-        }))
-    }
-
-    private fun handleMessage(text: String) {
+	private fun handleMessage(text: String) {
         runCatching { json.parseToJsonElement(text).jsonObject }.onSuccess { message ->
             when (message["type"]?.toString()?.trim('"')) {
                 "room_snapshot" -> message["room"]?.let { mutableEvents.tryEmit(LetterGameEvent.Room(json.decodeFromJsonElement(LetterGameRoom.serializer(), it))) }

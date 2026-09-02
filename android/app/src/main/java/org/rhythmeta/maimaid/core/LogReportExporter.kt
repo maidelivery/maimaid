@@ -13,7 +13,7 @@ import kotlinx.coroutines.withContext
 import org.rhythmeta.maimaid.BuildConfig
 
 internal object LogReportExporter {
-    private const val LogLineLimit = 4_000
+    private const val LOG_LINE_LIMIT = 4_000
     private val fileNameFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
         .withZone(ZoneId.systemDefault())
 
@@ -42,7 +42,7 @@ internal object LogReportExporter {
     private fun readRecentLogcat(): String = runCatching {
         val process = ProcessBuilder(
             "logcat", "-d", "-v", "threadtime",
-            "-t", LogLineLimit.toString(),
+            "-t", LOG_LINE_LIMIT.toString(),
         ).redirectErrorStream(true).start()
         process.inputStream.bufferedReader().use { it.readText() }.also { process.waitFor() }
     }.getOrElse { error ->

@@ -119,7 +119,6 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.PullToRefresh
@@ -528,84 +527,84 @@ fun LetterGameScreen(
             )
         } else {
             val currentUserId = session.user?.id
-					when (animatedMatch?.status) {
-						"active" -> PlayingPage(
-								match = animatedMatch,
-									currentUserId = currentUserId,
-									localAvatarModel = localAvatarModel,
-									englishOnly = animatedRoom.settings.selectionConfig["englishOnly"]?.jsonPrimitive?.booleanOrNull == true,
-								publicHintCost = animatedRoom.settings.publicHintCost,
-								privateHintCost = animatedRoom.settings.privateHintCost,
-								socket = socket,
-								repository = repository,
-								coverImageStore = container.coverImageStore,
-								versions = gameVersions,
-								contentTopPadding = contentTopPadding,
-								errorMessage = errorMessage,
-								onShowSnackbar = { message ->
-									scope.launch {
-										snackbarHostState.showSnackbar(
-											message = message,
-											withDismissAction = true,
-											duration = SnackbarDuration.Custom(5_000),
-										)
-									}
-								},
-								onMatchRefresh = { refreshed -> match = refreshed },
-							)
-								"finished", "abandoned" -> ResultsPage(
-									match = animatedMatch,
-									currentUserId = currentUserId,
-									localAvatarModel = localAvatarModel,
-									coverImageStore = container.coverImageStore,
-									versions = gameVersions,
-									contentTopPadding = contentTopPadding,
-									onReopen = {
-										hiddenFinishedMatchId = animatedMatch.matchId
-										scope.launch {
-										runCatching { repository.reopenRoom(animatedRoom.id) }
-												.onSuccess {
-														savedRoomCode = it.code
-														selectedRoom = it
-														hiddenFinishedMatchId = animatedMatch.matchId
-														match = null
-													}
-													.onFailure {
-														hiddenFinishedMatchId = null
-													errorMessage = it.message
-												}
-									}
-								},
-								onExit = { showExitConfirmation = true },
-							)
-							else -> WaitingPage(
-									room = animatedRoom,
-									currentUserId = currentUserId,
-									localAvatarModel = localAvatarModel,
-									contentTopPadding = contentTopPadding,
-								repository = repository,
-								loading = loading,
-								errorMessage = errorMessage,
-								onUpdateRoom = { updated ->
-									savedRoomCode = updated.code
-									selectedRoom = updated
-								},
-								onError = { errorMessage = it },
-								onStart = {
-									scope.launch {
-										loading = true
-										runCatching { repository.startMatch(animatedRoom.id) }
-												.onSuccess {
-													hiddenFinishedMatchId = null
-													match = it
-												}
-											.onFailure { errorMessage = it.message }
-										loading = false
-									}
-								},
-								onLeave = { showExitConfirmation = true },
-							)
-					}
+                    when (animatedMatch?.status) {
+                        "active" -> PlayingPage(
+                                match = animatedMatch,
+                                    currentUserId = currentUserId,
+                                    localAvatarModel = localAvatarModel,
+                                    englishOnly = animatedRoom.settings.selectionConfig["englishOnly"]?.jsonPrimitive?.booleanOrNull == true,
+                                publicHintCost = animatedRoom.settings.publicHintCost,
+                                privateHintCost = animatedRoom.settings.privateHintCost,
+                                socket = socket,
+                                repository = repository,
+                                coverImageStore = container.coverImageStore,
+                                versions = gameVersions,
+                                contentTopPadding = contentTopPadding,
+                                errorMessage = errorMessage,
+                                onShowSnackbar = { message ->
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            message = message,
+                                            withDismissAction = true,
+                                            duration = SnackbarDuration.Custom(5_000),
+                                        )
+                                    }
+                                },
+                                onMatchRefresh = { refreshed -> match = refreshed },
+                            )
+                                "finished", "abandoned" -> ResultsPage(
+                                    match = animatedMatch,
+                                    currentUserId = currentUserId,
+                                    localAvatarModel = localAvatarModel,
+                                    coverImageStore = container.coverImageStore,
+                                    versions = gameVersions,
+                                    contentTopPadding = contentTopPadding,
+                                    onReopen = {
+                                        hiddenFinishedMatchId = animatedMatch.matchId
+                                        scope.launch {
+                                        runCatching { repository.reopenRoom(animatedRoom.id) }
+                                                .onSuccess {
+                                                        savedRoomCode = it.code
+                                                        selectedRoom = it
+                                                        hiddenFinishedMatchId = animatedMatch.matchId
+                                                        match = null
+                                                    }
+                                                    .onFailure {
+                                                        hiddenFinishedMatchId = null
+                                                    errorMessage = it.message
+                                                }
+                                    }
+                                },
+                                onExit = { showExitConfirmation = true },
+                            )
+                            else -> WaitingPage(
+                                    room = animatedRoom,
+                                    currentUserId = currentUserId,
+                                    localAvatarModel = localAvatarModel,
+                                    contentTopPadding = contentTopPadding,
+                                repository = repository,
+                                loading = loading,
+                                errorMessage = errorMessage,
+                                onUpdateRoom = { updated ->
+                                    savedRoomCode = updated.code
+                                    selectedRoom = updated
+                                },
+                                onError = { errorMessage = it },
+                                onStart = {
+                                    scope.launch {
+                                        loading = true
+                                        runCatching { repository.startMatch(animatedRoom.id) }
+                                                .onSuccess {
+                                                    hiddenFinishedMatchId = null
+                                                    match = it
+                                                }
+                                            .onFailure { errorMessage = it.message }
+                                        loading = false
+                                    }
+                                },
+                                onLeave = { showExitConfirmation = true },
+                            )
+                    }
         }
         }
         SnackbarHost(
@@ -688,8 +687,8 @@ fun LetterGameScreen(
                                 showExitConfirmation = false
                                 savedRoomCode = null
                                 selectedRoom = null
-								match = null
-								hiddenFinishedMatchId = null
+                                match = null
+                                hiddenFinishedMatchId = null
                             }
                             .onFailure {
                                 leavingRoom = false
@@ -983,7 +982,7 @@ private fun RoomSettingsSummary(room: LetterGameRoom) {
     )
     val source = if (settings.selectionMode == "collection") {
         val collectionNames = settings.selectedCollections.joinToString(listSeparator) { it.name }
-			if (collectionNames.isBlank()) {
+        if (collectionNames.isBlank()) {
             stringResource(R.string.letter_game_source_collection)
         } else {
             stringResource(R.string.letter_game_summary_source_collection, collectionNames)
@@ -1503,6 +1502,12 @@ private fun TurnStrip(
 ) {
     val orderedPlayers = players.sortedBy(LetterGameMatchPlayer::turnOrder)
     val currentPlayer = orderedPlayers.firstOrNull { it.userId == turnUserId }
+    val currentIndex = orderedPlayers.indexOfFirst { it.userId == turnUserId }
+    val displayPlayers = if (currentIndex > 0) {
+        orderedPlayers.drop(currentIndex) + orderedPlayers.take(currentIndex)
+    } else {
+        orderedPlayers
+    }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1528,7 +1533,7 @@ private fun TurnStrip(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            orderedPlayers.forEachIndexed { index, player ->
+            displayPlayers.forEachIndexed { index, player ->
                 val active = player.userId == turnUserId
                 Column(
                     modifier = Modifier
@@ -1550,7 +1555,7 @@ private fun TurnStrip(
                         color = if (active) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )
                 }
-                if (index < orderedPlayers.lastIndex) {
+                if (index < displayPlayers.lastIndex) {
                     Icon(
                         Icons.AutoMirrored.Rounded.ArrowForward,
                         contentDescription = null,
@@ -1558,13 +1563,13 @@ private fun TurnStrip(
                     )
                 }
             }
-            if (orderedPlayers.isNotEmpty()) {
+            if (displayPlayers.isNotEmpty()) {
                 Icon(
                     Icons.AutoMirrored.Rounded.ArrowForward,
                     contentDescription = null,
                     tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
-                val first = orderedPlayers.first()
+                val first = displayPlayers.first()
                 PlayerAvatar(
                     url = first.avatarUrl,
                     name = first.displayName ?: first.userId,
@@ -1858,12 +1863,21 @@ private fun ResultsPage(
             }
         }
         items(match.players.sortedByDescending(LetterGameMatchPlayer::score), key = LetterGameMatchPlayer::userId) { player ->
-            Card(modifier = Modifier.fillMaxWidth(), cornerRadius = 12.dp, insideMargin = PaddingValues(12.dp), colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer)) {
+            val isSelf = player.userId == currentUserId
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                cornerRadius = 12.dp,
+                insideMargin = PaddingValues(12.dp),
+                colors = CardDefaults.defaultColors(
+                    color = if (isSelf) MiuixTheme.colorScheme.secondaryContainer else MiuixTheme.colorScheme.surfaceContainer,
+                ),
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         stringResource(R.string.letter_game_rank, match.players.sortedByDescending(LetterGameMatchPlayer::score).indexOf(player) + 1),
                         modifier = Modifier.width(21.dp),
                         style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.Bold),
+                        color = if (isSelf) MiuixTheme.colorScheme.onSecondaryContainer else MiuixTheme.colorScheme.onSurface,
                     )
                     PlayerAvatar(
                         url = player.avatarUrl,
@@ -1872,8 +1886,18 @@ private fun ResultsPage(
                         localModel = localAvatarModel.takeIf { player.userId == currentUserId },
                     )
                     Spacer(Modifier.width(10.dp))
-                    Text(player.displayName ?: player.userId, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(stringResource(R.string.letter_game_points, player.score), style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.Bold))
+                    Text(
+                        player.displayName ?: player.userId,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = if (isSelf) MiuixTheme.colorScheme.onSecondaryContainer else MiuixTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        stringResource(R.string.letter_game_points, player.score),
+                        style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.Bold),
+                        color = if (isSelf) MiuixTheme.colorScheme.onSecondaryContainer else MiuixTheme.colorScheme.onSurface,
+                    )
                 }
             }
         }

@@ -19,7 +19,7 @@ internal class DownloadSpeedTracker(
         downloadedBytes += byteCount.coerceAtLeast(0L)
         samples.addLast(Sample(now, downloadedBytes))
 
-        while (samples.size > 2 && samples[1].timestampMillis <= now - SampleWindowMillis) {
+        while (samples.size > 2 && samples[1].timestampMillis <= now - SAMPLE_WINDOW_MILLIS) {
             samples.removeFirst()
         }
 
@@ -34,6 +34,6 @@ internal class DownloadSpeedTracker(
     }
 
     private companion object {
-        const val SampleWindowMillis = 2_000L
+        const val SAMPLE_WINDOW_MILLIS = 2_000L
     }
 }

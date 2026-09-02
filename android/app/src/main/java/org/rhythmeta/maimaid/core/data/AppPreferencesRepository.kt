@@ -11,9 +11,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
-import org.rhythmeta.maimaid.ui.theme.AppThemeColorSource
-import org.rhythmeta.maimaid.ui.theme.AppThemeMode
-import org.rhythmeta.maimaid.ui.theme.DefaultThemeCustomColorArgb
 import org.rhythmeta.maimaid.ui.theme.AppThemeSettings
 import org.rhythmeta.maimaid.ui.theme.ColorMode
 import org.rhythmeta.maimaid.ui.theme.DefaultAppThemeSettings
@@ -84,24 +81,7 @@ class AppPreferencesRepository(
         setThemeSettings(transform(current))
     }
 
-    // Legacy read paths remain available for callers compiled against the previous settings API.
-    val themeMode: Flow<AppThemeMode> = context.appPreferencesDataStore.data.map { preferences ->
-        preferences[ThemeModeKey]
-            ?.let { stored -> AppThemeMode.entries.firstOrNull { it.name == stored } }
-            ?: AppThemeMode.System
-    }
-
-    val themeColorSource: Flow<AppThemeColorSource> = context.appPreferencesDataStore.data.map { preferences ->
-        preferences[ThemeColorSourceKey]
-            ?.let { stored -> AppThemeColorSource.entries.firstOrNull { it.name == stored } }
-            ?: AppThemeColorSource.Wallpaper
-    }
-
-    val themeCustomColorArgb: Flow<Int> = context.appPreferencesDataStore.data.map { preferences ->
-        preferences[ThemeCustomColorArgbKey] ?: DefaultThemeCustomColorArgb
-    }
-
-    val showScannerBoundingBoxes: Flow<Boolean> = context.appPreferencesDataStore.data.map { preferences ->
+	val showScannerBoundingBoxes: Flow<Boolean> = context.appPreferencesDataStore.data.map { preferences ->
         preferences[ShowScannerBoundingBoxesKey] ?: false
     }
 
@@ -157,25 +137,7 @@ class AppPreferencesRepository(
             ?: Best50ConstantMode.Server
     }
 
-    suspend fun setThemeMode(themeMode: AppThemeMode) {
-        context.appPreferencesDataStore.edit { preferences ->
-            preferences[ThemeModeKey] = themeMode.name
-        }
-    }
-
-    suspend fun setThemeColorSource(source: AppThemeColorSource) {
-        context.appPreferencesDataStore.edit { preferences ->
-            preferences[ThemeColorSourceKey] = source.name
-        }
-    }
-
-    suspend fun setThemeCustomColorArgb(colorArgb: Int) {
-        context.appPreferencesDataStore.edit { preferences ->
-            preferences[ThemeCustomColorArgbKey] = colorArgb
-        }
-    }
-
-    suspend fun setShowScannerBoundingBoxes(show: Boolean) {
+	suspend fun setShowScannerBoundingBoxes(show: Boolean) {
         context.appPreferencesDataStore.edit { preferences ->
             preferences[ShowScannerBoundingBoxesKey] = show
         }

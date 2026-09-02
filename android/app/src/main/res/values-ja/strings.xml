@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="UnusedResources,PluralsCandidate">
 	<string name="app_name">maimaid</string>
 	<string name="default_profile_name">プレイヤー</string>
 	<string name="nav_home">ホーム</string>
@@ -665,7 +665,7 @@
     <string name="letter_game_room_settings">ルーム設定</string>
     <string name="letter_game_room_title">ルーム：%1$s</string>
     <string name="letter_game_room_code_copied">ルームコードをコピーしました</string>
-    <string name="letter_game_restoring_room">ルームを復元しています...</string>
+    <string name="letter_game_restoring_room">ルームを復元しています…</string>
     <string name="letter_game_settings_expand">ルーム設定を展開</string>
     <string name="letter_game_settings_collapse">ルーム設定を折りたたむ</string>
     <string name="letter_game_settings_sheet_expanded">ルーム設定を展開中</string>
@@ -807,7 +807,7 @@
     <string name="letter_game_log_hint_low_score_2">%1$s は残高わずかで%5$s%6$sを購入。%2$d pt 支払い後は %3$d pt、ヒント #%4$d。</string>
     <string name="letter_game_log_hint_normal_1">%1$s が %2$d pt で%5$s情報%6$sを購入。残高 %3$d pt、%4$d 回目。</string>
     <string name="letter_game_log_hint_normal_2">%1$s が %2$d pt を%5$s情報%6$sに投資。残り %3$d pt、ヒント #%4$d。</string>
-    <string name="letter_game_unknown_song">?</string>
+    <string name="letter_game_unknown_song">&#63;</string>
     <string name="letter_game_match_results">ランキング</string>
     <string name="letter_game_reopen">ルームに戻る</string>
     <string name="letter_game_dismiss">閉じる</string>

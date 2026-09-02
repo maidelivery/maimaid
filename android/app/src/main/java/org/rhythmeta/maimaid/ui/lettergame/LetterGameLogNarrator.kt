@@ -236,7 +236,7 @@ internal object LetterGameLogNarrator {
         private fun narrateHint(log: LetterGameLogEntry, actorKey: String, actor: String): LetterGameLogNarration {
             val cost = (log.hintCost ?: log.points ?: 0).coerceAtLeast(0)
             val beforeBalance = balances[actorKey] ?: log.balance?.plus(cost) ?: 0
-            val afterBalance = log.balance ?: beforeBalance - cost
+            val afterBalance = log.balance ?: (beforeBalance - cost)
             val hasBalance = balances.containsKey(actorKey) || log.balance != null
             balances[actorKey] = afterBalance
             val hintCount = (hintCounts[actorKey] ?: 0) + 1

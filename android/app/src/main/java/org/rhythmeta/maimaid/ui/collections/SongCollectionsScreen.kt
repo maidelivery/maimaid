@@ -278,7 +278,7 @@ fun SongCollectionsScreen(
             Spacer(Modifier.height(10.dp))
             Button(
                 onClick = {
-                    shareCollectionUrl(context, SongCollectionCodec.WebBaseUrl + collection.id)
+                    shareCollectionUrl(context, SongCollectionCodec.WEB_BASE_URL + collection.id)
                     sharingCollection = null
                 },
                 modifier = Modifier.fillMaxWidth(),

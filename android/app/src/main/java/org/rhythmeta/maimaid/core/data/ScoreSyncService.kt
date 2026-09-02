@@ -83,7 +83,6 @@ class ScoreSyncService(
             credentials.credentials(profile.id).copy(lxnsToken = tokenPair.refreshToken),
         )
         postJson(
-            url = LxnsScoreUploadUrl,
             headers = mapOf("Authorization" to "Bearer ${tokenPair.accessToken}"),
             body = json.encodeToString(
                 LxnsScoreUploadRequest(
@@ -104,13 +103,13 @@ class ScoreSyncService(
         )
     }
 
-    private suspend fun postJson(url: String, headers: Map<String, String>, body: String) {
+    private suspend fun postJson(headers: Map<String, String>, body: String) {
         withContext(Dispatchers.IO) {
-            val connection = URL(url).openConnection() as HttpURLConnection
+            val connection = URL(LXNS_SCORE_UPLOAD_URL).openConnection() as HttpURLConnection
             try {
                 connection.requestMethod = "POST"
-                connection.connectTimeout = NetworkTimeoutMillis
-                connection.readTimeout = NetworkTimeoutMillis
+                connection.connectTimeout = NETWORK_TIMEOUT_MILLIS
+                connection.readTimeout = NETWORK_TIMEOUT_MILLIS
                 connection.doOutput = true
                 connection.setRequestProperty("Accept", "application/json")
                 connection.setRequestProperty("Content-Type", "application/json")
@@ -137,8 +136,8 @@ class ScoreSyncService(
     }
 
     private companion object {
-        const val LxnsScoreUploadUrl = "https://maimai.lxns.net/api/v0/user/maimai/player/scores"
-        const val NetworkTimeoutMillis = 30_000
+        const val LXNS_SCORE_UPLOAD_URL = "https://maimai.lxns.net/api/v0/user/maimai/player/scores"
+        const val NETWORK_TIMEOUT_MILLIS = 30_000
     }
 }
 

@@ -160,7 +160,7 @@ class OtogameImportService(
         while (true) {
             val response = apiClient.fetchPlaylogs(authorizationHeader, page)
             val totalPages = response.data.pagination.totalPage
-                .coerceIn(1, OtogameImportPolicy.PlaylogPageLimit)
+                .coerceIn(1, OtogameImportPolicy.PLAYLOG_PAGE_LIMIT)
             onPageProgress(page, totalPages)
             if (response.data.data.isEmpty()) break
 
@@ -215,11 +215,11 @@ private class OtogameApiClient(
     suspend fun fetchPlaylogs(authorizationHeader: String, page: Int): OtogamePlaylogResponse =
         withContext(Dispatchers.IO) {
             require(authorizationHeader.startsWith("Bearer ", ignoreCase = true))
-            val connection = URL("$PlaylogEndpoint?page=$page").openConnection() as HttpURLConnection
+            val connection = URL("$PLAYLOG_ENDPOINT?page=$page").openConnection() as HttpURLConnection
             try {
                 connection.requestMethod = "GET"
-                connection.connectTimeout = TimeoutMillis
-                connection.readTimeout = TimeoutMillis
+                connection.connectTimeout = TIMEOUT_MILLIS
+                connection.readTimeout = TIMEOUT_MILLIS
                 connection.useCaches = false
                 connection.setRequestProperty("Accept", "application/json")
                 connection.setRequestProperty("Authorization", authorizationHeader)
@@ -244,11 +244,11 @@ private class OtogameApiClient(
     suspend fun fetchRating(authorizationHeader: String): OtogameRatingResponse =
         withContext(Dispatchers.IO) {
             require(authorizationHeader.startsWith("Bearer ", ignoreCase = true))
-            val connection = URL(RatingEndpoint).openConnection() as HttpURLConnection
+            val connection = URL(RATING_ENDPOINT).openConnection() as HttpURLConnection
             try {
                 connection.requestMethod = "GET"
-                connection.connectTimeout = TimeoutMillis
-                connection.readTimeout = TimeoutMillis
+                connection.connectTimeout = TIMEOUT_MILLIS
+                connection.readTimeout = TIMEOUT_MILLIS
                 connection.useCaches = false
                 connection.setRequestProperty("Accept", "application/json")
                 connection.setRequestProperty("Authorization", authorizationHeader)
@@ -269,9 +269,9 @@ private class OtogameApiClient(
         }
 
     private companion object {
-        const val PlaylogEndpoint = "https://u.otogame.net/api/game/maimai/playlog"
-        const val RatingEndpoint = "https://u.otogame.net/api/game/maimai/rating"
-        const val TimeoutMillis = 15_000
+        const val PLAYLOG_ENDPOINT = "https://u.otogame.net/api/game/maimai/playlog"
+        const val RATING_ENDPOINT = "https://u.otogame.net/api/game/maimai/rating"
+        const val TIMEOUT_MILLIS = 15_000
     }
 }
 

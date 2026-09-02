@@ -19,17 +19,17 @@ data class SongCollectionExportEntry(
 )
 
 object SongCollectionCodec {
-    const val Prefix = "MMD2."
-    const val WebBaseUrl = "https://maimaid.rhythmeta.org/collection/"
+    const val PREFIX = "MMD2."
+    const val WEB_BASE_URL = "https://maimaid.rhythmeta.org/collection/"
 
-	private const val MaxTextLength = 2_000_000
-    private const val MaxCompressedBytes = 1_000_000
-    private const val MaxRawBytes = 1_000_000
-    private const val MaxEntriesPerCollection = 10_000
+	private const val MAX_TEXT_LENGTH = 2_000_000
+    private const val MAX_COMPRESSED_BYTES = 1_000_000
+    private const val MAX_RAW_BYTES = 1_000_000
+    private const val MAX_ENTRIES_PER_COLLECTION = 10_000
 
     fun encode(collection: SongCollectionExport): String {
         require(collection.name.length <= 200)
-        require(collection.entries.size <= MaxEntriesPerCollection)
+        require(collection.entries.size <= MAX_ENTRIES_PER_COLLECTION)
         val message = SongCollectionShare.newBuilder()
             .setName(collection.name)
             .addAllEntries(collection.entries.map { entry ->
@@ -43,21 +43,21 @@ object SongCollectionCodec {
                     .build()
             })
             .build()
-        return Prefix + Base64.getUrlEncoder().withoutPadding().encodeToString(compress(message.toByteArray()))
+        return PREFIX + Base64.getUrlEncoder().withoutPadding().encodeToString(compress(message.toByteArray()))
     }
 
-    fun webUrl(collection: SongCollectionExport): String = WebBaseUrl + encode(collection)
+    fun webUrl(collection: SongCollectionExport): String = WEB_BASE_URL + encode(collection)
 
 	fun decode(value: String): SongCollectionExport {
         val token = extractToken(value) ?: throw IllegalArgumentException("Invalid collection sharing link")
-        val compressed = Base64.getUrlDecoder().decode(token.removePrefix(Prefix))
-        require(compressed.size <= MaxCompressedBytes)
+        val compressed = Base64.getUrlDecoder().decode(token.removePrefix(PREFIX))
+        require(compressed.size <= MAX_COMPRESSED_BYTES)
         val message = try {
             SongCollectionShare.parseFrom(decompress(compressed))
         } catch (error: InvalidProtocolBufferException) {
             throw IllegalArgumentException("Invalid collection payload", error)
         }
-        require(message.entriesCount <= MaxEntriesPerCollection)
+        require(message.entriesCount <= MAX_ENTRIES_PER_COLLECTION)
         return SongCollectionExport(
             name = message.name,
             entries = message.entriesList.map { entry ->
@@ -72,9 +72,9 @@ object SongCollectionCodec {
 
     fun extractToken(value: String): String? {
         val normalized = value.filterNot(Char::isWhitespace)
-        if (normalized.length > MaxTextLength) return null
-        if (normalized.startsWith(Prefix)) return normalized
-        return extractSegment(normalized)?.takeIf { it.startsWith(Prefix) && it.length <= MaxTextLength }
+        if (normalized.length > MAX_TEXT_LENGTH) return null
+        if (normalized.startsWith(PREFIX)) return normalized
+        return extractSegment(normalized)?.takeIf { it.startsWith(PREFIX) && it.length <= MAX_TEXT_LENGTH }
     }
 
     fun extractCollectionId(value: String): String? = extractSegment(value.filterNot(Char::isWhitespace))
@@ -117,7 +117,7 @@ object SongCollectionCodec {
                 val count = inflater.inflate(buffer)
                 require(count > 0 || !inflater.needsInput())
                 output.write(buffer, 0, count)
-                require(output.size() <= MaxRawBytes)
+                require(output.size() <= MAX_RAW_BYTES)
             }
             output.toByteArray()
         } finally {

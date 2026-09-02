@@ -142,7 +142,6 @@ fun SettingsScreen(
                 SettingsValueRow(
                     icon = Icons.Rounded.Info,
                     title = stringResource(R.string.settings_version_label),
-                    value = BuildConfig.VERSION_NAME,
                 )
             }
         }
@@ -209,14 +208,13 @@ private fun SettingsToggleRow(
 private fun SettingsValueRow(
     icon: ImageVector,
     title: String,
-    value: String,
 ) {
     BasicComponent(
         title = title,
         startAction = { SettingsPreferenceIcon(icon) },
         endActions = {
             Text(
-                text = value,
+                text = BuildConfig.VERSION_NAME,
                 style = MiuixTheme.textStyles.body2,
                 color = MiuixTheme.colorScheme.onSurfaceVariantActions,
             )

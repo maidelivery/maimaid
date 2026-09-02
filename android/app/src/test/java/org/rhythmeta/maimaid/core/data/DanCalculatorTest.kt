@@ -50,9 +50,9 @@ class DanCalculatorTest {
     fun `detail excludes utage and matches chart plus active score`() {
         val normalSong = song("normal", "Song A")
         val utageSong = song("utage", "宴 Song")
-        val master = sheet("normal", "dx", "master")
-        val utage = sheet("utage", "utage", "master")
-        val score = score(master, 100.1234)
+        val master = sheet("normal", "dx")
+        val utage = sheet("utage", "utage")
+        val score = score(master)
         val category = DanCategory(
             title = "CiRCLE 段位認定",
             id = "circle",
@@ -107,11 +107,11 @@ class DanCalculatorTest {
         comment = null,
     )
 
-    private fun sheet(songId: String, type: String, difficulty: String) = SheetEntity(
-        sheetKey = "$songId-$type-$difficulty",
+    private fun sheet(songId: String, type: String) = SheetEntity(
+        sheetKey = "$songId-$type-master",
         songIdentifier = songId,
         type = type,
-        difficulty = difficulty,
+        difficulty = "master",
         version = null,
         level = "13+",
         levelValue = 13.7,
@@ -130,11 +130,11 @@ class DanCalculatorTest {
         regionCn = true,
     )
 
-    private fun score(sheet: SheetEntity, achievement: Double) = ScoreEntity(
+    private fun score(sheet: SheetEntity) = ScoreEntity(
         profileId = "active-profile",
         sheetKey = sheet.sheetKey,
-        achievement = achievement,
-        rank = RatingUtils.rank(achievement),
+        achievement = 100.1234,
+        rank = RatingUtils.rank(100.1234),
         dxScore = 0,
         fc = null,
         fs = null,

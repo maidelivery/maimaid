@@ -46,22 +46,22 @@ class BackendTokenStore(
         Context.MODE_PRIVATE,
     )
 
-    fun load(): BackendTokenBundle? = decrypt(preferences.getString(TokenKey, null))?.let { payload ->
+    fun load(): BackendTokenBundle? = decrypt(preferences.getString(TOKEN_KEY, null))?.let { payload ->
         runCatching { json.decodeFromString<BackendTokenBundle>(payload) }.getOrNull()
     }
 
     fun save(bundle: BackendTokenBundle) {
         preferences.edit {
-					putString(TokenKey, encrypt(json.encodeToString(BackendTokenBundle.serializer(), bundle)))
+					putString(TOKEN_KEY, encrypt(json.encodeToString(BackendTokenBundle.serializer(), bundle)))
 				}
     }
 
     fun clear() {
-        preferences.edit { remove(TokenKey) }
+        preferences.edit { remove(TOKEN_KEY) }
     }
 
     private fun encrypt(value: String): String? = runCatching {
-        val cipher = Cipher.getInstance(Transformation)
+        val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, secretKey())
         val encrypted = cipher.doFinal(value.toByteArray(Charsets.UTF_8))
         Base64.encodeToString(cipher.iv, Base64.NO_WRAP) + ":" +
@@ -72,7 +72,7 @@ class BackendTokenStore(
         if (payload.isNullOrBlank()) return null
         return runCatching {
             val (encodedIv, encodedValue) = payload.split(':', limit = 2)
-            val cipher = Cipher.getInstance(Transformation)
+            val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(
                 Cipher.DECRYPT_MODE,
                 secretKey(),
@@ -84,11 +84,11 @@ class BackendTokenStore(
 
     private fun secretKey(): SecretKey {
         val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        (keyStore.getKey(KeyAlias, null) as? SecretKey)?.let { return it }
+        (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
         generator.init(
             KeyGenParameterSpec.Builder(
-                KeyAlias,
+                KEY_ALIAS,
                 KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
             )
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
@@ -99,8 +99,8 @@ class BackendTokenStore(
     }
 
     private companion object {
-        const val TokenKey = "tokens"
-        const val KeyAlias = "maimaid.backend.tokens"
-        const val Transformation = "AES/GCM/NoPadding"
+        const val TOKEN_KEY = "tokens"
+        const val KEY_ALIAS = "maimaid.backend.tokens"
+        const val TRANSFORMATION = "AES/GCM/NoPadding"
     }
 }

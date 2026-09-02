@@ -161,11 +161,11 @@ class BackendImportService(
             MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray(Charsets.UTF_8)),
             Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING,
         )
-        val url = LxnsAuthorizeUrl.toUri().buildUpon()
+        val url = LXNS_AUTHORIZE_URL.toUri().buildUpon()
             .appendQueryParameter("response_type", "code")
-            .appendQueryParameter("client_id", LxnsClientId)
-            .appendQueryParameter("redirect_uri", LxnsRedirectUri)
-            .appendQueryParameter("scope", LxnsScope.replace('+', ' '))
+            .appendQueryParameter("client_id", LXNS_CLIENT_ID)
+            .appendQueryParameter("redirect_uri", LXNS_REDIRECT_URI)
+            .appendQueryParameter("scope", LXNS_SCOPE.replace('+', ' '))
             .appendQueryParameter("code_challenge", challenge)
             .appendQueryParameter("code_challenge_method", "S256")
             .appendQueryParameter("state", UUID.randomUUID().toString())
@@ -190,14 +190,14 @@ class BackendImportService(
     suspend fun refreshLxnsToken(refreshToken: String): LxnsTokenPair = withContext(Dispatchers.IO) {
         val body = formBody(
             "grant_type" to "refresh_token",
-            "client_id" to LxnsClientId,
+            "client_id" to LXNS_CLIENT_ID,
             "refresh_token" to refreshToken.trim(),
         )
-        val connection = URL(LxnsTokenUrl).openConnection() as HttpURLConnection
+        val connection = URL(LXNS_TOKEN_URL).openConnection() as HttpURLConnection
         try {
             connection.requestMethod = "POST"
-            connection.connectTimeout = NetworkTimeoutMillis
-            connection.readTimeout = NetworkTimeoutMillis
+            connection.connectTimeout = NETWORK_TIMEOUT_MILLIS
+            connection.readTimeout = NETWORK_TIMEOUT_MILLIS
             connection.doOutput = true
             connection.setRequestProperty("Accept", "application/json")
             connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
@@ -247,11 +247,11 @@ class BackendImportService(
     )
 
     private companion object {
-        const val LxnsClientId = "cfb7ef40-bc0f-4e3a-8258-9e5f52cd7338"
-        const val LxnsRedirectUri = "urn:ietf:wg:oauth:2.0:oob"
-        const val LxnsScope = "read_user_profile+read_player+write_player+read_user_token"
-        const val LxnsAuthorizeUrl = "https://maimai.lxns.net/oauth/authorize"
-        const val LxnsTokenUrl = "https://maimai.lxns.net/api/v0/oauth/token"
-        const val NetworkTimeoutMillis = 30_000
+        const val LXNS_CLIENT_ID = "cfb7ef40-bc0f-4e3a-8258-9e5f52cd7338"
+        const val LXNS_REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob"
+        const val LXNS_SCOPE = "read_user_profile+read_player+write_player+read_user_token"
+        const val LXNS_AUTHORIZE_URL = "https://maimai.lxns.net/oauth/authorize"
+        const val LXNS_TOKEN_URL = "https://maimai.lxns.net/api/v0/oauth/token"
+        const val NETWORK_TIMEOUT_MILLIS = 30_000
     }
 }

@@ -2,10 +2,11 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/widget_surface">
+    >
     <TextView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@color/widget_surface"
         android:gravity="center"
         android:text="@string/app_name"
         android:textColor="@color/widget_primary" />

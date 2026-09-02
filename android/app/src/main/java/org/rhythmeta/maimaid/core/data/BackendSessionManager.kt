@@ -91,7 +91,7 @@ class BackendSessionManager(
             append("authMode=")
             append(mode.queryValue)
             append("&redirect_uri=")
-            append(encode(AuthRedirectUrl))
+            append(URLEncoder.encode(AUTH_REDIRECT_URL, Charsets.UTF_8.name()))
             append("&client=app")
         }
     }
@@ -209,10 +209,8 @@ class BackendSessionManager(
         mutableState.value = BackendSessionState()
     }
 
-    private fun encode(value: String): String = URLEncoder.encode(value, Charsets.UTF_8.name())
-
     private companion object {
-        const val AuthRedirectUrl = "maimaid://auth/callback"
+        const val AUTH_REDIRECT_URL = "maimaid://auth/callback"
         val apiJson = kotlinx.serialization.json.Json {
             ignoreUnknownKeys = true
             coerceInputValues = true

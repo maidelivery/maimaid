@@ -86,29 +86,29 @@ internal object ConstantTableImageExporter {
         private val palette = Palette(darkTheme)
         private val jacketSize = if (includeScores) 58 else 52
         private val chartSpacing = if (includeScores) 8 else 6
-        private val columns = ((CanvasWidth - HorizontalPadding * 2 - LabelWidth - 20 + chartSpacing) /
+        private val columns = ((CANVAS_WIDTH - HORIZONTAL_PADDING * 2 - LABEL_WIDTH - 20 + chartSpacing) /
             (jacketSize + chartSpacing)).coerceAtLeast(1)
 
         fun render(): Bitmap {
-            val logicalHeight = HeaderHeight +
+            val logicalHeight = HEADER_HEIGHT +
                 sections.sumOf { sectionHeight(it.entries.size) } +
-                FooterHeight
-            val bitmap = createBitmap(CanvasWidth * OutputScale, logicalHeight * OutputScale)
+                FOOTER_HEIGHT
+            val bitmap = createBitmap(CANVAS_WIDTH * OUTPUT_SCALE, logicalHeight * OUTPUT_SCALE)
             val canvas = Canvas(bitmap)
-            canvas.scale(OutputScale.toFloat(), OutputScale.toFloat())
+            canvas.scale(OUTPUT_SCALE.toFloat(), OUTPUT_SCALE.toFloat())
             paint.shader = LinearGradient(
                 0f,
                 0f,
-                CanvasWidth.toFloat(),
+                CANVAS_WIDTH.toFloat(),
                 logicalHeight.toFloat(),
                 intArrayOf(palette.background, palette.secondaryBackground, palette.tertiaryBackground),
                 null,
                 Shader.TileMode.CLAMP,
             )
-            canvas.drawRect(0f, 0f, CanvasWidth.toFloat(), logicalHeight.toFloat(), paint)
+            canvas.drawRect(0f, 0f, CANVAS_WIDTH.toFloat(), logicalHeight.toFloat(), paint)
             paint.shader = null
             drawHeader(canvas)
-            var top = HeaderHeight
+            var top = HEADER_HEIGHT
             sections.forEachIndexed { index, section ->
                 drawSection(canvas, section, index, top)
                 top += sectionHeight(section.entries.size)
@@ -118,36 +118,36 @@ internal object ConstantTableImageExporter {
         }
 
         private fun drawHeader(canvas: Canvas) {
-            drawText(canvas, labels.title, HorizontalPadding.toFloat(), 58f, 36f, palette.primary, true)
-            drawText(canvas, labels.summary, HorizontalPadding.toFloat(), 89f, 16f, palette.secondary)
+            drawText(canvas, labels.title, HORIZONTAL_PADDING.toFloat(), 58f, 36f, palette.primary, true)
+            drawText(canvas, labels.summary, HORIZONTAL_PADDING.toFloat(), 89f, 16f, palette.secondary)
             if (includeScores) {
                 userName?.trim()?.takeIf(String::isNotEmpty)?.let { name ->
-                    setText(14f, Accent, true)
+                    setText(14f, ACCENT, true)
                     val width = paint.measureText(name) + 30f
-                    val left = CanvasWidth - HorizontalPadding - width
-                    paint.color = withAlpha(Accent, 0.12f)
+                    val left = CANVAS_WIDTH - HORIZONTAL_PADDING - width
+                    paint.color = accentBackgroundColor()
                     canvas.drawRoundRect(RectF(left, 31f, left + width, 65f), 17f, 17f, paint)
-                    drawText(canvas, name, left + 15f, 53f, 14f, Accent, true)
+                    drawText(canvas, name, left + 15f, 53f, 14f, ACCENT, true)
                 }
             }
             paint.color = palette.divider
             canvas.drawRect(
-                HorizontalPadding.toFloat(),
-                HeaderHeight - 14f,
-                (CanvasWidth - HorizontalPadding).toFloat(),
-                HeaderHeight - 13f,
+                HORIZONTAL_PADDING.toFloat(),
+                HEADER_HEIGHT - 14f,
+                (CANVAS_WIDTH - HORIZONTAL_PADDING).toFloat(),
+                HEADER_HEIGHT - 13f,
                 paint,
             )
         }
 
         private fun drawSection(canvas: Canvas, section: ConstantTableSection, index: Int, top: Int) {
-            val bottom = top + sectionHeight(section.entries.size) - SectionGap
+            val bottom = top + sectionHeight(section.entries.size) - SECTION_GAP
             paint.color = if (index % 2 == 0) palette.sectionA else palette.sectionB
             canvas.drawRoundRect(
                 RectF(
-                    HorizontalPadding.toFloat(),
+                    HORIZONTAL_PADDING.toFloat(),
                     top.toFloat(),
-                    (CanvasWidth - HorizontalPadding).toFloat(),
+                    (CANVAS_WIDTH - HORIZONTAL_PADDING).toFloat(),
                     bottom.toFloat(),
                 ),
                 18f,
@@ -157,13 +157,13 @@ internal object ConstantTableImageExporter {
             drawText(
                 canvas,
                 section.levelLabel,
-                (HorizontalPadding + 12).toFloat(),
+                (HORIZONTAL_PADDING + 12).toFloat(),
                 top + 47f,
                 32f,
                 levelColor(section.levelLabel, index),
                 true,
             )
-            val gridLeft = HorizontalPadding + 12 + LabelWidth + 16
+            val gridLeft = HORIZONTAL_PADDING + 12 + LABEL_WIDTH + 16
             val gridTop = top + 12
             section.entries.chunked(columns).forEachIndexed { row, entries ->
                 entries.forEachIndexed { column, entry ->
@@ -198,7 +198,7 @@ internal object ConstantTableImageExporter {
                 (top + jacketSize).toFloat(),
             )
             val jacket = coverImageStore.fileFor(imageName)?.let { file ->
-                decodeSampledBitmap(file, jacketSize * OutputScale, jacketSize * OutputScale)
+                decodeSampledBitmap(file, jacketSize * OUTPUT_SCALE, jacketSize * OUTPUT_SCALE)
             }
             canvas.withClip(Path().apply { addRoundRect(destination, 8f, 8f, Path.Direction.CW) }) {
 							if (jacket == null) {
@@ -261,7 +261,7 @@ internal object ConstantTableImageExporter {
             drawText(
                 canvas,
                 labels.watermark,
-                HorizontalPadding.toFloat(),
+                HORIZONTAL_PADDING.toFloat(),
                 top + 34f,
                 12f,
                 palette.secondary,
@@ -296,7 +296,7 @@ internal object ConstantTableImageExporter {
 
         private fun sectionHeight(entryCount: Int): Int {
             val rows = (entryCount + columns - 1) / columns
-            return 24 + rows * jacketSize + (rows - 1).coerceAtLeast(0) * chartSpacing + SectionGap
+            return 24 + rows * jacketSize + (rows - 1).coerceAtLeast(0) * chartSpacing + SECTION_GAP
         }
     }
 
@@ -376,15 +376,15 @@ internal object ConstantTableImageExporter {
     }
 
     @ColorInt
-    private fun withAlpha(@ColorInt color: Int, alpha: Float): Int =
-        Color.argb((alpha * 255).toInt(), Color.red(color), Color.green(color), Color.blue(color))
+    private fun accentBackgroundColor(): Int =
+        Color.argb((0.12f * 255).toInt(), Color.red(ACCENT), Color.green(ACCENT), Color.blue(ACCENT))
 
-    private const val CanvasWidth = 1440
-    private const val OutputScale = 2
-    private const val HorizontalPadding = 28
-    private const val LabelWidth = 72
-    private const val HeaderHeight = 120
-    private const val FooterHeight = 62
-    private const val SectionGap = 20
-    private const val Accent = 0xFF8E3DFF.toInt()
+    private const val CANVAS_WIDTH = 1440
+    private const val OUTPUT_SCALE = 2
+    private const val HORIZONTAL_PADDING = 28
+    private const val LABEL_WIDTH = 72
+    private const val HEADER_HEIGHT = 120
+    private const val FOOTER_HEIGHT = 62
+    private const val SECTION_GAP = 20
+    private const val ACCENT = 0xFF8E3DFF.toInt()
 }

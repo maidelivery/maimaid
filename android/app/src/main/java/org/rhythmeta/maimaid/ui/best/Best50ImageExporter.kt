@@ -86,15 +86,15 @@ internal object Best50ImageExporter {
                 ExportSection(labels.newSection, NewAccent, state.b15),
                 ExportSection(labels.oldSection, OldAccent, state.b35),
             ).filter { it.entries.isNotEmpty() }
-            val logicalHeight = HeaderHeight +
+            val logicalHeight = HEADER_HEIGHT +
                 sections.sumOf { sectionHeight(it.entries.size) } +
-                FooterHeight
-            val bitmap = createBitmap(CanvasWidth * OutputScale, logicalHeight * OutputScale)
+                FOOTER_HEIGHT
+            val bitmap = createBitmap(CANVAS_WIDTH * OUTPUT_SCALE, logicalHeight * OUTPUT_SCALE)
             val canvas = Canvas(bitmap)
             canvas.drawColor(palette.background)
-            canvas.scale(OutputScale.toFloat(), OutputScale.toFloat())
+            canvas.scale(OUTPUT_SCALE.toFloat(), OUTPUT_SCALE.toFloat())
             drawHeader(canvas)
-            var top = HeaderHeight
+            var top = HEADER_HEIGHT
             sections.forEach { section ->
                 drawSection(canvas, section, top)
                 top += sectionHeight(section.entries.size)
@@ -107,19 +107,18 @@ internal object Best50ImageExporter {
             val name = userName?.trim().orEmpty()
             val labelY: Float
             if (name.isNotEmpty()) {
-                drawText(canvas, name, SectionPadding.toFloat(), 64f, 24f, palette.primary, true)
+                drawText(canvas, name, SECTION_PADDING.toFloat(), 64f, 24f, palette.primary, true)
                 labelY = 95f
             } else {
                 labelY = 72f
             }
-            drawText(canvas, labels.rating, SectionPadding.toFloat(), labelY, 14f, palette.secondary)
+            drawText(canvas, labels.rating, SECTION_PADDING.toFloat(), labelY, 14f, palette.secondary)
             drawRating(canvas, state.total)
 
-            var pillLeft = SectionPadding.toFloat()
+            var pillLeft = SECTION_PADDING.toFloat()
             pillLeft += drawSummaryPill(
                 canvas = canvas,
                 left = pillLeft,
-                top = 126f,
                 label = labels.newSection,
                 value = state.b15.sumOf(RatingUtils.Entry::rating).toString(),
                 accent = NewAccent,
@@ -127,7 +126,6 @@ internal object Best50ImageExporter {
             drawSummaryPill(
                 canvas = canvas,
                 left = pillLeft,
-                top = 126f,
                 label = labels.oldSection,
                 value = state.b35.sumOf(RatingUtils.Entry::rating).toString(),
                 accent = OldAccent,
@@ -138,8 +136,8 @@ internal object Best50ImageExporter {
             setText(56f, Color.WHITE, bold = true)
             val text = rating.toString()
             val width = paint.measureText(text)
-            val left = CanvasWidth - SectionPadding - width
-            paint.shader = ratingShader(rating, left, 30f, left + width, 98f)
+            val left = CANVAS_WIDTH - SECTION_PADDING - width
+            paint.shader = ratingShader(rating, left, left + width)
             canvas.drawText(text, left, 84f, paint)
             paint.shader = null
         }
@@ -147,11 +145,11 @@ internal object Best50ImageExporter {
         private fun drawSummaryPill(
             canvas: Canvas,
             left: Float,
-            top: Float,
             label: String,
             value: String,
             @ColorInt accent: Int,
         ): Float {
+            val top = 126f
             setText(13f, palette.secondary)
             val labelWidth = paint.measureText(label)
             setText(13f, accent, bold = true)
@@ -171,7 +169,7 @@ internal object Best50ImageExporter {
             drawText(
                 canvas,
                 section.title,
-                SectionPadding.toFloat(),
+                SECTION_PADDING.toFloat(),
                 titleBaseline,
                 20f,
                 palette.primary,
@@ -181,17 +179,17 @@ internal object Best50ImageExporter {
             drawText(
                 canvas,
                 labels.sectionRating(section.entries.sumOf(RatingUtils.Entry::rating)),
-                SectionPadding + titleWidth + 12f,
+                SECTION_PADDING + titleWidth + 12f,
                 titleBaseline,
                 14f,
                 section.accent,
                 true,
             )
-            val gridTop = top + SectionHeaderHeight
-            section.entries.chunked(Columns).forEachIndexed { row, entries ->
+            val gridTop = top + SECTION_HEADER_HEIGHT
+            section.entries.chunked(COLUMNS).forEachIndexed { row, entries ->
                 entries.forEachIndexed { column, entry ->
-                    val left = SectionPadding + column * (CardWidth + CardSpacing)
-                    val cardTop = gridTop + row * (CardHeight + CardSpacing)
+                    val left = SECTION_PADDING + column * (CARD_WIDTH + CARD_SPACING)
+                    val cardTop = gridTop + row * (CARD_HEIGHT + CARD_SPACING)
                     drawSongCard(canvas, entry, left, cardTop)
                 }
             }
@@ -207,11 +205,11 @@ internal object Best50ImageExporter {
             val bounds = RectF(
                 left.toFloat(),
                 top.toFloat(),
-                (left + CardWidth).toFloat(),
-                (top + CardHeight).toFloat(),
+                (left + CARD_WIDTH).toFloat(),
+                (top + CARD_HEIGHT).toFloat(),
             )
             paint.style = Paint.Style.FILL
-            paint.color = compositeOver(palette.background, difficulty, 0.15f)
+            paint.color = compositeOver(palette.background, difficulty)
             canvas.drawRoundRect(bounds, 6f, 6f, paint)
             paint.style = Paint.Style.STROKE
             paint.strokeWidth = 1f
@@ -223,7 +221,7 @@ internal object Best50ImageExporter {
             val jacketTop = top + 6
             drawJacket(canvas, entry.imageName, entry.songId, jacketLeft, jacketTop)
             val contentLeft = left + 76f
-            val contentRight = left + CardWidth - 6f
+            val contentRight = left + CARD_WIDTH - 6f
             val contentWidth = contentRight - contentLeft
             drawEllipsizedText(
                 canvas,
@@ -231,9 +229,7 @@ internal object Best50ImageExporter {
                 contentLeft,
                 top + 19f,
                 contentWidth,
-                11f,
                 palette.primary,
-                bold = true,
             )
             val rank = RatingUtils.rank(entry.achievement)
             drawText(canvas, rank, contentLeft, top + 37f, 12f, rankColor(rank), true)
@@ -323,14 +319,12 @@ internal object Best50ImageExporter {
             val destination = RectF(
                 left.toFloat(),
                 top.toFloat(),
-                (left + JacketSize).toFloat(),
-                (top + JacketSize).toFloat(),
+                (left + JACKET_SIZE).toFloat(),
+                (top + JACKET_SIZE).toFloat(),
             )
             val jacket = coverImageStore.fileFor(imageName)?.let { file ->
                 decodeSampledBitmap(
                     file,
-                    JacketSize * OutputScale,
-                    JacketSize * OutputScale,
                 )
             }
             canvas.withClip(Path().apply { addRoundRect(destination, 4f, 4f, Path.Direction.CW) }) {
@@ -350,8 +344,8 @@ internal object Best50ImageExporter {
                 val idText = "#$songId"
                 setText(8f, Color.WHITE, bold = true, monospaced = true)
                 val width = paint.measureText(idText) + 6f
-                val badgeLeft = left + JacketSize - width - 2f
-                val badgeTop = top + JacketSize - 13f
+                val badgeLeft = left + JACKET_SIZE - width - 2f
+                val badgeTop = top + JACKET_SIZE - 13f
                 paint.color = Color.argb(153, 0, 0, 0)
                 canvas.drawRoundRect(
                     RectF(badgeLeft, badgeTop, badgeLeft + width, badgeTop + 11f),
@@ -392,14 +386,14 @@ internal object Best50ImageExporter {
             version?.takeIf(String::isNotBlank)?.let { currentVersion ->
                 setText(11f, palette.secondary, bold = true)
                 val text = "●  $currentVersion"
-                val left = (CanvasWidth - paint.measureText(text)) / 2f
+                val left = (CANVAS_WIDTH - paint.measureText(text)) / 2f
                 canvas.drawText(text, left, baseline, paint)
                 baseline += 22f
             }
             setText(12f, palette.subtle)
             canvas.drawText(
                 labels.watermark,
-                (CanvasWidth - paint.measureText(labels.watermark)) / 2f,
+                (CANVAS_WIDTH - paint.measureText(labels.watermark)) / 2f,
                 baseline,
                 paint,
             )
@@ -411,11 +405,9 @@ internal object Best50ImageExporter {
             x: Float,
             baseline: Float,
             maxWidth: Float,
-            size: Float,
             @ColorInt color: Int,
-            bold: Boolean = false,
         ) {
-            setText(size, color, bold)
+            setText(11f, color, bold = true)
             if (paint.measureText(text) <= maxWidth) {
                 canvas.drawText(text, x, baseline, paint)
                 return
@@ -460,9 +452,7 @@ internal object Best50ImageExporter {
         private fun ratingShader(
             rating: Int,
             left: Float,
-            top: Float,
             right: Float,
-            bottom: Float,
         ): Shader {
             val colors = when {
                 rating >= 15_000 -> intArrayOf(
@@ -482,13 +472,13 @@ internal object Best50ImageExporter {
                 rating >= 14_000 -> intArrayOf(Color.rgb(255, 215, 0), Color.rgb(255, 165, 0))
                 else -> intArrayOf(ratingColor(rating), ratingColor(rating))
             }
-            return LinearGradient(left, top, right, bottom, colors, null, Shader.TileMode.CLAMP)
+            return LinearGradient(left, 30f, right, 98f, colors, null, Shader.TileMode.CLAMP)
         }
 
         private fun sectionHeight(entryCount: Int): Int =
-            SectionHeaderHeight + rowsFor(entryCount) * CardHeight + (rowsFor(entryCount) - 1) * CardSpacing + SectionBottomPadding
+            SECTION_HEADER_HEIGHT + rowsFor(entryCount) * CARD_HEIGHT + (rowsFor(entryCount) - 1) * CARD_SPACING + SECTION_BOTTOM_PADDING
 
-        private fun rowsFor(entryCount: Int): Int = (entryCount + Columns - 1) / Columns
+        private fun rowsFor(entryCount: Int): Int = (entryCount + COLUMNS - 1) / COLUMNS
     }
 
     private data class ExportSection(
@@ -506,7 +496,9 @@ internal object Best50ImageExporter {
         @ColorInt val rating = if (darkTheme) Color.rgb(255, 215, 0) else Color.rgb(197, 160, 0)
     }
 
-    private fun decodeSampledBitmap(file: File, requestedWidth: Int, requestedHeight: Int): Bitmap? {
+    private fun decodeSampledBitmap(file: File): Bitmap? {
+        val requestedWidth = JACKET_SIZE * OUTPUT_SCALE
+        val requestedHeight = JACKET_SIZE * OUTPUT_SCALE
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.path, bounds)
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
@@ -597,7 +589,8 @@ internal object Best50ImageExporter {
     }
 
     @ColorInt
-    private fun compositeOver(@ColorInt background: Int, @ColorInt foreground: Int, alpha: Float): Int {
+    private fun compositeOver(@ColorInt background: Int, @ColorInt foreground: Int): Int {
+        val alpha = 0.15f
         val inverse = 1f - alpha
         return Color.rgb(
             (Color.red(foreground) * alpha + Color.red(background) * inverse).toInt(),
@@ -610,18 +603,18 @@ internal object Best50ImageExporter {
     private fun withAlpha(@ColorInt color: Int, alpha: Float): Int =
         Color.argb((alpha * 255).toInt(), Color.red(color), Color.green(color), Color.blue(color))
 
-    private const val OutputScale = 2
-    private const val Columns = 5
-    private const val CardWidth = 220
-    private const val CardHeight = 74
-    private const val CardSpacing = 8
-    private const val SectionPadding = 24
-    private const val JacketSize = 62
-    private const val CanvasWidth = Columns * CardWidth + (Columns - 1) * CardSpacing + SectionPadding * 2
-    private const val HeaderHeight = 184
-    private const val SectionHeaderHeight = 50
-    private const val SectionBottomPadding = 16
-    private const val FooterHeight = 70
+    private const val OUTPUT_SCALE = 2
+    private const val COLUMNS = 5
+    private const val CARD_WIDTH = 220
+    private const val CARD_HEIGHT = 74
+    private const val CARD_SPACING = 8
+    private const val SECTION_PADDING = 24
+    private const val JACKET_SIZE = 62
+    private const val CANVAS_WIDTH = COLUMNS * CARD_WIDTH + (COLUMNS - 1) * CARD_SPACING + SECTION_PADDING * 2
+    private const val HEADER_HEIGHT = 184
+    private const val SECTION_HEADER_HEIGHT = 50
+    private const val SECTION_BOTTOM_PADDING = 16
+    private const val FOOTER_HEIGHT = 70
     @ColorInt private val NewAccent = Color.rgb(255, 107, 107)
     @ColorInt private val OldAccent = Color.rgb(78, 205, 196)
     @ColorInt private val StarColor = Color.rgb(255, 204, 0)

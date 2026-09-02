@@ -84,7 +84,7 @@ object RecommendationCalculator {
         val b35Threshold = replacementThreshold(b35, b35Capacity)
         val selectedB15Keys = b15.mapTo(mutableSetOf(), SelectedEntry::sheetKey)
         val selectedB35Keys = b35.mapTo(mutableSetOf(), SelectedEntry::sheetKey)
-        val candidateLimit = if (scoresBySheet.isEmpty()) EmptyProfileCandidateLimit else CandidateLimit
+        val candidateLimit = if (scoresBySheet.isEmpty()) EMPTY_PROFILE_CANDIDATE_LIMIT else CANDIDATE_LIMIT
         val newRecommendations = mutableListOf<RecommendationResult>()
         val oldRecommendations = mutableListOf<RecommendationResult>()
 
@@ -104,7 +104,7 @@ object RecommendationCalculator {
                 RatingUtils.calculate(level, score.achievement, score.fc, afterCircle)
             } ?: 0
             val target = targetMilestones.firstNotNullOfOrNull { (rank, achievement) ->
-                if (achievement <= currentAchievement + AchievementTolerance) return@firstNotNullOfOrNull null
+                if (achievement <= currentAchievement + ACHIEVEMENT_TOLERANCE) return@firstNotNullOfOrNull null
                 val potentialRating = RatingUtils.calculate(level, achievement)
                 val gain = if (isSelected) {
                     (potentialRating - currentRating).coerceAtLeast(0)
@@ -196,7 +196,7 @@ object RecommendationCalculator {
     private data class SelectedEntry(val sheetKey: String, val level: Double, val rating: Int)
     private data class Target(val rank: String, val achievement: Double, val rating: Int, val gain: Int)
 
-    private const val CandidateLimit = 100
-    private const val EmptyProfileCandidateLimit = 50
-    private const val AchievementTolerance = 0.0001
+    private const val CANDIDATE_LIMIT = 100
+    private const val EMPTY_PROFILE_CANDIDATE_LIMIT = 50
+    private const val ACHIEVEMENT_TOLERANCE = 0.0001
 }

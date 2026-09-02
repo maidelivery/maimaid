@@ -50,8 +50,8 @@ class BackendApiClient(
             .openConnection() as HttpURLConnection
         try {
             connection.requestMethod = method
-            connection.connectTimeout = ConnectTimeoutMillis
-            connection.readTimeout = ReadTimeoutMillis
+            connection.connectTimeout = CONNECT_TIMEOUT_MILLIS
+            connection.readTimeout = READ_TIMEOUT_MILLIS
             connection.setRequestProperty("Accept", "application/json")
             connection.setRequestProperty("Accept-Encoding", "gzip")
             connection.setRequestProperty("X-Maimaid-Client", "app")
@@ -90,8 +90,8 @@ class BackendApiClient(
         val connection = URL(url).openConnection() as HttpURLConnection
         try {
             connection.requestMethod = "PUT"
-            connection.connectTimeout = ConnectTimeoutMillis
-            connection.readTimeout = ReadTimeoutMillis
+            connection.connectTimeout = CONNECT_TIMEOUT_MILLIS
+            connection.readTimeout = READ_TIMEOUT_MILLIS
             connection.doOutput = true
             connection.setFixedLengthStreamingMode(bytes.size)
             connection.setRequestProperty("Content-Type", contentType)
@@ -108,8 +108,8 @@ class BackendApiClient(
     fun endpoint(path: String): String = "$normalizedBaseUrl/${path.trimStart('/')}"
 
     private companion object {
-        const val ConnectTimeoutMillis = 15_000
-        const val ReadTimeoutMillis = 45_000
+        const val CONNECT_TIMEOUT_MILLIS = 15_000
+        const val READ_TIMEOUT_MILLIS = 45_000
     }
 }
 

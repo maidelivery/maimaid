@@ -122,7 +122,7 @@ object ScannerSongMatcher {
         candidates.forEach { candidate ->
             val cleaned = candidate.trim()
             if (cleaned.isEmpty()) return@forEach
-            val variants = generateOcrVariants(cleaned, 6)
+            val variants = generateOcrVariants(cleaned)
             filteredSongs.forEach { song ->
                 val aliases = catalog.aliasesBySong[song.songIdentifier].orEmpty()
                 val blankTitleSong = isBlankTitleSong(song, catalog)
@@ -274,14 +274,14 @@ object ScannerSongMatcher {
         }
         val exact = mutableListOf<SongEntity>()
         val partial = mutableListOf<SongEntity>()
-            candidates.forEach { candidate ->
+        candidates.forEach { candidate ->
             val cleaned = candidate.trim()
             if (cleaned.length < 2) return@forEach
             val normalized = normalizeMatchTitle(cleaned)
-                effectiveEligibleSongs.forEach { song ->
-                    val normalizedTitle = normalizeMatchTitle(song.title)
-                    if (normalizedTitle.isEmpty()) return@forEach
-                    when {
+            effectiveEligibleSongs.forEach { song ->
+                val normalizedTitle = normalizeMatchTitle(song.title)
+                if (normalizedTitle.isEmpty()) return@forEach
+                when {
                     normalizedTitle == normalized -> exact += song
                     (!isUtage && (song.title.contains(cleaned, true) || cleaned.contains(song.title, true))) ||
                         (isUtage && normalizedTitle.startsWith(normalized)) -> partial += song
@@ -296,16 +296,16 @@ object ScannerSongMatcher {
         }
         val selected = (exact + partial).distinctBy(SongEntity::songIdentifier).take(4)
         val uniqueUtageKanjiSong = if (isUtage && !recognition.kanji.isNullOrBlank()) {
-					songsMatchingUtageTextConstraints(
-						recognition = recognition,
-						explicitTitleKanji = explicitTitleKanji,
-						catalog = catalog,
-					).singleOrNull { song ->
-						sheetsFor(song, catalog).any { sheet ->
-							hasNoisyUtageKanjiEvidence(recognition.kanji, sheet.difficulty)
-						}
-					}
-				} else {
+            songsMatchingUtageTextConstraints(
+                recognition = recognition,
+                explicitTitleKanji = explicitTitleKanji,
+                catalog = catalog,
+            ).singleOrNull { song ->
+                sheetsFor(song, catalog).any { sheet ->
+                    hasNoisyUtageKanjiEvidence(recognition.kanji, sheet.difficulty)
+                }
+            }
+        } else {
             null
         }
         val fallback = if (selected.isNotEmpty()) {
@@ -314,11 +314,11 @@ object ScannerSongMatcher {
             listOf(uniqueUtageKanjiSong)
         } else if (recognition.maxDxScore?.let { it > 0 } == true) {
             val maxDxScore = requireNotNull(recognition.maxDxScore)
-					effectiveEligibleSongs.singleOrNull { song ->
-						sheetsFor(song, catalog).any { sheet ->
-							sheet.total?.times(3) == maxDxScore && validSheet(sheet, song)
-						}
-					}?.let(::listOf).orEmpty()
+            effectiveEligibleSongs.singleOrNull { song ->
+                sheetsFor(song, catalog).any { sheet ->
+                    sheet.total?.times(3) == maxDxScore && validSheet(sheet, song)
+                }
+            }?.let(::listOf).orEmpty()
         } else {
             emptyList()
         }
@@ -474,7 +474,7 @@ object ScannerSongMatcher {
         catalog.sheetsBySong[song.songIdentifier].orEmpty()
 
     private fun isBlankTitleSong(song: SongEntity, catalog: ScannerCatalog): Boolean =
-        song.title.isBlank() || sheetsFor(song, catalog).any { it.providerSongId == BlankTitleProviderSongId }
+        song.title.isBlank() || sheetsFor(song, catalog).any { it.providerSongId == BLANK_TITLE_PROVIDER_SONG_ID }
 
     private fun stripUtagePrefix(title: String): String = Normalizer.normalize(
         title.replaceFirst(UtagePrefix, "").trim(),
@@ -570,7 +570,7 @@ object ScannerSongMatcher {
             if (cleaned.isEmpty()) {
                 false
             } else {
-                generateOcrVariants(cleaned, 6).any { searchCandidate ->
+                generateOcrVariants(cleaned).any { searchCandidate ->
                     val normalizedSearch = normalizeMatchTitle(searchCandidate)
                     val exact = normalizedSongTitle == normalizedSearch ||
                         song.title.equals(searchCandidate, ignoreCase = true) ||
@@ -592,15 +592,15 @@ object ScannerSongMatcher {
         }
     }
 
-    private fun generateOcrVariants(text: String, maxVariants: Int): List<String> {
+    private fun generateOcrVariants(text: String): List<String> {
         val variants = mutableListOf(text)
         val queue = ArrayDeque<String>().apply { add(text) }
         val seen = mutableSetOf(text)
-        while (queue.isNotEmpty() && variants.size < maxVariants) {
+        while (queue.isNotEmpty() && variants.size < MAX_OCR_VARIANTS) {
             val current = queue.removeFirst()
             current.forEachIndexed { index, character ->
                 OcrSubstitutions[character].orEmpty().forEach { replacement ->
-                    if (variants.size >= maxVariants) return@forEach
+                    if (variants.size >= MAX_OCR_VARIANTS) return@forEach
                     val variant = current.replaceRange(index, index + 1, replacement.toString())
                     if (seen.add(variant)) {
                         variants += variant
@@ -640,5 +640,6 @@ object ScannerSongMatcher {
         return levenshtein(left, right) <= maxOf(1, left.length / 4)
     }
 
-    private const val BlankTitleProviderSongId = 11_422
+    private const val MAX_OCR_VARIANTS = 6
+    private const val BLANK_TITLE_PROVIDER_SONG_ID = 11_422
 }

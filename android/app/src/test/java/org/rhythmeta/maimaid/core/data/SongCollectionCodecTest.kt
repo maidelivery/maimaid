@@ -30,7 +30,7 @@ class SongCollectionCodecTest {
         val encoded = SongCollectionCodec.encode(collection)
         val decoded = SongCollectionCodec.decode(encoded)
 
-        assertTrue(encoded.startsWith(SongCollectionCodec.Prefix))
+        assertTrue(encoded.startsWith(SongCollectionCodec.PREFIX))
         assertEquals(collection, decoded)
     }
 

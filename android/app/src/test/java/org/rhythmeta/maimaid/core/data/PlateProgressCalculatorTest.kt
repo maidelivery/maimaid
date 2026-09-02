@@ -104,7 +104,18 @@ class PlateProgressCalculatorTest {
     private fun version(name: String, abbr: String, order: Int) = GameVersionEntity(name, abbr, null, order)
 
     private fun song(id: String, version: String, category: String = "maimai") = SongEntity(
-        id, category, id, "", "$id.png", version, null, 0, null, false, false, null,
+        songIdentifier = id,
+        category = category,
+        title = id,
+        artist = "",
+        imageName = "$id.png",
+        version = version,
+        releaseDate = null,
+        sortOrder = 0,
+        bpm = null,
+        isNew = false,
+        isLocked = false,
+        comment = null,
     )
 
     private fun sheet(
@@ -115,7 +126,10 @@ class PlateProgressCalculatorTest {
     ) = SheetEntity(
         "$songId-dx-$difficulty", songId, "dx", difficulty, version, "14+", 14.7,
         "14.7", 14.7, null, null, null, null, null, null, null,
-        jp, true, true, true,
+        regionJp = jp,
+        regionIntl = true,
+        regionUsa = true,
+        regionCn = true,
     )
 
     private fun score(

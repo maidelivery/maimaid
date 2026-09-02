@@ -433,9 +433,7 @@ private fun ScannerModelGate(
                     Text(stringResource(R.string.action_retry))
                 }
             }
-            is ScannerModelState.Ready,
-            is ScannerModelState.UpdateAvailable,
-            -> Unit
+            else -> Unit
         }
     }
 }
