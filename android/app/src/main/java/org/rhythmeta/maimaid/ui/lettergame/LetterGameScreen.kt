@@ -119,6 +119,7 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.PullToRefresh
@@ -1188,6 +1189,7 @@ private fun PlayingPage(
     var hintType by remember { mutableStateOf("version") }
     var hintVisibility by remember { mutableStateOf("public") }
     var secondsLeft by remember { mutableIntStateOf(0) }
+    var showInputTip by rememberSaveable(match.matchId) { mutableStateOf(true) }
     val isTurn = match.turnUserId == currentUserId
     val canAct = isTurn && socket != null
     val currentPlayer = match.players.firstOrNull { it.userId == currentUserId }
@@ -1258,7 +1260,9 @@ private fun PlayingPage(
             contentPadding = PaddingValues(start = 16.dp, top = contentTopPadding + 8.dp, end = 16.dp, bottom = 136.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-        item { InputMechanismTip() }
+        if (showInputTip) {
+            item { InputMechanismTip(onDismiss = { showInputTip = false }) }
+        }
         if (errorMessage != null) item { ErrorBanner(errorMessage) }
         item { TurnStrip(match.players, match.turnUserId, currentUserId, localAvatarModel) }
         if (englishOnly) item { EnglishLetterProgress(match.logs) }
@@ -1466,13 +1470,13 @@ private fun localizedLogMessage(narration: LetterGameLogNarration): String {
 }
 
 @Composable
-private fun InputMechanismTip() {
+private fun InputMechanismTip(onDismiss: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .squircleSurface(
                 color = MiuixTheme.colorScheme.surfaceContainer,
-                cornerRadius = 12.dp,
+                cornerRadius = 18.dp,
                 extension = SquircleExtension,
             )
             .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -1489,7 +1493,16 @@ private fun InputMechanismTip() {
             text = stringResource(R.string.letter_game_input_tip),
             style = MiuixTheme.textStyles.footnote1,
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            modifier = Modifier.weight(1f),
         )
+        IconButton(onClick = onDismiss, modifier = Modifier.size(36.dp)) {
+            Icon(
+                imageVector = Icons.Rounded.Cancel,
+                contentDescription = stringResource(R.string.letter_game_dismiss),
+                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                modifier = Modifier.size(18.dp),
+            )
+        }
     }
 }
 
