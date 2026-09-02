@@ -23,7 +23,22 @@ final class Song {
     @Relationship(deleteRule: .cascade, inverse: \Sheet.song)
     var sheets: [Sheet] = []
 
-    init(songIdentifier: String, category: String, title: String, artist: String, imageName: String, version: String? = nil, releaseDate: String? = nil, sortOrder: Int, bpm: Double? = nil, isNew: Bool, isLocked: Bool, comment: String? = nil, searchKeywords: String? = nil, aliases: [String] = []) {
+    init(
+        songIdentifier: String,
+        category: String,
+        title: String,
+        artist: String,
+        imageName: String,
+        version: String? = nil,
+        releaseDate: String? = nil,
+        sortOrder: Int,
+        bpm: Double? = nil,
+        isNew: Bool,
+        isLocked: Bool,
+        comment: String? = nil,
+        searchKeywords: String? = nil,
+        aliases: [String] = []
+    ) {
         self.songIdentifier = songIdentifier
         self.category = category
         self.title = title
@@ -76,7 +91,18 @@ final class SongCollectionItem {
     var clientUpdatedAt: Date?
     var deletedAt: Date?
 
-    init(id: UUID = UUID(), collectionId: UUID, songId: String, chartType: String, difficulty: String, position: Int = 0, createdAt: Date = .now, updatedAt: Date = .now, clientUpdatedAt: Date? = nil, deletedAt: Date? = nil) {
+    init(
+        id: UUID = UUID(),
+        collectionId: UUID,
+        songId: String,
+        chartType: String,
+        difficulty: String,
+        position: Int = 0,
+        createdAt: Date = .now,
+        updatedAt: Date = .now,
+        clientUpdatedAt: Date? = nil,
+        deletedAt: Date? = nil
+    ) {
         self.id = id
         self.collectionId = collectionId
         self.songId = songId

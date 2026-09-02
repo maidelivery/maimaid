@@ -1,6 +1,8 @@
 import SwiftUI
 import SwiftData
 
+// Plate filters and progress presentation operate over the same cached song snapshot.
+// swiftlint:disable:next type_body_length
 struct PlateProgressView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor

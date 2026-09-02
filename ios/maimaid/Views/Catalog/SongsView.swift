@@ -16,6 +16,8 @@ enum SortOption: String, CaseIterable, Identifiable, Sendable {
     var id: String { self.rawValue }
 }
 
+// Catalog filtering, navigation, and scroll restoration share one screen lifecycle.
+// swiftlint:disable:next type_body_length
 struct SongsView: View {
     private static var prefetchedSongsDescriptor: FetchDescriptor<Song> {
         var descriptor = FetchDescriptor<Song>(sortBy: [SortDescriptor(\Song.sortOrder, order: .forward)])
@@ -219,6 +221,8 @@ struct SongsView: View {
         )
     }
 
+    // Combined filters intentionally remain in one pure function so background sorting is deterministic.
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     nonisolated private static func filterAndSortSongIdentifiers(
         from snapshots: [SongFilterSnapshot],
         settings: FilterSettings,
@@ -327,29 +331,33 @@ struct SongsView: View {
             return true
         }
 
-        return filtered.sorted { a, b in
+        return filtered.sorted { firstSong, secondSong in
             switch sortOption {
             case .defaultOrder:
-                return sortAscending ? (a.sortOrder < b.sortOrder) : (a.sortOrder > b.sortOrder)
+                return sortAscending
+                    ? (firstSong.sortOrder < secondSong.sortOrder)
+                    : (firstSong.sortOrder > secondSong.sortOrder)
             case .versionAndDate:
-                let orderA = ThemeUtils.versionSortOrder(a.version ?? "")
-                let orderB = ThemeUtils.versionSortOrder(b.version ?? "")
+                let orderA = ThemeUtils.versionSortOrder(firstSong.version ?? "")
+                let orderB = ThemeUtils.versionSortOrder(secondSong.version ?? "")
 
                 if orderA != orderB {
                     return sortAscending ? (orderA < orderB) : (orderA > orderB)
                 }
 
-                let releaseA = a.releaseDate ?? "0000-00-00"
-                let releaseB = b.releaseDate ?? "0000-00-00"
+                let releaseA = firstSong.releaseDate ?? "0000-00-00"
+                let releaseB = secondSong.releaseDate ?? "0000-00-00"
                 if releaseA != releaseB {
                     return sortAscending ? (releaseA < releaseB) : (releaseA > releaseB)
                 }
-                return a.sortOrder < b.sortOrder
+                return firstSong.sortOrder < secondSong.sortOrder
             case .difficulty:
-                if a.maxDifficulty == b.maxDifficulty {
-                    return a.sortOrder < b.sortOrder
+                if firstSong.maxDifficulty == secondSong.maxDifficulty {
+                    return firstSong.sortOrder < secondSong.sortOrder
                 }
-                return sortAscending ? (a.maxDifficulty < b.maxDifficulty) : (a.maxDifficulty > b.maxDifficulty)
+                return sortAscending
+                    ? (firstSong.maxDifficulty < secondSong.maxDifficulty)
+                    : (firstSong.maxDifficulty > secondSong.maxDifficulty)
             }
         }
         .map(\.songIdentifier)
@@ -537,8 +545,8 @@ struct SongsView: View {
                         .onAppear {
                             viewportHeight = geo.size.height
                         }
-                        .onChange(of: geo.size.height) { _, h in
-                            viewportHeight = h
+                        .onChange(of: geo.size.height) { _, height in
+                            viewportHeight = height
                         }
                     }
                     .overlay {

@@ -1,6 +1,9 @@
 import SwiftUI
 import SwiftData
 
+// This feature file contains several established, tightly coupled detail sections.
+// swiftlint:disable file_length
+
 struct SongDetailView: View {
     let song: Song
     @Environment(\.modelContext) private var modelContext
@@ -55,6 +58,8 @@ private struct CommunityQuotaShakeEffect: GeometryEffect {
     }
 }
 
+// Song detail sections share selection, score, record, alias, and statistics state.
+// swiftlint:disable:next type_body_length
 struct SongDetailContent: View {
     let song: Song
     @Binding var selectedType: String
@@ -1007,6 +1012,8 @@ struct SongDetailContent: View {
 
 // MARK: - Sheet Card View
 
+// The expandable chart card owns coordinated score, history, notes, and rating sections.
+// swiftlint:disable:next type_body_length
 struct SheetCardView: View {
     let sheet: Sheet
     let mainChartVersion: String?
@@ -1509,22 +1516,22 @@ struct SheetCardView: View {
     @ViewBuilder
     private var noteBreakdown: some View {
         let totalWeight = calculateTotalWeight(sheet)
-        let items: [(String, Int?, Double, Color)] = [
-            ("TAP", sheet.tap, 1.0, .pink),
-            ("HOLD", sheet.hold, 2.0, .pink),
-            ("SLIDE", sheet.slide, 3.0, .blue),
-            ("TOUCH", sheet.touch, 1.0, .blue),
-            ("BREAK", sheet.breakCount, 5.0, .orange)
+        let items = [
+            NoteBreakdownItem(label: "TAP", count: sheet.tap, weight: 1.0, color: .pink),
+            NoteBreakdownItem(label: "HOLD", count: sheet.hold, weight: 2.0, color: .pink),
+            NoteBreakdownItem(label: "SLIDE", count: sheet.slide, weight: 3.0, color: .blue),
+            NoteBreakdownItem(label: "TOUCH", count: sheet.touch, weight: 1.0, color: .blue),
+            NoteBreakdownItem(label: "BREAK", count: sheet.breakCount, weight: 5.0, color: .orange)
         ]
 
         VStack(spacing: 0) {
-            ForEach(Array(items.filter { $0.1 != nil && $0.1! > 0 }.enumerated()), id: \.offset) { index, item in
-                let count = item.1!
-                let weight = Double(count) * item.2
+            ForEach(items.filter { ($0.count ?? 0) > 0 }.enumerated(), id: \.element.id) { index, item in
+                let count = item.count ?? 0
+                let weight = Double(count) * item.weight
                 let percent = totalWeight > 0 ? weight / totalWeight : 0
 
                 HStack(spacing: 8) {
-                    Text(item.0)
+                    Text(item.label)
                         .font(.system(size: 9, weight: .black))
                         .foregroundStyle(.secondary)
                         .frame(width: 40, alignment: .leading)
@@ -1536,7 +1543,7 @@ struct SheetCardView: View {
                                 .fill(Color.primary.opacity(0.06))
 
                             Capsule()
-                                .fill(item.3.opacity(0.5))
+                                .fill(item.color.opacity(0.5))
                                 .frame(width: max(4, geo.size.width * percent))
                         }
                     }

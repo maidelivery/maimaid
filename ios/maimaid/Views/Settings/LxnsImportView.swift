@@ -8,10 +8,17 @@ struct LxnsTokenResponse: Decodable {
 }
 
 struct LxnsTokenData: Decodable {
-    let access_token: String
-    let refresh_token: String
+    let accessToken: String
+    let refreshToken: String
+
+    private enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
+        case refreshToken = "refresh_token"
+    }
 }
 
+// OAuth validation, import progress, and conflict resolution form one transactional flow.
+// swiftlint:disable:next type_body_length
 struct LxnsImportView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
@@ -321,14 +328,14 @@ struct LxnsImportView: View {
 
             let tokenResponse = try JSONDecoder().decode(LxnsTokenResponse.self, from: data)
 
-            if httpResponse.statusCode != 200 || tokenResponse.data?.access_token == nil {
+            guard httpResponse.statusCode == 200, let tokenData = tokenResponse.data else {
                 importStatus = String(localized: "import.lxns.status.failed.token \(tokenResponse.message ?? String(localized: "import.status.error.unknown"))")
                 isImporting = false
                 return
             }
 
-            let accessToken = tokenResponse.data!.access_token
-            let refreshToken = tokenResponse.data!.refresh_token
+            let accessToken = tokenData.accessToken
+            let refreshToken = tokenData.refreshToken
             validatedAccessToken = accessToken
             validatedAccessTokenDate = Date()
 

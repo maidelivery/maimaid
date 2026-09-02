@@ -112,9 +112,10 @@ enum RatingUtils {
     ]
 
     static func getRatingCoefficient(for achievement: Double) -> Double {
-        for i in 0..<ratingCoefficients.count {
-            if i == ratingCoefficients.count - 1 || achievement < ratingCoefficients[i + 1].achievement {
-                return ratingCoefficients[i].coefficient
+        for index in ratingCoefficients.indices {
+            if index == ratingCoefficients.count - 1
+                || achievement < ratingCoefficients[index + 1].achievement {
+                return ratingCoefficients[index].coefficient
             }
         }
 
@@ -455,7 +456,7 @@ extension Array where Element == Song {
                 case .server:
                     nil
                 case .fitted:
-                    ChartStatsService.shared.getStat(for: sheet)?.fit_diff
+                    ChartStatsService.shared.getStat(for: sheet)?.fitDiff
                 case .version:
                     sheet.versionInternalLevelValue(for: selectedVersion)
                 }

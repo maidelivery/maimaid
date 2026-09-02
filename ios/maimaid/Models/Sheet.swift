@@ -64,7 +64,24 @@ final class Sheet {
             .value
     }
 
-    init(songIdentifier: String, type: String, difficulty: String, version: String? = nil, level: String, levelValue: Double? = nil, internalLevel: String? = nil, internalLevelValue: Double? = nil, noteDesigner: String? = nil, tap: Int? = nil, hold: Int? = nil, slide: Int? = nil, touch: Int? = nil, breakCount: Int? = nil, total: Int? = nil, songId: Int = 0) {
+    init(
+        songIdentifier: String,
+        type: String,
+        difficulty: String,
+        version: String? = nil,
+        level: String,
+        levelValue: Double? = nil,
+        internalLevel: String? = nil,
+        internalLevelValue: Double? = nil,
+        noteDesigner: String? = nil,
+        tap: Int? = nil,
+        hold: Int? = nil,
+        slide: Int? = nil,
+        touch: Int? = nil,
+        breakCount: Int? = nil,
+        total: Int? = nil,
+        songId: Int = 0
+    ) {
         self.songIdentifier = songIdentifier
         self.type = type
         self.difficulty = difficulty

@@ -20,6 +20,8 @@ private final class BackendWebAuthPresentationContextProvider: NSObject, ASWebAu
     }
 }
 
+// Authentication, conflict recovery, and account lifecycle state are coordinated by this screen.
+// swiftlint:disable:next type_body_length
 struct BackendAuthView: View {
     @Environment(\.modelContext) private var modelContext
 

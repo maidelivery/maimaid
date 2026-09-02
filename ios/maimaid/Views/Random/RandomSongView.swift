@@ -171,7 +171,7 @@ struct RandomSongView: View {
         pendingResults = newResults
 
         // Build the scrolling list for each slot
-        for i in 0..<songCount {
+        for index in 0..<songCount {
             var columnSongs: [Song] = []
             for _ in 0..<20 {
                 // Fillers can be from allSongs for variety, but the target should be from filteredSongs
@@ -179,14 +179,16 @@ struct RandomSongView: View {
                     columnSongs.append(filler)
                 }
             }
-            columnSongs.append(newResults[i])
-            displayedSongs[i] = columnSongs
-            spinOffsets[i] = 0
+            columnSongs.append(newResults[index])
+            displayedSongs[index] = columnSongs
+            spinOffsets[index] = 0
 
             // Animation for each column
-            let columnDuration = 2.0 + Double(i) * 0.4
+            let columnDuration = 2.0 + Double(index) * 0.4
             withAnimation(.timingCurve(0.4, 0, 0.2, 1, duration: columnDuration)) {
-                spinOffsets[i] = Double(-CGFloat(displayedSongs[i].count - 1) * currentSlotHeight)
+                spinOffsets[index] = Double(
+                    -CGFloat(displayedSongs[index].count - 1) * currentSlotHeight
+                )
             }
         }
 
@@ -194,7 +196,7 @@ struct RandomSongView: View {
         let totalDuration = 2.0 + Double(songCount - 1) * 0.4
 
         currentSpinTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: UInt64(totalDuration * 1_000_000_000))
+            try? await Task.sleep(for: .seconds(totalDuration))
 
             if !Task.isCancelled {
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
@@ -212,9 +214,11 @@ struct RandomSongView: View {
 
         // Snap everything to end
         withAnimation(.none) {
-            for i in 0..<songCount {
-                if i < displayedSongs.count && i < spinOffsets.count {
-                    spinOffsets[i] = Double(-CGFloat(displayedSongs[i].count - 1) * currentSlotHeight)
+            for index in 0..<songCount {
+                if index < displayedSongs.count && index < spinOffsets.count {
+                    spinOffsets[index] = Double(
+                        -CGFloat(displayedSongs[index].count - 1) * currentSlotHeight
+                    )
                 }
             }
         }

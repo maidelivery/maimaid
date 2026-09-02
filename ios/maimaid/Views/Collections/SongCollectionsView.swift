@@ -420,16 +420,9 @@ struct SongCollectionDetailView: View {
             )
         }
         .sorted { lhs, rhs in
-            guard let leftSong = lhs.song, let rightSong = rhs.song else {
-                return lhs.item.position < rhs.item.position
-            }
             return collectionCardComesBefore(
-                leftSong: leftSong,
-                rightSong: rightSong,
-                leftSheet: lhs.sheet,
-                rightSheet: rhs.sheet,
-                leftPosition: lhs.item.position,
-                rightPosition: rhs.item.position,
+                left: lhs,
+                right: rhs,
                 sortOption: sortOption,
                 sortAscending: sortAscending,
                 activeServer: activeServer
@@ -493,16 +486,16 @@ private struct SongCollectionPreview: Identifiable {
 }
 
 private func collectionCardComesBefore(
-    leftSong: Song,
-    rightSong: Song,
-    leftSheet: Sheet?,
-    rightSheet: Sheet?,
-    leftPosition: Int,
-    rightPosition: Int,
+    left: SongCollectionCard,
+    right: SongCollectionCard,
     sortOption: SortOption,
     sortAscending: Bool,
     activeServer: GameServer
 ) -> Bool {
+    guard let leftSong = left.song, let rightSong = right.song else {
+        return left.item.position < right.item.position
+    }
+
     let result: ComparisonResult
     let followsDirection: Bool
     switch sortOption {
@@ -521,8 +514,12 @@ private func collectionCardComesBefore(
         }
         followsDirection = true
     case .difficulty:
-        let leftDifficulty = leftSheet.map { ServerChartPolicy.metadata(for: $0, on: activeServer).ratingLevel ?? 0 } ?? 0
-        let rightDifficulty = rightSheet.map { ServerChartPolicy.metadata(for: $0, on: activeServer).ratingLevel ?? 0 } ?? 0
+        let leftDifficulty = left.sheet.map {
+            ServerChartPolicy.metadata(for: $0, on: activeServer).ratingLevel ?? 0
+        } ?? 0
+        let rightDifficulty = right.sheet.map {
+            ServerChartPolicy.metadata(for: $0, on: activeServer).ratingLevel ?? 0
+        } ?? 0
         if leftDifficulty != rightDifficulty {
             result = leftDifficulty < rightDifficulty ? .orderedAscending : .orderedDescending
             followsDirection = true
@@ -534,7 +531,7 @@ private func collectionCardComesBefore(
     if result != .orderedSame {
         return followsDirection ? (sortAscending ? result == .orderedAscending : result == .orderedDescending) : result == .orderedAscending
     }
-    return leftPosition < rightPosition
+    return left.item.position < right.item.position
 }
 
 private struct CollectionPreviewRow: View {
@@ -693,17 +690,47 @@ struct AddToSongCollectionsView: View {
         }
         .onAppear {
             selected = Set(collections.compactMap { collection in
-                items.contains { $0.collectionId == collection.id && $0.songId == songId && $0.chartType.caseInsensitiveCompare(chartType) == .orderedSame && $0.difficulty.caseInsensitiveCompare(difficulty) == .orderedSame && $0.deletedAt == nil } ? collection.id : nil
+                let containsSong = items.contains {
+                    $0.collectionId == collection.id
+                        && $0.songId == songId
+                        && $0.chartType.caseInsensitiveCompare(chartType) == .orderedSame
+                        && $0.difficulty.caseInsensitiveCompare(difficulty) == .orderedSame
+                        && $0.deletedAt == nil
+                }
+                return containsSong ? collection.id : nil
             })
         }
     }
 
     private func save() {
         for collection in collections {
-            let existing = items.first { $0.collectionId == collection.id && $0.songId == songId && $0.chartType.caseInsensitiveCompare(chartType) == .orderedSame && $0.difficulty.caseInsensitiveCompare(difficulty) == .orderedSame }
+            let existing = items.first {
+                $0.collectionId == collection.id
+                    && $0.songId == songId
+                    && $0.chartType.caseInsensitiveCompare(chartType) == .orderedSame
+                    && $0.difficulty.caseInsensitiveCompare(difficulty) == .orderedSame
+            }
             if selected.contains(collection.id) {
-                if let existing { existing.deletedAt = nil; existing.updatedAt = .now; existing.clientUpdatedAt = .now } else { modelContext.insert(SongCollectionItem(collectionId: collection.id, songId: songId, chartType: chartType, difficulty: difficulty, position: items.filter { $0.collectionId == collection.id }.count, clientUpdatedAt: .now)) }
-            } else if let existing { existing.deletedAt = .now; existing.updatedAt = .now; existing.clientUpdatedAt = .now }
+                if let existing {
+                    existing.deletedAt = nil
+                    existing.updatedAt = .now
+                    existing.clientUpdatedAt = .now
+                } else {
+                    let item = SongCollectionItem(
+                        collectionId: collection.id,
+                        songId: songId,
+                        chartType: chartType,
+                        difficulty: difficulty,
+                        position: items.count { $0.collectionId == collection.id },
+                        clientUpdatedAt: .now
+                    )
+                    modelContext.insert(item)
+                }
+            } else if let existing {
+                existing.deletedAt = .now
+                existing.updatedAt = .now
+                existing.clientUpdatedAt = .now
+            }
         }
         try? modelContext.save()
         dismiss()

@@ -2,6 +2,8 @@ import SwiftUI
 import SwiftData
 import CoreData
 
+// Best-list calculation state and export presentation are coordinated by this screen.
+// swiftlint:disable:next type_body_length
 struct BestTableView: View {
     private enum CapacityField: Hashable {
         case old

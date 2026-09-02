@@ -1,6 +1,9 @@
 import Foundation
 import SwiftData
 
+// Incremental synchronization keeps protocol payload handling together for auditability.
+// swiftlint:disable file_length
+
 @MainActor
 final class BackendSyncOperationGate {
     static let shared = BackendSyncOperationGate()
@@ -372,6 +375,8 @@ struct ImportSyncConflictPreview: Identifiable {
 }
 
 @MainActor
+// Push, pull, conflict, import, and deletion paths share the same synchronization contract.
+// swiftlint:disable:next type_body_length
 enum BackendIncrementalSyncService {
     static func pushScoreUpdate(profile: UserProfile, sheet: Sheet, score: Score) async throws {
         try await BackendSyncOperationGate.shared.withLock {
@@ -631,6 +636,8 @@ enum BackendIncrementalSyncService {
         )
     }
 
+    // One push payload must be assembled from a consistent ModelContext snapshot.
+    // swiftlint:disable:next function_body_length
     static func pushAllLocalDataUnlocked(
         context: ModelContext,
         forceProfileOverwrite: Bool = false,
@@ -697,10 +704,27 @@ enum BackendIncrementalSyncService {
 		let localCollections = try context.fetch(FetchDescriptor<SongCollection>())
 		let allCollectionItems = try context.fetch(FetchDescriptor<SongCollectionItem>())
 		let collectionUpserts = localCollections.map {
-			BackendSyncCollectionUpsertPayload(collectionId: $0.id.uuidString.lowercased(), name: $0.name, sortIndex: $0.sortIndex, createdAt: $0.createdAt, deletedAt: $0.deletedAt, clientUpdatedAt: $0.clientUpdatedAt ?? $0.updatedAt)
+			BackendSyncCollectionUpsertPayload(
+				collectionId: $0.id.uuidString.lowercased(),
+				name: $0.name,
+				sortIndex: $0.sortIndex,
+				createdAt: $0.createdAt,
+				deletedAt: $0.deletedAt,
+				clientUpdatedAt: $0.clientUpdatedAt ?? $0.updatedAt
+			)
 		}
 		let collectionItemUpserts = allCollectionItems.map {
-			BackendSyncCollectionItemUpsertPayload(itemId: $0.id.uuidString.lowercased(), collectionId: $0.collectionId.uuidString.lowercased(), songId: $0.songId, chartType: $0.chartType, difficulty: $0.difficulty, position: $0.position, createdAt: $0.createdAt, deletedAt: $0.deletedAt, clientUpdatedAt: $0.clientUpdatedAt ?? $0.updatedAt)
+			BackendSyncCollectionItemUpsertPayload(
+				itemId: $0.id.uuidString.lowercased(),
+				collectionId: $0.collectionId.uuidString.lowercased(),
+				songId: $0.songId,
+				chartType: $0.chartType,
+				difficulty: $0.difficulty,
+				position: $0.position,
+				createdAt: $0.createdAt,
+				deletedAt: $0.deletedAt,
+				clientUpdatedAt: $0.clientUpdatedAt ?? $0.updatedAt
+			)
 		}
 		let dataProfileIds = Set(
 			profiles.filter { forceDataUpload || config.pendingDataProfileIds.contains($0.id) || !config.syncedDataProfileIds.contains($0.id) }.map(\.id)
@@ -753,7 +777,15 @@ enum BackendIncrementalSyncService {
                 forceProfileOverwrite: forceProfileOverwrite,
                 profileUpserts: profileUpserts,
                 scoreUpserts: scoreUpserts,
-                playRecordUpserts: playRecordUpserts, replaceScoreProfileIds: dataProfileIds.filter { config.pendingFullReplaceProfileIds.contains($0) }.map { $0.uuidString.lowercased() }, replacePlayRecordProfileIds: dataProfileIds.filter { config.pendingFullReplaceProfileIds.contains($0) }.map { $0.uuidString.lowercased() }, collectionUpserts: collectionUpserts, collectionItemUpserts: collectionItemUpserts
+				playRecordUpserts: playRecordUpserts,
+				replaceScoreProfileIds: dataProfileIds
+					.filter { config.pendingFullReplaceProfileIds.contains($0) }
+					.map { $0.uuidString.lowercased() },
+				replacePlayRecordProfileIds: dataProfileIds
+					.filter { config.pendingFullReplaceProfileIds.contains($0) }
+					.map { $0.uuidString.lowercased() },
+				collectionUpserts: collectionUpserts,
+				collectionItemUpserts: collectionItemUpserts
             ),
             authentication: .required
         )
@@ -1236,6 +1268,8 @@ enum BackendIncrementalSyncService {
         try removeLocalProfiles(with: deletedProfileIds, context: context)
     }
 
+    // Snapshot application is transactional across every profile-scoped entity.
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     private static func applySnapshot(
         _ snapshot: BackendSyncSnapshot,
         context: ModelContext,
@@ -1415,21 +1449,46 @@ enum BackendIncrementalSyncService {
             sheet.scores.append(score)
         }
 
-        let existingCollections = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<SongCollection>()).map { ($0.id, $0) })
+        let existingCollections = Dictionary(
+            uniqueKeysWithValues: try context.fetch(FetchDescriptor<SongCollection>()).map { ($0.id, $0) }
+        )
         for remote in snapshot.collections {
             guard let collectionId = UUID(uuidString: remote.id) else { continue }
-            let collection = existingCollections[collectionId] ?? SongCollection(id: collectionId, name: remote.name, sortIndex: remote.sortIndex, createdAt: remote.createdAt, updatedAt: remote.updatedAt, clientUpdatedAt: remote.clientUpdatedAt, deletedAt: remote.deletedAt)
+            let collection = existingCollections[collectionId] ?? SongCollection(
+                id: collectionId,
+                name: remote.name,
+                sortIndex: remote.sortIndex,
+                createdAt: remote.createdAt,
+                updatedAt: remote.updatedAt,
+                clientUpdatedAt: remote.clientUpdatedAt,
+                deletedAt: remote.deletedAt
+            )
             if existingCollections[collectionId] == nil { context.insert(collection) }
             collection.name = remote.name
             collection.sortIndex = remote.sortIndex
             collection.updatedAt = remote.updatedAt
             collection.clientUpdatedAt = remote.clientUpdatedAt
             collection.deletedAt = remote.deletedAt
-            let localItems = try context.fetch(FetchDescriptor<SongCollectionItem>(predicate: #Predicate { $0.collectionId == collectionId }))
+            let localItems = try context.fetch(
+                FetchDescriptor<SongCollectionItem>(
+                    predicate: #Predicate { $0.collectionId == collectionId }
+                )
+            )
             let localById = Dictionary(uniqueKeysWithValues: localItems.map { ($0.id, $0) })
             for remoteItem in remote.items {
                 guard let itemId = UUID(uuidString: remoteItem.id) else { continue }
-                let item = localById[itemId] ?? SongCollectionItem(id: itemId, collectionId: collectionId, songId: remoteItem.songId, chartType: remoteItem.chartType, difficulty: remoteItem.difficulty, position: remoteItem.position, createdAt: remoteItem.createdAt, updatedAt: remoteItem.updatedAt, clientUpdatedAt: remoteItem.clientUpdatedAt, deletedAt: remoteItem.deletedAt)
+                let item = localById[itemId] ?? SongCollectionItem(
+                    id: itemId,
+                    collectionId: collectionId,
+                    songId: remoteItem.songId,
+                    chartType: remoteItem.chartType,
+                    difficulty: remoteItem.difficulty,
+                    position: remoteItem.position,
+                    createdAt: remoteItem.createdAt,
+                    updatedAt: remoteItem.updatedAt,
+                    clientUpdatedAt: remoteItem.clientUpdatedAt,
+                    deletedAt: remoteItem.deletedAt
+                )
                 if localById[itemId] == nil { context.insert(item) }
                 item.songId = remoteItem.songId
                 item.chartType = remoteItem.chartType
@@ -1656,6 +1715,8 @@ enum BackendIncrementalSyncService {
         }
     }
 
+    // Import merge policy is applied consistently across scores, records, and profile metadata.
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     private static func applyImportSnapshot(
         _ snapshot: BackendSyncSnapshot,
         profileId: UUID,

@@ -88,8 +88,8 @@ struct SettingsView: View {
                     Toggle("settings.sync.autoUpload", isOn: Binding(
                         get: { config?.isAutoUploadEnabled ?? false },
                         set: { newValue in
-                            if let c = config {
-                                c.isAutoUploadEnabled = newValue
+                            if let config {
+                                config.isAutoUploadEnabled = newValue
                             } else {
                                 let newConfig = SyncConfig(isAutoUploadEnabled: newValue)
                                 modelContext.insert(newConfig)
@@ -104,8 +104,8 @@ struct SettingsView: View {
                     Picker(selection: Binding(
                         get: { config?.themeRawValue ?? 0 },
                         set: { newValue in
-                            if let c = config {
-                                c.themeRawValue = newValue
+                            if let config {
+                                config.themeRawValue = newValue
                             } else {
                                 let newConfig = SyncConfig(themeRawValue: newValue)
                                 modelContext.insert(newConfig)

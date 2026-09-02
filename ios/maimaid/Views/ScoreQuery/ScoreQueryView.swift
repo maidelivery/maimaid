@@ -2,6 +2,8 @@ import SwiftUI
 import SwiftData
 import UIKit
 
+// Persisted filters, statistics, sorting, and result navigation share one query lifecycle.
+// swiftlint:disable:next type_body_length
 struct ScoreQueryView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
@@ -230,8 +232,8 @@ struct ScoreQueryView: View {
             .onAppear {
                 viewportHeight = geo.size.height
             }
-            .onChange(of: geo.size.height) { _, h in
-                viewportHeight = h
+            .onChange(of: geo.size.height) { _, height in
+                viewportHeight = height
             }
         }
         .background(Color(.systemGroupedBackground))
@@ -582,7 +584,7 @@ struct ScoreQueryView: View {
     }
 
     private func computeStats(from map: [String: Score]) {
-        var s = PlayerStats()
+        var statistics = PlayerStats()
 
         // Count unique songs with any score
         var songsWithScores = Set<String>()
@@ -595,29 +597,33 @@ struct ScoreQueryView: View {
             }
 
             // Achievement-based stats (count per sheet)
-            if score.rate >= 100.5 { s.sssPlus += 1 } else if score.rate >= 100.0 { s.sss += 1 }
+            if score.rate >= 100.5 {
+                statistics.sssPlus += 1
+            } else if score.rate >= 100.0 {
+                statistics.sss += 1
+            }
 
             // FC stats
             if let fc = score.fc?.lowercased(), !fc.isEmpty {
                 if fc.contains("app") || fc.contains("ap") {
-                    s.apCount += 1
+                    statistics.apCount += 1
                 } else if fc.contains("fc") {
-                    s.fcCount += 1
+                    statistics.fcCount += 1
                 }
             }
 
             // FS stats
             if let fs = score.fs?.lowercased(), !fs.isEmpty {
                 if fs.contains("fsd") {
-                    s.fsdCount += 1
+                    statistics.fsdCount += 1
                 } else if fs.contains("fs") {
-                    s.fsCount += 1
+                    statistics.fsCount += 1
                 }
             }
         }
 
-        s.totalPlayed = songsWithScores.count
-        self.stats = s
+        statistics.totalPlayed = songsWithScores.count
+        stats = statistics
     }
 
     // MARK: - Filtering & Sorting
@@ -691,15 +697,15 @@ struct ScoreQueryView: View {
         }
 
         // Sort
-        entries.sort { a, b in
+        entries.sort { firstEntry, secondEntry in
             let result: Bool
             switch currentSortMode {
             case .rating:
-                result = a.rating > b.rating
+                result = firstEntry.rating > secondEntry.rating
             case .achievement:
-                result = a.achievement > b.achievement
+                result = firstEntry.achievement > secondEntry.achievement
             case .level:
-                result = a.level > b.level
+                result = firstEntry.level > secondEntry.level
             }
             return ascending ? !result : result
         }

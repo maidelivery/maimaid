@@ -4,22 +4,22 @@ import SwiftUI
 nonisolated struct ChartStat: Codable, Sendable {
     let cnt: Double?
     let diff: String?
-    let fit_diff: Double?
+    let fitDiff: Double?
     let avg: Double?
-    let avg_dx: Double?
-    let std_dev: Double?
+    let avgDx: Double?
+    let standardDeviation: Double?
     let dist: [Int]?
-    let fc_dist: [Int]?
+    let fullComboDistribution: [Int]?
 
     var isPlaceholder: Bool {
         cnt == nil
             && diff == nil
-            && fit_diff == nil
+            && fitDiff == nil
             && avg == nil
-            && avg_dx == nil
-            && std_dev == nil
+            && avgDx == nil
+            && standardDeviation == nil
             && dist == nil
-            && fc_dist == nil
+            && fullComboDistribution == nil
     }
 
     var formattedAvg: String {
@@ -28,8 +28,8 @@ nonisolated struct ChartStat: Codable, Sendable {
     }
 
     var formattedFitDiff: String {
-        guard let fit_diff = fit_diff else { return "N/A" }
-        return fit_diff.formatted(.number.precision(.fractionLength(2)))
+        guard let fitDiff else { return "N/A" }
+        return fitDiff.formatted(.number.precision(.fractionLength(2)))
     }
 
     // Skip decoding if fields are missing (handles empty {} in API)
@@ -37,32 +37,50 @@ nonisolated struct ChartStat: Codable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         cnt = try? container.decode(Double.self, forKey: .cnt)
         diff = try? container.decode(String.self, forKey: .diff)
-        fit_diff = try? container.decode(Double.self, forKey: .fit_diff)
+        fitDiff = try? container.decode(Double.self, forKey: .fitDiff)
         avg = try? container.decode(Double.self, forKey: .avg)
-        avg_dx = try? container.decode(Double.self, forKey: .avg_dx)
-        std_dev = try? container.decode(Double.self, forKey: .std_dev)
+        avgDx = try? container.decode(Double.self, forKey: .avgDx)
+        standardDeviation = try? container.decode(Double.self, forKey: .standardDeviation)
         dist = try? container.decode([Int].self, forKey: .dist)
-        fc_dist = try? container.decode([Int].self, forKey: .fc_dist)
+        fullComboDistribution = try? container.decode([Int].self, forKey: .fullComboDistribution)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case cnt, diff, fit_diff, avg, avg_dx, std_dev, dist, fc_dist
+        case cnt
+        case diff
+        case fitDiff = "fit_diff"
+        case avg
+        case avgDx = "avg_dx"
+        case standardDeviation = "std_dev"
+        case dist
+        case fullComboDistribution = "fc_dist"
     }
 }
 
 nonisolated struct ChartStatsDiffData: Codable, Sendable {
     let achievements: Double?
     let dist: [Double]?
-    let fc_dist: [Double]?
+    let fullComboDistribution: [Double]?
+
+    private enum CodingKeys: String, CodingKey {
+        case achievements
+        case dist
+        case fullComboDistribution = "fc_dist"
+    }
 }
 
 nonisolated struct ChartStatsResponse: Codable, Sendable {
     let charts: [String: [ChartStat]]
-    let diff_data: [String: ChartStatsDiffData]?
+    let difficultyData: [String: ChartStatsDiffData]?
 
-    init(charts: [String: [ChartStat]], diff_data: [String: ChartStatsDiffData]? = nil) {
+    init(charts: [String: [ChartStat]], difficultyData: [String: ChartStatsDiffData]? = nil) {
         self.charts = charts
-        self.diff_data = diff_data
+        self.difficultyData = difficultyData
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case charts
+        case difficultyData = "diff_data"
     }
 }
 
@@ -153,7 +171,7 @@ class ChartStatsService {
     }
 
     private func saveCachedStats() {
-        guard let data = try? JSONEncoder().encode(ChartStatsResponse(charts: cache, diff_data: nil)) else {
+        guard let data = try? JSONEncoder().encode(ChartStatsResponse(charts: cache)) else {
             return
         }
 

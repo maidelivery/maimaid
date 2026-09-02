@@ -3,13 +3,24 @@ import SwiftData
 
 private struct LxnsScoreUploadRecord: Encodable {
     let id: Int
-    let song_name: String
-    let level_index: Int
+    let songName: String
+    let levelIndex: Int
     let type: String
     let achievements: Double
-    let dx_score: Int
+    let dxScore: Int
     let fc: String?
     let fs: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case songName = "song_name"
+        case levelIndex = "level_index"
+        case type
+        case achievements
+        case dxScore = "dx_score"
+        case fc
+        case fs
+    }
 }
 
 private struct LxnsScoreUploadRequest: Encodable {
@@ -221,11 +232,11 @@ class SyncManager {
             scores: [
                 LxnsScoreUploadRecord(
                     id: songId,
-                    song_name: sheet.song?.title ?? "",
-                    level_index: ThemeUtils.mapDifficultyToIndex(sheet.difficulty),
+                    songName: sheet.song?.title ?? "",
+                    levelIndex: ThemeUtils.mapDifficultyToIndex(sheet.difficulty),
                     type: lxnsChartType(for: sheet.type),
                     achievements: score.rate,
-                    dx_score: score.dxScore,
+                    dxScore: score.dxScore,
                     fc: score.fc,
                     fs: score.fs
                 )
@@ -368,8 +379,8 @@ class SyncManager {
             let tokenResponse = try decoder.decode(LxnsTokenResponse.self, from: data)
 
             if let newData = tokenResponse.data {
-                ProfileCredentialStore.shared.setLxnsRefreshToken(newData.refresh_token, for: profileId)
-                return .success(newData.access_token)
+                ProfileCredentialStore.shared.setLxnsRefreshToken(newData.refreshToken, for: profileId)
+                return .success(newData.accessToken)
             }
         } catch {
             print("SyncManager: [LXNS] 刷新令牌出错：\(error.localizedDescription)")

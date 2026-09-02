@@ -1,6 +1,8 @@
 import SwiftUI
 import SwiftData
 
+// Entry validation, history updates, and synchronization form one atomic editing flow.
+// swiftlint:disable:next type_body_length
 struct ScoreEntryView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext

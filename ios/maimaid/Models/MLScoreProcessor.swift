@@ -4,6 +4,8 @@ import Foundation
 @preconcurrency import UIKit
 
 /// Processor that encapsulates the logic for parsing Maimai scores using CoreML model.
+// The detector and OCR pipeline share intermediate Vision regions throughout this type.
+// swiftlint:disable:next type_body_length
 nonisolated final class MLScoreProcessor {
     nonisolated(unsafe) static let shared = MLScoreProcessor()
     private init() {}
@@ -17,6 +19,8 @@ nonisolated final class MLScoreProcessor {
         return Self.processSynchronously(normalizedImage, visionModel: visionModel)
     }
 
+    // Each detector label intentionally maps to a distinct score field in this single Vision pass.
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     private static func processSynchronously(_ image: UIImage, visionModel: VNCoreMLModel?) -> MLScoreResult {
         guard let cgImage = image.cgImage, let vnModel = visionModel else {
             return MLScoreResult(debugInfo: "Model not loaded or invalid image.")
@@ -59,7 +63,15 @@ nonisolated final class MLScoreProcessor {
 
             scoreResult.boxes.append(RecognizedBox(label: label, rect: box))
 
-            print("  [\(label)] confidence: \(String(format: "%.2f", confidence)), box: [x:\(String(format: "%.3f", box.origin.x)), y:\(String(format: "%.3f", box.origin.y)), w:\(String(format: "%.3f", box.width)), h:\(String(format: "%.3f", box.height))]")
+            let formattedConfidence = confidence.formatted(.number.precision(.fractionLength(2)))
+            let formattedX = Double(box.origin.x).formatted(.number.precision(.fractionLength(3)))
+            let formattedY = Double(box.origin.y).formatted(.number.precision(.fractionLength(3)))
+            let formattedWidth = Double(box.width).formatted(.number.precision(.fractionLength(3)))
+            let formattedHeight = Double(box.height).formatted(.number.precision(.fractionLength(3)))
+            print(
+                "  [\(label)] confidence: \(formattedConfidence), "
+                    + "box: [x:\(formattedX), y:\(formattedY), w:\(formattedWidth), h:\(formattedHeight)]"
+            )
 
             switch label {
             case "dx": scoreResult.type = "dx"
@@ -399,7 +411,7 @@ nonisolated final class MLScoreProcessor {
             var extracted: [String] = []
             for obs in observations {
                 guard let top = obs.topCandidates(1).first else { continue }
-                if let p = pattern, let regex = try? NSRegularExpression(pattern: p) {
+                if let pattern, let regex = try? NSRegularExpression(pattern: pattern) {
                     let text = top.string.replacingOccurrences(of: " ", with: "")
                     let range = NSRange(location: 0, length: text.utf16.count)
                     if let match = regex.firstMatch(in: text, range: range),
@@ -443,15 +455,15 @@ nonisolated final class MLScoreProcessor {
         var bri: CGFloat = 0
         avgColor.getHue(&hue, saturation: &sat, brightness: &bri, alpha: nil)
 
-        let h = hue * 360
+        let hueDegrees = hue * 360
 
-        if h > 320 || h < 20 {
+        if hueDegrees > 320 || hueDegrees < 20 {
             return "expert"
-        } else if h >= 20 && h < 60 {
+        } else if hueDegrees >= 20 && hueDegrees < 60 {
             return "advanced"
-        } else if h >= 60 && h < 160 {
+        } else if hueDegrees >= 60 && hueDegrees < 160 {
             return "basic"
-        } else if h >= 260 && h <= 320 {
+        } else if hueDegrees >= 260 && hueDegrees <= 320 {
             if bri > 0.75 && sat < 0.5 {
                 return "remaster"
             }
@@ -510,12 +522,12 @@ extension CGImage {
         guard let data = ctx.data else { return nil }
         let buffer = data.bindMemory(to: UInt8.self, capacity: 4)
 
-        let r = CGFloat(buffer[0]) / 255.0
-        let g = CGFloat(buffer[1]) / 255.0
-        let b = CGFloat(buffer[2]) / 255.0
-        let a = CGFloat(buffer[3]) / 255.0
+        let red = CGFloat(buffer[0]) / 255.0
+        let green = CGFloat(buffer[1]) / 255.0
+        let blue = CGFloat(buffer[2]) / 255.0
+        let alpha = CGFloat(buffer[3]) / 255.0
 
-        return UIColor(red: r, green: g, blue: b, alpha: a)
+        return UIColor(red: red, green: green, blue: blue, alpha: alpha)
     }
 }
 

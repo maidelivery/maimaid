@@ -1,6 +1,8 @@
 import SwiftUI
 import SwiftData
 
+// The dashboard coordinates all home sections and their shared navigation state.
+// swiftlint:disable:next type_body_length
 struct HomeView: View {
     private static var prefetchedSongsDescriptor: FetchDescriptor<Song> {
         var descriptor = FetchDescriptor<Song>()

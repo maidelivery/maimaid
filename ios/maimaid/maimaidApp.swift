@@ -9,7 +9,7 @@ import SwiftData
 import SwiftUI
 
 @main
-struct maimaidApp: App {
+struct MaimaidApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var collectionImportCoordinator = CollectionImportCoordinator()
 

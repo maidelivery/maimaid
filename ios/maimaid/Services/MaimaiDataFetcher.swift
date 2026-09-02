@@ -3,6 +3,9 @@ import OSLog
 import SwiftData
 import UIKit
 
+// Static catalog ingestion remains centralized to preserve its staged transaction semantics.
+// swiftlint:disable file_length
+
 extension Notification.Name {
     static let maimaiCatalogDidChange = Notification.Name("MaimaiCatalogDidChange")
 }
@@ -12,8 +15,13 @@ struct AliasListResponse: Decodable {
 }
 
 struct AliasItem: Decodable {
-    let song_id: Int
+    let songId: Int
     let aliases: [String]
+
+    private enum CodingKeys: String, CodingKey {
+        case songId = "song_id"
+        case aliases
+    }
 }
 
 struct SongIdItem: Decodable {
@@ -159,6 +167,8 @@ struct RemoteNoteCounts: Decodable {
 
 @Observable
 @MainActor
+// Catalog download, merge, and persistence share one observable synchronization lifecycle.
+// swiftlint:disable:next type_body_length
 class MaimaiDataFetcher {
     static let shared = MaimaiDataFetcher()
     private static let currentStaticBundleSchemaVersion = 2
@@ -330,6 +340,8 @@ class MaimaiDataFetcher {
         UserDefaults.app.maimaiCategorySequence = response.categories.map(\.category)
     }
 
+    // The staged fetch is one atomic synchronization operation with shared progress reporting.
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     func fetchSongs(
         modelContext: ModelContext,
         options: SyncOptions = SyncOptions(),
@@ -485,11 +497,14 @@ class MaimaiDataFetcher {
                 if !aliasItems.isEmpty {
                     hasFreshAliasSnapshot = true
                     for item in aliasItems {
-                        aliasMapByProviderSongId[item.song_id] = Self.mergingAliases(
+                        aliasMapByProviderSongId[item.songId] = Self.mergingAliases(
                             item.aliases,
-                            into: aliasMapByProviderSongId[item.song_id] ?? []
+                            into: aliasMapByProviderSongId[item.songId] ?? []
                         )
-                        let resolvedTitles = Self.resolveLxnsAliasTitles(songId: item.song_id, songIdToTitle: songIdToTitle)
+                        let resolvedTitles = Self.resolveLxnsAliasTitles(
+                            songId: item.songId,
+                            songIdToTitle: songIdToTitle
+                        )
                         guard !resolvedTitles.isEmpty else { continue }
 
                         for title in resolvedTitles {
@@ -570,72 +585,13 @@ class MaimaiDataFetcher {
 
                 let existingSongsFromDB = try modelContext.fetch(FetchDescriptor<Song>())
                 var existingSongMap: [String: Song] = [:]
-                for s in existingSongsFromDB {
-                    existingSongMap[s.songIdentifier] = s
+                for existingSong in existingSongsFromDB {
+                    existingSongMap[existingSong.songIdentifier] = existingSong
                 }
 
                 var songsToProcess: [RemoteSong] = remoteSongs
                 if !options.updateRemoteData {
-                    songsToProcess = existingSongsFromDB.map { s in
-                        RemoteSong(
-                            songId: s.songIdentifier,
-                            category: s.category,
-                            title: s.title,
-                            artist: s.artist,
-                            bpm: s.bpm,
-                            imageName: s.imageName,
-                            version: s.version,
-                            releaseDate: s.releaseDate,
-                            isNew: s.isNew,
-                            isLocked: s.isLocked,
-                            comment: s.comment,
-                            sheets: s.sheets.map { sh in
-                                RemoteSheet(
-                                    type: sh.type,
-                                    difficulty: sh.difficulty,
-                                    version: sh.version,
-                                    level: sh.level,
-                                    levelValue: sh.levelValue,
-                                    internalId: sh.songId > 0 ? sh.songId : nil,
-                                    internalLevel: sh.internalLevel,
-                                    internalLevelValue: sh.internalLevelValue,
-                                    multiverInternalLevelValue: sh.multiverInternalLevelValue,
-                                    noteDesigner: sh.noteDesigner,
-                                    noteCounts: RemoteNoteCounts(
-                                        tap: sh.tap,
-                                        hold: sh.hold,
-                                        slide: sh.slide,
-                                        touch: sh.touch,
-                                        breakNote: sh.breakCount,
-                                        total: sh.total
-                                    ),
-                                    regions: [
-                                        "jp": sh.regionJp,
-                                        "intl": sh.regionIntl,
-                                        "usa": sh.regionUsa,
-                                        "cn": sh.regionCn
-                                    ],
-                                    regionOverrides: [
-                                        "intl": RemoteSheetOverride(
-                                            version: sh.intlVersion,
-                                            level: sh.intlLevel,
-                                            levelValue: sh.intlLevelValue,
-                                            internalLevel: sh.intlInternalLevel,
-                                            internalLevelValue: sh.intlInternalLevelValue
-                                        ),
-                                        "cn": RemoteSheetOverride(
-                                            version: sh.cnVersion,
-                                            level: sh.cnLevel,
-                                            levelValue: sh.cnLevelValue,
-                                            internalLevel: sh.cnInternalLevel,
-                                            internalLevelValue: sh.cnInternalLevelValue
-                                        )
-                                    ],
-                                    isSpecial: nil
-                                )
-                            }
-                        )
-                    }
+                    songsToProcess = existingSongsFromDB.map(Self.remoteSong)
                 } else {
                     let currentRemoteIds = Set(remoteSongs.map { $0.songId })
                     for existing in existingSongsFromDB {
@@ -658,9 +614,9 @@ class MaimaiDataFetcher {
                             songIdentifier: remoteSong.songId,
                             category: remoteSong.category ?? "",
                             title: {
-                                let t = remoteSong.title ?? ""
-                                let trimmed = t.trimmingCharacters(in: .whitespacesAndNewlines)
-                                return trimmed.isEmpty ? t : trimmed
+                                let title = remoteSong.title ?? ""
+                                let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+                                return trimmed.isEmpty ? title : trimmed
                             }(),
                             artist: remoteSong.artist ?? "",
                             imageName: (remoteSong.imageName ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
@@ -1038,6 +994,69 @@ class MaimaiDataFetcher {
             isSyncing = false
             throw error
         }
+    }
+
+    private static func remoteSong(from song: Song) -> RemoteSong {
+        RemoteSong(
+            songId: song.songIdentifier,
+            category: song.category,
+            title: song.title,
+            artist: song.artist,
+            bpm: song.bpm,
+            imageName: song.imageName,
+            version: song.version,
+            releaseDate: song.releaseDate,
+            isNew: song.isNew,
+            isLocked: song.isLocked,
+            comment: song.comment,
+            sheets: song.sheets.map(Self.remoteSheet)
+        )
+    }
+
+    private static func remoteSheet(from sheet: Sheet) -> RemoteSheet {
+        RemoteSheet(
+            type: sheet.type,
+            difficulty: sheet.difficulty,
+            version: sheet.version,
+            level: sheet.level,
+            levelValue: sheet.levelValue,
+            internalId: sheet.songId > 0 ? sheet.songId : nil,
+            internalLevel: sheet.internalLevel,
+            internalLevelValue: sheet.internalLevelValue,
+            multiverInternalLevelValue: sheet.multiverInternalLevelValue,
+            noteDesigner: sheet.noteDesigner,
+            noteCounts: RemoteNoteCounts(
+                tap: sheet.tap,
+                hold: sheet.hold,
+                slide: sheet.slide,
+                touch: sheet.touch,
+                breakNote: sheet.breakCount,
+                total: sheet.total
+            ),
+            regions: [
+                "jp": sheet.regionJp,
+                "intl": sheet.regionIntl,
+                "usa": sheet.regionUsa,
+                "cn": sheet.regionCn
+            ],
+            regionOverrides: [
+                "intl": RemoteSheetOverride(
+                    version: sheet.intlVersion,
+                    level: sheet.intlLevel,
+                    levelValue: sheet.intlLevelValue,
+                    internalLevel: sheet.intlInternalLevel,
+                    internalLevelValue: sheet.intlInternalLevelValue
+                ),
+                "cn": RemoteSheetOverride(
+                    version: sheet.cnVersion,
+                    level: sheet.cnLevel,
+                    levelValue: sheet.cnLevelValue,
+                    internalLevel: sheet.cnInternalLevel,
+                    internalLevelValue: sheet.cnInternalLevelValue
+                )
+            ],
+            isSpecial: nil
+        )
     }
 
     private static func buildUtageStatsByKey(

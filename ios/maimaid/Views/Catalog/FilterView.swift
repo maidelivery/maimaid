@@ -332,16 +332,19 @@ struct FlowLayout: Layout {
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         let rows = computeRows(subviews: subviews, proposal: proposal)
-        var y = bounds.minY
+        var rowOriginY = bounds.minY
 
         for row in rows {
-            var x = bounds.minX
+            var itemOriginX = bounds.minX
             for index in row.range {
                 let size = subviews[index].sizeThatFits(.unspecified)
-                subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
-                x += size.width + spacing
+                subviews[index].place(
+                    at: CGPoint(x: itemOriginX, y: rowOriginY),
+                    proposal: ProposedViewSize(size)
+                )
+                itemOriginX += size.width + spacing
             }
-            y += row.height + spacing
+            rowOriginY += row.height + spacing
         }
     }
 

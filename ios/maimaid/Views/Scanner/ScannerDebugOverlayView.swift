@@ -8,16 +8,18 @@ struct ScannerDebugOverlayView: View {
         if showScannerBoundingBox {
             GeometryReader { geo in
                 ZStack(alignment: .topLeading) {
-                    ForEach(debugBoxes.indices, id: \.self) { i in
-                        let box = debugBoxes[i]
+                    ForEach(debugBoxes.indices, id: \.self) { index in
+                        let box = debugBoxes[index]
                         let rect = box.rect
-                        let x = rect.origin.x * geo.size.width
-                        let y = (1 - rect.origin.y - rect.height) * geo.size.height
-                        let w = rect.width * geo.size.width
-                        let h = rect.height * geo.size.height
+                        let originX = rect.origin.x * geo.size.width
+                        let originY = (1 - rect.origin.y - rect.height) * geo.size.height
+                        let width = rect.width * geo.size.width
+                        let height = rect.height * geo.size.height
 
                         Path { path in
-                            path.addRect(CGRect(x: x, y: y, width: w, height: h))
+                            path.addRect(
+                                CGRect(x: originX, y: originY, width: width, height: height)
+                            )
                         }
                         .stroke(Color.green, lineWidth: 2)
 
@@ -26,7 +28,7 @@ struct ScannerDebugOverlayView: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 2)
                             .background(Color.green)
-                            .position(x: x + w / 2, y: max(10, y - 8))
+                            .position(x: originX + width / 2, y: max(10, originY - 8))
                     }
                 }
             }

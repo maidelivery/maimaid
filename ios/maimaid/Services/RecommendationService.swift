@@ -31,6 +31,8 @@ class RecommendationService {
     private init() {}
 
     /// Generates recommendations considering B15/B35 thresholds and potential gain
+    // Candidate generation keeps both B15 and B35 thresholds in one cancellable calculation pass.
+    // swiftlint:disable:next function_body_length
     func getRecommendations(songs: [Song], configs: [SyncConfig], activeProfile: UserProfile? = nil, modelContext: ModelContext) async -> RecommendationResponse {
         print("RecommendationService: Generating recommendations for \(songs.count) songs...")
 
@@ -146,7 +148,7 @@ class RecommendationService {
 
                 if let target = bestTarget, bestGain > 0 {
                     let matchingStat = chartStatsService.getStat(for: sheet)
-                    let fitDiff = matchingStat?.fit_diff
+                    let fitDiff = matchingStat?.fitDiff
                     let diffGap = fitDiff.map { internalLevelValue - $0 }
 
                     let result = RecommendationResult(

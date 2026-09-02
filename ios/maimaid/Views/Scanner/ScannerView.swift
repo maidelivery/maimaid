@@ -2,6 +2,9 @@ import SwiftUI
 import SwiftData
 import PhotosUI
 
+// Camera recognition, matching, stabilization, and result presentation share frame state.
+// swiftlint:disable file_length
+
 // MARK: - OCR Error Correction
 
 extension ScannerView {
@@ -273,6 +276,8 @@ extension ScannerView {
 }
 
 @MainActor
+// The scanner owns the camera frame lifecycle and its coordinated recognition buffers.
+// swiftlint:disable:next type_body_length
 struct ScannerView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var configs: [SyncConfig]
@@ -503,12 +508,21 @@ struct ScannerView: View {
     @ViewBuilder
     private var scoreEntrySheetContent: some View {
         if recognizedClass == .score, let sheet = resolvedCurrentScoreSheet {
-                ScoreEntryView(sheet: sheet, initialRate: recognizedRate, initialRank: RatingUtils.calculateRank(achievement: recognizedRate ?? 0), initialDxScore: recognizedDxScore, initialFC: recognizedFC, initialFS: recognizedFS)
+                ScoreEntryView(
+                    sheet: sheet,
+                    initialRate: recognizedRate,
+                    initialRank: RatingUtils.calculateRank(achievement: recognizedRate ?? 0),
+                    initialDxScore: recognizedDxScore,
+                    initialFC: recognizedFC,
+                    initialFS: recognizedFS
+                )
         }
     }
 
     // MARK: - Photo Processing
 
+    // Photo recognition mirrors the live camera pipeline while reporting user-facing failures.
+    // swiftlint:disable:next function_body_length
     private func processSelectedPhoto(_ item: PhotosPickerItem) async {
         guard modelController.canRecognize else { return }
         isProcessingPhoto = true
@@ -565,17 +579,21 @@ struct ScannerView: View {
             }
 
             if let targetCandidate = allCandidates.first {
-                matchedSongs.sort { a, b in
-                    let aExact = a.title.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame
-                    let bExact = b.title.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame
+                matchedSongs.sort { firstSong, secondSong in
+                    let aExact = firstSong.title.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame
+                    let bExact = secondSong.title.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame
                     if aExact != bExact { return aExact }
-                    let aAlias = a.aliases.contains { $0.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame }
-                    let bAlias = b.aliases.contains { $0.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame }
+                    let aAlias = firstSong.aliases.contains {
+                        $0.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame
+                    }
+                    let bAlias = secondSong.aliases.contains {
+                        $0.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame
+                    }
                     if aAlias != bAlias { return aAlias }
-                    let aDist = levenshteinDistance(a.title, targetCandidate)
-                    let bDist = levenshteinDistance(b.title, targetCandidate)
+                    let aDist = levenshteinDistance(firstSong.title, targetCandidate)
+                    let bDist = levenshteinDistance(secondSong.title, targetCandidate)
                     if aDist != bDist { return aDist < bDist }
-                    return a.title.count < b.title.count
+                    return firstSong.title.count < secondSong.title.count
                 }
             }
 
@@ -599,7 +617,7 @@ struct ScannerView: View {
                 showFeedback(error.localizedDescription)
                 return
             }
-            let matchedSongs = matchSongsWithFilters(titleCandidates: recognition.titleCandidates, title: recognition.title, difficulty: recognition.difficulty, level: recognition.level, maxCombo: recognition.maxCombo, dxScore: recognition.dxScore, maxDxScore: recognition.maxDxScore, type: recognition.type, kanji: recognition.kanji)
+            let matchedSongs = matchSongsWithFilters(recognition)
 
             isProcessingPhoto = false
             if let firstMatch = matchedSongs.first(where: {
@@ -635,7 +653,18 @@ struct ScannerView: View {
 
     // MARK: - Song Matching
 
-    private func matchSongsWithFilters(titleCandidates: [String], title: String?, difficulty: String?, level: Double?, maxCombo: Int?, dxScore: Int?, maxDxScore: Int?, type: String?, kanji: String?) -> [Song] {
+    // OCR candidates require coordinated title, chart, level, note-count, and server validation.
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
+    private func matchSongsWithFilters(_ recognition: MLScoreResult) -> [Song] {
+        let titleCandidates = recognition.titleCandidates
+        let title = recognition.title
+        let difficulty = recognition.difficulty
+        let level = recognition.level
+        let maxCombo = recognition.maxCombo
+        let dxScore = recognition.dxScore
+        let maxDxScore = recognition.maxDxScore
+        let type = recognition.type
+        let kanji = recognition.kanji
         let rawCandidates = ([title] + titleCandidates.map { Optional($0) }).compactMap { $0 }
         var allCandidates = titleCandidates
         if let exactTitle = title {
@@ -873,7 +902,18 @@ struct ScannerView: View {
 
     // MARK: - Fast Camera Frame Matching
 
-    private func matchSongsForCameraFrame(titleCandidates: [String], title: String?, difficulty: String?, level: Double?, maxCombo: Int?, dxScore: Int?, maxDxScore: Int?, type: String?, kanji: String?) -> [String] {
+    // The fast path repeats the same validation without materializing score-entry state.
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
+    private func matchSongsForCameraFrame(_ recognition: MLScoreResult) -> [String] {
+        let titleCandidates = recognition.titleCandidates
+        let title = recognition.title
+        let difficulty = recognition.difficulty
+        let level = recognition.level
+        let maxCombo = recognition.maxCombo
+        let dxScore = recognition.dxScore
+        let maxDxScore = recognition.maxDxScore
+        let type = recognition.type
+        let kanji = recognition.kanji
         let rawCandidates = ([title] + titleCandidates.map { Optional($0) }).compactMap { $0 }
         var allCandidates = titleCandidates
         if let exactTitle = title { allCandidates.insert(exactTitle, at: 0) }
@@ -890,6 +930,8 @@ struct ScannerView: View {
             hasMaxDxScore ||
             kanji?.isEmpty == false
 
+        // Every available OCR signal is optional and narrows compatible chart candidates.
+        // swiftlint:disable:next cyclomatic_complexity
         func sheetOK(_ sheet: Sheet) -> Bool {
             if !ServerChartPolicy.isPlayable(sheet, on: activeServer) { return false }
             if !ScannerNoteCountValidator.isCompatible(maxDxScore: maxDxScore, sheetTotal: sheet.total) {
@@ -897,14 +939,16 @@ struct ScannerView: View {
             }
             if isUtage {
                 if sheet.type.lowercased() != "utage" { return false }
-                if let k = kanji, !k.isEmpty, !sheet.difficulty.contains(k) { return false }
+                if let kanji, !kanji.isEmpty, !sheet.difficulty.contains(kanji) { return false }
                 if hasExplicitUtagePrefix, let song = sheet.song, !songHasExplicitUtagePrefix(song, kanji: explicitTitleKanji) { return false }
                 if let tn = derivedTotalNotes, tn > 0 { if let total = sheet.total, total != tn { return false } }
                 if let dx = dxScore, dx > 0 { if let total = sheet.total, total * 3 < dx { return false } }
                 return true
             }
             if sheet.type.lowercased() == "utage" { return false }
-            if let t = type, t.lowercased() != "utage" { if sheet.type.lowercased() != t.lowercased() { return false } }
+            if let type, type.lowercased() != "utage" {
+                if sheet.type.lowercased() != type.lowercased() { return false }
+            }
             if let diff = difficulty { if sheet.difficulty.lowercased() != diff.lowercased() { return false } }
             if let lv = level, lv >= 1, lv <= 15 {
                 let metadata = ServerChartPolicy.metadata(for: sheet, on: activeServer)
@@ -963,8 +1007,14 @@ struct ScannerView: View {
                 guard cleaned.count >= 2 else { continue }
                 for song in songs {
                     let std = song.sheets.filter { $0.type.lowercased() != "utage" }
-                    if std.isEmpty || std.allSatisfy({ !$0.regionJp && !$0.regionIntl && !$0.regionCn }) { continue }
-                    if song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title) { frameMatches.append(song.songIdentifier); if frameMatches.count > 3 { break } }
+                    if std.isEmpty || std.allSatisfy({ !$0.regionJp && !$0.regionIntl && !$0.regionCn }) {
+                        continue
+                    }
+                    if song.title.localizedCaseInsensitiveContains(cleaned)
+                        || cleaned.localizedCaseInsensitiveContains(song.title) {
+                        frameMatches.append(song.songIdentifier)
+                        if frameMatches.count > 3 { break }
+                    }
                 }
                 if !frameMatches.isEmpty { break }
             }
@@ -975,14 +1025,33 @@ struct ScannerView: View {
     // MARK: - Utilities
 
     private func levenshteinDistance(_ s1: String, _ s2: String) -> Int {
-        let a = Array(s1.lowercased()), b = Array(s2.lowercased())
-        if a.isEmpty { return b.count }; if b.isEmpty { return a.count }
-        var dist = [[Int]](repeating: [Int](repeating: 0, count: b.count + 1), count: a.count + 1)
-        for i in 0...a.count { dist[i][0] = i }; for j in 0...b.count { dist[0][j] = j }
-        for i in 1...a.count { for j in 1...b.count {
-            dist[i][j] = a[i-1] == b[j-1] ? dist[i-1][j-1] : min(dist[i-1][j]+1, dist[i][j-1]+1, dist[i-1][j-1]+1)
-        } }
-        return dist[a.count][b.count]
+        let firstCharacters = Array(s1.lowercased())
+        let secondCharacters = Array(s2.lowercased())
+        if firstCharacters.isEmpty { return secondCharacters.count }
+        if secondCharacters.isEmpty { return firstCharacters.count }
+
+        var distances = [[Int]](
+            repeating: [Int](repeating: 0, count: secondCharacters.count + 1),
+            count: firstCharacters.count + 1
+        )
+        for rowIndex in 0...firstCharacters.count {
+            distances[rowIndex][0] = rowIndex
+        }
+        for columnIndex in 0...secondCharacters.count {
+            distances[0][columnIndex] = columnIndex
+        }
+        for rowIndex in 1...firstCharacters.count {
+            for columnIndex in 1...secondCharacters.count {
+                distances[rowIndex][columnIndex] = firstCharacters[rowIndex - 1] == secondCharacters[columnIndex - 1]
+                    ? distances[rowIndex - 1][columnIndex - 1]
+                    : min(
+                        distances[rowIndex - 1][columnIndex] + 1,
+                        distances[rowIndex][columnIndex - 1] + 1,
+                        distances[rowIndex - 1][columnIndex - 1] + 1
+                    )
+            }
+        }
+        return distances[firstCharacters.count][secondCharacters.count]
     }
 
     private func showFeedback(_ message: String) {
@@ -1051,7 +1120,7 @@ struct ScannerView: View {
 
         let title = recognizedSong?.title
         var tags: [String] = []
-        if let t = title { tags.append(t) }
+        if let title { tags.append(title) }
         if let song = recognizedSong, let diff = recognizedDifficulty {
             let type = recognizedType ?? "dx"
             if let sheet = matchedSheet(for: song, diff: diff, type: type) {
@@ -1080,7 +1149,17 @@ struct ScannerView: View {
     private func resultView() -> some View {
         if let song = recognizedSong {
             if recognizedClass != .score || canPresentCurrentScoreResult {
-                ScannerResultCardView(song: song, recognizedClass: recognizedClass, recognizedType: recognizedType, recognizedDifficulty: recognizedDifficulty, recognizedRate: recognizedRate, resolvedSheet: recognizedClass == .score ? resolvedCurrentScoreSheet : nil, server: activeServer, onScoreEntryTap: { isShowingScoreEntry = true }, onResetTap: { resetScanner() })
+                ScannerResultCardView(
+                    song: song,
+                    recognizedClass: recognizedClass,
+                    recognizedType: recognizedType,
+                    recognizedDifficulty: recognizedDifficulty,
+                    recognizedRate: recognizedRate,
+                    resolvedSheet: recognizedClass == .score ? resolvedCurrentScoreSheet : nil,
+                    server: activeServer,
+                    onScoreEntryTap: { isShowingScoreEntry = true },
+                    onResetTap: resetScanner
+                )
                     .equatable()
             }
         }
@@ -1108,6 +1187,8 @@ struct ScannerView: View {
         }
     }
 
+    // Choose-screen and score-screen models intentionally share one serialized frame loop.
+    // swiftlint:disable:next cyclomatic_complexity
     private func analyzeCameraFrame(_ image: UIImage) async {
         guard !isShowingScoreEntry else { return }
 
@@ -1122,7 +1203,11 @@ struct ScannerView: View {
         guard !Task.isCancelled, !isShowingScoreEntry else { return }
 
         if imageType == .unknown {
-            updateUIWithResults(songIds: [], rate: nil, diff: nil, type: nil, dxScore: nil, maxDxScore: nil, fc: nil, fs: nil, boxes: [], imageClass: .unknown, level: nil, maxCombo: nil, kanji: nil)
+            updateUIWithResults(
+                songIds: [],
+                recognition: MLScoreResult(),
+                imageClass: .unknown
+            )
             return
         }
 
@@ -1144,16 +1229,28 @@ struct ScannerView: View {
                 guard cleaned.count >= 2 else { continue }
                 var foundFast = false
                 for song in songs {
-                    if song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title) {
-                        frameMatches.append(song.songIdentifier); foundFast = true; if frameMatches.count > 3 { break }
+                    if song.title.localizedCaseInsensitiveContains(cleaned)
+                        || cleaned.localizedCaseInsensitiveContains(song.title) {
+                        frameMatches.append(song.songIdentifier)
+                        foundFast = true
+                        if frameMatches.count > 3 { break }
                     }
                 }
                 if !foundFast && cleaned.count > 4 {
-                    for song in songs { if fuzzyMatch(cleaned, song.title) { frameMatches.append(song.songIdentifier); if frameMatches.count > 3 { break } } }
+                    for song in songs where fuzzyMatch(cleaned, song.title) {
+                        frameMatches.append(song.songIdentifier)
+                        if frameMatches.count > 3 { break }
+                    }
                 }
                 if !frameMatches.isEmpty { break }
             }
-            updateUIWithResults(songIds: frameMatches, rate: nil, diff: nil, type: nil, dxScore: nil, maxDxScore: nil, fc: nil, fs: nil, boxes: recognition.boxes, imageClass: .choose, level: nil, maxCombo: nil, kanji: nil)
+            var chooseResult = MLScoreResult()
+            chooseResult.boxes = recognition.boxes
+            updateUIWithResults(
+                songIds: frameMatches,
+                recognition: chooseResult,
+                imageClass: .choose
+            )
         } else {
             let recognition: MLScoreResult
             do {
@@ -1164,7 +1261,7 @@ struct ScannerView: View {
             }
             guard !Task.isCancelled, !isShowingScoreEntry else { return }
 
-            let matchedSongIds = matchSongsForCameraFrame(titleCandidates: recognition.titleCandidates, title: recognition.title, difficulty: recognition.difficulty, level: recognition.level, maxCombo: recognition.maxCombo, dxScore: recognition.dxScore, maxDxScore: recognition.maxDxScore, type: recognition.type, kanji: recognition.kanji)
+            let matchedSongIds = matchSongsForCameraFrame(recognition)
                 .filter { songId in
                     guard let song = songs.first(where: { $0.songIdentifier == songId }) else { return false }
                     return canPresentScoreResult(
@@ -1176,14 +1273,34 @@ struct ScannerView: View {
                         dxScore: recognition.dxScore
                     )
                 }
-            updateUIWithResults(songIds: matchedSongIds, rate: recognition.rate, diff: recognition.difficulty, type: recognition.type, dxScore: recognition.dxScore, maxDxScore: recognition.maxDxScore, fc: recognition.comboStatus, fs: recognition.syncStatus, boxes: recognition.boxes, imageClass: .score, level: recognition.level, maxCombo: recognition.maxCombo, kanji: recognition.kanji)
+            updateUIWithResults(
+                songIds: matchedSongIds,
+                recognition: recognition,
+                imageClass: .score
+            )
         }
     }
 
-    private func updateUIWithResults(songIds: [String], rate: Double?, diff: String?, type: String?, dxScore: Int?, maxDxScore: Int?, fc: String?, fs: String?, boxes: [RecognizedBox], imageClass: MaimaiImageType, level: Double?, maxCombo: Int?, kanji: String?) {
-        self.debugBoxes = boxes
-        for id in recognitionBuffer.keys { recognitionBuffer[id, default: 0] -= 1; if recognitionBuffer[id]! <= 0 { recognitionBuffer.removeValue(forKey: id) } }
-        for id in songIds { recognitionBuffer[id, default: 0] += 6; if recognitionBuffer[id]! > 18 { recognitionBuffer[id] = 18 } }
+    // Stabilization combines independent OCR signals before publishing a coherent result.
+    // swiftlint:disable:next cyclomatic_complexity
+    private func updateUIWithResults(
+        songIds: [String],
+        recognition: MLScoreResult,
+        imageClass: MaimaiImageType
+    ) {
+        debugBoxes = recognition.boxes
+        for songId in recognitionBuffer.keys {
+            recognitionBuffer[songId, default: 0] -= 1
+            if recognitionBuffer[songId, default: 0] <= 0 {
+                recognitionBuffer.removeValue(forKey: songId)
+            }
+        }
+        for songId in songIds {
+            recognitionBuffer[songId, default: 0] += 6
+            if recognitionBuffer[songId, default: 0] > 18 {
+                recognitionBuffer[songId] = 18
+            }
+        }
         if let topCandidate = recognitionBuffer.max(by: { $0.value < $1.value }), topCandidate.value > 15 {
             if let song = songs.first(where: { $0.songIdentifier == topCandidate.key }) {
                 let newClass = songIds.contains(song.songIdentifier) ? imageClass : recognizedClass
@@ -1196,26 +1313,46 @@ struct ScannerView: View {
             }
         }
         if isLocked {
-            if let r = rate {
-                rateBuffer.append(r); if rateBuffer.count > 5 { rateBuffer.removeFirst() }
+            if let rate = recognition.rate {
+                rateBuffer.append(rate)
+                if rateBuffer.count > 5 { rateBuffer.removeFirst() }
                 let counts = rateBuffer.reduce(into: [:]) { $0[$1, default: 0] += 1 }
-                if let (best, count) = counts.max(by: { $0.value < $1.value }), count >= stabilizationThreshold { self.recognizedRate = best } else if rateBuffer.count < stabilizationThreshold { self.recognizedRate = rateBuffer.last }
+                if let (best, count) = counts.max(by: { $0.value < $1.value }),
+                   count >= stabilizationThreshold {
+                    recognizedRate = best
+                } else if rateBuffer.count < stabilizationThreshold {
+                    recognizedRate = rateBuffer.last
+                }
             }
-            if let d = diff { self.recognizedDifficulty = d }
-            if let t = type { self.recognizedType = t }
-            if let dx = dxScore {
-                dxScoreBuffer.append(dx); if dxScoreBuffer.count > 5 { dxScoreBuffer.removeFirst() }
+            if let difficulty = recognition.difficulty { recognizedDifficulty = difficulty }
+            if let type = recognition.type { recognizedType = type }
+            if let dxScore = recognition.dxScore {
+                dxScoreBuffer.append(dxScore)
+                if dxScoreBuffer.count > 5 { dxScoreBuffer.removeFirst() }
                 let counts = dxScoreBuffer.reduce(into: [:]) { $0[$1, default: 0] += 1 }
-                if let (best, count) = counts.max(by: { $0.value < $1.value }), count >= stabilizationThreshold { self.recognizedDxScore = best } else if dxScoreBuffer.count < stabilizationThreshold { self.recognizedDxScore = dxScoreBuffer.last }
+                if let (best, count) = counts.max(by: { $0.value < $1.value }),
+                   count >= stabilizationThreshold {
+                    recognizedDxScore = best
+                } else if dxScoreBuffer.count < stabilizationThreshold {
+                    recognizedDxScore = dxScoreBuffer.last
+                }
             }
-            if let maxDx = maxDxScore {
-                maxDxScoreBuffer.append(maxDx); if maxDxScoreBuffer.count > 5 { maxDxScoreBuffer.removeFirst() }
+            if let maxDxScore = recognition.maxDxScore {
+                maxDxScoreBuffer.append(maxDxScore)
+                if maxDxScoreBuffer.count > 5 { maxDxScoreBuffer.removeFirst() }
                 let counts = maxDxScoreBuffer.reduce(into: [:]) { $0[$1, default: 0] += 1 }
-                if let (best, count) = counts.max(by: { $0.value < $1.value }), count >= stabilizationThreshold { self.recognizedMaxDxScore = best } else if maxDxScoreBuffer.count < stabilizationThreshold { self.recognizedMaxDxScore = maxDxScoreBuffer.last }
+                if let (best, count) = counts.max(by: { $0.value < $1.value }),
+                   count >= stabilizationThreshold {
+                    recognizedMaxDxScore = best
+                } else if maxDxScoreBuffer.count < stabilizationThreshold {
+                    recognizedMaxDxScore = maxDxScoreBuffer.last
+                }
             }
-            if let f = fc { self.recognizedFC = f }; if let s = fs { self.recognizedFS = s }
-            if let lv = level { self.recognizedLevel = lv }; if let mc = maxCombo { self.recognizedMaxCombo = mc }
-            if let k = kanji { self.recognizedKanji = k }
+            if let comboStatus = recognition.comboStatus { recognizedFC = comboStatus }
+            if let syncStatus = recognition.syncStatus { recognizedFS = syncStatus }
+            if let level = recognition.level { recognizedLevel = level }
+            if let maxCombo = recognition.maxCombo { recognizedMaxCombo = maxCombo }
+            if let kanji = recognition.kanji { recognizedKanji = kanji }
         }
         if isLocked && !isShowingScoreEntry { if Date().timeIntervalSince(lastSeenDate) > 4.0 { withAnimation { resetScanner() } } }
     }

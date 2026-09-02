@@ -110,6 +110,8 @@ struct DanListView: View {
         }
     }
 
+    // The explicit title mapping mirrors the externally defined Dan progression.
+    // swiftlint:disable:next cyclomatic_complexity
     private func rankOrder(_ title: String) -> Int {
         let normalized = title.lowercased()
 

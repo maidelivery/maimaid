@@ -112,6 +112,8 @@ final class OtogameImportService {
 
     private init() {}
 
+    // Import validation and persistence are intentionally one transaction on the model context.
+    // swiftlint:disable:next function_body_length
     func importRecent(
         authorizationHeader: String,
         expectedProfileID: UUID,
