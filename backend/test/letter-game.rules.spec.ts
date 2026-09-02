@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
 	buildLetterTokens,
 	guessScore,
-	guessSongMatches,
 	maskLetterTokens,
 	normalizeLetterCharacter,
 	remainingCharacterCount,
 	revealCharacter,
+	songIndexesMatchingGuess,
 } from "../src/services/letter-game.rules.js";
 
 describe("letter game rules", () => {
@@ -35,10 +35,26 @@ describe("letter game rules", () => {
 		expect(normalizeLetterCharacter("中")).toBe("中");
 	});
 
-	it("matches titles and aliases using normalized guesses", () => {
-		expect(guessSongMatches("  song title ", "Song Title", [])).toBe(true);
-		expect(guessSongMatches("alias", "Song Title", ["Alias"])).toBe(true);
-		expect(guessSongMatches("other", "Song Title", ["Alias"])).toBe(false);
+	it("matches complete titles and aliases using normalized guesses", () => {
+		const titleMatch = { title: "Song Title", aliases: [] };
+		const aliasMatch = { title: "Other Song", aliases: ["Alias"] };
+		expect(songIndexesMatchingGuess("  song title ", [titleMatch, aliasMatch])).toEqual([0]);
+		expect(songIndexesMatchingGuess("alias", [titleMatch, aliasMatch])).toEqual([1]);
+		expect(songIndexesMatchingGuess("other guess", [titleMatch, aliasMatch])).toEqual([]);
+	});
+
+	it("accepts partial titles and aliases only when they identify one song", () => {
+		const alpha = { title: "Alpha Song", aliases: ["First Choice"] };
+		const beta = { title: "Beta Song", aliases: ["Second Choice"] };
+		expect(songIndexesMatchingGuess("lph", [alpha, beta])).toEqual([0]);
+		expect(songIndexesMatchingGuess("cond cho", [alpha, beta])).toEqual([1]);
+		expect(songIndexesMatchingGuess("song", [alpha, beta])).toEqual([0, 1]);
+	});
+
+	it("prioritizes a complete match over partial matches in other songs", () => {
+		const exactAlias = { title: "Alpha", aliases: ["A"] };
+		const partialTitle = { title: "Beta", aliases: [] };
+		expect(songIndexesMatchingGuess("a", [exactAlias, partialTitle])).toEqual([0]);
 	});
 
 	it("uses the distinct normal and blind guess scores", () => {

@@ -8,11 +8,11 @@ import { CatalogService } from "./catalog.service.js";
 import {
 	buildLetterTokens,
 	guessScore,
-	guessSongMatches,
 	maskLetterTokens,
 	remainingCharacterCount,
 	revealCharacter,
 	segmentLetterText,
+	songIndexesMatchingGuess,
 } from "./letter-game.rules.js";
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -823,9 +823,11 @@ export class LetterGameService {
 				};
 			} else if (input.kind === "guess_song") {
 				const activeSongs = match.songs.filter((item: any) => item.status === "active");
-				const matchingSongs = activeSongs.filter((song: any) =>
-					guessSongMatches(input.guess, song.title, jsonArray<string>(song.aliases)),
+				const matchingSongIndexes = songIndexesMatchingGuess(
+					input.guess,
+					activeSongs.map((song: any) => ({ title: String(song.title), aliases: jsonArray<string>(song.aliases) })),
 				);
+				const matchingSongs = matchingSongIndexes.map((index) => activeSongs[index]);
 				if (matchingSongs.length > 1)
 					throw new AppError(409, "ambiguous_song_guess", "More than one active song matches this title or alias.");
 				const song = matchingSongs[0];

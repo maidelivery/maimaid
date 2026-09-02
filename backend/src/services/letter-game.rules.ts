@@ -12,6 +12,11 @@ export type LetterRevealResult = {
 	autoCompleted: boolean;
 };
 
+export type SongGuessCandidate = {
+	title: string;
+	aliases: readonly string[];
+};
+
 const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
 /**
@@ -77,10 +82,22 @@ export const revealCharacter = (
 	};
 };
 
-export const guessSongMatches = (guess: string, title: string, aliases: string[]): boolean => {
+export const songIndexesMatchingGuess = (guess: string, songs: readonly SongGuessCandidate[]): number[] => {
 	const normalizedGuess = normalizeGuess(guess);
-	if (!normalizedGuess) return false;
-	return [title, ...aliases].some((candidate) => normalizeGuess(candidate) === normalizedGuess);
+	if (!normalizedGuess) return [];
+
+	const normalizedCandidates = songs.map((song, index) => ({
+		index,
+		values: [song.title, ...song.aliases].map(normalizeGuess),
+	}));
+	const exactMatches = normalizedCandidates
+		.filter(({ values }) => values.some((candidate) => candidate === normalizedGuess))
+		.map(({ index }) => index);
+	if (exactMatches.length > 0) return exactMatches;
+
+	return normalizedCandidates
+		.filter(({ values }) => values.some((candidate) => candidate.includes(normalizedGuess)))
+		.map(({ index }) => index);
 };
 
 export const guessScore = (remainingCharacters: number, blind: boolean): number =>

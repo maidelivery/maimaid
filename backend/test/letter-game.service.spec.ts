@@ -463,7 +463,7 @@ describe("LetterGameService room lifecycle", () => {
 		expect(transaction).not.toHaveBeenCalled();
 	});
 
-	it("matches a guess against every active song title and alias", async () => {
+	it("accepts a partial guess that uniquely matches an active song", async () => {
 		const songs = [
 			{
 				id: "song-1",
@@ -517,7 +517,7 @@ describe("LetterGameService room lifecycle", () => {
 		await expect(
 			service.applyAction("user-1", "match-1", "action-1", 0, {
 				kind: "guess_song",
-				guess: " a ",
+				guess: " lph ",
 			}),
 		).resolves.toMatchObject({ correct: true, blind: true, points: 15 });
 		expect(songUpdate).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "song-1" } }));
