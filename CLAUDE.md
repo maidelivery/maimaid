@@ -66,19 +66,23 @@ The Gradle root is `android/`, so run the wrapper from there — not from the re
 - **Target**: iOS 26.0+, Swift 6.2+, strict concurrency
 - **Data layer**: SwiftData with models: `Song`, `Sheet`, `Score`, `PlayRecord`, `SyncConfig`, `MaimaiIcon`, `UserProfile`, `CommunityAliasCache`
 - **Entry point**: `maimaidApp.swift` — sets up `ModelContainer`, handles background tasks (`BGAppRefreshTask` for static data sync and cloud backup), and manages app lifecycle sync
-- **Views/**: Feature views organized flat; `Settings/` and `Components/` are subdirectories
+- **Views/**: Page-oriented SwiftUI features, aligned with Android's `ui` packages:
+  `Home/`, `Catalog/`, `Best/`, `Song/`, `Collections/`, `Score/`, `ScoreQuery/`,
+  `Recommendation/`, `ConstantTable/`, `Dan/`, `Plate/`, `Random/`, `Scanner/`,
+  `Community/`, `LetterGame/`, `Settings/`, and `Onboarding/`. Shared UI stays in
+  `Components/`; app-level tab routing stays in `Navigation/`.
 - **Services/**: Backend API client (`BackendAPIClient`), session management (`BackendSessionManager`), cloud sync (`BackendCloudSyncService`), incremental sync, score sync, data import from Diving Fish / LXNS, image recognition (`MLScoreProcessor`, `MLChooseProcessor`, `MLDistinguishProcessor`), community aliases
 - **Localization**: `Localizable.strings` in `en`, `ja`, `zh-Hans`, `zh-Hant`. When adding user-facing strings, translate into all four languages.
 
 ### Android App (`android/`)
 
-- **Target**: minSdk 33, targetSdk 36, compileSdk 36.1; JVM target 17; Kotlin 2.3.20, AGP 9.2.1
+- **Target**: minSdk 28, targetSdk 37, compileSdk 37; JVM target 17; Kotlin 2.4.1, AGP 9.4.0
 - **Toolchain**: `app/build.gradle.kts` pins `kotlin { jvmToolchain(17) }`, so the compile JDK does not depend on your `JAVA_HOME`. This is deliberate: AGP's `androidJdkImage` transform shells out to `jlink`, and GraalVM's `jlink` cannot process the Android platform's `core-for-system-modules.jar`. Without the pin, a GraalVM `JAVA_HOME` fails `:app:compileDebugJavaWithJavac`. Gradle auto-provisions a JDK 17 via the foojay resolver configured in `settings.gradle.kts` if you don't have one.
-- **Package**: `net.krtl.maimaid` (both `namespace` and `applicationId`)
-- **UI**: Jetpack Compose (Compose BOM) + Material 3, Navigation Compose, Coil for images
+- **Package**: `org.rhythmeta.maimaid` (both `namespace` and `applicationId`)
+- **UI**: Jetpack Compose (Compose BOM) + Miuix, Navigation Compose, Coil for images
 - **Data layer**: Room (schemas exported to `app/schemas/` via KSP) + DataStore Preferences
 - **Networking**: Retrofit + OkHttp + kotlinx.serialization; background work via WorkManager
-- **Scanner**: CameraX for capture, ML Kit text recognition (Latin + Chinese + Japanese) for OCR, TFLite for classification/detection. Code lives in `app/src/main/kotlin/net/krtl/maimaid/scanner`; see `android/docs/scanner-structure.md` for the module layout. Runtime models are packaged assets in `app/src/main/assets/scanner/`.
+- **Scanner**: CameraX for capture, ML Kit text recognition (Latin + Chinese + Japanese) for OCR, TFLite for classification/detection. Runtime models are packaged assets in `app/src/main/assets/scanner/`.
 - **Build types**: `debug` (`.debug` suffix), `release`, and `snapshot` (`.snapshot` suffix, derived from release). All restricted to the `arm64-v8a` ABI.
 - **Config**: `BACKEND_URL` and `BACKEND_AUTH_URL` are read as Gradle properties from `android/gradle.properties` and exposed through `BuildConfig`. Release signing reads the PKCS#12 keystore path, store password, alias, and key password from `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`; local release builds remain unsigned when these variables are absent.
 - **Tests**: JVM unit tests in `app/src/test/` (JUnit4 + Truth + coroutines-test). Instrumented tests in `app/src/androidTest/`, including `ScannerSampleRegressionTest`, which reads the HEIC samples and `detail.json` in `android/mairesult/` — that directory is wired in as an androidTest asset source, so it is test fixture data, not scratch files.
