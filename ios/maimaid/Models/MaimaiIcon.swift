@@ -7,14 +7,14 @@ final class MaimaiIcon {
     var name: String
     var descriptionText: String
     var genre: String
-    
+
     init(id: Int, name: String, descriptionText: String, genre: String) {
         self.id = id
         self.name = name
         self.descriptionText = descriptionText
         self.genre = genre
     }
-    
+
     var iconUrl: String {
         Self.avatarURL(for: id)
     }

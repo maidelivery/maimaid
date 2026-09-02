@@ -378,8 +378,7 @@ final class CommunityAliasService {
 
             if
                 updateSongs,
-                let song = fetchSong(songIdentifier: row.songIdentifier, modelContext: modelContext)
-            {
+                let song = fetchSong(songIdentifier: row.songIdentifier, modelContext: modelContext) {
                 let exists = song.aliases.contains {
                     $0.localizedCaseInsensitiveCompare(row.aliasText) == .orderedSame
                 }

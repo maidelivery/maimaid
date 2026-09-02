@@ -8,10 +8,10 @@ final class SyncConfig {
     var backgroundSyncInterval: Int = 0 // 0 means disabled, otherwise in hours
     @Attribute(originalName: "supabaseBackupInterval")
     var cloudBackupInterval: Int = 0 // 0 means disabled, otherwise in hours
-    
+
     // Theme Settings
     var themeRawValue: Int = 0 // 0: System, 1: Light, 2: Dark
-    
+
     // Last Sync Info
     var lastImportDateDF: Date?
     var lastImportDateLXNS: Date?
@@ -29,7 +29,7 @@ final class SyncConfig {
     var localDataOwnerUserId: String?
     var pendingResolutionForUserId: String?
     var pendingResolutionDetectedAt: Date?
-    
+
     // Legacy fields — kept for migration, will be read once to create default UserProfile
     var userName: String?
     var avatarUrl: String?
@@ -44,10 +44,10 @@ final class SyncConfig {
     var b15Count: Int = 15
     var b35RecLimit: Int = 10
     var b15RecLimit: Int = 10
-    
+
     // Migration flag
     var didMigrateToUserProfile: Bool = false
-    
+
     init(isAutoUploadEnabled: Bool = false,
          backgroundSyncInterval: Int = 0,
          cloudBackupInterval: Int = 0,

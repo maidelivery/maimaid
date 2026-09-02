@@ -5,9 +5,9 @@ import UIKit
 struct AvatarCropEditorView: View {
     let originalImage: UIImage
     let onSave: (Data) -> Void
-    
+
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var scale: CGFloat = 1
     @State private var committedScale: CGFloat = 1
     @State private var offset: CGSize = .zero
@@ -15,18 +15,18 @@ struct AvatarCropEditorView: View {
     @State private var rotation: Angle = .zero
     @State private var committedRotation: Angle = .zero
     @State private var didInitializeTransforms = false
-    
+
     private let maximumScale: CGFloat = 4
     private let guideInset: CGFloat = 12
     private let coveragePadding: CGFloat = 8
-    
+
     var body: some View {
         GeometryReader { geometry in
             let cropSize = min(geometry.size.width - 32, geometry.size.height * 0.5)
-            
+
             VStack(spacing: 24) {
                 Spacer(minLength: 0)
-                
+
                 VStack(spacing: 14) {
                     Text("avatar.editor.title")
                         .font(.headline.bold())
@@ -34,16 +34,16 @@ struct AvatarCropEditorView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 cropCanvas(cropSize: cropSize)
-                
+
                 Button("avatar.editor.reset") {
                     let guideDiameter = cropSize - guideInset * 2
                     let baseSize = baseDisplaySize(for: originalImage.size, cropTargetSize: guideDiameter)
                     resetTransforms(guideDiameter: guideDiameter, baseSize: baseSize)
                 }
                 .buttonStyle(.bordered)
-                
+
                 Button {
                     saveAvatar(cropSize: cropSize)
                 } label: {
@@ -54,7 +54,7 @@ struct AvatarCropEditorView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .padding(.horizontal, 16)
-                
+
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -68,16 +68,16 @@ struct AvatarCropEditorView: View {
             }
         }
     }
-    
+
     @ViewBuilder
     private func cropCanvas(cropSize: CGFloat) -> some View {
         let guideDiameter = cropSize - guideInset * 2
         let baseSize = baseDisplaySize(for: originalImage.size, cropTargetSize: guideDiameter)
-        
+
         ZStack {
             RoundedRectangle(cornerRadius: 28)
                 .fill(Color.black)
-            
+
             Image(uiImage: originalImage)
                 .resizable()
                 .frame(width: baseSize.width, height: baseSize.height)
@@ -87,7 +87,7 @@ struct AvatarCropEditorView: View {
                 .gesture(dragGesture(guideDiameter: guideDiameter, baseSize: baseSize))
                 .simultaneousGesture(magnificationGesture(guideDiameter: guideDiameter, baseSize: baseSize))
                 .simultaneousGesture(rotationGesture(guideDiameter: guideDiameter, baseSize: baseSize))
-            
+
             Circle()
                 .strokeBorder(.white.opacity(0.9), lineWidth: 2)
                 .frame(width: guideDiameter, height: guideDiameter)
@@ -106,7 +106,7 @@ struct AvatarCropEditorView: View {
         )
         .shadow(color: .black.opacity(0.12), radius: 16, y: 8)
     }
-    
+
     private func dragGesture(guideDiameter: CGFloat, baseSize: CGSize) -> some Gesture {
         DragGesture()
             .onChanged { value in
@@ -120,7 +120,7 @@ struct AvatarCropEditorView: View {
                 committedOffset = offset
             }
     }
-    
+
     private func magnificationGesture(guideDiameter: CGFloat, baseSize: CGSize) -> some Gesture {
         MagnificationGesture()
             .onChanged { value in
@@ -136,7 +136,7 @@ struct AvatarCropEditorView: View {
                 committedOffset = offset
             }
     }
-    
+
     private func rotationGesture(guideDiameter: CGFloat, baseSize: CGSize) -> some Gesture {
         RotationGesture()
             .onChanged { value in
@@ -152,7 +152,7 @@ struct AvatarCropEditorView: View {
                 committedOffset = offset
             }
     }
-    
+
     private func resetTransforms(guideDiameter: CGFloat, baseSize: CGSize, animated: Bool = true) {
         let minScale = minimumScale(for: baseSize, guideDiameter: guideDiameter)
         let updates = {
@@ -163,31 +163,31 @@ struct AvatarCropEditorView: View {
             rotation = .zero
             committedRotation = .zero
         }
-        
+
         if animated {
             withAnimation(.snappy, updates)
         } else {
             updates()
         }
     }
-    
+
     private func baseDisplaySize(for imageSize: CGSize, cropTargetSize: CGFloat) -> CGSize {
         guard imageSize.width > 0, imageSize.height > 0 else {
             return CGSize(width: cropTargetSize, height: cropTargetSize)
         }
-        
+
         let aspectRatio = imageSize.width / imageSize.height
         let baseSize: CGSize
-        
+
         if aspectRatio >= 1 {
             baseSize = CGSize(width: cropTargetSize * aspectRatio, height: cropTargetSize)
         } else {
             baseSize = CGSize(width: cropTargetSize, height: cropTargetSize / aspectRatio)
         }
-        
+
         return baseSize
     }
-    
+
     private func clampedOffset(
         _ proposedOffset: CGSize,
         guideDiameter: CGFloat,
@@ -203,39 +203,39 @@ struct AvatarCropEditorView: View {
         let radians = currentRotation.radians
         let cosine = cos(radians)
         let sine = sin(radians)
-        
+
         let localX = proposedOffset.width * cosine + proposedOffset.height * sine
         let localY = -proposedOffset.width * sine + proposedOffset.height * cosine
-        
+
         let horizontalLimit = max(halfWidth - guideRadius, 0)
         let verticalLimit = max(halfHeight - guideRadius, 0)
         let clampedLocalX = min(max(localX, -horizontalLimit), horizontalLimit)
         let clampedLocalY = min(max(localY, -verticalLimit), verticalLimit)
-        
+
         return CGSize(
             width: clampedLocalX * cosine - clampedLocalY * sine,
             height: clampedLocalX * sine + clampedLocalY * cosine
         )
     }
-    
+
     private func minimumScale(for baseSize: CGSize, guideDiameter: CGFloat) -> CGFloat {
         let shortestSide = max(min(baseSize.width, baseSize.height), 1)
         let requiredDiameter = guideDiameter + coveragePadding * 2
         return min(max(requiredDiameter / shortestSide, 1), maximumScale)
     }
-    
+
     private func normalizedScale(_ proposedScale: CGFloat, guideDiameter: CGFloat, baseSize: CGSize) -> CGFloat {
         let minScale = minimumScale(for: baseSize, guideDiameter: guideDiameter)
         return min(max(proposedScale, minScale), maximumScale)
     }
-    
+
     private func saveAvatar(cropSize: CGFloat) {
         let exportSize: CGFloat = 1024
         let guideDiameter = cropSize - guideInset * 2
         let exportBaseSize = baseDisplaySize(for: originalImage.size, cropTargetSize: exportSize)
         let offsetScale = exportSize / guideDiameter
         let exportOffset = CGSize(width: offset.width * offsetScale, height: offset.height * offsetScale)
-        
+
         let rendererFormat = UIGraphicsImageRendererFormat()
         rendererFormat.scale = 1
         rendererFormat.preferredRange = .standard
@@ -251,7 +251,7 @@ struct AvatarCropEditorView: View {
             context?.translateBy(x: exportSize / 2 + exportOffset.width, y: exportSize / 2 + exportOffset.height)
             context?.rotate(by: rotation.radians)
             context?.scaleBy(x: scale, y: scale)
-            
+
             originalImage.draw(
                 in: CGRect(
                     x: -exportBaseSize.width / 2,
@@ -262,7 +262,7 @@ struct AvatarCropEditorView: View {
             )
         }
         guard let imageData = renderedImage.pngData() else { return }
-        
+
         onSave(imageData)
         dismiss()
     }

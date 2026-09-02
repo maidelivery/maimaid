@@ -13,9 +13,9 @@ final class Score {
     var fc: String?
     var fs: String?
     var userProfileId: UUID? // Links score to a specific user profile
-    
+
     var sheet: Sheet?
-    
+
     init(sheetId: String, rate: Double, rank: String, dxScore: Int = 0, fc: String? = nil, fs: String? = nil, achievementDate: Date = Date(), userProfileId: UUID? = nil) {
         self.sheetId = sheetId
         self.rate = rate

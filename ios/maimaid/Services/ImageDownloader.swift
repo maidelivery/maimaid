@@ -6,28 +6,28 @@ class ImageDownloader {
     static let shared = ImageDownloader()
     private let fileManager = FileManager.default
     private static let imageAcceptHeader = "image/png"
-    
+
     private lazy var coversDirectory: URL = {
         let dir = URL.documentsDirectory.appending(path: "Covers", directoryHint: .isDirectory)
         ensureDirectoryExists(at: dir)
         return dir
     }()
-    
+
     private lazy var iconsDirectory: URL = {
         let dir = URL.documentsDirectory.appending(path: "Icons", directoryHint: .isDirectory)
         ensureDirectoryExists(at: dir)
         return dir
     }()
-    
+
     func getCoverUrl(for imageName: String) -> URL {
         let cleanName = imageName.trimmingCharacters(in: .whitespacesAndNewlines)
         return coversDirectory.appending(path: cleanName)
     }
-    
+
     func getIconUrl(for iconId: Int) -> URL {
         iconsDirectory.appending(path: "\(iconId).png")
     }
-    
+
     private func isValidImageName(_ name: String) -> Bool {
         let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
         if clean.isEmpty || clean.lowercased() == "n/a" || clean.lowercased() == "n/a " {
@@ -35,32 +35,32 @@ class ImageDownloader {
         }
         return true
     }
-    
+
     func imageExists(imageName: String) -> Bool {
         guard isValidImageName(imageName) else { return false }
         let url = getCoverUrl(for: imageName)
         return fileManager.fileExists(atPath: url.path)
     }
-    
+
     func iconExists(iconId: Int) -> Bool {
         let url = getIconUrl(for: iconId)
         return fileManager.fileExists(atPath: url.path)
     }
-    
+
     func downloadImage(from urls: [URL], as imageName: String) async throws -> URL {
         guard isValidImageName(imageName) else {
             throw URLError(.badURL)
         }
-        
+
         let destinationUrl = getCoverUrl(for: imageName)
         return try await downloadAndSave(from: urls, to: destinationUrl)
     }
-    
+
     func downloadIcon(from urls: [URL], id: Int) async throws -> URL {
         let destinationUrl = getIconUrl(for: id)
         return try await downloadAndSave(from: urls, to: destinationUrl)
     }
-    
+
     private func downloadAndSave(from urls: [URL], to destinationUrl: URL) async throws -> URL {
         if fileManager.fileExists(atPath: destinationUrl.path) {
             return destinationUrl
@@ -110,14 +110,14 @@ class ImageDownloader {
 
         return (data, image)
     }
-    
+
     // Utility to get image synchronously if it exists, useful for SwiftUI or UIImage(contentsOfFile:)
     func loadImage(imageName: String) -> UIImage? {
         guard isValidImageName(imageName) else { return nil }
         let url = getCoverUrl(for: imageName)
         return UIImage(contentsOfFile: url.path)
     }
-    
+
     func loadImage(iconId: Int) -> UIImage? {
         let url = getIconUrl(for: iconId)
         return UIImage(contentsOfFile: url.path)

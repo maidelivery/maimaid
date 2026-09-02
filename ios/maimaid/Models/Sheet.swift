@@ -25,7 +25,7 @@ final class Sheet {
     var cnLevelValue: Double?
     var cnInternalLevel: String?
     var cnInternalLevelValue: Double?
-    
+
     // Note Counts
     var tap: Int?
     var hold: Int?
@@ -33,19 +33,19 @@ final class Sheet {
     var touch: Int?
     var breakCount: Int?
     var total: Int?
-    
+
     // Regional Availability
     var regionJp: Bool = true  // Base data is from JP
     var regionIntl: Bool = false
     var regionUsa: Bool = false
     var regionCn: Bool = false
-    
+
     var songId: Int = 0
-    
+
     var song: Song?
     @Relationship(deleteRule: .cascade) var scores: [Score] = []
     @Relationship(deleteRule: .cascade) var playRecords: [PlayRecord]?
-    
+
     /// Returns the score for a specific user profile, or the first score if no profile specified (legacy compat)
     @available(*, deprecated, message: "Use ScoreService.shared.score(for:context:) instead")
     func score(for userProfileId: UUID? = nil) -> Score? {
@@ -63,7 +63,7 @@ final class Sheet {
             }?
             .value
     }
-    
+
     init(songIdentifier: String, type: String, difficulty: String, version: String? = nil, level: String, levelValue: Double? = nil, internalLevel: String? = nil, internalLevelValue: Double? = nil, noteDesigner: String? = nil, tap: Int? = nil, hold: Int? = nil, slide: Int? = nil, touch: Int? = nil, breakCount: Int? = nil, total: Int? = nil, songId: Int = 0) {
         self.songIdentifier = songIdentifier
         self.type = type

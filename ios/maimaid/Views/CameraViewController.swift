@@ -6,7 +6,7 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
     var onImageCaptured: ((UIImage) -> Void)?
     var onPhotoCaptured: ((Result<Data, Error>) -> Void)?
     var onQRCodeDetected: ((String) -> Void)?
-    
+
     private var captureSession: AVCaptureSession?
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private var photoOutput: AVCapturePhotoOutput?
@@ -15,34 +15,34 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
     private let processingQueue = DispatchQueue(label: "com.maimaid.camera.queue", qos: .userInteractive)
     private let frameCounter = OSAllocatedUnfairLock(initialState: 0)
     nonisolated private static let rawContext = CIContext(options: [.useSoftwareRenderer: false])
-    
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupCaptureSession()
         NotificationCenter.default.addObserver(self, selector: #selector(handleTakePhoto), name: Notification.Name("TakeScannerPhoto"), object: nil)
     }
-    
+
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
-    
+
     private func setupCaptureSession() {
         captureSession = AVCaptureSession()
         guard let captureSession = captureSession else { return }
-        
+
         captureSession.sessionPreset = .high
-        
+
         guard let videoDevice = Self.preferredBackCamera(),
               let videoInput = try? AVCaptureDeviceInput(device: videoDevice) else { return }
         self.videoDevice = videoDevice
-        
+
         if captureSession.canAddInput(videoInput) { captureSession.addInput(videoInput) }
-        
+
         let videoOutput = AVCaptureVideoDataOutput()
         videoOutput.alwaysDiscardsLateVideoFrames = true
         videoOutput.setSampleBufferDelegate(self, queue: processingQueue)
         if captureSession.canAddOutput(videoOutput) { captureSession.addOutput(videoOutput) }
-        
+
         let photoOut = AVCapturePhotoOutput()
         if captureSession.canAddOutput(photoOut) {
             captureSession.addOutput(photoOut)
@@ -60,7 +60,7 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
             metadataOutput.setMetadataObjectsDelegate(self, queue: processingQueue)
             metadataOutput.metadataObjectTypes = [.qr]
         }
-        
+
         if let connection = videoOutput.connection(with: .video) {
             if #available(iOS 17.0, *) {
                 if connection.isVideoRotationAngleSupported(90) {
@@ -70,17 +70,17 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
                 connection.videoOrientation = .portrait
             }
         }
-        
+
         previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
         previewLayer?.frame = view.layer.bounds
         previewLayer?.videoGravity = .resizeAspectFill
         if let previewLayer { view.layer.addSublayer(previewLayer) }
-        
+
         DispatchQueue.global(qos: .userInitiated).async {
             captureSession.startRunning()
         }
     }
-    
+
     nonisolated func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         let count = frameCounter.withLock { value -> Int in
             value += 1
@@ -88,22 +88,22 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
         }
         guard count.isMultiple(of: 10),
               let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-        
+
         let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
         guard let cgImage = Self.rawContext.createCGImage(ciImage, from: ciImage.extent) else { return }
         let image = UIImage(cgImage: cgImage)
-        
+
         Task { @MainActor [weak self] in
             self?.onImageCaptured?(image)
         }
     }
-    
+
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         previewLayer?.frame = view.layer.bounds
         configureSystemCameraFieldOfView()
     }
-    
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         if let captureSession, !captureSession.isRunning {
@@ -112,12 +112,12 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
             }
         }
     }
-    
+
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         captureSession?.stopRunning()
     }
-    
+
     @objc private func handleTakePhoto() {
         guard let output = photoOutput else {
             let error = NSError(
@@ -128,7 +128,7 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
             onPhotoCaptured?(.failure(error))
             return
         }
-        
+
         let settings = AVCapturePhotoSettings()
         if let connection = output.connection(with: .video) {
             if #available(iOS 17.0, *) {
@@ -139,7 +139,7 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
                 connection.videoOrientation = .portrait
             }
         }
-        
+
         if output.availablePhotoCodecTypes.contains(.jpeg) {
             if #available(iOS 16.0, *) {
                 settings.maxPhotoDimensions = output.maxPhotoDimensions
@@ -147,7 +147,7 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
                 settings.isHighResolutionPhotoEnabled = true
             }
         }
-        
+
         output.capturePhoto(with: settings, delegate: self)
     }
 

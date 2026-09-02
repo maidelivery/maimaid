@@ -84,17 +84,17 @@ extension ScannerView {
         "樣": ["様"],
         "測": ["測"],
         "画": ["畫"],
-        "畫": ["画"],
+        "畫": ["画"]
     ]
-    
+
     private func generateOCRVariants(_ text: String, maxVariants: Int = 8) -> [String] {
         var variants = [text]
         var queue = [text]
         var seen = Set<String>([text])
-        
+
         while !queue.isEmpty && variants.count < maxVariants {
             let current = queue.removeFirst()
-            
+
             for (original, replacements) in Self.ocrSubstitutions {
                 if current.contains(original) {
                     for replacement in replacements {
@@ -106,7 +106,7 @@ extension ScannerView {
                         }
                     }
                 }
-                
+
                 for replacement in replacements {
                     if current.contains(replacement) {
                         let variant = current.replacingOccurrences(of: String(replacement), with: String(original))
@@ -119,18 +119,18 @@ extension ScannerView {
                 }
             }
         }
-        
+
         return variants
     }
-    
+
     private func isSimilarWithOCRErrors(_ s1: String, _ s2: String, threshold: Int? = nil) -> Bool {
         if s1.localizedCaseInsensitiveCompare(s2) == .orderedSame {
             return true
         }
-        
+
         let s1Variants = generateOCRVariants(s1)
         let s2Lower = s2.lowercased()
-        
+
         for variant in s1Variants {
             let variantLower = variant.lowercased()
             if s2Lower.localizedCaseInsensitiveContains(variantLower) ||
@@ -138,53 +138,53 @@ extension ScannerView {
                 return true
             }
         }
-        
+
         let dist = levenshteinDistance(s1, s2)
         let maxLen = max(s1.count, s2.count)
         let adaptiveThreshold = threshold ?? max(2, maxLen / 3)
-        
+
         return dist <= adaptiveThreshold
     }
-    
+
     private func stripUtagePrefix(_ title: String) -> String {
         var result = title
-        
+
         if let range = result.range(of: "^【[^】]+】\\s*", options: .regularExpression) {
             result.removeSubrange(range)
         }
-        
+
         if let range = result.range(of: "^\\[[^\\]]+\\]\\s*", options: .regularExpression) {
             result.removeSubrange(range)
         }
-        
+
         if let range = result.range(of: "^［[^］]+］\\s*", options: .regularExpression) {
             result.removeSubrange(range)
         }
-        
+
         return result
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .folding(options: [.widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
     }
-    
+
     private func extractUtagePrefixKanji(from text: String?) -> String? {
         guard let text else { return nil }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         if let range = trimmed.range(of: #"^【([^】]+)】"#, options: .regularExpression) {
             return String(trimmed[range]).dropFirst().dropLast().trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        
+
         if let range = trimmed.range(of: #"^\[([^\]]+)\]"#, options: .regularExpression) {
             return String(trimmed[range]).dropFirst().dropLast().trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        
+
         if let range = trimmed.range(of: #"^［([^］]+)］"#, options: .regularExpression) {
             return String(trimmed[range]).dropFirst().dropLast().trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        
+
         return nil
     }
-    
+
     private func songHasExplicitUtagePrefix(_ song: Song, kanji: String?) -> Bool {
         for text in [song.title, song.songIdentifier] {
             if let detected = extractUtagePrefixKanji(from: text) {
@@ -195,10 +195,10 @@ extension ScannerView {
                 }
             }
         }
-        
+
         return false
     }
-    
+
     private func normalizedSongMatchTitle(_ title: String) -> String {
         stripUtagePrefix(title)
             .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
@@ -207,26 +207,26 @@ extension ScannerView {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
     }
-    
+
     private func matchUtageSheet(for song: Song, kanji: String?, maxDxScore: Int?, dxScore: Int?) -> Sheet? {
         let utageSheets = song.sheets.filter {
             $0.type.lowercased() == "utage" &&
                 ServerChartPolicy.isPlayable($0, on: activeServer) &&
                 ScannerNoteCountValidator.isCompatible(maxDxScore: maxDxScore, sheetTotal: $0.total)
         }
-        
+
         guard !utageSheets.isEmpty else { return nil }
-        
+
         if let kanji = kanji, !kanji.isEmpty {
             let kanjiMatches = utageSheets.filter { sheet in
                 let diff = sheet.difficulty
                 return diff.contains(kanji)
             }
-            
+
             if kanjiMatches.count == 1 {
                 return kanjiMatches.first
             }
-            
+
             if kanjiMatches.count > 1 {
                 if let maxDx = maxDxScore, maxDx > 0 {
                     let totalNotes = maxDx / 3
@@ -243,35 +243,34 @@ extension ScannerView {
                 return kanjiMatches.first
             }
         }
-        
+
         if let maxDx = maxDxScore, maxDx > 0 {
             let totalNotes = maxDx / 3
             let exact = utageSheets.first { $0.total == totalNotes }
             if let exact = exact { return exact }
         }
-        
+
         if let dx = dxScore, dx > 0 {
             let matching = utageSheets.filter { sheet in
                 guard let total = sheet.total else { return true }
                 return total * 3 >= dx
             }
             if matching.count == 1 { return matching.first }
-            
+
             let best = matching.min { s1, s2 in
                 guard let t1 = s1.total, let t2 = s2.total else { return s1.total != nil }
                 return abs(t1 * 3 - dx) < abs(t2 * 3 - dx)
             }
             if let best = best { return best }
         }
-        
+
         if utageSheets.count == 1 {
             return utageSheets.first
         }
-        
+
         return utageSheets.first
     }
 }
-
 
 @MainActor
 struct ScannerView: View {
@@ -279,32 +278,32 @@ struct ScannerView: View {
     @Query private var configs: [SyncConfig]
     @Query private var songs: [Song]
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
-    
+
     @State private var isShowingDetail = false
     @State private var isShowingScoreEntry = false
-    
-    @State private var recognizedSong: Song? = nil
-    @State private var recognizedRate: Double? = nil
-    @State private var recognizedDifficulty: String? = nil
-    @State private var recognizedType: String? = nil
-    @State private var recognizedDxScore: Int? = nil
-    @State private var recognizedMaxDxScore: Int? = nil
-    @State private var recognizedFC: String? = nil
-    @State private var recognizedFS: String? = nil
-    @State private var recognizedLevel: Double? = nil
-    @State private var recognizedMaxCombo: Int? = nil
-    @State private var recognizedKanji: String? = nil
+
+    @State private var recognizedSong: Song?
+    @State private var recognizedRate: Double?
+    @State private var recognizedDifficulty: String?
+    @State private var recognizedType: String?
+    @State private var recognizedDxScore: Int?
+    @State private var recognizedMaxDxScore: Int?
+    @State private var recognizedFC: String?
+    @State private var recognizedFS: String?
+    @State private var recognizedLevel: Double?
+    @State private var recognizedMaxCombo: Int?
+    @State private var recognizedKanji: String?
     @State private var debugBoxes: [RecognizedBox] = []
     @AppStorage(AppStorageKeys.showScannerBoundingBox) private var showScannerBoundingBox: Bool = false
     @State private var recognizedClass: MaimaiImageType = .unknown
-    
+
     @State private var showFlashOverlay = false
     @State private var isSavingPhoto = false
-    
+
     @State private var isLocked = false
     @State private var lastSeenDate = Date()
     @State private var recognitionBuffer: [String: Int] = [:]
-    
+
     @State private var rateBuffer: [Double] = []
     @State private var dxScoreBuffer: [Int] = []
     @State private var maxDxScoreBuffer: [Int] = []
@@ -313,15 +312,15 @@ struct ScannerView: View {
     private var activeServer: GameServer {
         activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
     }
-    
-    @State private var selectedPhotoItem: PhotosPickerItem? = nil
+
+    @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var isProcessingPhoto = false
-    @State private var photoImportFeedback: String? = nil
-    @State private var feedbackDismissTask: Task<Void, Never>? = nil
-    @State private var frameAnalysisTask: Task<Void, Never>? = nil
-    @State private var pendingFrameImage: UIImage? = nil
+    @State private var photoImportFeedback: String?
+    @State private var feedbackDismissTask: Task<Void, Never>?
+    @State private var frameAnalysisTask: Task<Void, Never>?
+    @State private var pendingFrameImage: UIImage?
     @State private var modelController = ScannerModelDownloadController()
-    
+
     private var resolvedCurrentScoreSheet: Sheet? {
         guard let song = recognizedSong else { return nil }
         return resolvedScoreSheet(
@@ -333,18 +332,18 @@ struct ScannerView: View {
             dxScore: recognizedDxScore
         )
     }
-    
+
     private var canPresentCurrentScoreResult: Bool {
         guard recognizedClass == .score, recognizedSong != nil else { return false }
-        
+
         guard let difficulty = recognizedDifficulty?.trimmingCharacters(in: .whitespacesAndNewlines),
               !difficulty.isEmpty else {
             return true
         }
-        
+
         return resolvedCurrentScoreSheet != nil
     }
-    
+
     var body: some View {
         @Bindable var downloadController = modelController
 
@@ -356,20 +355,20 @@ struct ScannerView: View {
                     onQRCodeDetected: handleCollectionQRCode
                 )
                 .ignoresSafeArea()
-                
+
                 debugOverlayView()
-                
+
                 if showFlashOverlay {
                     Color.white
                         .ignoresSafeArea()
                         .zIndex(10)
                         .transition(.opacity)
                 }
-                
+
                 VStack {
                     headerView()
                     Spacer()
-                    
+
                     if isProcessingPhoto {
                         HStack(spacing: 10) {
                             ProgressView()
@@ -383,7 +382,7 @@ struct ScannerView: View {
                         .background(.ultraThinMaterial, in: Capsule())
                         .padding(.bottom, 8)
                     }
-                    
+
                     if let feedback = photoImportFeedback {
                         Text(feedback)
                             .font(.system(size: 12, weight: .semibold))
@@ -395,7 +394,7 @@ struct ScannerView: View {
                             .padding(.bottom, 8)
                     }
                 }
-                
+
                 VStack {
                     Spacer()
                     if canPresentCurrentScoreResult {
@@ -435,7 +434,7 @@ struct ScannerView: View {
             }) {
                 scoreEntrySheetContent
             }
-            .onChange(of: selectedPhotoItem) { oldItem, newItem in
+            .onChange(of: selectedPhotoItem) { _, newItem in
                 if let item = newItem {
                     Task { await processSelectedPhoto(item) }
                 }
@@ -500,28 +499,28 @@ struct ScannerView: View {
             showFeedback("Invalid collection QR code")
         }
     }
-    
+
     @ViewBuilder
     private var scoreEntrySheetContent: some View {
         if recognizedClass == .score, let sheet = resolvedCurrentScoreSheet {
                 ScoreEntryView(sheet: sheet, initialRate: recognizedRate, initialRank: RatingUtils.calculateRank(achievement: recognizedRate ?? 0), initialDxScore: recognizedDxScore, initialFC: recognizedFC, initialFS: recognizedFS)
         }
     }
-    
+
     // MARK: - Photo Processing
-    
+
     private func processSelectedPhoto(_ item: PhotosPickerItem) async {
         guard modelController.canRecognize else { return }
         isProcessingPhoto = true
         photoImportFeedback = nil
-        
+
         guard let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data) else {
             isProcessingPhoto = false
             showFeedback(String(localized: "scanner.error.load"))
             return
         }
-        
+
         let imageType: MaimaiImageType
         do {
             imageType = try await MLDistinguishProcessor.shared.classify(image)
@@ -531,7 +530,7 @@ struct ScannerView: View {
             showFeedback(error.localizedDescription)
             return
         }
-        
+
         if imageType == .choose {
             let recognition: MLChooseResult
             do {
@@ -546,7 +545,7 @@ struct ScannerView: View {
             var seenIds = Set<String>()
             var allCandidates = recognition.titleCandidates
             if let exactTitle = recognition.title { allCandidates.insert(exactTitle, at: 0) }
-            
+
             for candidate in allCandidates {
                 let matches = songs.filter { song in
                     let standardSheets = song.sheets.filter { $0.type.lowercased() != "utage" }
@@ -564,7 +563,7 @@ struct ScannerView: View {
                     }
                 }
             }
-            
+
             if let targetCandidate = allCandidates.first {
                 matchedSongs.sort { a, b in
                     let aExact = a.title.localizedCaseInsensitiveCompare(targetCandidate) == .orderedSame
@@ -579,7 +578,7 @@ struct ScannerView: View {
                     return a.title.count < b.title.count
                 }
             }
-            
+
             isProcessingPhoto = false
             if let firstMatch = matchedSongs.first {
                 self.recognizedSong = firstMatch
@@ -601,7 +600,7 @@ struct ScannerView: View {
                 return
             }
             let matchedSongs = matchSongsWithFilters(titleCandidates: recognition.titleCandidates, title: recognition.title, difficulty: recognition.difficulty, level: recognition.level, maxCombo: recognition.maxCombo, dxScore: recognition.dxScore, maxDxScore: recognition.maxDxScore, type: recognition.type, kanji: recognition.kanji)
-            
+
             isProcessingPhoto = false
             if let firstMatch = matchedSongs.first(where: {
                 canPresentScoreResult(
@@ -633,9 +632,9 @@ struct ScannerView: View {
             }
         }
     }
-    
+
     // MARK: - Song Matching
-    
+
     private func matchSongsWithFilters(titleCandidates: [String], title: String?, difficulty: String?, level: Double?, maxCombo: Int?, dxScore: Int?, maxDxScore: Int?, type: String?, kanji: String?) -> [Song] {
         let rawCandidates = ([title] + titleCandidates.map { Optional($0) }).compactMap { $0 }
         var allCandidates = titleCandidates
@@ -775,13 +774,13 @@ struct ScannerView: View {
             guard hasAvailableStandardSheets(song) else { return false }
             return isUtage ? matchesUtage(song) : matchesStandard(song)
         }
-        
+
         let hasAnyValidation = hasDifficulty || hasLevel || hasTotalNotes || hasDxScore || hasMaxDxScore || hasKanji
         if filteredSongs.isEmpty && !hasAnyValidation {
             filteredSongs = songs.filter(hasAvailableStandardSheets)
         }
         if filteredSongs.count == 1 && hasMaxDxScore { return filteredSongs }
-        
+
         var matchedSongs: [(song: Song, score: Int)] = []
         var seenIds = Set<String>()
 
@@ -871,9 +870,9 @@ struct ScannerView: View {
         }
         return matchedSongs.map { $0.song }
     }
-    
+
     // MARK: - Fast Camera Frame Matching
-    
+
     private func matchSongsForCameraFrame(titleCandidates: [String], title: String?, difficulty: String?, level: Double?, maxCombo: Int?, dxScore: Int?, maxDxScore: Int?, type: String?, kanji: String?) -> [String] {
         let rawCandidates = ([title] + titleCandidates.map { Optional($0) }).compactMap { $0 }
         var allCandidates = titleCandidates
@@ -890,7 +889,7 @@ struct ScannerView: View {
             (dxScore ?? 0) > 0 ||
             hasMaxDxScore ||
             kanji?.isEmpty == false
-        
+
         func sheetOK(_ sheet: Sheet) -> Bool {
             if !ServerChartPolicy.isPlayable(sheet, on: activeServer) { return false }
             if !ScannerNoteCountValidator.isCompatible(maxDxScore: maxDxScore, sheetTotal: sheet.total) {
@@ -917,7 +916,7 @@ struct ScannerView: View {
             if let maxDx = maxDxScore, maxDx > 0 { if let total = sheet.total, total * 3 != maxDx { return false } }
             return true
         }
-        
+
         var frameMatches: [String] = []
         for candidate in allCandidates {
             let cleaned = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -972,9 +971,9 @@ struct ScannerView: View {
         }
         return frameMatches
     }
-    
+
     // MARK: - Utilities
-    
+
     private func levenshteinDistance(_ s1: String, _ s2: String) -> Int {
         let a = Array(s1.lowercased()), b = Array(s2.lowercased())
         if a.isEmpty { return b.count }; if b.isEmpty { return a.count }
@@ -985,7 +984,7 @@ struct ScannerView: View {
         } }
         return dist[a.count][b.count]
     }
-    
+
     private func showFeedback(_ message: String) {
         feedbackDismissTask?.cancel()
         withAnimation { photoImportFeedback = message }
@@ -997,21 +996,21 @@ struct ScannerView: View {
             } catch {
                 return
             }
-            
+
             guard photoImportFeedback == message else { return }
             withAnimation { photoImportFeedback = nil }
             feedbackDismissTask = nil
         }
     }
-    
+
     private func fuzzyMatch(_ s1: String, _ s2: String) -> Bool {
         let t1 = s1.lowercased().filter { !$0.isWhitespace }, t2 = s2.lowercased().filter { !$0.isWhitespace }
         if abs(t1.count - t2.count) > 2 { return false }
         return levenshteinDistance(t1, t2) <= max(1, t1.count / 4)
     }
-    
+
     // MARK: - Header
-    
+
     @ViewBuilder
     private func headerView() -> some View {
         HStack(spacing: 16) {
@@ -1030,7 +1029,7 @@ struct ScannerView: View {
         }
         .padding()
     }
-    
+
     private func triggerPhotoCapture() {
         guard !isSavingPhoto else { return }
         UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
@@ -1042,7 +1041,7 @@ struct ScannerView: View {
         isSavingPhoto = true
         NotificationCenter.default.post(name: NSNotification.Name("TakeScannerPhoto"), object: nil)
     }
-    
+
     private func handleCapturedScannerPhoto(_ result: Result<Data, Error>) {
         guard case .success(let data) = result else {
             isSavingPhoto = false
@@ -1071,12 +1070,12 @@ struct ScannerView: View {
             }
         }
     }
-    
+
     @ViewBuilder
     private func debugOverlayView() -> some View {
         ScannerDebugOverlayView(showScannerBoundingBox: showScannerBoundingBox, debugBoxes: debugBoxes)
     }
-    
+
     @ViewBuilder
     private func resultView() -> some View {
         if let song = recognizedSong {
@@ -1086,21 +1085,21 @@ struct ScannerView: View {
             }
         }
     }
-    
+
     // MARK: - Camera Frame Handling
-    
+
     private func handleCameraFrame(_ image: UIImage) {
         guard !isShowingScoreEntry, modelController.canRecognize else { return }
         pendingFrameImage = image
-        
+
         guard frameAnalysisTask == nil else { return }
-        
+
         frameAnalysisTask = Task { @MainActor in
             defer {
                 frameAnalysisTask = nil
                 pendingFrameImage = nil
             }
-            
+
             while !Task.isCancelled {
                 guard let nextFrame = pendingFrameImage else { break }
                 pendingFrameImage = nil
@@ -1108,10 +1107,10 @@ struct ScannerView: View {
             }
         }
     }
-    
+
     private func analyzeCameraFrame(_ image: UIImage) async {
         guard !isShowingScoreEntry else { return }
-        
+
         guard modelController.canRecognize else { return }
         let imageType: MaimaiImageType
         do {
@@ -1121,12 +1120,12 @@ struct ScannerView: View {
             return
         }
         guard !Task.isCancelled, !isShowingScoreEntry else { return }
-        
+
         if imageType == .unknown {
             updateUIWithResults(songIds: [], rate: nil, diff: nil, type: nil, dxScore: nil, maxDxScore: nil, fc: nil, fs: nil, boxes: [], imageClass: .unknown, level: nil, maxCombo: nil, kanji: nil)
             return
         }
-        
+
         if imageType == .choose {
             let recognition: MLChooseResult
             do {
@@ -1136,7 +1135,7 @@ struct ScannerView: View {
                 return
             }
             guard !Task.isCancelled, !isShowingScoreEntry else { return }
-            
+
             var frameMatches: [String] = []
             var allCandidates = recognition.titleCandidates
             if let exactTitle = recognition.title { allCandidates.insert(exactTitle, at: 0) }
@@ -1164,7 +1163,7 @@ struct ScannerView: View {
                 return
             }
             guard !Task.isCancelled, !isShowingScoreEntry else { return }
-            
+
             let matchedSongIds = matchSongsForCameraFrame(titleCandidates: recognition.titleCandidates, title: recognition.title, difficulty: recognition.difficulty, level: recognition.level, maxCombo: recognition.maxCombo, dxScore: recognition.dxScore, maxDxScore: recognition.maxDxScore, type: recognition.type, kanji: recognition.kanji)
                 .filter { songId in
                     guard let song = songs.first(where: { $0.songIdentifier == songId }) else { return false }
@@ -1180,7 +1179,7 @@ struct ScannerView: View {
             updateUIWithResults(songIds: matchedSongIds, rate: recognition.rate, diff: recognition.difficulty, type: recognition.type, dxScore: recognition.dxScore, maxDxScore: recognition.maxDxScore, fc: recognition.comboStatus, fs: recognition.syncStatus, boxes: recognition.boxes, imageClass: .score, level: recognition.level, maxCombo: recognition.maxCombo, kanji: recognition.kanji)
         }
     }
-    
+
     private func updateUIWithResults(songIds: [String], rate: Double?, diff: String?, type: String?, dxScore: Int?, maxDxScore: Int?, fc: String?, fs: String?, boxes: [RecognizedBox], imageClass: MaimaiImageType, level: Double?, maxCombo: Int?, kanji: String?) {
         self.debugBoxes = boxes
         for id in recognitionBuffer.keys { recognitionBuffer[id, default: 0] -= 1; if recognitionBuffer[id]! <= 0 { recognitionBuffer.removeValue(forKey: id) } }
@@ -1220,7 +1219,7 @@ struct ScannerView: View {
         }
         if isLocked && !isShowingScoreEntry { if Date().timeIntervalSince(lastSeenDate) > 4.0 { withAnimation { resetScanner() } } }
     }
-    
+
     private func resetScanner() {
         recognizedSong = nil; recognizedRate = nil; recognizedDifficulty = nil; recognizedType = nil
         recognizedDxScore = nil; recognizedMaxDxScore = nil; recognizedFC = nil; recognizedFS = nil
@@ -1228,7 +1227,7 @@ struct ScannerView: View {
         recognitionBuffer.removeAll(); rateBuffer.removeAll(); dxScoreBuffer.removeAll()
         maxDxScoreBuffer.removeAll(); debugBoxes.removeAll(); isLocked = false
     }
-    
+
     private func canPresentScoreResult(for song: Song, difficulty: String?, type: String?, kanji: String?, maxDxScore: Int?, dxScore: Int?) -> Bool {
         let normalizedDifficulty = difficulty?.trimmingCharacters(in: .whitespacesAndNewlines)
         let hasDifficulty = normalizedDifficulty?.isEmpty == false
@@ -1236,7 +1235,7 @@ struct ScannerView: View {
         guard hasDifficulty || hasMaxDxScore else {
             return true
         }
-        
+
         return resolvedScoreSheet(
             for: song,
             difficulty: normalizedDifficulty,
@@ -1246,15 +1245,15 @@ struct ScannerView: View {
             dxScore: dxScore
         ) != nil
     }
-    
+
     private func resolvedScoreSheet(for song: Song, difficulty: String?, type: String?, kanji: String?, maxDxScore: Int?, dxScore: Int?) -> Sheet? {
         let normalizedDifficulty = difficulty?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let normalizedType = type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        
+
         if normalizedType == "utage" {
             return matchUtageSheet(for: song, kanji: kanji, maxDxScore: maxDxScore, dxScore: dxScore)
         }
-        
+
         let filteredCandidates = song.sheets.filter { sheet in
             if !ServerChartPolicy.isPlayable(sheet, on: activeServer) { return false }
             if !ScannerNoteCountValidator.isCompatible(maxDxScore: maxDxScore, sheetTotal: sheet.total) {
@@ -1266,23 +1265,23 @@ struct ScannerView: View {
             if let normalizedDifficulty, !normalizedDifficulty.isEmpty, sheet.difficulty.lowercased() != normalizedDifficulty { return false }
             return true
         }
-        
+
         guard !filteredCandidates.isEmpty else { return nil }
         if filteredCandidates.count == 1 { return filteredCandidates.first }
-        
+
         if let maxDxScore, maxDxScore > 0 {
             let targetTotal = maxDxScore / 3
             if let exact = filteredCandidates.first(where: { $0.total == targetTotal }) {
                 return exact
             }
         }
-        
+
         if let dxScore, dxScore > 0 {
             let dxCandidates = filteredCandidates.filter { sheet in
                 guard let total = sheet.total else { return true }
                 return total * 3 >= dxScore
             }
-            
+
             if dxCandidates.count == 1 { return dxCandidates.first }
             if let best = dxCandidates.min(by: { lhs, rhs in
                 guard let lhsTotal = lhs.total, let rhsTotal = rhs.total else {
@@ -1293,10 +1292,10 @@ struct ScannerView: View {
                 return best
             }
         }
-        
+
         return filteredCandidates.first
     }
-    
+
     private func matchedSheet(for song: Song, diff: String, type: String) -> Sheet? {
         resolvedScoreSheet(
             for: song,

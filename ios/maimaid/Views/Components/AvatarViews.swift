@@ -20,12 +20,10 @@ struct AvatarImageView: View {
     private var avatarContent: some View {
         if let imageData, let uiImage = UIImage(data: imageData) {
             Image(uiImage: uiImage)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
+                .resizable().scaledToFill()
         } else if let cachedIconImage {
             Image(uiImage: cachedIconImage)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
+                .resizable().scaledToFill()
         } else if let remoteURL {
             RemoteImage(url: remoteURL) {
                 placeholderView(showsProgress: true)
@@ -72,7 +70,7 @@ struct EditableAvatarSection: View {
     @Binding var selectedItem: PhotosPickerItem?
     @Binding var selectedImageData: Data?
     @Binding var avatarURL: String?
-    
+
     @State private var editorImage: UIImage?
     @State private var isShowingEditor = false
     @State private var isLoadingSelectedPhoto = false
@@ -80,7 +78,7 @@ struct EditableAvatarSection: View {
     var body: some View {
         let previewImageData = selectedImageData
         let previewAvatarURL = avatarURL
-        
+
         Section {
             HStack {
                 Spacer()
@@ -99,7 +97,7 @@ struct EditableAvatarSection: View {
                         ProgressView()
                             .controlSize(.small)
                     }
-                    
+
                     ViewThatFits {
                         HStack(spacing: 8) {
                             changeAvatarButton
@@ -130,15 +128,15 @@ struct EditableAvatarSection: View {
         .onChange(of: selectedItem) { _, newItem in
             guard let newItem else { return }
             isLoadingSelectedPhoto = true
-            
+
             Task {
                 let loadedData = try? await newItem.loadTransferable(type: Data.self)
                 let image = loadedData.flatMap(UIImage.init(data:))
-                
+
                 await MainActor.run {
                     selectedItem = nil
                     isLoadingSelectedPhoto = false
-                    
+
                     if let image {
                         editorImage = image
                         isShowingEditor = true
@@ -147,7 +145,7 @@ struct EditableAvatarSection: View {
             }
         }
     }
-    
+
     private var changeAvatarButton: some View {
         PhotosPicker(selection: $selectedItem, matching: .images) {
             Text("profile.edit.changeAvatar")
@@ -155,7 +153,7 @@ struct EditableAvatarSection: View {
         }
         .disabled(isLoadingSelectedPhoto)
     }
-    
+
     private var clearAvatarButton: some View {
         Button("profile.edit.clearAvatar", role: .destructive) {
             selectedImageData = nil
@@ -171,7 +169,7 @@ struct EditableAvatarSection: View {
 private extension View {
     nonisolated func capsuleActionStyle(role: ButtonRole? = nil) -> some View {
         let isDestructive = role == .destructive
-        
+
         return self
             .font(.caption.bold())
             .foregroundStyle(isDestructive ? .red : .primary)

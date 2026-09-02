@@ -17,16 +17,16 @@ struct RecommendationListView: View {
     @State private var selectedPage: RecommendationPage = .new
     @State private var visibleB15Count = 10
     @State private var visibleB35Count = 10
-    
+
     // Cache invalidation: track a fingerprint of the user's scores
     @State private var lastScoreFingerprint: String = ""
     @State private var lastConfigFingerprint: String = ""
     @State private var hasLoadedOnce = false
 
     private let pageSize = 10
-    
+
     private var activeProfile: UserProfile? { activeProfiles.first }
-    
+
     /// Generates a lightweight fingerprint from scores to detect changes.
     /// Uses count + sum of rates, which changes whenever scores are added/updated.
     private func currentScoreFingerprint() async -> String {
@@ -45,7 +45,7 @@ struct RecommendationListView: View {
         let normalizedRate = Int((totalRate * 100).rounded())
         return "\(count)_\(normalizedRate)_\(Int(latestUpdate))"
     }
-    
+
     /// Generates a fingerprint from config values that affect recommendations
     private func currentConfigFingerprint() -> String {
         let b15Count = activeProfile?.b15Count ?? configs.first?.b15Count ?? 15
@@ -70,7 +70,7 @@ struct RecommendationListView: View {
             "rec.section.old"
         }
     }
-    
+
     var body: some View {
         ZStack {
             switch selectedPage {
@@ -142,7 +142,7 @@ struct RecommendationListView: View {
             Task { await loadRecommendations(force: true) }
         }
     }
-    
+
     private func loadMoreB15() {
         visibleB15Count = min(visibleB15Count + pageSize, b15Recommendations.count)
     }
@@ -150,30 +150,30 @@ struct RecommendationListView: View {
     private func loadMoreB35() {
         visibleB35Count = min(visibleB35Count + pageSize, b35Recommendations.count)
     }
-    
+
     /// Only reloads if scores or config have actually changed
     private func loadRecommendationsIfNeeded() async {
         let scoreFingerprint = await currentScoreFingerprint()
         let configFingerprint = currentConfigFingerprint()
-        
+
         // If we have cached results and nothing has changed, skip
         if hasLoadedOnce && scoreFingerprint == lastScoreFingerprint && configFingerprint == lastConfigFingerprint {
             return
         }
-        
+
         await loadRecommendations(force: false)
     }
-    
+
     private func loadRecommendations(force: Bool = false) async {
         // Update fingerprints before loading
         let scoreFingerprint = await currentScoreFingerprint()
         let configFingerprint = currentConfigFingerprint()
-        
+
         // Skip if nothing changed (unless forced)
         if !force && hasLoadedOnce && scoreFingerprint == lastScoreFingerprint && configFingerprint == lastConfigFingerprint {
             return
         }
-        
+
         isLoading = true
         let newResponse = await RecommendationService.shared.getRecommendations(
             songs: songs,
@@ -198,7 +198,7 @@ struct RecommendationListView: View {
 struct RecommendationRow: View {
     let result: RecommendationResult
     @Environment(\.colorScheme) private var colorScheme
-    
+
     var body: some View {
         HStack(spacing: 14) {
             HStack(spacing: 10) {
@@ -213,12 +213,12 @@ struct RecommendationRow: View {
                     cornerRadius: 10
                 )
             }
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 // Line 1: Song Title
                 MarqueeText(text: result.song.title, font: .system(size: 15, weight: .bold), fontWeight: .bold, color: .primary)
                     .frame(height: 18)
-                
+
                 // Line 2: Current Status
                 HStack(spacing: 6) {
                     if let rate = result.currentRate {
@@ -226,7 +226,7 @@ struct RecommendationRow: View {
                         Text(rank)
                             .font(.system(size: 11, weight: .black, design: .rounded))
                             .foregroundStyle(RatingUtils.colorForRank(rank))
-                        
+
                         Text("\(rate, format: .number.precision(.fractionLength(4)))%")
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(.secondary)
@@ -236,22 +236,22 @@ struct RecommendationRow: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                
+
                 // Line 3: Badges
                 HStack(spacing: 4) {
                     BadgeView(text: result.sheet.type.uppercased(), background: result.sheet.type.lowercased() == "dx" ? .orange : .blue)
                 }
             }
             .frame(minHeight: 56, alignment: .leading)
-            
+
             Spacer()
-            
+
             // Right side: Target Rank & Gain
             VStack(alignment: .trailing, spacing: 2) {
                 Text("+\(result.potentialGain)")
                     .font(.system(size: 18, weight: .black, design: .rounded))
                     .foregroundStyle(.orange)
-                
+
                 Text("rec.afterRank \(result.targetRank)")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundStyle(.secondary)

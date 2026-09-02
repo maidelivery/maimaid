@@ -13,7 +13,7 @@ struct ZipArchiveExtractorTests {
         try StoredZip.make(entries: [
             ("score.mlpackage/", Data()),
             ("score.mlpackage/Manifest.json", Data("manifest".utf8)),
-            ("score.mlpackage/Data/weights.bin", Data([1, 2, 3])),
+            ("score.mlpackage/Data/weights.bin", Data([1, 2, 3]))
         ]).write(to: archive)
 
         try ZipArchiveExtractor.extract(archiveURL: archive, to: destination)

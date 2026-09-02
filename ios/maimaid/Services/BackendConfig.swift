@@ -11,8 +11,7 @@ enum BackendConfig {
     static var webAuthBaseURL: URL? {
         if
             let configured = AppInfo.configuredString(for: BundleInfoKeys.backendAuthURL),
-            let configuredURL = URL(string: configured)
-        {
+            let configuredURL = URL(string: configured) {
             return configuredURL
         }
 
@@ -52,7 +51,7 @@ enum BackendConfig {
     static func staticAssetsEndpoint(_ path: String) -> URL? {
         staticAssetsBaseURL?.appending(path: path)
     }
-    
+
     static func endpoint(_ path: String) -> URL? {
         guard let baseURL else {
             return nil

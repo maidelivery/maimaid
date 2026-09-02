@@ -3,7 +3,7 @@ import SwiftUI
 struct ScannerDebugOverlayView: View {
     let showScannerBoundingBox: Bool
     let debugBoxes: [RecognizedBox]
-    
+
     var body: some View {
         if showScannerBoundingBox {
             GeometryReader { geo in
@@ -15,12 +15,12 @@ struct ScannerDebugOverlayView: View {
                         let y = (1 - rect.origin.y - rect.height) * geo.size.height
                         let w = rect.width * geo.size.width
                         let h = rect.height * geo.size.height
-                        
+
                         Path { path in
                             path.addRect(CGRect(x: x, y: y, width: w, height: h))
                         }
                         .stroke(Color.green, lineWidth: 2)
-                        
+
                         Text(box.label)
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(.white)

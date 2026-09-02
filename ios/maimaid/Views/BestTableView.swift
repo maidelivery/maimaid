@@ -13,20 +13,20 @@ struct BestTableView: View {
     @Query private var songs: [Song]
     @Query private var configs: [SyncConfig]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
-    
+
     @State private var cache = B50CacheService.shared
-    
+
     private var activeProfile: UserProfile? { activeProfiles.first }
-    
+
     @State private var isExporting = false
-    
+
     // MARK: - 临时版本覆盖 (退出页面即失效)
     @State private var overriddenVersion: String?
     @State private var showVersionPicker = false
     @State private var cachedServerVersion: String?
     @AppStorage(AppStorageKeys.best50ConstantMode) private var constantMode: Best50ConstantMode = .server
     @AppStorage(AppStorageKeys.useFitDiff) private var legacyUseFitDiff = false
-    
+
     // MARK: - Performance / Lifecycle
     @State private var calculationTask: Task<Void, Never>?
     @State private var hasAppeared = false
@@ -34,18 +34,18 @@ struct BestTableView: View {
     @State private var b35CountDraft = 35
     @State private var b15CountDraft = 15
     @FocusState private var focusedCapacityField: CapacityField?
-    
+
     /// 可选的版本列表
     private var availableVersions: [String] {
         let sequence = UserDefaults.app.maimaiVersionSequence
         return sequence
     }
-    
+
     /// 当前实际使用的版本（覆盖或默认）
     private var effectiveVersion: String? {
         overriddenVersion ?? serverVersion
     }
-    
+
     private var serverVersion: String? {
         cachedServerVersion
     }
@@ -56,23 +56,23 @@ struct BestTableView: View {
             set: { constantMode = $0 ?? .server }
         )
     }
-    
+
     private var b35Sum: Int {
         cache.b50Result.b35.reduce(0) { $0 + $1.rating }
     }
-    
+
     private var b15Sum: Int {
         cache.b50Result.b15.reduce(0) { $0 + $1.rating }
     }
-    
+
     private var currentB35Count: Int {
         activeProfile?.b35Count ?? configs.first?.b35Count ?? 35
     }
-    
+
     private var currentB15Count: Int {
         activeProfile?.b15Count ?? configs.first?.b15Count ?? 15
     }
-    
+
     var body: some View {
         List {
             Section {
@@ -111,9 +111,9 @@ struct BestTableView: View {
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(overriddenVersion != nil ? .orange : .primary)
                         }
-                        
+
                         Spacer()
-                        
+
                         if overriddenVersion != nil {
                             Button {
                                 overriddenVersion = nil
@@ -124,7 +124,7 @@ struct BestTableView: View {
                             }
                             .buttonStyle(.plain)
                         }
-                        
+
                         Image(systemName: "chevron.right")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -140,22 +140,22 @@ struct BestTableView: View {
                         value: $b35CountDraft,
                         field: .old
                     )
-                    
+
                     VStack {
                         Image(systemName: "plus")
                             .font(.caption.bold())
                             .foregroundStyle(.secondary)
                     }
-                    
+
                     capacityInput(
                         title: "bestTable.settings.new",
                         value: $b15CountDraft,
                         field: .new
                     )
-                    
+
                     Divider()
                         .frame(height: 30)
-                    
+
                     VStack(alignment: .center, spacing: 4) {
                         Text("bestTable.settings.total").font(.caption2).foregroundStyle(.secondary)
                         Text("\(currentB35Count + currentB15Count)")
@@ -165,7 +165,7 @@ struct BestTableView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .padding(.vertical, 4)
-                
+
             }
 
             Section(String(localized: "bestTable.section.new \(currentB15Count)")) {
@@ -189,7 +189,7 @@ struct BestTableView: View {
                     }
                 }
             }
-            
+
             Section(String(localized: "bestTable.section.old \(currentB35Count)")) {
                 if cache.isLoading && cache.isFirstLoad {
                     ForEach(0..<min(8, currentB35Count), id: \.self) { _ in
@@ -264,10 +264,10 @@ struct BestTableView: View {
             isVisible = true
             cache.updateSongs(songs)
             synchronizeCapacityDrafts()
-            
+
             guard !hasAppeared else { return }
             hasAppeared = true
-            
+
             scheduleCalculation(delay: .milliseconds(180))
         }
         .task(id: activeProfile?.server) {
@@ -332,9 +332,9 @@ struct BestTableView: View {
             scheduleCalculation()
         }
     }
-    
+
     // MARK: - Scheduling
-    
+
     private func scheduleCalculation(delay: Duration = .milliseconds(120)) {
         calculationTask?.cancel()
         calculationTask = Task {
@@ -343,9 +343,9 @@ struct BestTableView: View {
             await performCalculation()
         }
     }
-    
+
     // MARK: - Version Display
-    
+
     private var versionDisplayName: String {
         if let version = effectiveVersion {
             let abbr = ThemeUtils.versionAbbreviation(version)
@@ -356,12 +356,12 @@ struct BestTableView: View {
         }
         return String(localized: "bestTable.settings.version.unknown")
     }
-    
+
     // MARK: - Export
-    
+
     private func exportImage() {
         isExporting = true
-        
+
         Task {
             let image = await MainActor.run {
                 B50ExportView.renderImage(
@@ -374,32 +374,32 @@ struct BestTableView: View {
                     colorScheme: colorScheme
                 )
             }
-            
+
             isExporting = false
-            
+
             guard let image = image else { return }
-            
+
             if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                let rootVC = scene.windows.first?.rootViewController {
-                
+
                 var topVC = rootVC
                 while let presented = topVC.presentedViewController {
                     topVC = presented
                 }
-                
+
                 let activityVC = UIActivityViewController(activityItems: [image], applicationActivities: nil)
-                
+
                 if let popover = activityVC.popoverPresentationController {
                     popover.sourceView = topVC.view
                     popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: 0, width: 0, height: 0)
                     popover.permittedArrowDirections = []
                 }
-                
+
                 topVC.present(activityVC, animated: true)
             }
         }
     }
-    
+
     private func capacityInput(
         title: LocalizedStringKey,
         value: Binding<Int>,
@@ -407,7 +407,7 @@ struct BestTableView: View {
     ) -> some View {
         VStack(alignment: .center, spacing: 6) {
             Text(title).font(.caption2).foregroundStyle(.secondary)
-            
+
             TextField("", value: value, format: .number)
             .keyboardType(.numberPad)
             .multilineTextAlignment(.center)
@@ -462,14 +462,14 @@ struct BestTableView: View {
             }
         }
     }
-    
+
     private func performCalculation() async {
         if constantMode == .fitted {
             await ChartStatsService.shared.fetchStats()
         }
-        
+
         guard isVisible else { return }
-        
+
         _ = await cache.calculateIfNeeded(
             modelContext: modelContext,
             activeProfile: activeProfile,
@@ -486,7 +486,7 @@ struct BestTableView: View {
         }
         legacyUseFitDiff = false
     }
-    
+
     private func ratingRow(entry: RatingUtils.RatingEntry) -> some View {
         HStack(spacing: 14) {
             HStack(spacing: 10) {
@@ -502,21 +502,21 @@ struct BestTableView: View {
                     useThumbnail: true
                 )
             }
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 MarqueeText(text: entry.songTitle, font: .system(size: 15, weight: .bold), fontWeight: .bold, color: .primary)
                     .frame(height: 20)
-                
+
                 HStack(spacing: 6) {
                     let rank = RatingUtils.calculateRank(achievement: entry.achievement)
                     Text(rank)
                         .font(.system(size: 13, weight: .black, design: .rounded))
                         .foregroundStyle(RatingUtils.colorForRank(rank))
-                    
+
                     Text("\(entry.achievement, format: .number.precision(.fractionLength(4)))%")
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundStyle(.secondary)
-                    
+
                     if entry.dxScore > 0 {
                         HStack(spacing: 2) {
                             Image(systemName: "star.fill")
@@ -528,23 +528,23 @@ struct BestTableView: View {
                         .foregroundStyle(.yellow)
                     }
                 }
-                
+
                 HStack(spacing: 4) {
                     BadgeView(text: entry.type.uppercased(), background: entry.type.uppercased() == "DX" ? .orange : .blue)
-                    
+
                     if let fc = entry.fc, !fc.isEmpty {
                         BadgeView(text: ThemeUtils.normalizeFC(fc), background: ThemeUtils.fcColor(fc))
                     }
-                    
+
                     if let fs = entry.fs, !fs.isEmpty {
                         BadgeView(text: ThemeUtils.normalizeFS(fs), background: ThemeUtils.fsColor(fs))
                     }
                 }
             }
             .frame(minHeight: 56, alignment: .leading)
-            
+
             Spacer()
-            
+
             VStack(alignment: .trailing, spacing: 2) {
                 Text("\(entry.rating)")
                     .font(.system(size: 18, weight: .black, design: .rounded))
@@ -566,9 +566,9 @@ struct VersionPickerSheet: View {
     let versions: [String]
     @Binding var selectedVersion: String?
     let currentServerVersion: String?
-    
+
     @State private var tempSelection: String?
-    
+
     var body: some View {
         NavigationStack {
             List {
@@ -594,7 +594,7 @@ struct VersionPickerSheet: View {
                         Text(ThemeUtils.versionAbbreviation(serverVersion))
                     }
                 }
-                
+
                 Section("bestTable.settings.version.available") {
                     ForEach(versions.reversed(), id: \.self) { version in
                         Button {
@@ -656,32 +656,32 @@ struct RatingRowSkeletonView: View {
                 .fill(Color.gray.opacity(0.15))
                 .frame(width: 56, height: 56)
                 .skeleton()
-            
+
             VStack(alignment: .leading, spacing: 8) {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(Color.gray.opacity(0.15))
                     .frame(height: 16)
                     .frame(maxWidth: 160)
                     .skeleton()
-                
+
                 HStack(spacing: 6) {
                     RoundedRectangle(cornerRadius: 4)
                         .fill(Color.gray.opacity(0.15))
                         .frame(width: 30, height: 14)
                         .skeleton()
-                    
+
                     RoundedRectangle(cornerRadius: 4)
                         .fill(Color.gray.opacity(0.15))
                         .frame(width: 50, height: 14)
                         .skeleton()
                 }
-                
+
                 HStack(spacing: 4) {
                     RoundedRectangle(cornerRadius: 2)
                         .fill(Color.gray.opacity(0.15))
                         .frame(width: 24, height: 12)
                         .skeleton()
-                    
+
                     RoundedRectangle(cornerRadius: 2)
                         .fill(Color.gray.opacity(0.15))
                         .frame(width: 36, height: 12)
@@ -689,15 +689,15 @@ struct RatingRowSkeletonView: View {
                 }
             }
             .frame(minHeight: 56, alignment: .leading)
-            
+
             Spacer()
-            
+
             VStack(alignment: .trailing, spacing: 6) {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(Color.gray.opacity(0.15))
                     .frame(width: 40, height: 20)
                     .skeleton()
-                
+
                 RoundedRectangle(cornerRadius: 4)
                     .fill(Color.gray.opacity(0.15))
                     .frame(width: 48, height: 12)

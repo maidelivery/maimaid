@@ -2,7 +2,7 @@ import SwiftUI
 
 struct SkeletonModifier: ViewModifier {
     @State private var isAnimating = false
-    
+
     func body(content: Content) -> some View {
         content
             .overlay(

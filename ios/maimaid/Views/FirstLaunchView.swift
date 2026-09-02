@@ -13,13 +13,13 @@ struct FirstLaunchView: View {
         ("lock.fill", "onboarding.feature.localOffline", "onboarding.feature.localOffline.detail"),
         ("person.2.fill", "onboarding.feature.multiUser", "onboarding.feature.multiUser.detail")
     ]
-    
+
     @State private var downloadError: String?
     @State private var didTriggerCompletion = false
-    
+
     private var fetcher: MaimaiDataFetcher { MaimaiDataFetcher.shared }
     private var isSyncing: Bool { fetcher.isSyncing }
-    
+
     private var actionTitleKey: LocalizedStringKey {
         if downloadError != nil { return "onboarding.download.action.retry" }
         return "onboarding.download.action.start"
@@ -143,7 +143,7 @@ struct FirstLaunchView: View {
         }
         .padding(.vertical, 14)
     }
-    
+
     private var bottomAction: some View {
         Button {
             guard !isSyncing else { return }
@@ -202,7 +202,7 @@ struct FirstLaunchView: View {
         .padding(.bottom, 8)
         .background(.ultraThinMaterial)
     }
-    
+
     private func startInitialDownload() async {
         let options = MaimaiDataFetcher.SyncOptions(
             updateRemoteData: true,
@@ -213,7 +213,7 @@ struct FirstLaunchView: View {
             updateChartStats: true,
             updateUtageChartStats: true
         )
-        
+
         do {
             try await fetcher.fetchSongs(modelContext: modelContext, options: options)
             didPerformInitialSync = true
@@ -223,7 +223,7 @@ struct FirstLaunchView: View {
             downloadError = error.localizedDescription
         }
     }
-    
+
     private func completeIfNeeded() {
         guard !didTriggerCompletion else { return }
         didTriggerCompletion = true

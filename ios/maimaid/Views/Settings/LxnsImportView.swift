@@ -15,13 +15,13 @@ struct LxnsTokenData: Decodable {
 struct LxnsImportView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
-    
+
     private var activeProfile: UserProfile? { activeProfiles.first }
-    
+
     @State private var generatedCodeVerifier: String = ""
     @State private var authCode: String = ""
     @State private var lxnsRefreshToken: String = ""
-    
+
     @State private var isImporting = false
     @State private var importStatus: String = ""
     @State private var progress: Double = 0
@@ -34,11 +34,11 @@ struct LxnsImportView: View {
     @State private var isValidatingSession = false
     @State private var validatedAccessToken: String?
     @State private var validatedAccessTokenDate: Date?
-    
+
     @Environment(\.openURL) var openURL
-    
+
     private var hasBoundAccount: Bool { !lxnsRefreshToken.isEmpty }
-    
+
     private var importStatusStyle: (tint: Color, icon: String) {
         let failedText = String(localized: "import.status.failed")
         let errorText = String(localized: "import.status.error")
@@ -46,34 +46,34 @@ struct LxnsImportView: View {
         let isFailure = importStatus.contains(failedText) || importStatus.contains(errorText) || importStatus.contains(expiredText)
         return (isFailure ? .red : .cyan, isFailure ? "xmark.circle.fill" : "checkmark.circle.fill")
     }
-    
+
     private var sessionStatusTint: Color {
         if isValidatingSession { return .orange }
         return .green
     }
-    
+
     private var sessionStatusText: LocalizedStringKey {
         if isValidatingSession {
             return "import.lxns.status.checking"
         }
         return "import.lxns.status.connected"
     }
-    
+
     private var hasUsableValidatedAccessToken: Bool {
         guard let validatedAccessToken,
               let validatedAccessTokenDate else { return false }
         return !validatedAccessToken.isEmpty && Date().timeIntervalSince(validatedAccessTokenDate) < 300
     }
-    
+
     var body: some View {
         ZStack(alignment: .bottom) {
             Color(uiColor: .systemGroupedBackground)
                 .ignoresSafeArea()
-            
+
             List {
                 summarySection
                 contentSection
-                
+
                 if isImporting || !importStatus.isEmpty {
                     statusSection
                 }
@@ -107,7 +107,7 @@ struct LxnsImportView: View {
             .interactiveDismissDisabled(true)
         }
     }
-    
+
     @ViewBuilder
     private var summarySection: some View {
         Section {
@@ -124,7 +124,7 @@ struct LxnsImportView: View {
         .listRowBackground(Color.clear)
         .listSectionSeparator(.hidden)
     }
-    
+
     @ViewBuilder
     private var contentSection: some View {
         if let profile = activeProfile, !lxnsRefreshToken.isEmpty {
@@ -136,7 +136,7 @@ struct LxnsImportView: View {
                     Text(sessionStatusText)
                         .foregroundStyle(sessionStatusTint)
                 }
-                
+
                 actionRow(
                     title: isImporting ? "import.status.syncing" : "import.lxns.action.quickSync",
                     icon: "arrow.triangle.2.circlepath.circle.fill",
@@ -149,7 +149,7 @@ struct LxnsImportView: View {
                 .disabled(isImporting || isValidatingSession || isResolvingImportConflict)
                 .opacity(isImporting || isValidatingSession || isResolvingImportConflict ? 0.6 : 1.0)
             }
-            
+
             Section("import.lxns.manage.header") {
                 Button("import.lxns.action.relogin", role: .destructive) {
                     ProfileCredentialStore.shared.setLxnsRefreshToken("", for: profile.id)
@@ -175,7 +175,7 @@ struct LxnsImportView: View {
             } footer: {
                 Text("import.lxns.step1.footer")
             }
-            
+
             Section {
                 VStack(spacing: 14) {
                     credentialField(
@@ -183,7 +183,7 @@ struct LxnsImportView: View {
                         text: $authCode,
                         icon: "key.fill"
                     )
-                    
+
                     Button {
                         Task {
                             await exchangeCodeAndImport()
@@ -215,7 +215,7 @@ struct LxnsImportView: View {
             .listSectionSeparator(.hidden)
         }
     }
-    
+
     @ViewBuilder
     private var statusSection: some View {
         Section("import.status.header") {
@@ -227,7 +227,7 @@ struct LxnsImportView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                
+
                 if !importStatus.isEmpty {
                     Label {
                         Text(importStatus)
@@ -238,7 +238,7 @@ struct LxnsImportView: View {
                             .foregroundStyle(importStatusStyle.tint)
                     }
                 }
-                
+
                 if totalRecords > 0 {
                     VStack(alignment: .leading, spacing: 8) {
                         ProgressView(value: progress, total: Double(totalRecords))
@@ -252,19 +252,19 @@ struct LxnsImportView: View {
             .padding(.vertical, 4)
         }
     }
-    
+
     @MainActor
     private func openAuthPage() {
         if LxnsOAuthConfiguration.clientId == "YOUR_CLIENT_ID_HERE" {
             importStatus = String(localized: "import.lxns.error.clientId")
             return
         }
-        
+
         let codeVerifier = AuthUtils.generateCodeVerifier()
         let codeChallenge = AuthUtils.generateCodeChallenge(verifier: codeVerifier)
-        
+
         self.generatedCodeVerifier = codeVerifier
-        
+
         var components = URLComponents(string: "https://maimai.lxns.net/oauth/authorize")!
         components.queryItems = [
             URLQueryItem(name: "response_type", value: "code"),
@@ -275,31 +275,31 @@ struct LxnsImportView: View {
             URLQueryItem(name: "code_challenge_method", value: "S256"),
             URLQueryItem(name: "state", value: UUID().uuidString)
         ]
-        
+
         if let authURL = components.url {
             openURL(authURL)
         }
     }
-    
+
     @MainActor
     private func exchangeCodeAndImport() async {
         if generatedCodeVerifier.isEmpty {
             importStatus = String(localized: "import.lxns.error.security")
             return
         }
-        
+
         isImporting = true
         importStatus = ""
         currentStep = String(localized: "import.lxns.status.exchanging")
         progress = 0
         totalRecords = 0
-        
+
         do {
             guard let tokenURL = URL(string: "https://maimai.lxns.net/api/v0/oauth/token") else { throw URLError(.badURL) }
-            
+
             var request = URLRequest(url: tokenURL)
             request.httpMethod = "POST"
-            
+
             let parameters = [
                 "grant_type": "authorization_code",
                 "client_id": LxnsOAuthConfiguration.clientId,
@@ -307,31 +307,31 @@ struct LxnsImportView: View {
                 "code": authCode.trimmingCharacters(in: .whitespacesAndNewlines),
                 "code_verifier": generatedCodeVerifier
             ]
-            
+
             let bodyString = parameters.compactMap { key, value in
                 let encodedValue = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
                 return "\(key)=\(encodedValue)"
             }.joined(separator: "&")
-            
+
             request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
             request.httpBody = bodyString.data(using: .utf8)
-            
+
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
-            
+
             let tokenResponse = try JSONDecoder().decode(LxnsTokenResponse.self, from: data)
-            
+
             if httpResponse.statusCode != 200 || tokenResponse.data?.access_token == nil {
                 importStatus = String(localized: "import.lxns.status.failed.token \(tokenResponse.message ?? String(localized: "import.status.error.unknown"))")
                 isImporting = false
                 return
             }
-            
+
             let accessToken = tokenResponse.data!.access_token
             let refreshToken = tokenResponse.data!.refresh_token
             validatedAccessToken = accessToken
             validatedAccessTokenDate = Date()
-            
+
             if let profile = activeProfile {
                 ProfileCredentialStore.shared.setLxnsRefreshToken(refreshToken, for: profile.id)
                 lxnsRefreshToken = refreshToken
@@ -343,22 +343,22 @@ struct LxnsImportView: View {
             isImporting = false
         }
     }
-    
+
     @MainActor
     private func startQuickImport(profile: UserProfile) async {
         isImporting = true
         importStatus = ""
         progress = 0
         totalRecords = 0
-        
+
         if hasUsableValidatedAccessToken, let validatedAccessToken {
             currentStep = String(localized: "import.lxns.status.fetching")
             await importData(accessToken: validatedAccessToken)
             return
         }
-        
+
         currentStep = String(localized: "import.lxns.status.refreshing")
-        
+
         switch await SyncManager.shared.refreshLxnsTokenResult(profileId: profile.id) {
         case .success(let token):
             validatedAccessToken = token
@@ -374,7 +374,7 @@ struct LxnsImportView: View {
             isImporting = false
         }
     }
-    
+
     @MainActor
     private func importData(accessToken: String) async {
         currentStep = String(localized: "import.lxns.status.fetching")
@@ -440,7 +440,7 @@ struct LxnsImportView: View {
         } catch {
             importStatus = String(localized: "import.status.error.message \(error.localizedDescription)")
         }
-        
+
         isImporting = false
     }
 
@@ -496,7 +496,7 @@ private extension LxnsImportView {
             .frame(width: 32, height: 32)
             .background(color.gradient, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
-    
+
     func accountSummaryCard(icon: String, iconTint: Color, title: String, subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 14) {
@@ -508,7 +508,7 @@ private extension LxnsImportView {
                             .font(.system(size: 30, weight: .semibold))
                             .foregroundStyle(.white)
                     }
-                
+
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title)
                         .font(.system(size: 18, weight: .bold, design: .rounded))
@@ -517,12 +517,12 @@ private extension LxnsImportView {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                
+
                 Spacer(minLength: 0)
             }
-            
+
             Divider()
-            
+
             Label("import.lxns.summary.footer", systemImage: "square.and.arrow.down")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -530,7 +530,7 @@ private extension LxnsImportView {
         .padding(20)
         .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
-    
+
     func actionRow(title: String, icon: String, tint: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
@@ -545,7 +545,7 @@ private extension LxnsImportView {
         }
         .buttonStyle(.plain)
     }
-    
+
     func credentialField(title: String, text: Binding<String>, icon: String) -> some View {
         HStack(spacing: 12) {
             settingsIcon(icon: icon, color: .gray)
@@ -555,17 +555,17 @@ private extension LxnsImportView {
         }
         .padding(.vertical, 2)
     }
-    
+
     @MainActor
     func validateSessionOnEntryIfNeeded() async {
         guard !hasValidatedSessionOnEntry else { return }
         hasValidatedSessionOnEntry = true
-        
+
         guard let profile = activeProfile, !lxnsRefreshToken.isEmpty else { return }
-        
+
         isValidatingSession = true
         defer { isValidatingSession = false }
-        
+
         switch await SyncManager.shared.refreshLxnsTokenResult(profileId: profile.id) {
         case .success(let accessToken):
             validatedAccessToken = accessToken

@@ -10,19 +10,19 @@ final class B50CacheService {
     var b50Result: (total: Int, b35: [RatingUtils.RatingEntry], b15: [RatingUtils.RatingEntry]) = (0, [], [])
     var isLoading = false
     var isFirstLoad = true
-    
+
     private var lastCalculationParams: String = ""
     private var songMap: [String: Song] = [:]
     private var allSongs: [Song] = []
-    
+
     // MARK: - Cached fingerprints / results
-    
+
     private var lastScoreFingerprintByProfile: [String: String] = [:]
     private var lastScoreMapByProfile: [String: [String: Score]] = [:]
     private var currentCalculationTask: Task<(total: Int, b35: [RatingUtils.RatingEntry], b15: [RatingUtils.RatingEntry]), Never>?
-    
+
     private init() {}
-    
+
     /// Pre-warm the song map to make lookups O(1)
     func updateSongs(_ songs: [Song]) {
         if songs.count == allSongs.count && !allSongs.isEmpty {
@@ -31,19 +31,19 @@ final class B50CacheService {
         self.allSongs = songs
         self.songMap = Dictionary(uniqueKeysWithValues: songs.map { ($0.songIdentifier, $0) })
     }
-    
+
     func getSong(identifier: String) -> Song? {
         return songMap[identifier]
     }
-    
+
     // MARK: - Score Snapshot
-    
+
     private func buildScoreSnapshot(
         modelContext: ModelContext,
         profileId: UUID?
     ) async -> (fingerprint: String, scoreMap: [String: Score]) {
         let profileKey = profileId?.uuidString ?? "none"
-        
+
         let scores: [Score]
         if let profileId {
             let descriptor = FetchDescriptor<Score>(
@@ -56,14 +56,14 @@ final class B50CacheService {
             )
             scores = (try? modelContext.fetch(descriptor)) ?? []
         }
-        
+
         var scoreMap: [String: Score] = [:]
         scoreMap.reserveCapacity(scores.count)
-        
+
         var latestUpdate: TimeInterval = 0
         var totalRate: Double = 0
         var totalDxScore: Int = 0
-        
+
         for (index, score) in scores.enumerated() {
             if index.isMultiple(of: 200) {
                 await Task.yield()
@@ -73,15 +73,15 @@ final class B50CacheService {
             totalDxScore += score.dxScore
             latestUpdate = max(latestUpdate, score.achievementDate.timeIntervalSince1970)
         }
-        
+
         let fingerprint = "\(scores.count)_\(String(format: "%.4f", totalRate))_\(totalDxScore)_\(Int(latestUpdate))"
-        
+
         lastScoreFingerprintByProfile[profileKey] = fingerprint
         lastScoreMapByProfile[profileKey] = scoreMap
-        
+
         return (fingerprint, scoreMap)
     }
-    
+
     /// Triggers calculation if parameters have changed or if forced.
     /// Returns true if a calculation was performed.
     @discardableResult
@@ -100,10 +100,10 @@ final class B50CacheService {
         let version = overriddenVersion ?? "auto"
         let serverRaw = activeProfile?.server ?? "none"
         let songCount = allSongs.count
-        
+
         // Single score fetch instead of fetchCount + latest fetch + scoreMap rebuild
         let snapshot = await buildScoreSnapshot(modelContext: modelContext, profileId: profileId)
-        
+
         let params = [
             profileKey,
             serverRaw,
@@ -114,16 +114,16 @@ final class B50CacheService {
             "constantMode:\(constantMode.rawValue)",
             "scores:\(snapshot.fingerprint)"
         ].joined(separator: "|")
-        
+
         if !force && params == lastCalculationParams && !isFirstLoad {
             return false
         }
-        
+
         lastCalculationParams = params
         isLoading = true
-        
+
         currentCalculationTask?.cancel()
-        
+
         let server = activeProfile.flatMap { GameServer(rawValue: $0.server) }
         let latestVersion: String?
         if let overriddenVersion {
@@ -133,7 +133,7 @@ final class B50CacheService {
         } else {
             latestVersion = nil
         }
-        
+
         let input = await allSongs.toCalculationInput(
             userProfileId: profileId,
             server: server,
@@ -141,7 +141,7 @@ final class B50CacheService {
             constantMode: constantMode,
             selectedVersion: latestVersion
         )
-        
+
         let task = Task<(total: Int, b35: [RatingUtils.RatingEntry], b15: [RatingUtils.RatingEntry]), Never> {
             await RatingUtils.calculateB50(
                 input: input,
@@ -150,33 +150,33 @@ final class B50CacheService {
                 latestVersion: latestVersion
             )
         }
-        
+
         currentCalculationTask = task
         let result = await task.value
-        
+
         guard !Task.isCancelled else { return false }
         guard currentCalculationTask?.isCancelled != true else { return false }
-        
+
         // Ensure no newer params replaced this calculation while awaiting
         if lastCalculationParams != params {
             return false
         }
-        
+
         self.b50Result = result
         self.isLoading = false
         self.isFirstLoad = false
-        
+
         return true
     }
-    
+
     // MARK: - Manual invalidation
-    
+
     func invalidate() {
         currentCalculationTask?.cancel()
         currentCalculationTask = nil
         lastCalculationParams = ""
     }
-    
+
     func invalidateScores(for profileId: UUID?) {
         let profileKey = profileId?.uuidString ?? "none"
         lastScoreFingerprintByProfile.removeValue(forKey: profileKey)

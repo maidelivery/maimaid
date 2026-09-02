@@ -5,7 +5,7 @@ struct BadgeView: View {
     let text: String
     var background: Color = .blue
     var foreground: Color = .white
-    
+
     var body: some View {
         Text(text)
             .font(.system(size: 9, weight: .heavy))

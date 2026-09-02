@@ -702,8 +702,7 @@ struct AddToSongCollectionsView: View {
         for collection in collections {
             let existing = items.first { $0.collectionId == collection.id && $0.songId == songId && $0.chartType.caseInsensitiveCompare(chartType) == .orderedSame && $0.difficulty.caseInsensitiveCompare(difficulty) == .orderedSame }
             if selected.contains(collection.id) {
-                if let existing { existing.deletedAt = nil; existing.updatedAt = .now; existing.clientUpdatedAt = .now }
-                else { modelContext.insert(SongCollectionItem(collectionId: collection.id, songId: songId, chartType: chartType, difficulty: difficulty, position: items.filter { $0.collectionId == collection.id }.count, clientUpdatedAt: .now)) }
+                if let existing { existing.deletedAt = nil; existing.updatedAt = .now; existing.clientUpdatedAt = .now } else { modelContext.insert(SongCollectionItem(collectionId: collection.id, songId: songId, chartType: chartType, difficulty: difficulty, position: items.filter { $0.collectionId == collection.id }.count, clientUpdatedAt: .now)) }
             } else if let existing { existing.deletedAt = .now; existing.updatedAt = .now; existing.clientUpdatedAt = .now }
         }
         try? modelContext.save()

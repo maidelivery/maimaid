@@ -517,7 +517,7 @@ private extension AccountDataResolutionCoordinator {
         if localProfile.playerRating < remoteProfile.playerRating {
             localProfile.playerRating = remoteProfile.playerRating
         }
-        if (localProfile.plate?.isEmpty ?? true), let remotePlate = remoteProfile.plate, !remotePlate.isEmpty {
+        if localProfile.plate?.isEmpty ?? true, let remotePlate = remoteProfile.plate, !remotePlate.isEmpty {
             localProfile.plate = remotePlate
         }
         if localProfile.dfUsername.isEmpty {

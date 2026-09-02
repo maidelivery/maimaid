@@ -124,7 +124,7 @@ nonisolated struct ModelStoreFixture {
             let packageName = asset.rawValue.replacing(".zip", with: "")
             let archive = StoredZip.make(entries: [
                 ("\(packageName)/", Data()),
-                ("\(packageName)/Manifest.json", Data("{\"marker\":\"\(marker)\"}".utf8)),
+                ("\(packageName)/Manifest.json", Data("{\"marker\":\"\(marker)\"}".utf8))
             ])
             return (asset, archive)
         })

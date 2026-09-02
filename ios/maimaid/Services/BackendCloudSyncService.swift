@@ -368,8 +368,7 @@ enum BackendCloudSyncService {
 
         if
             let pngData = resizedImage.pngData(),
-            pngData.count <= maxAvatarUploadBytes
-        {
+            pngData.count <= maxAvatarUploadBytes {
             return (pngData, "image/png")
         }
 

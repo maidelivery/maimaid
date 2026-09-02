@@ -9,35 +9,35 @@ extension Notification.Name {
 @MainActor
 final class ScoreService {
     static let shared = ScoreService()
-    
+
     private init() {}
-    
+
     // MARK: - Cache
-    
+
     private struct ScoreSnapshot {
         let scores: [Score]
         let scoreMap: [String: Score]
     }
-    
+
     private var cachedActiveProfileId: UUID?
     private var didResolveActiveProfile = false
     private var didRepairDetachedRecords = false
-    
+
     private var cachedSnapshotsByProfileKey: [String: ScoreSnapshot] = [:]
-    
+
     private func profileKey(_ profileId: UUID?) -> String {
         profileId?.uuidString ?? "none"
     }
-    
+
     private func invalidateActiveProfileCache() {
         didResolveActiveProfile = false
         cachedActiveProfileId = nil
     }
-    
+
     private func invalidateScoreCache(for profileId: UUID?) {
         cachedSnapshotsByProfileKey.removeValue(forKey: profileKey(profileId))
     }
-    
+
     private func ensureActiveProfile(context: ModelContext) -> UserProfile {
         let activeDescriptor = FetchDescriptor<UserProfile>(predicate: #Predicate { $0.isActive })
         if let activeProfile = (try? context.fetch(activeDescriptor))?.first {
@@ -45,7 +45,7 @@ final class ScoreService {
             didResolveActiveProfile = true
             return activeProfile
         }
-        
+
         let descriptor = FetchDescriptor<UserProfile>()
         if let existingProfile = (try? context.fetch(descriptor))?.sorted(by: { $0.createdAt < $1.createdAt }).first {
             existingProfile.isActive = true
@@ -54,7 +54,7 @@ final class ScoreService {
             didResolveActiveProfile = true
             return existingProfile
         }
-        
+
         let defaultProfile = UserProfile(
             name: String(localized: "userProfile.defaultName"),
             server: "jp",
@@ -62,12 +62,12 @@ final class ScoreService {
         )
         context.insert(defaultProfile)
         try? context.save()
-        
+
         cachedActiveProfileId = defaultProfile.id
         didResolveActiveProfile = true
         return defaultProfile
     }
-    
+
     func invalidateAllCaches() {
         invalidateActiveProfileCache()
         cachedSnapshotsByProfileKey.removeAll()
@@ -138,9 +138,9 @@ final class ScoreService {
         }
         didRepairDetachedRecords = true
     }
-    
+
     // MARK: - 获取当前活跃用户
-    
+
     /// 获取当前活跃用户的 ID，如果没有则返回 nil
     func currentActiveProfileId(context: ModelContext) -> UUID? {
         if didResolveActiveProfile {
@@ -148,20 +148,20 @@ final class ScoreService {
         }
         return ensureActiveProfile(context: context).id
     }
-    
+
     /// 获取当前活跃用户
     func currentActiveProfile(context: ModelContext) -> UserProfile? {
         ensureActiveProfile(context: context)
     }
-    
+
     // MARK: - 成绩读取（严格用户隔离）
-    
+
     private func loadSnapshot(context: ModelContext, profileId: UUID?) -> ScoreSnapshot {
         let key = profileKey(profileId)
         if let cached = cachedSnapshotsByProfileKey[key] {
             return cached
         }
-        
+
         let scores: [Score]
         if let profileId {
             let descriptor = FetchDescriptor<Score>(
@@ -174,40 +174,40 @@ final class ScoreService {
             )
             scores = (try? context.fetch(descriptor)) ?? []
         }
-        
+
         var map: [String: Score] = [:]
         map.reserveCapacity(scores.count)
         for score in scores {
             map[score.sheetId] = score
         }
-        
+
         let snapshot = ScoreSnapshot(scores: scores, scoreMap: map)
         cachedSnapshotsByProfileKey[key] = snapshot
         return snapshot
     }
-    
+
     private func currentSnapshot(context: ModelContext) -> ScoreSnapshot {
         let profileId = currentActiveProfileId(context: context)
         return loadSnapshot(context: context, profileId: profileId)
     }
-    
+
     private func candidateScoreSheetIds(for sheet: Sheet) -> [String] {
         let rawIdentifiers: [String?] = [
             sheet.songIdentifier,
             String(sheet.songId),
             sheet.song?.songIdentifier,
-            sheet.song.map { String($0.songId) },
+            sheet.song.map { String($0.songId) }
         ]
-        
+
         var songIdentifiers: [String] = []
         for rawIdentifier in rawIdentifiers {
             guard let rawIdentifier, !rawIdentifier.isEmpty, rawIdentifier != "0" else { continue }
             songIdentifiers.append(rawIdentifier)
         }
-        
+
         var seen = Set<String>()
         var result: [String] = []
-        
+
         for songIdentifier in songIdentifiers {
             for separator in ["_", "-"] {
                 let sheetId = "\(songIdentifier)\(separator)\(sheet.type)\(separator)\(sheet.difficulty)"
@@ -216,10 +216,10 @@ final class ScoreService {
                 }
             }
         }
-        
+
         return result
     }
-    
+
     /// 获取指定谱面对当前用户的成绩
     func score(for sheet: Sheet, context: ModelContext) -> Score? {
         let profileId = currentActiveProfileId(context: context)
@@ -235,19 +235,19 @@ final class ScoreService {
         }
         return nil
     }
-    
+
     /// 获取当前用户的所有成绩
     func allScores(context: ModelContext) -> [Score] {
         currentSnapshot(context: context).scores
     }
-    
+
     /// 获取成绩映射表（用于批量计算）
     func scoreMap(context: ModelContext) -> [String: Score] {
         currentSnapshot(context: context).scoreMap
     }
-    
+
     // MARK: - 成绩写入（严格用户隔离）
-    
+
     /// 计算等级（内联实现，避免依赖循环）
     private func calculateRank(achievement: Double) -> String {
         if achievement >= 100.5 { return "SSS+" }
@@ -265,7 +265,7 @@ final class ScoreService {
         if achievement >= 50.0 { return "C" }
         return "D"
     }
-    
+
     /// 保存或更新成绩 - 自动关联当前用户
     @discardableResult
     func saveScore(
@@ -282,9 +282,9 @@ final class ScoreService {
         let existingScore = score(for: sheet, context: context)
         let canonicalFC = ThemeUtils.canonicalFC(fc)
         let calculatedRank = calculateRank(achievement: rate)
-        
+
         let result: Score
-        
+
         if let existing = existingScore {
             let isNewRateBetter = rate > existing.rate
             if isNewRateBetter {
@@ -292,7 +292,7 @@ final class ScoreService {
                 existing.rank = calculatedRank
                 existing.achievementDate = achievementDate
             }
-            
+
             existing.dxScore = max(existing.dxScore, dxScore)
             existing.fc = ThemeUtils.canonicalFC(ThemeUtils.bestFC(existing.fc, canonicalFC))
             existing.fs = ThemeUtils.bestFS(existing.fs, fs)
@@ -312,11 +312,11 @@ final class ScoreService {
             sheet.scores.append(newScore)
             result = newScore
         }
-        
+
         invalidateScoreCache(for: profileId)
         return result
     }
-    
+
     /// 记录游玩历史 - 自动关联当前用户
     func recordPlay(
         id: UUID = UUID(),
@@ -330,7 +330,7 @@ final class ScoreService {
         context: ModelContext
     ) -> PlayRecord {
         let profileId = currentActiveProfileId(context: context)
-        
+
         let record = PlayRecord(
             id: id,
             sheetId: "\(sheet.songIdentifier)-\(sheet.type)-\(sheet.difficulty)",
@@ -343,17 +343,17 @@ final class ScoreService {
             userProfileId: profileId
         )
         context.insert(record)
-        
+
         if sheet.playRecords == nil {
             sheet.playRecords = []
         }
         sheet.playRecords?.append(record)
-        
+
         return record
     }
-    
+
     // MARK: - 删除成绩
-    
+
     /// 删除当前用户的成绩
     func deleteScore(for sheet: Sheet, context: ModelContext) -> Bool {
         let profileId = currentActiveProfileId(context: context)
@@ -362,27 +362,27 @@ final class ScoreService {
         invalidateScoreCache(for: profileId)
         return true
     }
-    
+
     // MARK: - 用户切换 / 外部更新
-    
+
     /// 当用户切换时调用，清空 active profile 和成绩缓存
     func notifyActiveProfileChanged() {
         invalidateAllCaches()
     }
-    
+
     /// 当外部导入、恢复、批量更新成绩后调用
     func notifyScoresChanged(for profileId: UUID? = nil) {
         invalidateScoreCache(for: profileId)
         NotificationCenter.default.post(name: .maimaiScoresDidChange, object: profileId)
     }
-    
+
     // MARK: - 历史记录
-    
+
     /// 获取当前用户在指定谱面的游玩历史
     func playHistory(for sheet: Sheet, context: ModelContext) -> [PlayRecord] {
         guard let profileId = currentActiveProfileId(context: context) else {
             var records = sheet.playRecords?.filter { $0.userProfileId == nil } ?? []
-            
+
             if let bestScore = score(for: sheet, context: context) {
                 let hasMatch = records.contains { abs($0.rate - bestScore.rate) < 0.0001 }
                 if !hasMatch && bestScore.rate > 0 {
@@ -398,22 +398,22 @@ final class ScoreService {
                     )
                     generatedRecord.sheet = sheet
                     context.insert(generatedRecord)
-                    
+
                     if sheet.playRecords == nil {
                         sheet.playRecords = []
                     }
                     sheet.playRecords?.append(generatedRecord)
                     records.append(generatedRecord)
-                    
+
                     try? context.save()
                 }
             }
-            
+
             return records.sorted { $0.playDate > $1.playDate }
         }
-        
+
         var records = sheet.playRecords?.filter { $0.userProfileId == profileId } ?? []
-        
+
         // Auto-repair missing PlayRecord from imported Score
         if let bestScore = score(for: sheet, context: context) {
             let hasMatch = records.contains { abs($0.rate - bestScore.rate) < 0.0001 }
@@ -430,17 +430,17 @@ final class ScoreService {
                 )
                 generatedRecord.sheet = sheet
                 context.insert(generatedRecord)
-                
+
                 if sheet.playRecords == nil {
                     sheet.playRecords = []
                 }
                 sheet.playRecords?.append(generatedRecord)
                 records.append(generatedRecord)
-                
+
                 try? context.save()
             }
         }
-        
+
         return records.sorted { $0.playDate > $1.playDate }
     }
 }

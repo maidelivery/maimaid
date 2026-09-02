@@ -25,13 +25,13 @@ enum LxnsTokenRefreshResult {
 @MainActor
 class SyncManager {
     static let shared = SyncManager()
-    
+
     private init() {}
 
     private func sheetTitle(_ sheet: Sheet) -> String {
         sheet.song?.title ?? String(localized: "common.unknown")
     }
-    
+
     /// Unified sync entry for manual score-save flow:
     /// backend incremental sync + third-party (DF/LXNS) sync.
     func syncAfterScoreSave(sheet: Sheet, score: Score, context: ModelContext) async {
@@ -54,7 +54,7 @@ class SyncManager {
             await uploadScoreIfNeeded(sheet: sheet, score: score, config: config)
         }
     }
-    
+
     /// Legacy entry used by old call sites. This path only targets third-party sync.
     func uploadScoreIfNeeded(sheet: Sheet, score: Score, config: SyncConfig) async {
         guard config.isAutoUploadEnabled else {
@@ -149,7 +149,7 @@ class SyncManager {
             fullReplace: fullReplace
         )
     }
-    
+
     private func uploadToBackend(sheet: Sheet, score: Score, profile: UserProfile) async {
         print("SyncManager: [Backend] 开始上传成绩。")
 
@@ -314,7 +314,7 @@ class SyncManager {
         )
         return (try? context.fetch(descriptor))?.first
     }
-    
+
     func refreshLxnsToken(profileId: UUID) async -> String? {
         switch await refreshLxnsTokenResult(profileId: profileId) {
         case .success(let accessToken):
@@ -331,11 +331,11 @@ class SyncManager {
             return .expired
         }
         guard let url = URL(string: "https://maimai.lxns.net/api/v0/oauth/token") else { return .failed }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        
+
         let bodyString = [
             "grant_type": "refresh_token",
             "client_id": LxnsOAuthConfiguration.clientId,
@@ -344,17 +344,17 @@ class SyncManager {
             let encodedValue = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
             return "\(key)=\(encodedValue)"
         }.joined(separator: "&")
-        
+
         request.httpBody = bodyString.data(using: .utf8)
-        
+
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             let httpResponse = response as? HTTPURLResponse
-            
+
             if let http = httpResponse, http.statusCode != 200 {
                 let errorBody = String(data: data, encoding: .utf8) ?? "无错误响应内容"
                 print("SyncManager: [LXNS] 刷新令牌失败，状态码 \(http.statusCode)，响应：\(errorBody)")
-                
+
                 // If 400 (Invalid Refresh Token), clear the token
                 if http.statusCode == 400 {
                     print("SyncManager: [LXNS] 检测到无效 Refresh Token，正在清除凭据。")
@@ -363,10 +363,10 @@ class SyncManager {
                 }
                 return .failed
             }
-            
+
             let decoder = JSONDecoder()
             let tokenResponse = try decoder.decode(LxnsTokenResponse.self, from: data)
-            
+
             if let newData = tokenResponse.data {
                 ProfileCredentialStore.shared.setLxnsRefreshToken(newData.refresh_token, for: profileId)
                 return .success(newData.access_token)
@@ -376,6 +376,5 @@ class SyncManager {
         }
         return .failed
     }
-    
 
 }

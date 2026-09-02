@@ -11,7 +11,7 @@ struct ScannerResultCardView: View, Equatable {
     let onScoreEntryTap: () -> Void
     let onResetTap: () -> Void
     @Environment(\.colorScheme) private var colorScheme
-    
+
     static func == (lhs: ScannerResultCardView, rhs: ScannerResultCardView) -> Bool {
         lhs.song.songIdentifier == rhs.song.songIdentifier &&
         lhs.recognizedClass == rhs.recognizedClass &&
@@ -24,7 +24,7 @@ struct ScannerResultCardView: View, Equatable {
         lhs.resolvedSheet.map { ServerChartPolicy.metadata(for: $0, on: lhs.server).displayLevel } ==
             rhs.resolvedSheet.map { ServerChartPolicy.metadata(for: $0, on: rhs.server).displayLevel }
     }
-    
+
     var body: some View {
         if recognizedClass == .choose {
             NavigationLink(destination: {

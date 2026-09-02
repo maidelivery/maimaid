@@ -104,7 +104,7 @@ enum OtogameImportPolicy {
             String(playlog.playDate),
             String(playlog.trackNumber),
             String(playlog.achievement),
-            String(playlog.deluxeScore),
+            String(playlog.deluxeScore)
         ].joined(separator: "|")
         var bytes = Array(SHA256.hash(data: Data(identity.utf8)).prefix(16))
         bytes[6] = (bytes[6] & 0x0f) | 0x50

@@ -19,10 +19,10 @@ final class Song {
     var aliases: [String] = []
     var songId: Int = 0
     var isFavorite: Bool = false
-    
+
     @Relationship(deleteRule: .cascade, inverse: \Sheet.song)
     var sheets: [Sheet] = []
-    
+
     init(songIdentifier: String, category: String, title: String, artist: String, imageName: String, version: String? = nil, releaseDate: String? = nil, sortOrder: Int, bpm: Double? = nil, isNew: Bool, isLocked: Bool, comment: String? = nil, searchKeywords: String? = nil, aliases: [String] = []) {
         self.songIdentifier = songIdentifier
         self.category = category

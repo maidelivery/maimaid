@@ -12,17 +12,17 @@ struct RandomSongView: View {
     @State private var spinOffsets: [Double] = [0, 0, 0, 0]
     @State private var displayedSongs: [[Song]] = [[], [], [], []]
     @State private var pendingResults: [Song] = []
-    @State private var currentSpinTask: Task<Void, Never>? = nil
-    
+    @State private var currentSpinTask: Task<Void, Never>?
+
     // Computed properties for filter options
     private var allCategories: [String] {
         Array(Set(allSongs.map { $0.category })).sorted { ThemeUtils.categorySortOrder($0) < ThemeUtils.categorySortOrder($1) }
     }
-    
+
     private var allVersions: [String] {
         Array(Set(allSongs.compactMap { $0.version })).sorted { ThemeUtils.versionSortOrder($0) < ThemeUtils.versionSortOrder($1) }
     }
-    
+
     private var currentSlotHeight: CGFloat {
         songCount == 4 ? 100 : 120
     }
@@ -32,7 +32,7 @@ struct RandomSongView: View {
     private var activeServer: GameServer {
         activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Top Section
@@ -44,7 +44,7 @@ struct RandomSongView: View {
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 40)
                 .padding(.top, 16)
-                
+
                 // Slot Machine Area
                 HStack(spacing: 8) {
                     ForEach(0..<songCount, id: \.self) { index in
@@ -61,7 +61,7 @@ struct RandomSongView: View {
                 .padding(16)
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 24))
                 .padding(.horizontal, 16)
-                
+
                 // Spin Button
                 Button(action: {
                     if isSpinning {
@@ -84,7 +84,7 @@ struct RandomSongView: View {
             }
             .padding(.bottom, 24)
             .background(Color(.systemGroupedBackground))
-            
+
             // Results Section
             if !isSpinning && !results.isEmpty {
                 ScrollView {
@@ -94,7 +94,7 @@ struct RandomSongView: View {
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 24)
                             .padding(.bottom, 8)
-                        
+
                         ForEach(results) { song in
                             NavigationLink(destination: SongDetailView(song: song)) {
                                 SongRowView(song: song)
@@ -133,7 +133,7 @@ struct RandomSongView: View {
             resetSlots()
         }
     }
-    
+
     private func resetSlots() {
         withAnimation(.easeOut(duration: 0.3)) {
             results = []
@@ -141,7 +141,7 @@ struct RandomSongView: View {
             spinOffsets = [0, 0, 0, 0]
         }
     }
-    
+
     private func spin() {
         // 1. Apply Filters
         let filteredSongs = FilterUtils.filterSongs(
@@ -149,18 +149,18 @@ struct RandomSongView: View {
             settings: filterSettings,
             server: activeServer
         )
-        
+
         guard !filteredSongs.isEmpty else { return }
-        
+
         // Prepare haptics
         let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
         feedbackGenerator.prepare()
-        
+
         withAnimation(.easeOut(duration: 0.2)) {
             isSpinning = true
             results = []
         }
-        
+
         // Pick from filtered pool
         var newResults: [Song] = []
         for _ in 0..<songCount {
@@ -169,7 +169,7 @@ struct RandomSongView: View {
             }
         }
         pendingResults = newResults
-        
+
         // Build the scrolling list for each slot
         for i in 0..<songCount {
             var columnSongs: [Song] = []
@@ -182,20 +182,20 @@ struct RandomSongView: View {
             columnSongs.append(newResults[i])
             displayedSongs[i] = columnSongs
             spinOffsets[i] = 0
-            
+
             // Animation for each column
             let columnDuration = 2.0 + Double(i) * 0.4
             withAnimation(.timingCurve(0.4, 0, 0.2, 1, duration: columnDuration)) {
                 spinOffsets[i] = Double(-CGFloat(displayedSongs[i].count - 1) * currentSlotHeight)
             }
         }
-        
+
         // Final completion logic
         let totalDuration = 2.0 + Double(songCount - 1) * 0.4
-        
+
         currentSpinTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: UInt64(totalDuration * 1_000_000_000))
-            
+
             if !Task.isCancelled {
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                     results = pendingResults
@@ -205,11 +205,11 @@ struct RandomSongView: View {
             }
         }
     }
-    
+
     private func skipSpin() {
         currentSpinTask?.cancel()
         currentSpinTask = nil
-        
+
         // Snap everything to end
         withAnimation(.none) {
             for i in 0..<songCount {
@@ -218,12 +218,12 @@ struct RandomSongView: View {
                 }
             }
         }
-        
+
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             results = pendingResults
             isSpinning = false
         }
-        
+
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
 }
@@ -233,7 +233,7 @@ struct SlotColumn: View {
     let offset: Double
     let slotHeight: CGFloat
     let jacketSize: CGFloat // Now dynamic
-    
+
     var body: some View {
         GeometryReader { _ in
             VStack(spacing: 0) {

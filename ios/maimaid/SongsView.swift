@@ -12,7 +12,7 @@ enum SortOption: String, CaseIterable, Identifiable, Sendable {
     case defaultOrder = "sort.default"
     case versionAndDate = "sort.versionDate"
     case difficulty = "sort.difficulty"
-    
+
     var id: String { self.rawValue }
 }
 
@@ -37,9 +37,9 @@ struct SongsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(Self.prefetchedSongsDescriptor) private var songs: [Song]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
-    
+
     var searchText: String = ""
-    
+
     @State private var filterSettings = FilterSettings()
     @State private var showFilterSheet = false
     @State private var isFetching = false
@@ -50,36 +50,36 @@ struct SongsView: View {
     @State private var isSorting: Bool = false
     @State private var searchTask: Task<Void, Never>?
     @State private var snapshotCache: [SongFilterSnapshot] = []
-    
+
     // Performance: Cache score map to avoid repeated lookups
     @State private var scoreCache: [String: Score] = [:]
-    
+
     // Grid zoom state
     @AppStorage(AppStorageKeys.songsGridColumns) private var committedColumns: Int = 4
     @State private var isZooming: Bool = false
     @State private var liveColumnCount: CGFloat = 4.0
     @State private var pinchStartColumns: CGFloat = 4.0
-    @State private var zoomAnchorSongID: String? = nil
+    @State private var zoomAnchorSongID: String?
     @State private var viewportHeight: CGFloat = 0
     /// Brief cooldown after pinch ends to prevent accidental tap activation
     @State private var navigationDisabled: Bool = false
-    
+
     /// Namespace for matched geometry zoom transition (iOS 18+)
     @Namespace private var songTransitionNamespace
-    
+
     /// The song selected for fullScreenCover detail presentation
-    @State private var selectedSong: Song? = nil
-    
+    @State private var selectedSong: Song?
+
     /// Task for background score cache refresh
     @State private var scoreCacheTask: Task<Void, Never>?
 
     private var activeServer: GameServer {
         activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
     }
-    
+
     private let minColumns: CGFloat = 3
     private let maxColumns: CGFloat = 7
-    
+
     private struct SongFilterSnapshot: Sendable {
         struct SheetSnapshot: Sendable {
             let type: String
@@ -89,7 +89,7 @@ struct SongsView: View {
             let isPlayable: Bool
             let isPlayableOnActiveServer: Bool
         }
-        
+
         let songIdentifier: String
         let songId: Int
         let category: String
@@ -130,7 +130,7 @@ struct SongsView: View {
         let providerSongIds: Set<Int>
         let sheets: [SheetExtraction]
     }
-    
+
     private func refreshScoreCache() {
         scoreCacheTask?.cancel()
         scoreCacheTask = Task { @MainActor in
@@ -140,15 +140,15 @@ struct SongsView: View {
             scoreCache = ScoreService.shared.scoreMap(context: modelContext)
         }
     }
-    
+
     var allCategories: [String] {
         Array(Set(songs.map { $0.category })).sorted { ThemeUtils.categorySortOrder($0) < ThemeUtils.categorySortOrder($1) }
     }
-    
+
     var allVersions: [String] {
         Array(Set(songs.compactMap { $0.version })).sorted { ThemeUtils.versionSortOrder($0) < ThemeUtils.versionSortOrder($1) }
     }
-    
+
     private func extractSongSnapshot(_ song: Song) -> SongSnapshotExtraction {
         var sheets: [SongSnapshotExtraction.SheetExtraction] = []
         sheets.reserveCapacity(song.sheets.count)
@@ -218,7 +218,7 @@ struct SongsView: View {
             maxDifficulty: maxDifficulty
         )
     }
-    
+
     nonisolated private static func filterAndSortSongIdentifiers(
         from snapshots: [SongFilterSnapshot],
         settings: FilterSettings,
@@ -234,7 +234,7 @@ struct SongsView: View {
         let hasVersions = !settings.selectedVersions.isEmpty
         let hasTypes = !settings.selectedTypes.isEmpty
         let hasDifficulties = !settings.selectedDifficulties.isEmpty
-        
+
         let filtered = snapshots.filter { song in
             if hasSearch {
                 let titleMatch = SearchTextNormalizer.matches(
@@ -272,44 +272,44 @@ struct SongsView: View {
                 let idMatch = searchedSongId.map { songId in
                     songId > 0 && (song.songId == songId || song.providerSongIds.contains(songId))
                 } ?? false
-                
+
                 if !titleMatch && !artistMatch && !keywordMatch && !aliasMatch && !designerMatch && !idMatch {
                     return false
                 }
             }
-            
+
             if settings.showFavoritesOnly && !song.isFavorite {
                 return false
             }
-            
+
             if hasCategories && !settings.selectedCategories.contains(song.category) {
                 return false
             }
-            
+
             if hasVersions {
                 guard let version = song.version, settings.selectedVersions.contains(version) else {
                     return false
                 }
             }
-            
+
             if hasTypes || hasDifficulties || settings.hideDeletedSongs || settings.showOnlyPlayableSongs {
                 var hasMatchingType = !hasTypes
                 var hasMatchingDifficulty = !hasDifficulties
                 var isPlayable = !settings.hideDeletedSongs
                 var hasPlayableOnActiveServer = !settings.showOnlyPlayableSongs
-                
+
                 for sheet in song.sheets {
                     if hasTypes && settings.selectedTypes.contains(sheet.type) {
                         hasMatchingType = true
                     }
-                    
+
                     if hasDifficulties && settings.selectedDifficulties.contains(sheet.difficulty) {
                         let level = sheet.ratingLevel ?? 0.0
                         if level >= settings.minLevel && level <= settings.maxLevel {
                             hasMatchingDifficulty = true
                         }
                     }
-                    
+
                     if settings.hideDeletedSongs && sheet.isPlayable {
                         isPlayable = true
                     }
@@ -318,15 +318,15 @@ struct SongsView: View {
                         hasPlayableOnActiveServer = true
                     }
                 }
-                
+
                 if !hasMatchingType || !hasMatchingDifficulty || !isPlayable || !hasPlayableOnActiveServer {
                     return false
                 }
             }
-            
+
             return true
         }
-        
+
         return filtered.sorted { a, b in
             switch sortOption {
             case .defaultOrder:
@@ -334,11 +334,11 @@ struct SongsView: View {
             case .versionAndDate:
                 let orderA = ThemeUtils.versionSortOrder(a.version ?? "")
                 let orderB = ThemeUtils.versionSortOrder(b.version ?? "")
-                
+
                 if orderA != orderB {
                     return sortAscending ? (orderA < orderB) : (orderA > orderB)
                 }
-                
+
                 let releaseA = a.releaseDate ?? "0000-00-00"
                 let releaseB = b.releaseDate ?? "0000-00-00"
                 if releaseA != releaseB {
@@ -354,18 +354,18 @@ struct SongsView: View {
         }
         .map(\.songIdentifier)
     }
-    
+
     private func updateDisplayedSongs(debounce: Duration? = nil, refreshSnapshots: Bool = false) {
         searchTask?.cancel()
         isSorting = true
-        
+
         searchTask = Task { @MainActor in
             defer { isSorting = false }
             if let debounce {
                 try? await Task.sleep(for: debounce)
             }
             guard !Task.isCancelled else { return }
-            
+
             let currentSongs = songs
             let songsByIdentifier = Dictionary(uniqueKeysWithValues: currentSongs.map { ($0.songIdentifier, $0) })
             let snapshots: [SongFilterSnapshot]
@@ -379,12 +379,12 @@ struct SongsView: View {
             } else {
                 snapshots = snapshotCache
             }
-            
+
             let currentFilter = filterSettings
             let currentSearch = searchText
             let currentSort = sortOption
             let currentAscending = sortAscending
-            
+
             let identifiers = await Task.detached(priority: .userInitiated) {
                 Self.filterAndSortSongIdentifiers(
                     from: snapshots,
@@ -394,18 +394,18 @@ struct SongsView: View {
                     sortAscending: currentAscending
                 )
             }.value
-            
+
             guard !Task.isCancelled else { return }
             displayedSongs = identifiers.compactMap { songsByIdentifier[$0] }
         }
     }
-    
+
     /// Given the pinch magnification, compute the effective continuous column count.
     private func continuousColumns(for magnification: CGFloat) -> CGFloat {
         let raw = pinchStartColumns / magnification
         return min(maxColumns, max(minColumns, raw))
     }
-    
+
     /// Compute cell size and spacing from a column count and available width.
     private func gridMetrics(intColumns: Int, in width: CGFloat) -> (cellSize: CGFloat, spacing: CGFloat) {
         let intCols = max(1, intColumns)
@@ -422,7 +422,7 @@ struct SongsView: View {
         let cellSize = (width - totalSpacing - horizontalPadding * 2) / CGFloat(intCols)
         return (max(1, cellSize), spacing)
     }
-    
+
     /// The corner radius for a given column count
     private func cornerRadius(for columns: Int) -> CGFloat {
         switch columns {
@@ -431,12 +431,12 @@ struct SongsView: View {
         default: return 3
         }
     }
-    
+
     /// Whether to show score dots at this column count
     private func showDots(for columns: Int) -> Bool {
         columns <= 5
     }
-    
+
     /// Estimate which song index is near the center of the pinch gesture.
     private func estimateCenterSongIndex(pinchY: CGFloat, gridWidth: CGFloat, columns: Int) -> Int {
         let metrics = gridMetrics(intColumns: columns, in: gridWidth)
@@ -444,13 +444,13 @@ struct SongsView: View {
         let spacing = metrics.spacing
         let rowHeight = cellSize + spacing
         guard rowHeight > 0 else { return 0 }
-        
+
         let estimatedRow = Int(max(0, pinchY - 12) / rowHeight)
         let centerIndexInRow = columns / 2
         let index = estimatedRow * columns + centerIndexInRow
         return min(max(0, index), max(0, displayedSongs.count - 1))
     }
-    
+
     private func makePinchGesture(width: CGFloat) -> some Gesture {
         MagnifyGesture(minimumScaleDelta: 0.02)
             .onChanged { value in
@@ -458,7 +458,7 @@ struct SongsView: View {
                     isZooming = true
                     navigationDisabled = true
                     pinchStartColumns = CGFloat(committedColumns)
-                    
+
                     let centerIdx = estimateCenterSongIndex(
                         pinchY: value.startLocation.y,
                         gridWidth: width,
@@ -475,18 +475,18 @@ struct SongsView: View {
                 let targetCols = max(Int(minColumns), min(Int(maxColumns), Int(finalCols.rounded())))
                 let changed = targetCols != committedColumns
                 let anchorID = zoomAnchorSongID
-                
+
                 isZooming = false
-                
+
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
                     committedColumns = targetCols
                     liveColumnCount = CGFloat(targetCols)
                 }
-                
+
                 if changed {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 }
-                
+
                 if let anchorID = anchorID {
                     Task { @MainActor in
                         try? await Task.sleep(for: .milliseconds(50))
@@ -495,14 +495,14 @@ struct SongsView: View {
                         }
                     }
                 }
-                
+
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(300))
                     navigationDisabled = false
                 }
             }
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -515,7 +515,7 @@ struct SongsView: View {
                 } else {
                     GeometryReader { geo in
                         let width = geo.size.width
-                        
+
                         ScrollViewReader { scrollProxy in
                             ScrollView {
                                 if isGridView {
@@ -549,7 +549,7 @@ struct SongsView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                     }
-                    
+
                     if !searchText.isEmpty && displayedSongs.isEmpty && !isSorting {
                         ContentUnavailableView.search(text: searchText)
                             .padding(.top, 40)
@@ -568,7 +568,7 @@ struct SongsView: View {
                             .contentTransition(.symbolEffect(.replace))
                     }
                 }
-                
+
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Picker("sort.title", selection: $sortOption.animation(.easeInOut)) {
@@ -576,9 +576,9 @@ struct SongsView: View {
                                 Text(LocalizedStringKey(option.rawValue)).tag(option)
                             }
                         }
-                        
+
                         Divider()
-                        
+
                         Button {
                             withAnimation(.easeInOut) {
                                 sortAscending.toggle()
@@ -593,7 +593,7 @@ struct SongsView: View {
                         Image(systemName: "arrow.up.arrow.down")
                     }
                 }
-                
+
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showFilterSheet = true
@@ -657,9 +657,9 @@ struct SongsView: View {
             snapshotCache = []
         }
     }
-    
+
     // MARK: - List Layout
-    
+
     private var listContent: some View {
         LazyVStack(spacing: 8) {
             ForEach(displayedSongs) { song in
@@ -675,9 +675,9 @@ struct SongsView: View {
         }
         .padding(.vertical, 12)
     }
-    
+
     // MARK: - Grid Layout
-    
+
     private func gridBody(in width: CGFloat) -> some View {
         let cols = isZooming ? liveColumnCount : CGFloat(committedColumns)
         let intCols = max(Int(minColumns), min(Int(maxColumns), Int(cols.rounded())))
@@ -687,7 +687,7 @@ struct SongsView: View {
         let horizontalPadding = spacing + 2
         let cr = cornerRadius(for: intCols)
         let dots = showDots(for: intCols)
-        
+
         return LazyVGrid(
             columns: Array(repeating: GridItem(.fixed(cellSize), spacing: spacing), count: intCols),
             spacing: spacing
@@ -701,7 +701,7 @@ struct SongsView: View {
         .padding(.horizontal, horizontalPadding)
         .padding(.vertical, 12)
     }
-    
+
     @ViewBuilder
     private func gridCellView(song: Song, intCols: Int, cellSize: CGFloat, cornerRadius: CGFloat, showDots: Bool) -> some View {
         Button {
@@ -746,7 +746,7 @@ extension View {
             self
         }
     }
-    
+
     @ViewBuilder
     func applyZoomTransition(id: String, ns: Namespace.ID) -> some View {
         if #available(iOS 18.0, *) {
@@ -766,11 +766,11 @@ struct SongGridCell: View {
     var cellSize: CGFloat = 60
     var cornerRadius: CGFloat = 6
     var showDots: Bool = true
-    var actualSheet: Sheet? = nil
+    var actualSheet: Sheet?
     var showActualDifficultyBorder: Bool = false
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
-    
+
     private var utageFontSize: CGFloat {
         switch columnCount {
         case ...3: return 14
@@ -779,7 +779,7 @@ struct SongGridCell: View {
         default: return 6
         }
     }
-    
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             SongJacketView(
@@ -797,10 +797,10 @@ struct SongGridCell: View {
                         )
                 }
             }
-            
+
             if showDots {
                 let isUtage = song.songId > 100000
-                
+
                 HStack(spacing: 2) {
                     if isUtage {
                         Text("宴")
@@ -818,7 +818,7 @@ struct SongGridCell: View {
                                 .filter { $0.type.lowercased() == "std" }
                                 .sorted(by: { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) })
                         }()
-                        
+
                         ForEach(prioritizedSheets) { sheet in
                             if scoreCache.isEmpty {
                                 SongRowView.ScoreProgressDot(sheet: sheet, context: modelContext)

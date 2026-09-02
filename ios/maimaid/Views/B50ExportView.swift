@@ -10,30 +10,30 @@ struct B50ExportView: View {
     let userName: String?
     let currentVersion: String? // 当前设定的最新版本
     let constantMode: Best50ConstantMode
-    
+
     private let columns = 5
     private let cardWidth: CGFloat = 220
     private let cardSpacing: CGFloat = 8
     private let sectionPadding: CGFloat = 24
-    
+
     private var totalWidth: CGFloat {
         CGFloat(columns) * cardWidth + CGFloat(columns - 1) * cardSpacing + sectionPadding * 2
     }
-    
+
     @Environment(\.colorScheme) var colorScheme
-    
+
     // Explicit Theme Colors for ImageRenderer
     private var bgColor: Color { colorScheme == .dark ? Color(hex: "#0F0F13") : Color.white }
     private var primaryColor: Color { colorScheme == .dark ? .white : .black }
     private var secondaryColor: Color { colorScheme == .dark ? Color.white.opacity(0.6) : Color.black.opacity(0.6) }
     private var subtleColor: Color { colorScheme == .dark ? Color.white.opacity(0.3) : Color.black.opacity(0.3) }
     private var emptyCardColor: Color { colorScheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.05) }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // MARK: - Header
             headerSection
-            
+
             // MARK: - New Songs Section (B15)
             if !b15.isEmpty {
                 sectionView(
@@ -43,7 +43,7 @@ struct B50ExportView: View {
                     accentColor: Color(hex: "#FF6B6B")
                 )
             }
-            
+
             // MARK: - Old Songs Section (B35)
             if !b35.isEmpty {
                 sectionView(
@@ -53,16 +53,16 @@ struct B50ExportView: View {
                     accentColor: Color(hex: "#4ECDC4")
                 )
             }
-            
+
             // MARK: - Footer
             footerSection
         }
         .frame(width: totalWidth)
         .background(bgColor)
     }
-    
+
     // MARK: - Header
-    
+
     private var headerSection: some View {
         VStack(spacing: 12) {
             HStack {
@@ -72,19 +72,19 @@ struct B50ExportView: View {
                             .font(.system(size: 24, weight: .bold))
                             .foregroundStyle(primaryColor)
                     }
-                    
+
                     Text(String(localized: "bestTable.rating"))
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(secondaryColor)
                 }
-                
+
                 Spacer()
-                
+
                 VStack(alignment: .trailing, spacing: 0) {
                     Text("\(totalRating)")
                         .font(.system(size: 56, weight: .black, design: .rounded))
                         .foregroundStyle(ThemeUtils.ratingGradient(totalRating))
-                    
+
                     if let ratingModeLabel {
                         Text(ratingModeLabel)
                             .font(.system(size: 14, weight: .bold))
@@ -92,7 +92,7 @@ struct B50ExportView: View {
                     }
                 }
             }
-            
+
             // Summary pills
             HStack(spacing: 12) {
                 summaryPill(
@@ -111,7 +111,7 @@ struct B50ExportView: View {
         .padding(sectionPadding)
         .padding(.top, 12)
     }
-    
+
     private func summaryPill(label: String, value: String, color: Color) -> some View {
         HStack(spacing: 6) {
             Circle()
@@ -128,9 +128,9 @@ struct B50ExportView: View {
         .padding(.vertical, 6)
         .background(color.opacity(0.12), in: Capsule())
     }
-    
+
     // MARK: - Section
-    
+
     private func sectionView(title: LocalizedStringKey, subtitle: String, entries: [RatingUtils.RatingEntry], accentColor: Color) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
@@ -144,12 +144,12 @@ struct B50ExportView: View {
                 Spacer()
             }
             .padding(.horizontal, sectionPadding)
-            
+
             // Grid of song cards
             let rows = stride(from: 0, to: entries.count, by: columns).map { startIndex in
                 Array(entries[startIndex..<min(startIndex + columns, entries.count)])
             }
-            
+
             VStack(spacing: cardSpacing) {
                 ForEach(rows.indices, id: \.self) { rowIndex in
                     let row = rows[rowIndex]
@@ -170,9 +170,9 @@ struct B50ExportView: View {
         }
         .padding(.vertical, 16)
     }
-    
+
     // MARK: - Song Card
-    
+
     private func songCard(entry: RatingUtils.RatingEntry) -> some View {
         B50ExportSongCard(
             entry: entry,
@@ -184,9 +184,9 @@ struct B50ExportView: View {
             emptyCardColor: emptyCardColor
         )
     }
-    
+
     // MARK: - Export Badge
-    
+
     private func exportBadge(text: String, color: Color) -> some View {
         Text(text)
             .font(.system(size: 7, weight: .heavy))
@@ -195,9 +195,9 @@ struct B50ExportView: View {
             .padding(.vertical, 1.5)
             .background(color, in: RoundedRectangle(cornerRadius: 2))
     }
-    
+
     // MARK: - Footer
-    
+
     private var footerSection: some View {
         VStack(spacing: 8) {
             // Version indicator
@@ -207,7 +207,7 @@ struct B50ExportView: View {
                         .font(.system(size: 10))
                     Text(ThemeUtils.versionAbbreviation(version))
                         .font(.system(size: 11, weight: .semibold))
-                    
+
                     if let constantModeLabel {
                         Text(constantModeLabel)
                             .font(.system(size: 9, weight: .semibold))
@@ -219,7 +219,7 @@ struct B50ExportView: View {
                 }
                 .foregroundStyle(secondaryColor)
             }
-            
+
             HStack {
                 Spacer()
                 Text(String(localized: "bestTable.export.watermark"))
@@ -302,8 +302,7 @@ private struct B50ExportSongCard: View {
             if let imageName = entry.imageName,
                let uiImage = ImageDownloader.shared.loadImage(imageName: imageName) {
                 Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
+                    .resizable().scaledToFill()
                     .frame(width: jacketSize, height: jacketSize)
                     .clipShape(.rect(cornerRadius: 4))
             } else {
@@ -441,10 +440,10 @@ extension B50ExportView {
         )
         .environment(\.colorScheme, colorScheme ?? .light)
         .preferredColorScheme(colorScheme)
-        
+
         let renderer = ImageRenderer(content: view)
         renderer.scale = 2.0 // Retina quality
-        
+
         return renderer.uiImage
     }
 }

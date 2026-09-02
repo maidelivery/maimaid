@@ -9,20 +9,20 @@ struct MarqueeText: View {
     var spacing: CGFloat = 60
     var speed: Double = 30 // pixels per second (slower default)
     var initialDelay: Double = 2.0 // pause on first character
-    
+
     @State private var contentWidth: CGFloat = 0
     @State private var containerWidth: CGFloat = 0
     @State private var offset: CGFloat = 0
     @State private var marqueeTask: Task<Void, Never>?
-    
+
     private var needsScroll: Bool {
         contentWidth > containerWidth && containerWidth > 0
     }
-    
+
     var body: some View {
         GeometryReader { container in
             let cw = container.size.width
-            
+
             HStack(spacing: spacing) {
                 textLabel
                     .background(
@@ -37,7 +37,7 @@ struct MarqueeText: View {
                                 }
                         }
                     )
-                
+
                 // Duplicate for seamless loop
                 if needsScroll {
                     textLabel
@@ -62,7 +62,7 @@ struct MarqueeText: View {
         }
         .clipped()
     }
-    
+
     private var textLabel: some View {
         Text(text)
             .font(font)
@@ -71,29 +71,29 @@ struct MarqueeText: View {
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: false)
     }
-    
+
     private func startMarquee() {
         stopMarquee()
         offset = 0
-        
+
         guard needsScroll else { return }
-        
+
         let totalDistance = contentWidth + spacing
         let duration = totalDistance / speed
-        
+
         marqueeTask = Task { @MainActor in
             while !Task.isCancelled {
                 // Pause at the beginning
                 try? await Task.sleep(nanoseconds: UInt64(initialDelay * 1_000_000_000))
                 if Task.isCancelled { break }
-                
+
                 withAnimation(.linear(duration: duration)) {
                     offset = -totalDistance
                 }
-                
+
                 try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
                 if Task.isCancelled { break }
-                
+
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
                 withTransaction(transaction) {
@@ -102,7 +102,7 @@ struct MarqueeText: View {
             }
         }
     }
-    
+
     private func stopMarquee() {
         marqueeTask?.cancel()
         marqueeTask = nil

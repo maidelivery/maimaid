@@ -7,30 +7,30 @@ struct ScoreEntryView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
-    
+
     let sheet: Sheet
-    
+
     let initialRate: Double?
     let initialRank: String?
     let initialDxScore: Int?
     let initialFC: String?
     let initialFS: String?
-    
+
     @State private var rateText = ""
     @State private var dxScoreText = ""
     @State private var isSaved = false
     @FocusState private var isRateFocused: Bool
     @FocusState private var isDxScoreFocused: Bool
-    
-    @State private var selectedFC: String? = nil
-    @State private var selectedFS: String? = nil
-    @State private var cachedCurrentScore: Score? = nil
-    
+
+    @State private var selectedFC: String?
+    @State private var selectedFS: String?
+    @State private var cachedCurrentScore: Score?
+
     @ScaledMetric(relativeTo: .title3) private var headerAccentHeight = 50
     @ScaledMetric(relativeTo: .largeTitle) private var achievementFontSize = 48
     @ScaledMetric(relativeTo: .title3) private var achievementPercentFontSize = 24
     @ScaledMetric(relativeTo: .body) private var dxScoreFieldMinWidth = 88
-    
+
     init(sheet: Sheet, initialRate: Double? = nil, initialRank: String? = nil, initialDxScore: Int? = nil, initialFC: String? = nil, initialFS: String? = nil) {
         self.sheet = sheet
         self.initialRate = initialRate
@@ -39,39 +39,39 @@ struct ScoreEntryView: View {
         self.initialFC = initialFC
         self.initialFS = initialFS
     }
-    
+
     private var trimmedRateText: String {
         rateText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
-    
+
     private var trimmedDxScoreText: String {
         dxScoreText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
-    
+
     private var parsedRate: Double? {
         Double(trimmedRateText)
     }
-    
+
     private var parsedDxScore: Int? {
         Int(trimmedDxScoreText)
     }
-    
+
     private var maxDxScore: Int {
         (sheet.total ?? 0) * 3
     }
-    
+
     private var diffColor: Color {
         ThemeUtils.colorForDifficulty(sheet.difficulty, sheet.type, colorScheme)
     }
-    
+
     private var chartTypeLabel: String {
         sheet.type.uppercased() == "STD" ? String(localized: "scanner.chart.std") : sheet.type.uppercased()
     }
-    
+
     private var difficultyLabel: String {
         sheet.difficulty.lowercased() == "remaster" ? "Re:MASTER" : sheet.difficulty.capitalized
     }
-    
+
     private var levelLabel: String {
         "Lv.\(ServerChartPolicy.metadata(for: sheet, on: activeServer).displayLevel)"
     }
@@ -79,7 +79,7 @@ struct ScoreEntryView: View {
     private var activeServer: GameServer {
         activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
     }
-    
+
     private var displayedRank: String {
         if let rate = parsedRate {
             return RatingUtils.calculateRank(achievement: rate)
@@ -92,16 +92,16 @@ struct ScoreEntryView: View {
         }
         return "—"
     }
-    
+
     private var displayedRankColor: Color {
         displayedRank == "—" ? .secondary : RatingUtils.colorForRank(displayedRank)
     }
-    
+
     private var selectedFCDisplayText: String {
         guard let selectedFC, !selectedFC.isEmpty else {
             return String(localized: "score.entry.combo")
         }
-        
+
         switch selectedFC {
         case "fcp":
             return "FC+"
@@ -111,12 +111,12 @@ struct ScoreEntryView: View {
             return selectedFC.uppercased()
         }
     }
-    
+
     private var selectedFSDisplayText: String {
         guard let selectedFS, !selectedFS.isEmpty else {
             return String(localized: "score.entry.sync")
         }
-        
+
         switch selectedFS {
         case "sync":
             return "Sync"
@@ -132,7 +132,7 @@ struct ScoreEntryView: View {
             return selectedFS.uppercased()
         }
     }
-    
+
     private var rateValidationMessage: String? {
         guard !trimmedRateText.isEmpty else { return nil }
         guard let rate = parsedRate else {
@@ -143,7 +143,7 @@ struct ScoreEntryView: View {
         }
         return nil
     }
-    
+
     private var dxScoreValidationMessage: String? {
         guard !trimmedDxScoreText.isEmpty else { return nil }
         guard let dxScore = parsedDxScore, dxScore >= 0 else {
@@ -154,7 +154,7 @@ struct ScoreEntryView: View {
         }
         return nil
     }
-    
+
     private var validationMessage: (text: String, color: Color, icon: String)? {
         if let rateValidationMessage {
             return (rateValidationMessage, .red, "exclamationmark.circle.fill")
@@ -164,26 +164,26 @@ struct ScoreEntryView: View {
         }
         return nil
     }
-    
+
     private var savedMessage: (text: String, color: Color, icon: String)? {
         if isSaved {
             return (String(localized: "score.entry.savedHint"), .green, "checkmark.circle.fill")
         }
         return nil
     }
-    
+
     private var isValid: Bool {
         guard let rate = parsedRate else { return false }
         let rateValid = rate >= 0 && rate <= 101.0
-        
+
         if let dxScore = parsedDxScore {
             let dxValid = dxScore >= 0 && (maxDxScore == 0 || dxScore <= maxDxScore)
             return rateValid && dxValid
         }
-        
+
         return rateValid
     }
-    
+
     private var saveButtonBackground: Color {
         if isSaved {
             return .green
@@ -193,22 +193,22 @@ struct ScoreEntryView: View {
             return .gray
         }
     }
-    
+
     private var feedbackAnimation: Animation {
         reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.3, dampingFraction: 0.82)
     }
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     headerCard
                     scoreInputSection
-                    
+
                     if let existingScore = cachedCurrentScore {
                         existingScoreCard(existingScore)
                     }
-                    
+
                     if let savedMessage {
                         Label {
                             Text(savedMessage.text)
@@ -219,7 +219,7 @@ struct ScoreEntryView: View {
                         .foregroundStyle(savedMessage.color)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    
+
                     saveButton
                 }
                 .padding(20)
@@ -233,23 +233,23 @@ struct ScoreEntryView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("profile.edit.cancel") { dismiss() }
                 }
-                
+
                 if isSaved {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("filter.done") { dismiss() }
                     }
                 }
-                
+
                 ToolbarItemGroup(placement: .keyboard) {
                     if isRateFocused {
                         Button("score.entry.keyboard.next") {
                             isRateFocused = false
                             isDxScoreFocused = true
                         }
-                        
+
                         Spacer()
                     }
-                    
+
                     Button("filter.done") {
                         dismissKeyboard()
                     }
@@ -272,13 +272,13 @@ struct ScoreEntryView: View {
             resetSaveStateIfNeeded()
         }
     }
-    
+
     private var headerCard: some View {
         HStack(spacing: 16) {
             RoundedRectangle(cornerRadius: 3)
                 .fill(diffColor)
                 .frame(width: 5, height: headerAccentHeight)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 if let song = sheet.song {
                     Text(song.title)
@@ -286,7 +286,7 @@ struct ScoreEntryView: View {
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                 }
-                
+
                 HStack(spacing: 4) {
                     Text(chartTypeLabel)
                         .font(.caption.bold())
@@ -294,15 +294,15 @@ struct ScoreEntryView: View {
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
                         .background(ThemeUtils.badgeColorForChartType(sheet.type, colorScheme), in: Capsule())
-                    
+
                     Text(difficultyLabel)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(diffColor)
                 }
             }
-            
+
             Spacer(minLength: 12)
-            
+
             Text(levelLabel)
                 .font(.title2.bold())
                 .fontDesign(.rounded)
@@ -314,14 +314,14 @@ struct ScoreEntryView: View {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
         .accessibilityElement(children: .combine)
     }
-    
+
     private var scoreInputSection: some View {
         VStack(spacing: 20) {
             VStack(spacing: 12) {
                 Text("song.detail.table.achievement")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                
+
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     TextField("0.0000", text: $rateText)
                         .font(.system(size: achievementFontSize, weight: .black, design: .rounded))
@@ -332,7 +332,7 @@ struct ScoreEntryView: View {
                         .submitLabel(.next)
                         .focused($isRateFocused)
                         .accessibilityLabel(Text("song.detail.table.achievement"))
-                    
+
                     Text("%")
                         .font(.system(size: achievementPercentFontSize, weight: .bold, design: .rounded))
                         .foregroundStyle(.secondary)
@@ -340,13 +340,13 @@ struct ScoreEntryView: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-            
+
             HStack(spacing: 12) {
                 HStack(spacing: 8) {
                     Image(systemName: "trophy.fill")
                         .foregroundStyle(displayedRankColor)
                         .accessibilityHidden(true)
-                    
+
                     Text(displayedRank)
                         .font(.title3.bold())
                         .fontDesign(.rounded)
@@ -360,12 +360,12 @@ struct ScoreEntryView: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(Text("score.entry.rank"))
                 .accessibilityValue(Text(displayedRank == "—" ? String(localized: "score.entry.rank.pending") : displayedRank))
-                
+
                 HStack(spacing: 8) {
                     Image(systemName: "star.fill")
                         .foregroundStyle(dxScoreText.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.yellow))
                         .accessibilityHidden(true)
-                    
+
                     TextField(String(localized: "score.entry.dxScore"), text: $dxScoreText)
                         .font(.body.bold())
                         .fontDesign(.rounded)
@@ -376,7 +376,7 @@ struct ScoreEntryView: View {
                         .submitLabel(.done)
                         .focused($isDxScoreFocused)
                         .accessibilityLabel(Text("score.entry.dxScore"))
-                    
+
                     if maxDxScore > 0 {
                         Text("/ \(maxDxScore)")
                             .font(.footnote)
@@ -390,7 +390,7 @@ struct ScoreEntryView: View {
                 .padding(.horizontal, 12)
                 .background(dxScoreText.isEmpty ? Color.secondary.opacity(0.08) : Color.yellow.opacity(0.12), in: Capsule())
             }
-            
+
             if let validationMessage {
                 Label {
                     Text(validationMessage.text)
@@ -402,7 +402,7 @@ struct ScoreEntryView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .transition(.opacity)
             }
-            
+
             HStack(spacing: 12) {
                 Menu {
                     Picker(String(localized: "score.entry.combo"), selection: $selectedFC) {
@@ -428,7 +428,7 @@ struct ScoreEntryView: View {
                 }
                 .accessibilityLabel(Text("score.entry.combo"))
                 .accessibilityValue(Text(selectedFCDisplayText))
-                
+
                 Menu {
                     Picker(String(localized: "score.entry.sync"), selection: $selectedFS) {
                         Text("common.none").tag(String?.none)
@@ -461,27 +461,27 @@ struct ScoreEntryView: View {
         .padding(24)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
     }
-    
+
     private func existingScoreCard(_ score: Score) -> some View {
         HStack(spacing: 12) {
             Image(systemName: "clock.arrow.circlepath")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text("score.entry.currentBest")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                
+
                 Text("\(score.rate, format: .number.precision(.fractionLength(4)))% · \(score.rank)")
                     .font(.headline.bold())
                     .monospacedDigit()
                     .foregroundStyle(.primary)
             }
-            
+
             Spacer()
-            
+
             Text(score.achievementDate, style: .date)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -490,7 +490,7 @@ struct ScoreEntryView: View {
         .background(Color.primary.opacity(0.03), in: RoundedRectangle(cornerRadius: 12))
         .accessibilityElement(children: .combine)
     }
-    
+
     private var saveButton: some View {
         Button {
             if isSaved {
@@ -515,51 +515,51 @@ struct ScoreEntryView: View {
         .disabled(!isSaved && !isValid)
         .animation(feedbackAnimation, value: isSaved)
     }
-    
+
     private func loadInitialValues() {
         cachedCurrentScore = ScoreService.shared.score(for: sheet, context: modelContext)
-        
+
         if let initialRate {
             rateText = String(format: "%.4f", initialRate)
         } else if let cachedCurrentScore {
             rateText = String(format: "%.4f", cachedCurrentScore.rate)
         }
-        
+
         if let initialDxScore {
             dxScoreText = "\(initialDxScore)"
         } else if let cachedCurrentScore {
             dxScoreText = cachedCurrentScore.dxScore > 0 ? "\(cachedCurrentScore.dxScore)" : ""
         }
-        
+
         if let initialFC, !initialFC.isEmpty {
             selectedFC = initialFC
         } else if let cachedCurrentScore, let fc = cachedCurrentScore.fc, !fc.isEmpty {
             selectedFC = fc
         }
-        
+
         if let initialFS, !initialFS.isEmpty {
             selectedFS = initialFS
         } else if let cachedCurrentScore, let fs = cachedCurrentScore.fs, !fs.isEmpty {
             selectedFS = fs
         }
     }
-    
+
     private func dismissKeyboard() {
         isRateFocused = false
         isDxScoreFocused = false
     }
-    
+
     private func resetSaveStateIfNeeded() {
         guard isSaved else { return }
-        
+
         withAnimation(feedbackAnimation) {
             isSaved = false
         }
     }
-    
+
     private func saveScore() {
         guard let rate = parsedRate, isValid else { return }
-        
+
         _ = ScoreService.shared.recordPlay(
             sheet: sheet,
             rate: rate,
@@ -569,7 +569,7 @@ struct ScoreEntryView: View {
             fs: selectedFS,
             context: modelContext
         )
-        
+
         let savedScore = ScoreService.shared.saveScore(
             sheet: sheet,
             rate: rate,
@@ -579,7 +579,7 @@ struct ScoreEntryView: View {
             fs: selectedFS,
             context: modelContext
         )
-        
+
         try? modelContext.save()
         cachedCurrentScore = savedScore
         ScoreService.shared.notifyScoresChanged(for: savedScore.userProfileId)
@@ -594,7 +594,7 @@ struct ScoreEntryView: View {
                 context: modelContext
             )
         }
-        
+
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         withAnimation(feedbackAnimation) {
             isSaved = true

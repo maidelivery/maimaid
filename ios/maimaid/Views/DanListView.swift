@@ -3,19 +3,19 @@ import SwiftUI
 struct DanListView: View {
     @State private var categories: [DanCategory] = []
     @State private var isLoading = true
-    
+
     private var groupedCategories: [(version: String, items: [DanCategory])] {
         let groups = Dictionary(grouping: categories) { category in
             versionName(for: category)
         }
-        
+
         return groups
             .map { (version: $0.key, items: sortCategories($0.value)) }
             .sorted { lhs, rhs in
                 versionSortKey(lhs.version) > versionSortKey(rhs.version)
             }
     }
-    
+
     var body: some View {
         List {
             if isLoading {
@@ -49,12 +49,12 @@ struct DanListView: View {
 //                                            .font(.system(size: 18, weight: .bold))
 //                                            .foregroundStyle(.orange)
 //                                    }
-                                    
+
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(category.title)
                                             .font(.system(size: 16, weight: .bold, design: .rounded))
                                             .foregroundStyle(.primary)
-                                        
+
                                         Text(String(localized: "dan.list.sections \(category.sections.count)"))
                                             .font(.system(size: 12))
                                             .foregroundStyle(.secondary)
@@ -76,46 +76,46 @@ struct DanListView: View {
             loadData()
         }
     }
-    
+
     private func loadData() {
         categories = MaimaiDataFetcher.shared.loadCachedDanData()
         isLoading = false
     }
-    
+
     private func versionName(for category: DanCategory) -> String {
         let title = category.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         let sequence = UserDefaults.app.maimaiVersionSequence
         if let matched = sequence
             .sorted(by: { $0.count > $1.count })
             .first(where: { title.localizedCaseInsensitiveContains($0) || category.id.localizedCaseInsensitiveContains($0) }) {
             return matched
         }
-        
+
         if let prefix = category.id.split(separator: "_").first, !prefix.isEmpty {
             return String(prefix)
         }
-        
+
         return String(localized: "common.unknown")
     }
-    
+
     private func versionSortKey(_ version: String) -> Int {
         let order = ThemeUtils.versionSortOrder(version)
         return order == 999 ? -1 : order
     }
-    
+
     private func sortCategories(_ items: [DanCategory]) -> [DanCategory] {
         items.sorted { lhs, rhs in
             rankOrder(lhs.title) < rankOrder(rhs.title)
         }
     }
-    
+
     private func rankOrder(_ title: String) -> Int {
         let normalized = title.lowercased()
-        
+
         if normalized.contains("expert") { return -2 }
         if normalized.contains("master") { return -1 }
-        
+
         if normalized.contains("真") { return 0 }
         if normalized.contains("超") { return 1 }
         if normalized.contains("檄") { return 2 }
@@ -134,7 +134,7 @@ struct DanListView: View {
         if normalized.contains("煌") { return 15 }
         if normalized.contains("舞") { return 16 }
         if normalized.contains("霸") { return 17 }
-        
+
         if normalized.contains("初") { return 100 }
         if normalized.contains("二") { return 101 }
         if normalized.contains("三") { return 102 }
@@ -145,7 +145,7 @@ struct DanListView: View {
         if normalized.contains("八") { return 107 }
         if normalized.contains("九") { return 108 }
         if normalized.contains("十") { return 109 }
-        
+
         return 999
     }
 }

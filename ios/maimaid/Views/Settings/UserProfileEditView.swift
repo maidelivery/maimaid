@@ -6,7 +6,7 @@ struct UserProfileEditView: View {
     enum Mode: Identifiable {
         case create
         case edit(UUID)
-        
+
         var id: String {
             switch self {
             case .create: return "create"
@@ -16,31 +16,30 @@ struct UserProfileEditView: View {
     }
 
     let mode: Mode
-    
+
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var name: String = ""
     @State private var plate: String = ""
     @State private var selectedServer: GameServer = .jp
-    
+
     @State private var avatarUrl: String?
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImageData: Data?
     @State private var isSaving = false
     @State private var errorMessage: String?
-    
+
     private var isEditing: Bool {
         if case .edit = mode { return true }
         return false
     }
-    
+
     private var profileId: UUID? {
         if case .edit(let profileId) = mode { return profileId }
         return nil
     }
-    
-    
+
     var body: some View {
         Form {
             EditableAvatarSection(
@@ -48,19 +47,19 @@ struct UserProfileEditView: View {
                 selectedImageData: $selectedImageData,
                 avatarURL: $avatarUrl
             )
-            
+
             Section("userProfile.section.basic") {
                 TextField("userProfile.name", text: $name)
                 TextField("profile.edit.titleName", text: $plate)
-                
+
                 Picker("userProfile.server", selection: $selectedServer) {
                     ForEach(GameServer.allCases) { server in
                         Text(server.displayName).tag(server)
                     }
                 }
-                
+
             }
-            
+
             Section("profile.edit.presetIcon") {
                 NavigationLink {
                     MaimaiIconPicker(avatarUrl: $avatarUrl, selectedImageData: $selectedImageData)

@@ -1,207 +1,422 @@
 import Foundation
 import Observation
 
-struct LetterGameRoomSettings: Codable, Equatable {
-    let turnDurationSeconds: Int
-    let stalledRoundLimit: Int
-    let songCountOverride: Int?
-    let publicHintCost: Int
-    let privateHintCost: Int
-    let selectionMode: String
-}
-
-struct LetterGameRoomMember: Codable, Equatable, Identifiable {
-    let userId: String
-    let status: String
-    let seatOrder: Int
-    var id: String { userId }
-}
-
-struct LetterGameLatestMatch: Codable, Equatable {
-    let id: String
-    let sequence: Int
-    let status: String
-    let revision: Int
-}
-
-struct LetterGameRoom: Codable, Equatable, Identifiable {
-    let id: String
-    let code: String
-    let visibility: String
-    let hostMode: String
-    let hostUserId: String
-    let status: String
-    let settings: LetterGameRoomSettings
-    let memberCount: Int
-    let members: [LetterGameRoomMember]
-    let latestMatch: LetterGameLatestMatch?
-}
-
-struct LetterGameMatchPlayer: Codable, Equatable, Identifiable {
-    let userId: String
-    let score: Int
-    let turnOrder: Int
-    let status: String
-    let scoringEligible: Bool
-    var id: String { userId }
-}
-
-struct LetterGameFact: Codable, Equatable, Identifiable {
-    let type: String
-    let visibility: String
-    let value: AnyCodable
-    var id: String { "\(type)-\(visibility)" }
-}
-
-struct LetterGameMatchSong: Codable, Equatable, Identifiable {
-    let slotId: String
-    let title: String
-    let remainingCharacterCount: Int
-    let status: String
-    let completionReason: String?
-    let completedByUserId: String?
-    let facts: [LetterGameFact]
-    var id: String { slotId }
-}
-
-struct LetterGameMatchSnapshot: Codable, Equatable {
-    let matchId: String
-    let status: String
-    let revision: Int
-    let turnUserId: String?
-    let turnDeadline: Date?
-    let noProgressRounds: Int
-    let players: [LetterGameMatchPlayer]
-    let songs: [LetterGameMatchSong]
-}
-
-private struct LetterGameRoomResponse: Codable { let room: LetterGameRoom }
-private struct LetterGameMatchResponse: Codable { let match: LetterGameMatchSnapshot }
-private struct LetterGameRoomsResponse: Codable { let rooms: [LetterGameRoom] }
-private struct LetterGameCreateRequest: Codable {
-    let visibility: String
-    let hostMode: String
-    let turnDurationSeconds: Int
-    let stalledRoundLimit: Int
-    let songCount: Int?
-    let publicHintCost: Int
-    let privateHintCost: Int
-    let selectionMode: String
-    let selectionConfig: [String: String]
-}
-
-struct AnyCodable: Codable, Equatable {
-    let value: AnyHashable?
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if container.decodeNil() { value = nil }
-        else if let bool = try? container.decode(Bool.self) { value = bool }
-        else if let number = try? container.decode(Double.self) { value = number }
-        else if let string = try? container.decode(String.self) { value = string }
-        else { value = nil }
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        switch value {
-        case let value as Bool: try container.encode(value)
-        case let value as Double: try container.encode(value)
-        case let value as String: try container.encode(value)
-        default: try container.encodeNil()
-        }
-    }
-}
+// The service keeps the REST and WebSocket lifecycle together to serialize room state.
+// swiftlint:disable file_length type_body_length
 
 @MainActor
 @Observable
 final class LetterGameService {
-    var room: LetterGameRoom?
-    var match: LetterGameMatchSnapshot?
-    var errorMessage: String?
+    private(set) var publicRooms: [LetterGameRoom] = []
+    private(set) var room: LetterGameRoom?
+    private(set) var match: LetterGameMatchSnapshot?
+    private(set) var isLoading = false
+    private(set) var isConnected = false
+    var errorMessage = ""
+    var isShowingError = false
+
     private var socket: URLSessionWebSocketTask?
     private var receiveTask: Task<Void, Never>?
+    private var hiddenFinishedMatchId: String?
+    private let savedRoomCodeKey = "letterGame.savedRoomCode"
 
-    func loadPublicRooms() async throws -> [LetterGameRoom] {
-        let response: LetterGameRoomsResponse = try await BackendAPIClient.request(path: "v1/letter-game/rooms")
-        return response.rooms
-    }
+    var currentUserId: String? { BackendSessionManager.shared.currentUser?.id }
+    var isAuthenticated: Bool { BackendSessionManager.shared.isAuthenticated }
+    var isHost: Bool { room?.hostUserId == currentUserId }
+    var isCurrentTurn: Bool { match?.turnUserId == currentUserId }
 
-    func createPrivateRoom() async {
-        do {
-            let response: LetterGameRoomResponse = try await BackendAPIClient.request(
-                path: "v1/letter-game/rooms",
-                body: LetterGameCreateRequest(
-                    visibility: "private",
-                    hostMode: "fixed",
-                    turnDurationSeconds: 30,
-                    stalledRoundLimit: 3,
-                    songCount: nil,
-                    publicHintCost: 5,
-                    privateHintCost: 10,
-                    selectionMode: "filtered_random",
-                    selectionConfig: [:]
-                )
-            )
-            room = response.room
-            connect()
-        } catch { errorMessage = error.localizedDescription }
-    }
+    func run() async {
+        await BackendSessionManager.shared.checkSession()
+        guard isAuthenticated else { return }
+        if let savedCode = UserDefaults.standard.string(forKey: savedRoomCodeKey) {
+            await restoreRoom(code: savedCode)
+        } else {
+            await refreshPublicRooms()
+        }
 
-    func join(code: String) async {
-        struct JoinRequest: Codable { let code: String }
-        do {
-            let response: LetterGameRoomResponse = try await BackendAPIClient.request(path: "v1/letter-game/rooms:join", body: JoinRequest(code: code.uppercased()))
-            room = response.room
-            connect()
-        } catch { errorMessage = error.localizedDescription }
-    }
-
-    func start() async {
-        guard let room else { return }
-        do {
-            let response: LetterGameMatchResponse = try await BackendAPIClient.request(path: "v1/letter-game/rooms/\(room.id)/start", method: "POST")
-            match = response.match
-        } catch { errorMessage = error.localizedDescription }
-    }
-
-    func connect() {
-        guard let room, let baseURL = BackendConfig.baseURL, let token = BackendSessionManager.shared.accessTokenForRequest() else { return }
-        var components = URLComponents(url: baseURL.appending(path: "v1/letter-game/rooms/\(room.code)/ws"), resolvingAgainstBaseURL: false)
-        components?.scheme = baseURL.scheme == "https" ? "wss" : "ws"
-        guard let url = components?.url else { return }
-        var request = URLRequest(url: url)
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        socket?.cancel(with: .goingAway, reason: nil)
-        let task = URLSession.shared.webSocketTask(with: request)
-        socket = task
-        task.resume()
-        receiveTask?.cancel()
-        receiveTask = Task { [weak self] in
-            guard let self else { return }
-            while !Task.isCancelled {
-                do {
-                    let message = try await task.receive()
-                    guard case let .string(text) = message, let data = text.data(using: .utf8) else { continue }
-                    await self.consume(data: data)
-                } catch { break }
+        while !Task.isCancelled {
+            do {
+                try await Task.sleep(for: .seconds(5))
+            } catch {
+                break
+            }
+            if room == nil {
+                await refreshPublicRooms(silently: true)
+            } else {
+                await refreshCurrentRoom()
             }
         }
     }
 
-    func sendAction(actionId: String = UUID().uuidString, payload: [String: String]) async {
-        guard let socket, let match else { return }
-        let body: [String: Any] = ["type": "action", "matchId": match.matchId, "actionId": actionId, "expectedRevision": match.revision, "payload": payload]
-        guard let data = try? JSONSerialization.data(withJSONObject: body) else { return }
-        try? await socket.send(.string(String(decoding: data, as: UTF8.self)))
+    func refreshPublicRooms(silently: Bool = false) async {
+        if !silently { isLoading = true }
+        defer { if !silently { isLoading = false } }
+        do {
+            struct Response: Decodable { let rooms: [LetterGameRoom] }
+            let response: Response = try await BackendAPIClient.request(path: "v1/letter-game/rooms")
+            publicRooms = response.rooms
+        } catch {
+            if !silently { present(error) }
+        }
     }
 
-    private func consume(data: Data) async {
-        struct Envelope: Decodable { let type: String; let room: LetterGameRoom?; let match: LetterGameMatchSnapshot?; let message: String? }
+    func createRoom(visibility: String) async {
+        await performLoadingAction {
+            struct Response: Decodable { let room: LetterGameRoom }
+            let request = LetterGameCreateRequest(visibility: visibility)
+            let response: Response = try await BackendAPIClient.request(path: "v1/letter-game/rooms", body: request)
+            enter(response.room)
+        }
+    }
+
+    func join(code: String) async {
+        await performLoadingAction {
+            struct Request: Encodable { let code: String }
+            struct Response: Decodable { let room: LetterGameRoom }
+            let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            let response: Response = try await BackendAPIClient.request(
+                path: "v1/letter-game/rooms:join",
+                body: Request(code: normalized)
+            )
+            enter(response.room)
+        }
+    }
+
+    func startMatch() async {
+        guard let room else { return }
+        await performLoadingAction {
+            struct Response: Decodable { let match: LetterGameMatchSnapshot }
+            let response: Response = try await BackendAPIClient.request(
+                path: "v1/letter-game/rooms/\(room.id)/start",
+                method: "POST"
+            )
+            hiddenFinishedMatchId = nil
+            match = response.match
+        }
+    }
+
+    func updateRoom(_ request: LetterGameCreateRequest) async -> Bool {
+        guard let room else { return false }
+        do {
+            struct Response: Decodable { let room: LetterGameRoom }
+            let response: Response = try await BackendAPIClient.request(
+                path: "v1/letter-game/rooms/\(room.id)",
+                method: "PATCH",
+                body: request
+            )
+            self.room = response.room
+            return true
+        } catch {
+            present(error)
+            return false
+        }
+    }
+
+    func approve(_ member: LetterGameRoomMember) async { await updateMember(member, action: "approve") }
+    func reject(_ member: LetterGameRoomMember) async { await updateMember(member, action: "reject") }
+    func kick(_ member: LetterGameRoomMember) async { await updateMember(member, action: "kick") }
+
+    func reopenRoom() async {
+        guard let room else { return }
+        let finishedMatchId = match?.matchId
+        await performLoadingAction {
+            struct Response: Decodable { let room: LetterGameRoom }
+            let response: Response = try await BackendAPIClient.request(
+                path: "v1/letter-game/rooms/\(room.id)/reopen",
+                method: "POST"
+            )
+            self.room = response.room
+            hiddenFinishedMatchId = finishedMatchId
+            match = nil
+        }
+    }
+
+    func leaveRoom() async {
+        guard let room else { return }
+        await performLoadingAction {
+            _ = try await BackendAPIClient.requestData(
+                path: "v1/letter-game/rooms/\(room.id)/leave",
+                method: "POST",
+                body: Optional<String>.none
+            )
+            clearRoom()
+            await refreshPublicRooms(silently: true)
+        }
+    }
+
+    func sendInput(_ input: String) async {
+        guard let action = LetterGameInputAction(input: input) else { return }
+        await sendAction(payload: action.payload)
+    }
+
+    func buyHint(song: LetterGameMatchSong, type: String, visibility: String) async {
+        await sendAction(payload: [
+            "kind": .string("buy_hint"),
+            "slotId": .string(song.slotId),
+            "hintType": .string(type),
+            "visibility": .string(visibility)
+        ])
+    }
+
+    func disconnect() {
+        receiveTask?.cancel()
+        receiveTask = nil
+        socket?.cancel(with: .goingAway, reason: nil)
+        socket = nil
+        isConnected = false
+    }
+
+    private func restoreRoom(code: String) async {
+        do {
+            struct Response: Decodable { let room: LetterGameRoom }
+            let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            let response: Response = try await BackendAPIClient.request(path: "v1/letter-game/rooms/\(normalized)")
+            guard hasCurrentMembership(in: response.room) else {
+                clearRoom()
+                return
+            }
+            enter(response.room)
+            await refreshLatestMatch()
+        } catch {
+            clearRoom()
+        }
+    }
+
+    private func refreshCurrentRoom() async {
+        guard let room else { return }
+        do {
+            struct Response: Decodable { let room: LetterGameRoom }
+            let response: Response = try await BackendAPIClient.request(path: "v1/letter-game/rooms/\(room.id)")
+            guard hasCurrentMembership(in: response.room) else {
+                clearRoom()
+                presentMessage(String(localized: "letterGame.removed"))
+                return
+            }
+            self.room = response.room
+            connectIfAllowed()
+            await refreshLatestMatch()
+        } catch let error as BackendAPIError where [403, 404, 410].contains(error.statusCode) {
+            clearRoom()
+            presentMessage(String(localized: "letterGame.removed"))
+        } catch {
+            // WebSocket state remains authoritative during transient polling failures.
+        }
+    }
+
+    private func refreshLatestMatch() async {
+        guard let latest = room?.latestMatch else { return }
+        if latest.id == hiddenFinishedMatchId, latest.status != "active" { return }
+        if match?.matchId == latest.id, match?.revision == latest.revision { return }
+        await refreshMatch(id: latest.id)
+    }
+
+    private func refreshMatch(id: String) async {
+        do {
+            struct Response: Decodable { let match: LetterGameMatchSnapshot }
+            let response: Response = try await BackendAPIClient.request(path: "v1/letter-game/matches/\(id)")
+            if response.match.status == "active" { hiddenFinishedMatchId = nil }
+            match = response.match
+        } catch {
+            present(error)
+        }
+    }
+
+    private func updateMember(_ member: LetterGameRoomMember, action: String) async {
+        guard let room, let memberId = member.memberId else { return }
+        await performLoadingAction {
+            struct Response: Decodable { let room: LetterGameRoom }
+            let response: Response = try await BackendAPIClient.request(
+                path: "v1/letter-game/rooms/\(room.id)/members/\(memberId)/\(action)",
+                method: "POST"
+            )
+            self.room = response.room
+        }
+    }
+
+    private func hasCurrentMembership(in room: LetterGameRoom) -> Bool {
+        room.members.contains {
+            $0.userId == currentUserId && ["accepted", "pending"].contains($0.status)
+        }
+    }
+
+    private func enter(_ room: LetterGameRoom) {
+        self.room = room
+        UserDefaults.standard.set(room.code, forKey: savedRoomCodeKey)
+        connectIfAllowed()
+    }
+
+    private func clearRoom() {
+        disconnect()
+        room = nil
+        match = nil
+        hiddenFinishedMatchId = nil
+        UserDefaults.standard.removeObject(forKey: savedRoomCodeKey)
+    }
+
+    private func connectIfAllowed() {
+        guard let room,
+              room.members.contains(where: { $0.userId == currentUserId && $0.status == "accepted" }),
+              socket == nil,
+              let baseURL = BackendConfig.baseURL,
+              let token = BackendSessionManager.shared.accessTokenForRequest() else { return }
+
+        var components = URLComponents(
+            url: baseURL.appending(path: "v1/letter-game/rooms/\(room.code)/ws"),
+            resolvingAgainstBaseURL: false
+        )
+        components?.scheme = baseURL.scheme == "https" ? "wss" : "ws"
+        guard let url = components?.url else { return }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let task = URLSession.shared.webSocketTask(with: request)
+        socket = task
+        task.resume()
+        isConnected = true
+        receiveTask = Task { [weak self] in
+            await self?.receiveMessages(from: task)
+        }
+        if let match {
+            Task { [weak self] in
+                await self?.sendResume(match: match)
+            }
+        }
+    }
+
+    private func receiveMessages(from task: URLSessionWebSocketTask) async {
+        while !Task.isCancelled {
+            do {
+                let message = try await task.receive()
+                switch message {
+                case .string(let text):
+                    consume(Data(text.utf8))
+                case .data(let data):
+                    consume(data)
+                @unknown default:
+                    continue
+                }
+            } catch {
+                if socket === task {
+                    socket = nil
+                    isConnected = false
+                }
+                break
+            }
+        }
+    }
+
+    // swiftlint:disable:next cyclomatic_complexity
+    private func consume(_ data: Data) {
+        struct Envelope: Decodable {
+            let type: String
+            let room: LetterGameRoom?
+            let match: LetterGameMatchSnapshot?
+            let code: String?
+            let message: String?
+        }
         guard let envelope = try? BackendAPIClient.decoder.decode(Envelope.self, from: data) else { return }
-        if envelope.type == "room_snapshot" { room = envelope.room }
-        if envelope.type == "match_snapshot" { match = envelope.match }
-        if envelope.type == "action_rejected" { errorMessage = envelope.message }
+        switch envelope.type {
+        case "room_snapshot":
+            if let updated = envelope.room, updated.id == room?.id {
+                guard hasCurrentMembership(in: updated) else {
+                    clearRoom()
+                    presentMessage(String(localized: "letterGame.removed"))
+                    return
+                }
+                room = updated
+            }
+        case "match_snapshot":
+            if let updated = envelope.match,
+               updated.matchId != hiddenFinishedMatchId || updated.status == "active" {
+                if updated.status == "active" { hiddenFinishedMatchId = nil }
+                match = updated
+            }
+        case "member_removed", "room_dissolved":
+            clearRoom()
+            let key = envelope.type == "room_dissolved" ? "letterGame.dissolved" : "letterGame.removed"
+            presentMessage(String(localized: String.LocalizationValue(key)))
+        case "action_rejected":
+            let key: String? = if envelope.code == "hint_already_known" {
+                "letterGame.hintKnown"
+            } else if envelope.code == "ambiguous_song_guess" {
+                "letterGame.ambiguousGuess"
+            } else {
+                nil
+            }
+            let localizedMessage = key.map { String(localized: String.LocalizationValue($0)) }
+            presentMessage(localizedMessage ?? envelope.message ?? envelope.code ?? "")
+            if envelope.code == "stale_revision", let matchId = match?.matchId {
+                Task { [weak self] in
+                    await self?.refreshMatch(id: matchId)
+                }
+            }
+        default:
+            break
+        }
     }
 
+    private func sendResume(match: LetterGameMatchSnapshot) async {
+        await sendSocketMessage(
+            LetterGameResumeMessage(type: "resume", matchId: match.matchId, lastRevision: match.revision)
+        )
+    }
+
+    private func sendAction(payload: [String: LetterGameJSONValue]) async {
+        guard let match else { return }
+        await sendSocketMessage(
+            LetterGameActionMessage(
+                type: "action",
+                matchId: match.matchId,
+                actionId: UUID().uuidString,
+                expectedRevision: match.revision,
+                payload: payload
+            )
+        )
+    }
+
+    private func sendSocketMessage<Message: Encodable>(_ message: Message) async {
+        guard let socket else {
+            presentMessage(String(localized: "letterGame.disconnected"))
+            return
+        }
+        do {
+            let data = try BackendAPIClient.encoder.encode(message)
+            guard let text = String(bytes: data, encoding: .utf8) else { return }
+            try await socket.send(.string(text))
+        } catch {
+            present(error)
+        }
+    }
+
+    private func performLoadingAction(_ action: () async throws -> Void) async {
+        isLoading = true
+        defer { isLoading = false }
+        do { try await action() } catch { present(error) }
+    }
+
+    private func present(_ error: Error) {
+        presentMessage(error.localizedDescription)
+    }
+
+    private func presentMessage(_ message: String) {
+        guard !message.isEmpty else { return }
+        errorMessage = message
+        isShowingError = true
+    }
 }
+
+private struct LetterGameResumeMessage: Encodable {
+    let type: String
+    let matchId: String
+    let lastRevision: Int
+}
+
+private struct LetterGameActionMessage: Encodable {
+    let type: String
+    let matchId: String
+    let actionId: String
+    let expectedRevision: Int
+    let payload: [String: LetterGameJSONValue]
+}
+
+// swiftlint:enable file_length type_body_length

@@ -289,9 +289,7 @@ private struct BackendSyncPushPayload: Encodable {
         scoreUpserts: [BackendSyncScoreSet],
         playRecordUpserts: [BackendSyncRecordSet],
         replaceScoreProfileIds: [String] = [],
-        replacePlayRecordProfileIds: [String] = []
-        ,collectionUpserts: [BackendSyncCollectionUpsertPayload] = []
-        ,collectionItemUpserts: [BackendSyncCollectionItemUpsertPayload] = []
+        replacePlayRecordProfileIds: [String] = [], collectionUpserts: [BackendSyncCollectionUpsertPayload] = [], collectionItemUpserts: [BackendSyncCollectionItemUpsertPayload] = []
     ) {
         self.idempotencyKey = idempotencyKey
         self.forceProfileOverwrite = forceProfileOverwrite
@@ -755,11 +753,7 @@ enum BackendIncrementalSyncService {
                 forceProfileOverwrite: forceProfileOverwrite,
                 profileUpserts: profileUpserts,
                 scoreUpserts: scoreUpserts,
-                playRecordUpserts: playRecordUpserts
-                ,replaceScoreProfileIds: dataProfileIds.filter { config.pendingFullReplaceProfileIds.contains($0) }.map { $0.uuidString.lowercased() }
-                ,replacePlayRecordProfileIds: dataProfileIds.filter { config.pendingFullReplaceProfileIds.contains($0) }.map { $0.uuidString.lowercased() }
-                ,collectionUpserts: collectionUpserts
-                ,collectionItemUpserts: collectionItemUpserts
+                playRecordUpserts: playRecordUpserts, replaceScoreProfileIds: dataProfileIds.filter { config.pendingFullReplaceProfileIds.contains($0) }.map { $0.uuidString.lowercased() }, replacePlayRecordProfileIds: dataProfileIds.filter { config.pendingFullReplaceProfileIds.contains($0) }.map { $0.uuidString.lowercased() }, collectionUpserts: collectionUpserts, collectionItemUpserts: collectionItemUpserts
             ),
             authentication: .required
         )
@@ -795,9 +789,7 @@ enum BackendIncrementalSyncService {
                     forceProfileOverwrite: forceProfileOverwrite,
                     profileUpserts: avatarUpserts,
                     scoreUpserts: [],
-                    playRecordUpserts: []
-                    ,replaceScoreProfileIds: []
-                    ,replacePlayRecordProfileIds: []
+                    playRecordUpserts: [], replaceScoreProfileIds: [], replacePlayRecordProfileIds: []
                 ),
                 authentication: .required
             )

@@ -10,26 +10,26 @@ final class UserProfile {
     var avatarUrl: String?
     var isActive: Bool
     var createdAt: Date
-    
+
     // Provider account metadata and local LXNS credentials
     var dfUsername: String = ""
     var lxnsRefreshToken: String = ""
     var lxnsClientId: String = ""
-    
+
     // Player info
     var playerRating: Int = 0
     var plate: String?
-    
+
     // Sync timestamps (per-user)
     var lastImportDateDF: Date?
     var lastImportDateLXNS: Date?
-    
+
     // B50 settings (per-user)
     var b35Count: Int = 35
     var b15Count: Int = 15
     var b35RecLimit: Int = 10
     var b15RecLimit: Int = 10
-    
+
     init(
         id: UUID = UUID(),
         name: String = "",

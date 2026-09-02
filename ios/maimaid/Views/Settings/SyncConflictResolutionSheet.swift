@@ -342,7 +342,6 @@ private extension SyncConflictResolutionSheet {
             .background(color.gradient, in: RoundedRectangle(cornerRadius: 10))
     }
 
-
     func statRow(icon: String, iconTint: Color, label: String, value: String) -> some View {
         HStack(spacing: 12) {
             settingsIcon(icon: icon, color: iconTint)

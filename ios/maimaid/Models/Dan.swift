@@ -11,7 +11,7 @@ struct DanSection: Codable, Identifiable {
     let description: String?
     let sheets: [String]
     let sheetDescriptions: [String]?
-    
+
     var id: String { title ?? sheets.joined(separator: "|") }
 }
 
@@ -20,9 +20,9 @@ struct DanSheetRef: Identifiable {
     let title: String
     let type: String
     let difficulty: String
-    
+
     var id: String { "\(title)|\(type)|\(difficulty)" }
-    
+
     init(raw: String) {
         let parts = raw.components(separatedBy: "|")
         if parts.count >= 3 {
@@ -36,7 +36,7 @@ struct DanSheetRef: Identifiable {
             self.difficulty = ""
         }
     }
-    
+
     var isPlaceholder: Bool {
         type.isEmpty || difficulty.isEmpty
     }

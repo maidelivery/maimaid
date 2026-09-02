@@ -6,19 +6,19 @@ struct DanDetailView: View {
     @Query private var allSongs: [Song]
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
     @Environment(\.modelContext) private var modelContext
-    
+
     @State private var scoreCache: [String: Score] = [:]
     @State private var selectedPage = 0
     @State private var regularScrollPosition = ScrollPosition()
     @State private var trueScrollPosition = ScrollPosition()
-    
+
     private var songMap: [String: Song] {
         var map: [String: Song] = [:]
         for song in allSongs {
             // Dan songs should not resolve to songs that only contain Utage charts
             let hasStandardCharts = song.sheets.contains { !$0.type.lowercased().contains("utage") }
             guard hasStandardCharts else { continue }
-            
+
             if map[song.title] == nil {
                 map[song.title] = song
             }
@@ -41,7 +41,7 @@ struct DanDetailView: View {
     private var activeServer: GameServer {
         activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             if hasTruePage {
@@ -84,7 +84,7 @@ struct DanDetailView: View {
             Task { await loadScoreCache() }
         }
     }
-    
+
     private func loadScoreCache() async {
         try? await Task.sleep(for: .milliseconds(50))
         scoreCache = ScoreService.shared.scoreMap(context: modelContext)
@@ -105,15 +105,15 @@ struct DanSectionCard: View {
     let songMap: [String: Song]
     let scoreCache: [String: Score]
     let server: GameServer
-    
+
     private var refs: [DanSheetRef] {
         section.sheets.map { DanSheetRef(raw: $0) }
     }
-    
+
     private var titleTheme: (colors: [Color], border: Color, icon: Color) {
         let title = section.title ?? categoryTitle
         let lower = title.lowercased()
-        
+
         if lower.contains("expert") {
             return (
                 colors: [Color.orange.opacity(0.14), Color.red.opacity(0.06)],
@@ -121,7 +121,7 @@ struct DanSectionCard: View {
                 icon: .orange
             )
         }
-        
+
         if lower.contains("master") {
             return (
                 colors: [Color.purple.opacity(0.14), Color.indigo.opacity(0.06)],
@@ -129,7 +129,7 @@ struct DanSectionCard: View {
                 icon: .purple
             )
         }
-        
+
         if isShinToUraKaiden(title) {
             return (
                 colors: [Color.purple.opacity(0.14), Color.indigo.opacity(0.06)],
@@ -137,14 +137,14 @@ struct DanSectionCard: View {
                 icon: .purple
             )
         }
-        
+
         return (
             colors: [Color.orange.opacity(0.14), Color.red.opacity(0.06)],
             border: Color.orange.opacity(0.18),
             icon: .orange
         )
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let title = section.title, !title.isEmpty {
@@ -168,11 +168,11 @@ struct DanSectionCard: View {
                         .strokeBorder(titleTheme.border, lineWidth: 1)
                 )
             }
-            
+
             if let desc = section.description, !desc.isEmpty {
                 DanRequirementPills(raw: desc)
             }
-            
+
             VStack(spacing: 8) {
                 ForEach(Array(refs.enumerated()), id: \.offset) { index, ref in
                     if let song = songMap[ref.title] {
@@ -195,7 +195,7 @@ struct DanSectionCard: View {
         .padding(14)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18))
     }
-    
+
     private func isShinToUraKaiden(_ title: String) -> Bool {
         let advancedTitles = [
             "真初段", "真二段", "真三段", "真四段", "真五段", "真六段", "真七段", "真八段", "真九段", "真十段",
@@ -212,16 +212,16 @@ struct DanSectionCard: View {
 
 struct DanRequirementPills: View {
     let raw: String
-    
+
     private var segments: [String] {
         raw.components(separatedBy: "｜")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
     }
-    
+
     var body: some View {
         let damage = segments[safe: 1].map(parseDamage)
-        
+
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .center) {
                 HStack(spacing: 5) {
@@ -232,7 +232,7 @@ struct DanRequirementPills: View {
                             tint: .pink
                         )
                     }
-                    
+
                     if let third = segments[safe: 2] {
                         compactPill(
                             icon: "plus.circle.fill",
@@ -241,9 +241,9 @@ struct DanRequirementPills: View {
                         )
                     }
                 }
-                
+
                 Spacer(minLength: 10)
-                
+
                 if let damage {
                     HStack(spacing: 5) {
                         compactPill(text: "Great \(damage.great)", tint: .pink)
@@ -252,7 +252,7 @@ struct DanRequirementPills: View {
                     }
                 }
             }
-            
+
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 5) {
                     if let first = segments[safe: 0] {
@@ -262,7 +262,7 @@ struct DanRequirementPills: View {
                             tint: .pink
                         )
                     }
-                    
+
                     if let third = segments[safe: 2] {
                         compactPill(
                             icon: "plus.circle.fill",
@@ -271,7 +271,7 @@ struct DanRequirementPills: View {
                         )
                     }
                 }
-                
+
                 if let damage {
                     HStack(spacing: 5) {
                         compactPill(text: "Great \(damage.great)", tint: .pink)
@@ -282,30 +282,30 @@ struct DanRequirementPills: View {
             }
         }
     }
-    
+
     private func normalizedLife(_ text: String) -> String {
         text
             .replacingOccurrences(of: "❤", with: "")
             .replacingOccurrences(of: "♥", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
-    
+
     private func normalizedHeal(_ text: String) -> String {
         text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
-    
+
     private func parseDamage(_ text: String) -> (great: String, good: String, miss: String) {
         let parts = text
             .split(separator: "/")
             .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-        
+
         return (
             great: parts[safe: 0] ?? "-0",
             good: parts[safe: 1] ?? "-0",
             miss: parts[safe: 2] ?? "-0"
         )
     }
-    
+
     private func compactPill(icon: String? = nil, text: String, tint: Color) -> some View {
         HStack(spacing: 4) {
             if let icon {
@@ -313,7 +313,7 @@ struct DanRequirementPills: View {
                     .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(tint)
             }
-            
+
             Text(text)
                 .font(.system(size: 9, weight: .bold, design: .rounded))
                 .foregroundStyle(tint)
@@ -351,12 +351,12 @@ struct DanSongRowEnhanced: View {
     private var diffColor: Color {
         ThemeUtils.colorForDifficulty(ref.difficulty, ref.type, colorScheme)
     }
-    
+
     private func score(for sheet: Sheet) -> Score? {
         let sheetId = "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)"
         return scoreCache[sheetId]
     }
-    
+
     var body: some View {
         NavigationLink(destination: SongDetailView(song: song, preferredType: ref.type)) {
             HStack(spacing: 10) {
@@ -364,20 +364,20 @@ struct DanSongRowEnhanced: View {
                     .fill(diffColor)
                     .frame(width: 4)
                     .padding(.vertical, 6)
-                
+
                 SongJacketView(
                     imageName: song.imageName,
                     size: 50,
                     cornerRadius: 12,
                     useThumbnail: true
                 )
-                
+
                 VStack(alignment: .leading, spacing: 6) {
                     Text(song.title)
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
-                    
+
                     HStack(spacing: 5) {
                         Text(ref.type.uppercased() == "STD" ? "STD" : ref.type.uppercased())
                             .font(.system(size: 10, weight: .bold))
@@ -388,17 +388,17 @@ struct DanSongRowEnhanced: View {
                                 ref.type.lowercased() == "dx" ? Color.orange : Color.blue,
                                 in: RoundedRectangle(cornerRadius: 5)
                             )
-                        
+
                         Text(difficultyDisplayName(ref.difficulty))
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(diffColor)
-                        
+
                         if let sheet = matchingSheet {
                             Text("Lv.\(ServerChartPolicy.metadata(for: sheet, on: server).displayLevel)")
                                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.secondary)
                         }
-                        
+
                         if let desc = description, !desc.isEmpty {
                             Text(desc)
                                 .font(.system(size: 9, weight: .bold))
@@ -409,9 +409,9 @@ struct DanSongRowEnhanced: View {
                         }
                     }
                 }
-                
+
                 Spacer(minLength: 6)
-                
+
                 VStack(alignment: .trailing, spacing: 6) {
                     if let sheet = matchingSheet, let score = score(for: sheet) {
                         Text("\(score.rate, format: .number.precision(.fractionLength(4)))%")
@@ -425,7 +425,7 @@ struct DanSongRowEnhanced: View {
                             .font(.system(size: 9, weight: .medium))
                             .foregroundStyle(.secondary)
                     }
-                    
+
                     Image(systemName: "chevron.right")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(.secondary.opacity(0.5))
@@ -440,7 +440,7 @@ struct DanSongRowEnhanced: View {
         }
         .buttonStyle(.plain)
     }
-    
+
     private func difficultyDisplayName(_ diff: String) -> String {
         switch diff.lowercased() {
         case "basic": return "Basic"
@@ -463,30 +463,30 @@ struct DanSongPlaceholder: View {
     private var diffColor: Color {
         ThemeUtils.colorForDifficulty(ref.difficulty, ref.type, colorScheme)
     }
-    
+
     var body: some View {
         HStack(spacing: 10) {
             RoundedRectangle(cornerRadius: 3)
                 .fill(diffColor.opacity(0.5))
                 .frame(width: 4)
                 .padding(.vertical, 6)
-            
+
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.primary.opacity(0.05))
                     .frame(width: 50, height: 50)
-                
+
                 Image(systemName: "questionmark")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.secondary.opacity(0.5))
             }
-            
+
             VStack(alignment: .leading, spacing: 6) {
                 Text(ref.title)
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                
+
                 HStack(spacing: 5) {
                     Text(ref.type.uppercased())
                         .font(.system(size: 10, weight: .bold))
@@ -497,11 +497,11 @@ struct DanSongPlaceholder: View {
                             ref.type.lowercased() == "dx" ? Color.orange : Color.blue,
                             in: RoundedRectangle(cornerRadius: 7)
                         )
-                    
+
                     Text(displayDifficultyName(ref.difficulty))
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(diffColor.opacity(0.8))
-                    
+
                     if let desc = description, !desc.isEmpty {
                         Text(desc)
                             .font(.system(size: 9, weight: .bold))
@@ -512,9 +512,9 @@ struct DanSongPlaceholder: View {
                     }
                 }
             }
-            
+
             Spacer()
-            
+
             Text("dan.detail.missing")
                 .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(.secondary)
@@ -526,7 +526,7 @@ struct DanSongPlaceholder: View {
                 .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
         )
     }
-    
+
     private func displayDifficultyName(_ diff: String) -> String {
         switch diff.lowercased() {
         case "basic": return "Basic"

@@ -21,12 +21,12 @@ nonisolated struct ChartStat: Codable, Sendable {
             && dist == nil
             && fc_dist == nil
     }
-    
+
     var formattedAvg: String {
         guard let avg = avg else { return "N/A" }
         return "\(avg.formatted(.number.precision(.fractionLength(4))))%"
     }
-    
+
     var formattedFitDiff: String {
         guard let fit_diff = fit_diff else { return "N/A" }
         return fit_diff.formatted(.number.precision(.fractionLength(2)))
@@ -70,14 +70,14 @@ nonisolated struct ChartStatsResponse: Codable, Sendable {
 @MainActor
 class ChartStatsService {
     static let shared = ChartStatsService()
-    
+
     private init() {
         loadCachedStats()
     }
-    
+
     private var cache: [String: [ChartStat]] = [:]
-    private var lastFetchDate: Date? = nil
-    
+    private var lastFetchDate: Date?
+
     func fetchStats(forceRefresh: Bool = false) async {
         ensureCacheLoaded()
         if forceRefresh && !cache.isEmpty {
@@ -99,12 +99,12 @@ class ChartStatsService {
         ensureCacheLoaded()
         return cache
     }
-    
+
     func getStats(for songId: Int) -> [ChartStat]? {
         ensureCacheLoaded()
         return cache["\(songId)"]
     }
-    
+
     func getStat(for sheet: Sheet) -> ChartStat? {
         ensureCacheLoaded()
 
@@ -112,11 +112,11 @@ class ChartStatsService {
         // unless it's a specific internal ID mapping. 
         // Based on the 'charts' response seen in logs:
         // "diff": "13", "diff": "14+", etc.
-        
+
         let diffValue = sheet.level
         let songId = sheet.songId > 0 ? sheet.songId : (sheet.song?.songId ?? 0)
         if songId == 0 { return nil }
-        
+
         // Strategy 1: Try with DX offset if song is DX
         if sheet.type.lowercased() == "dx" {
             let dxId = songId + 10000
@@ -125,13 +125,13 @@ class ChartStatsService {
                 return stat
             }
         }
-        
+
         // Strategy 2: Try with base ID
         if let songStats = cache["\(songId)"],
            let stat = songStats.first(where: { $0.diff == diffValue }) {
             return stat
         }
-        
+
         return nil
     }
 

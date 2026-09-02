@@ -5,9 +5,9 @@ enum GameServer: String, CaseIterable, Identifiable, Codable, Sendable {
     case jp = "jp"
     case intl = "intl"
     case cn = "cn"
-    
+
     var id: String { rawValue }
-    
+
     var displayName: String {
         switch self {
         case .jp:   return String(localized: "server.jp")
@@ -15,7 +15,7 @@ enum GameServer: String, CaseIterable, Identifiable, Codable, Sendable {
         case .cn:   return String(localized: "server.cn")
         }
     }
-    
+
     /// Maps to the corresponding region boolean on Sheet (Legacy, now partially deprecated by time-offset logic)
     var regionKeyPath: KeyPath<Sheet, Bool> {
         switch self {
@@ -29,9 +29,9 @@ enum GameServer: String, CaseIterable, Identifiable, Codable, Sendable {
 @MainActor
 class ServerVersionService {
     static let shared = ServerVersionService()
-    
+
     private init() {}
-    
+
     /// Determines the latest version for a given server by finding the newest
     /// version with at least one playable song on that server.
     /// Deleted songs (not playable on ANY server) are excluded.
@@ -39,10 +39,10 @@ class ServerVersionService {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        
+
         let now = Date()
         let calendar = Calendar.current
-        
+
         switch server {
         case .jp:
             return "9999-12-31" // All JP songs are playable
@@ -54,19 +54,19 @@ class ServerVersionService {
             return formatter.string(from: date)
         }
     }
-    
+
     func isPlayable(song: Song, cutoff: String, server: GameServer? = nil) -> Bool {
         // Exclude utage
         if song.category.lowercased().contains("utage") || song.category.contains("宴") {
             return false
         }
-        
+
         // Exclude deleted songs (no regions at all)
         let isDeleted = song.sheets.isEmpty || song.sheets.allSatisfy { sheet in
             !sheet.regionJp && !sheet.regionIntl && !sheet.regionCn
         }
         if isDeleted { return false }
-        
+
         // If the song explicitly has the region set to true for the specified server, it is actively playable
         if let srv = server {
             let hasRegion = song.sheets.contains { sheet in
@@ -80,17 +80,17 @@ class ServerVersionService {
                 return true
             }
         }
-        
+
         guard let releaseDateStr = song.releaseDate, !releaseDateStr.isEmpty else {
             return true // Playable if missing date
         }
-        
+
         return releaseDateStr <= cutoff
     }
 
     func latestVersion(for server: GameServer, songs: [Song]) -> String {
         let cutoff = cutoffDate(for: server)
-        
+
         let sequence = UserDefaults.app.maimaiVersionSequence
         let orderedVersions: [String]
         if sequence.isEmpty {
@@ -99,18 +99,18 @@ class ServerVersionService {
         } else {
             orderedVersions = sequence
         }
-        
+
         var serverVersion = orderedVersions.first ?? ThemeUtils.latestVersion
-        
+
         for version in orderedVersions {
             let versionSongs = songs.filter { $0.version == version && !($0.category.lowercased().contains("utage") || $0.category.contains("宴")) }
-            
+
             // Exclude completely deleted/removed songs from the version count
             let activeVersionSongs = versionSongs.filter { song in
                 !song.sheets.isEmpty && !song.sheets.allSatisfy { !$0.regionJp && !$0.regionIntl && !$0.regionCn }
             }
             if activeVersionSongs.isEmpty { continue }
-            
+
             let playableCount = activeVersionSongs.filter {
                 isPlayable(song: $0, cutoff: cutoff, server: server)
             }.count
@@ -124,10 +124,10 @@ class ServerVersionService {
                 break
             }
         }
-        
+
         return serverVersion
     }
-    
+
     /// Returns a dictionary of latest versions for all servers
     func allLatestVersions(songs: [Song]) -> [GameServer: String] {
         var result: [GameServer: String] = [:]
@@ -136,13 +136,13 @@ class ServerVersionService {
         }
         return result
     }
-    
+
     /// Returns the active user profile, or nil if none exists
     func activeProfile(context: ModelContext) -> UserProfile? {
         let descriptor = FetchDescriptor<UserProfile>(predicate: #Predicate { $0.isActive == true })
         return try? context.fetch(descriptor).first
     }
-    
+
     /// Returns the latest version for the active user's server
     func latestVersionForActiveUser(songs: [Song], context: ModelContext) -> String {
         guard let profile = activeProfile(context: context),

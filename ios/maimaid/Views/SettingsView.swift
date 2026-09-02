@@ -6,7 +6,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var configs: [SyncConfig]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
-    
+
     private var config: SyncConfig? { configs.first }
     private var activeProfile: UserProfile? { activeProfiles.first }
     private var canUseThirdPartyScoreSync: Bool {
@@ -20,7 +20,7 @@ struct SettingsView: View {
     }
     @State private var selectedTheme = 0
     @AppStorage(AppStorageKeys.showScannerBoundingBox) private var showScannerBoundingBox: Bool = false
-    
+
     @State private var alertTitle = ""
     @State private var alertMessage = ""
     @State private var showAlert = false
@@ -28,7 +28,7 @@ struct SettingsView: View {
     private var appVersionText: String {
         AppInfo.versionDisplayString
     }
-    
+
     var body: some View {
         NavigationStack {
             List {
@@ -40,7 +40,7 @@ struct SettingsView: View {
                         settingsRowLabel(icon: "person.2.fill", iconColor: .purple, title: "settings.userManagement.title")
                     }
                 }
-                
+
                 // Cloud Account & Sync Section
                 Section(header: Text("settings.cloud.section.sync"), footer: Text("settings.cloud.privacy.hint")) {
                     NavigationLink {
@@ -54,7 +54,7 @@ struct SettingsView: View {
                         settingsRowLabel(icon: "cloud.fill", iconColor: .indigo, title: "settings.cloud.title")
                     }
                 }
-                
+
                 // Data Import Section
                 Section(header: Text("settings.sync.header"), footer: Text("settings.sync.footer")) {
                     NavigationLink {
@@ -62,7 +62,7 @@ struct SettingsView: View {
                     } label: {
                         settingsRowLabel(icon: "fish.fill", iconColor: .blue, title: "settings.data.importDivingFish")
                     }
-                    
+
                     NavigationLink(destination: LxnsImportView()) {
                         HStack {
                             settingsRowLabel(icon: "snowflake", iconColor: .cyan, title: "settings.data.importLxns")
@@ -84,7 +84,7 @@ struct SettingsView: View {
                             )
                         }
                     }
-                    
+
                     Toggle("settings.sync.autoUpload", isOn: Binding(
                         get: { config?.isAutoUploadEnabled ?? false },
                         set: { newValue in
@@ -98,7 +98,7 @@ struct SettingsView: View {
                     ))
                     .disabled(!canUseThirdPartyScoreSync)
                 }
-                
+
                 // Appearance Section
                 Section("settings.appearance.header") {
                     Picker(selection: Binding(
@@ -118,12 +118,12 @@ struct SettingsView: View {
                     } label: {
                         settingsRowLabel(icon: "moon.fill", iconColor: .indigo, title: "settings.appearance.theme")
                     }
-                    
+
                     Toggle(isOn: $showScannerBoundingBox) {
                         settingsRowLabel(icon: "viewfinder", iconColor: .green, title: "settings.appearance.showBoundingBox")
                     }
                 }
-                
+
                 // About Section
                 Section("settings.about.header") {
                     settingsRow(icon: "info.circle.fill", iconColor: .gray, title: "settings.about.version", value: appVersionText)
@@ -137,9 +137,9 @@ struct SettingsView: View {
             }
         }
     }
-    
+
     // MARK: - Helper Views
-    
+
     private func settingsRow(icon: String, iconColor: Color, title: LocalizedStringKey, value: String) -> some View {
         HStack {
             settingsRowLabel(icon: icon, iconColor: iconColor, title: title)
@@ -149,7 +149,7 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
         }
     }
-    
+
     private func settingsRowLabel(icon: String, iconColor: Color, title: LocalizedStringKey) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
@@ -157,7 +157,7 @@ struct SettingsView: View {
                 .foregroundStyle(.white)
                 .frame(width: 28, height: 28)
                 .background(iconColor, in: RoundedRectangle(cornerRadius: 6))
-            
+
             Text(title)
                 .font(.system(size: 16))
         }
@@ -172,10 +172,10 @@ struct SettingsView: View {
 
 struct ShareSheetView: UIViewControllerRepresentable {
     let items: [Any]
-    
+
     func makeUIViewController(context: Context) -> UIActivityViewController {
         UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
-    
+
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

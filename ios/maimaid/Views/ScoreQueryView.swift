@@ -7,9 +7,9 @@ struct ScoreQueryView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Query private var songs: [Song]
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true }) private var activeProfiles: [UserProfile]
-    
+
     // MARK: - State
-    
+
     @State private var songMap: [String: Song] = [:]
     @State private var allEntries: [ScoreEntry] = []
     @State private var filteredEntries: [ScoreEntry] = []
@@ -18,42 +18,42 @@ struct ScoreQueryView: View {
     @State private var searchTask: Task<Void, Never>?
     @State private var filterSettings = ScoreQueryFilterSettings()
     @State private var isShowingFilters = false
-    
+
     // Display settings (persisted)
     @AppStorage(AppStorageKeys.scoreQueryDisplayMode) private var displayMode: DisplayMode = .grid
     @AppStorage(AppStorageKeys.scoreQueryGridColumns) private var committedColumns: Int = 5
     @AppStorage(AppStorageKeys.scoreQuerySortMode) private var sortMode: SortMode = .rating
     @AppStorage(AppStorageKeys.scoreQuerySortAscending) private var sortAscending: Bool = false
-    
+
     // Grid zoom state
     @State private var isZooming: Bool = false
     @State private var liveColumnCount: CGFloat = 5.0
     @State private var pinchStartColumns: CGFloat = 5.0
-    @State private var zoomAnchorEntryID: String? = nil
+    @State private var zoomAnchorEntryID: String?
     @State private var viewportHeight: CGFloat = 0
     /// Brief cooldown after pinch ends to prevent accidental tap activation
     @State private var navigationDisabled: Bool = false
-    
+
     private let minColumns: CGFloat = 3
     private let maxColumns: CGFloat = 7
-    
+
     // Stats
     @State private var stats = PlayerStats()
 
     private var activeServer: GameServer {
         activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
     }
-    
+
     // MARK: - Types
-    
+
     enum DisplayMode: String, CaseIterable {
         case grid, list
     }
-    
+
     enum SortMode: String, CaseIterable {
         case rating, achievement, level
     }
-    
+
     struct PlayerStats {
         var totalPlayed: Int = 0
         var sssPlus: Int = 0
@@ -63,7 +63,7 @@ struct ScoreQueryView: View {
         var fsCount: Int = 0
         var fsdCount: Int = 0
     }
-    
+
     struct ScoreEntry: Identifiable, Sendable {
         let id: String // sheetId
         let songId: Int
@@ -82,15 +82,15 @@ struct ScoreQueryView: View {
         let fs: String?
         let dxScore: Int
     }
-    
+
     // MARK: - Grid Zoom Helpers
-    
+
     /// Given the pinch magnification, compute the effective continuous column count.
     private func continuousColumns(for magnification: CGFloat) -> CGFloat {
         let raw = pinchStartColumns / magnification
         return min(maxColumns, max(minColumns, raw))
     }
-    
+
     /// Compute cell size and spacing from a column count and available width.
     private func gridMetrics(intColumns: Int, in width: CGFloat) -> (cellSize: CGFloat, spacing: CGFloat) {
         let intCols = max(1, intColumns)
@@ -107,7 +107,7 @@ struct ScoreQueryView: View {
         let cellSize = (width - totalSpacing - horizontalPadding * 2) / CGFloat(intCols)
         return (max(1, cellSize), spacing)
     }
-    
+
     /// The corner radius for a given column count
     private func cornerRadius(for columns: Int) -> CGFloat {
         switch columns {
@@ -116,7 +116,7 @@ struct ScoreQueryView: View {
         default: return 3
         }
     }
-    
+
     /// Estimate which entry index is near the center of the pinch gesture.
     private func estimateCenterEntryIndex(pinchY: CGFloat, gridWidth: CGFloat, columns: Int) -> Int {
         let metrics = gridMetrics(intColumns: columns, in: gridWidth)
@@ -124,13 +124,13 @@ struct ScoreQueryView: View {
         let spacing = metrics.spacing
         let rowHeight = cellSize + spacing
         guard rowHeight > 0 else { return 0 }
-        
+
         let estimatedRow = Int(max(0, pinchY - 12) / rowHeight)
         let centerIndexInRow = columns / 2
         let index = estimatedRow * columns + centerIndexInRow
         return min(max(0, index), max(0, filteredEntries.count - 1))
     }
-    
+
     private func makePinchGesture(width: CGFloat) -> some Gesture {
         MagnifyGesture(minimumScaleDelta: 0.02)
             .onChanged { value in
@@ -138,7 +138,7 @@ struct ScoreQueryView: View {
                     isZooming = true
                     navigationDisabled = true
                     pinchStartColumns = CGFloat(committedColumns)
-                    
+
                     let centerIdx = estimateCenterEntryIndex(
                         pinchY: value.startLocation.y,
                         gridWidth: width,
@@ -155,18 +155,18 @@ struct ScoreQueryView: View {
                 let targetCols = max(Int(minColumns), min(Int(maxColumns), Int(finalCols.rounded())))
                 let changed = targetCols != committedColumns
                 let anchorID = zoomAnchorEntryID
-                
+
                 isZooming = false
-                
+
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
                     committedColumns = targetCols
                     liveColumnCount = CGFloat(targetCols)
                 }
-                
+
                 if changed {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 }
-                
+
                 if let anchorID = anchorID {
                     Task { @MainActor in
                         try? await Task.sleep(for: .milliseconds(50))
@@ -182,13 +182,13 @@ struct ScoreQueryView: View {
                 }
             }
     }
-    
+
     // MARK: - Body
-    
+
     var body: some View {
         GeometryReader { geo in
             let width = geo.size.width
-            
+
             ScrollViewReader { scrollProxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -196,7 +196,7 @@ struct ScoreQueryView: View {
                         statsHeader
                             .padding(.horizontal, 16)
                             .padding(.top, 8)
-                        
+
                         // Content
                         Group {
                             if isLoading {
@@ -304,9 +304,9 @@ struct ScoreQueryView: View {
             await loadData()
         }
     }
-    
+
     // MARK: - Stats Header
-    
+
     private var statsHeader: some View {
         VStack(spacing: 12) {
             // Primary stats row
@@ -317,9 +317,9 @@ struct ScoreQueryView: View {
                 Divider().frame(height: 30)
                 statItem(value: stats.sss, label: "SSS")
             }
-            
+
             Divider()
-            
+
             // Secondary stats row
             HStack(spacing: 0) {
                 statItem(value: stats.fcCount, label: "scoreQuery.stats.fc")
@@ -334,7 +334,7 @@ struct ScoreQueryView: View {
         .padding(16)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
     }
-    
+
     private func statItem(value: Int, label: LocalizedStringKey) -> some View {
         VStack(spacing: 4) {
             Text("\(value)")
@@ -347,9 +347,9 @@ struct ScoreQueryView: View {
         }
         .frame(maxWidth: .infinity)
     }
-    
+
     // MARK: - Content View
-    
+
     @ViewBuilder
     private func contentView(in width: CGFloat) -> some View {
         switch displayMode {
@@ -359,7 +359,7 @@ struct ScoreQueryView: View {
             listView
         }
     }
-    
+
     private func gridBody(in width: CGFloat) -> some View {
         let cols = isZooming ? liveColumnCount : CGFloat(committedColumns)
         let intCols = max(Int(minColumns), min(Int(maxColumns), Int(cols.rounded())))
@@ -368,7 +368,7 @@ struct ScoreQueryView: View {
         let spacing = metrics.spacing
         let horizontalPadding = spacing + 2
         let cr = cornerRadius(for: intCols)
-        
+
         return LazyVGrid(
             columns: Array(repeating: GridItem(.fixed(cellSize), spacing: spacing), count: intCols),
             spacing: spacing
@@ -386,7 +386,7 @@ struct ScoreQueryView: View {
         .padding(.horizontal, horizontalPadding)
         .padding(.bottom, 20)
     }
-    
+
     private func gridCell(entry: ScoreEntry, cellSize: CGFloat, cornerRadius: CGFloat, intCols: Int) -> some View {
         ZStack(alignment: .bottomTrailing) {
             SongJacketView(
@@ -406,7 +406,7 @@ struct ScoreQueryView: View {
                 .padding(2)
         }
     }
-    
+
     @ViewBuilder
     private func scoreBadges(entry: ScoreEntry, intCols: Int) -> some View {
         VStack(alignment: .trailing, spacing: 2) {
@@ -443,7 +443,7 @@ struct ScoreQueryView: View {
             .background(color, in: RoundedRectangle(cornerRadius: 3))
             .lineLimit(1)
     }
-    
+
     private var listView: some View {
         LazyVStack(spacing: 2) {
             ForEach(filteredEntries) { entry in
@@ -456,7 +456,7 @@ struct ScoreQueryView: View {
         .padding(.horizontal, 12)
         .padding(.bottom, 20)
     }
-    
+
     private func listRow(entry: ScoreEntry) -> some View {
         HStack(spacing: 10) {
             // Difficulty accent
@@ -464,28 +464,28 @@ struct ScoreQueryView: View {
                 .fill(ThemeUtils.colorForDifficulty(entry.difficulty, entry.type, colorScheme))
                 .frame(width: 3)
                 .padding(.vertical, 6)
-            
+
             // Jacket
             SongJacketView(imageName: entry.imageName, size: 42, cornerRadius: 8)
-            
+
             // Info
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.songTitle)
                     .font(.system(size: 14, weight: .semibold))
                     .lineLimit(1)
                     .foregroundStyle(.primary)
-                
+
                 HStack(spacing: 4) {
                     Text("\(entry.achievement, format: .number.precision(.fractionLength(4)))%")
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
                         .foregroundStyle(.secondary)
-                    
+
                     if let fc = entry.fc, !fc.isEmpty {
                         Text(ThemeUtils.normalizeFC(fc))
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(ThemeUtils.fcColor(fc))
                     }
-                    
+
                     if let fs = entry.fs, !fs.isEmpty {
                         Text(ThemeUtils.normalizeFS(fs))
                             .font(.system(size: 9, weight: .bold))
@@ -493,15 +493,15 @@ struct ScoreQueryView: View {
                     }
                 }
             }
-            
+
             Spacer()
-            
+
             // Rating + Rank
             VStack(alignment: .trailing, spacing: 2) {
                 Text(entry.rank)
                     .font(.system(size: 13, weight: .black, design: .rounded))
                     .foregroundStyle(RatingUtils.colorForRank(entry.rank))
-                
+
                 Text("\(entry.rating)")
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundStyle(.secondary)
@@ -511,9 +511,9 @@ struct ScoreQueryView: View {
         .padding(.horizontal, 10)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
     }
-    
+
     // MARK: - Navigation
-    
+
     @ViewBuilder
     private func songDetailDestination(entry: ScoreEntry) -> some View {
         if let song = songMap[entry.songIdentifier] {
@@ -522,37 +522,37 @@ struct ScoreQueryView: View {
             Text("scoreQuery.songNotFound")
         }
     }
-    
+
     // MARK: - Data Loading
-    
+
     private func loadData() async {
         let map = ScoreService.shared.scoreMap(context: modelContext)
-        
+
         var sMap: [String: Song] = [:]
         var rootEntries: [ScoreEntry] = []
-        
+
         for (index, song) in songs.enumerated() {
             if index.isMultiple(of: 32) {
                 await Task.yield()
             }
             sMap[song.songIdentifier] = song
-            
+
             if song.category.lowercased().contains("utage") || song.category.contains("宴") { continue }
-            
+
             for sheet in song.sheets {
                 if sheet.type.lowercased().contains("utage") { continue }
 
                 guard ServerChartPolicy.isPlayable(sheet, on: activeServer) else { continue }
                 let metadata = ServerChartPolicy.metadata(for: sheet, on: activeServer)
                 guard let level = metadata.ratingLevel else { continue }
-                
+
                 let score = scoreForSheet(sheet, in: map)
-                
+
                 guard let score, score.rate > 0 else { continue }
-                
+
                 let rank = RatingUtils.calculateRank(achievement: score.rate)
                 let rating = RatingUtils.calculateRating(internalLevel: level, achievement: score.rate)
-                
+
                 rootEntries.append(ScoreEntry(
                     id: "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)",
                     songId: song.songId,
@@ -573,31 +573,30 @@ struct ScoreQueryView: View {
                 ))
             }
         }
-        
+
         self.songMap = sMap
         self.allEntries = rootEntries
         computeStats(from: map)
         applyFiltersAndSort()
         isLoading = false
     }
-    
+
     private func computeStats(from map: [String: Score]) {
         var s = PlayerStats()
-        
+
         // Count unique songs with any score
         var songsWithScores = Set<String>()
-        
+
         for (_, score) in map {
             // Extract songIdentifier from sheetId (format: songId_type_difficulty)
             let parts = score.sheetId.components(separatedBy: "_")
             if parts.count >= 1 {
                 songsWithScores.insert(parts[0])
             }
-            
+
             // Achievement-based stats (count per sheet)
-            if score.rate >= 100.5 { s.sssPlus += 1 }
-            else if score.rate >= 100.0 { s.sss += 1 }
-            
+            if score.rate >= 100.5 { s.sssPlus += 1 } else if score.rate >= 100.0 { s.sss += 1 }
+
             // FC stats
             if let fc = score.fc?.lowercased(), !fc.isEmpty {
                 if fc.contains("app") || fc.contains("ap") {
@@ -606,7 +605,7 @@ struct ScoreQueryView: View {
                     s.fcCount += 1
                 }
             }
-            
+
             // FS stats
             if let fs = score.fs?.lowercased(), !fs.isEmpty {
                 if fs.contains("fsd") {
@@ -616,13 +615,13 @@ struct ScoreQueryView: View {
                 }
             }
         }
-        
+
         s.totalPlayed = songsWithScores.count
         self.stats = s
     }
-    
+
     // MARK: - Filtering & Sorting
-    
+
     private func debounceFilter() {
         searchTask?.cancel()
         searchTask = Task {
@@ -632,7 +631,7 @@ struct ScoreQueryView: View {
             }
         }
     }
-    
+
     private func applyFiltersAndSort() {
 //        let searchLower = searchText.lowercased()
         let hasSearch = !searchText.isEmpty
@@ -644,9 +643,9 @@ struct ScoreQueryView: View {
         let fsFilter = filterSettings.selectedFS
         let currentSortMode = sortMode
         let ascending = sortAscending
-        
+
         var entries: [ScoreEntry] = []
-        
+
         for entry in allEntries {
             // Search filter
             if hasSearch {
@@ -669,28 +668,28 @@ struct ScoreQueryView: View {
                 } ?? false)
                 if !matches { continue }
             }
-            
+
             // Difficulty filter
             if !diffFilter.isEmpty && !diffFilter.contains(entry.difficulty.lowercased()) { continue }
-            
+
             // Rank filter
             if !rankFilter.isEmpty && !rankFilter.contains(entry.rank) { continue }
-            
+
             // FC filter
             if !fcFilter.isEmpty {
                 let normalizedFC = entry.fc.map { ThemeUtils.normalizeFC($0) } ?? ""
                 if !fcFilter.contains(normalizedFC) { continue }
             }
-            
+
             // FS filter
             if !fsFilter.isEmpty {
                 let normalizedFS = entry.fs.map { ThemeUtils.normalizeFS($0) } ?? ""
                 if !fsFilter.contains(normalizedFS) { continue }
             }
-            
+
             entries.append(entry)
         }
-        
+
         // Sort
         entries.sort { a, b in
             let result: Bool
@@ -704,10 +703,10 @@ struct ScoreQueryView: View {
             }
             return ascending ? !result : result
         }
-        
+
         filteredEntries = entries
     }
-    
+
     private func scoreForSheet(_ sheet: Sheet, in map: [String: Score]) -> Score? {
         for candidate in candidateSheetIds(for: sheet) {
             if let score = map[candidate] {
@@ -716,7 +715,7 @@ struct ScoreQueryView: View {
         }
         return nil
     }
-    
+
     private func candidateSheetIds(for sheet: Sheet) -> [String] {
         let rawIdentifiers: [String?] = [
             sheet.songIdentifier,
@@ -724,13 +723,13 @@ struct ScoreQueryView: View {
             sheet.song?.songIdentifier,
             sheet.songId == 0 ? nil : String(sheet.songId)
         ]
-        
+
         var candidates: [String] = []
         var seen = Set<String>()
-        
+
         for raw in rawIdentifiers {
             guard let raw, !raw.isEmpty, raw != "0" else { continue }
-            
+
             for separator in ["_", "-"] {
                 let sheetId = "\(raw)\(separator)\(sheet.type)\(separator)\(sheet.difficulty)"
                 if seen.insert(sheetId).inserted {
@@ -738,7 +737,7 @@ struct ScoreQueryView: View {
                 }
             }
         }
-        
+
         return candidates
     }
 }

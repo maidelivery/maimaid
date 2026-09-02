@@ -7,15 +7,15 @@ struct PlateProgressView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query private var songs: [Song]
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
-    
+
     // Filters
     @State private var selectedGroup: VersionPlateGroup?
     @State private var selectedDifficulty: String = "master"
     @State private var selectedPlate: PlateType = .sho
-    
+
     // Data
     @State private var groups: [VersionPlateGroup] = []
-    
+
     // Cached computation results
     @State private var cachedSections: [(level: String, sheets: [Sheet])] = []
     @State private var achievedCache: [String: Bool] = [:]
@@ -23,37 +23,37 @@ struct PlateProgressView: View {
     @State private var isComputing = false
     @State private var hasAppeared = false
     @State private var recomputeTask: Task<Void, Never>?
-    
+
     private let difficulties = ["basic", "advanced", "expert", "master", "remaster"]
 
     private var activeServer: GameServer {
         activeProfiles.first.flatMap { GameServer(rawValue: $0.server) } ?? .jp
     }
-    
+
     private var totalSheetCount: Int {
         cachedSections.reduce(0) { $0 + $1.sheets.count }
     }
-    
+
     private var achievedSheetCount: Int {
         cachedSections.reduce(0) { partialResult, section in
             partialResult + section.sheets.filter { achievedCache[Self.sheetKey($0)] == true }.count
         }
     }
-    
+
     private var progressValue: Double {
         guard totalSheetCount > 0 else { return 0 }
         return Double(achievedSheetCount) / Double(totalSheetCount)
     }
-    
+
     private var remainingSheetCount: Int {
         max(totalSheetCount - achievedSheetCount, 0)
     }
-    
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
                 headerView
-                
+
                 if selectedGroup == nil {
                     ProgressView()
                         .controlSize(.large)
@@ -115,9 +115,9 @@ struct PlateProgressView: View {
             recomputeTask?.cancel()
         }
     }
-    
+
     // MARK: - Setup
-    
+
     private func setupData() {
         let allGroups = PlateService.shared.getVersionGroups()
         self.groups = allGroups
@@ -125,19 +125,19 @@ struct PlateProgressView: View {
             selectedGroup = first
         }
     }
-    
+
     // MARK: - Recomputation
-    
+
     private static func sheetKey(_ sheet: Sheet) -> String {
         "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)"
     }
-    
+
     /// Debounced recompute: yield to let UI settle before heavy work
     private func scheduleRecompute() {
         isComputing = true
         // Clear sections immediately so we show the spinner
         cachedSections = []
-        
+
         // Cancel previous task and create new one with debounce
         recomputeTask?.cancel()
         recomputeTask = Task { @MainActor in
@@ -147,7 +147,7 @@ struct PlateProgressView: View {
             recomputeSections()
         }
     }
-    
+
     private func recomputeSections() {
         guard let group = selectedGroup else {
             cachedSections = []
@@ -155,7 +155,7 @@ struct PlateProgressView: View {
             return
         }
         let targetDifficulty = selectedDifficulty.lowercased()
-        
+
         var sheets: [Sheet] = []
         for song in songs {
             if isUtageCategory(song.category) { continue }
@@ -173,64 +173,64 @@ struct PlateProgressView: View {
                 }
             }
         }
-        
+
         let grouped = Dictionary(grouping: sheets) { sheet in
             ServerChartPolicy.metadata(for: sheet, on: activeServer).displayLevel
         }
-        
+
         cachedSections = grouped.map { (level: $0.key, sheets: $0.value) }
             .sorted { parseLevel($0.level) > parseLevel($1.level) }
-        
+
         recomputeAchievements()
         isComputing = false
     }
-    
+
     private func recomputeAchievements() {
         let allSheets = cachedSections.flatMap { $0.sheets }
-        
+
         // Use scoreMap() for better performance
         scoreCache = ScoreService.shared.scoreMap(context: modelContext)
-        
+
         var newAchievedCache: [String: Bool] = [:]
         newAchievedCache.reserveCapacity(allSheets.count)
-        
+
         for sheet in allSheets {
             let key = Self.sheetKey(sheet)
             newAchievedCache[key] = selectedPlate.isAchieved(score: scoreCache[key])
         }
         achievedCache = newAchievedCache
     }
-    
+
     // MARK: - Helpers
-    
+
     private func isUtageCategory(_ category: String) -> Bool {
         category.lowercased().contains("utage") || category.contains("宴")
     }
-    
+
     private func isUtageType(_ type: String) -> Bool {
         type.lowercased().contains("utage")
     }
-    
+
     private func parseLevel(_ level: String) -> Double {
         Double(level.replacingOccurrences(of: "+", with: ".7")) ?? 0
     }
-    
+
     private func applyFallbacks(newGroup: VersionPlateGroup?) {
         guard let group = newGroup else { return }
-        
+
         // 只有舞代支持 REMASTER，其他版本自动退到 MASTER
         if group.name != "舞代" && selectedDifficulty == "remaster" {
             selectedDifficulty = "master"
         }
-        
+
         // 如果选择的版本组不支持将牌，自动切换到极牌
         if !group.hasSho && selectedPlate == .sho {
             selectedPlate = .kiwami
         }
     }
-    
+
     // MARK: - Header
-    
+
     private var headerView: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 14) {
@@ -242,9 +242,9 @@ struct PlateProgressView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
-                    
+
                     Spacer(minLength: 12)
-                    
+
                     Text(progressText)
                         .font(.headline.monospacedDigit().bold())
                         .foregroundStyle(Color(hex: selectedPlate.color))
@@ -252,10 +252,10 @@ struct PlateProgressView: View {
                         .padding(.vertical, 8)
                         .background(Color(hex: selectedPlate.color).opacity(0.12), in: Capsule())
                 }
-                
+
                 ProgressView(value: progressValue)
                     .tint(Color(hex: selectedPlate.color))
-                
+
                 HStack(spacing: 12) {
                     summaryMetric(title: "plate.summary.completed", value: achievedSheetCount, tint: Color(hex: selectedPlate.color))
                     summaryMetric(title: "plate.summary.remaining", value: remainingSheetCount, tint: .secondary)
@@ -264,7 +264,7 @@ struct PlateProgressView: View {
             }
             .padding(16)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
-            
+
             HStack(spacing: 10) {
                 menuButton(
                     title: "plate.menu.version",
@@ -276,7 +276,7 @@ struct PlateProgressView: View {
                         selectedGroup = found
                     }
                 }
-                
+
                 menuButton(
                     title: "plate.menu.difficulty",
                     selection: selectedDifficulty.uppercased(),
@@ -287,7 +287,7 @@ struct PlateProgressView: View {
                     guard diff != "remaster" || selectedGroup?.name == "舞代" else { return }
                     selectedDifficulty = diff
                 }
-                
+
                 menuButton(
                     title: "plate.menu.plate",
                     selection: localizedPlateName(selectedPlate),
@@ -301,12 +301,12 @@ struct PlateProgressView: View {
             }
         }
     }
-    
+
     private func displayName(for group: VersionPlateGroup?) -> String {
         guard let group = group else { return "..." }
         return (group.name == group.platePrefix || group.name == "舞代") ? group.name : group.platePrefix
     }
-    
+
     private func menuButton(
         title: LocalizedStringKey,
         selection: String,
@@ -325,7 +325,7 @@ struct PlateProgressView: View {
                     .font(.caption.bold())
                     .foregroundStyle(.secondary)
                     .labelStyle(.titleAndIcon)
-                
+
                 HStack(spacing: 6) {
                     Text(selection)
                         .font(.subheadline.bold())
@@ -344,7 +344,7 @@ struct PlateProgressView: View {
         }
         .accessibilityLabel(Text(selection))
     }
-    
+
     private func isOptionDisabled(_ option: String) -> Bool {
         (option == localizedPlateName(.sho) && selectedGroup?.hasSho == false) ||
         (option == "REMASTER" && selectedGroup?.name != "舞代")
@@ -353,28 +353,28 @@ struct PlateProgressView: View {
     private func localizedPlateName(_ plate: PlateType) -> String {
         String(localized: LocalizedStringResource(stringLiteral: plate.rawValue))
     }
-    
+
     // MARK: - Level Section
-    
+
     private func levelSection(_ section: (level: String, sheets: [Sheet])) -> some View {
         let completedCount = section.sheets.filter { achievedCache[Self.sheetKey($0)] == true }.count
-        
+
         let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 5)
-        
+
         return VStack(alignment: .leading, spacing: 10) {
             Text("Lv. \(section.level)")
                 .font(.headline.bold())
-            
+
             HStack(spacing: 10) {
                 Text("plate.section.progress \(completedCount) \(section.sheets.count)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                
+
                 ProgressView(value: Double(completedCount), total: Double(max(section.sheets.count, 1)))
                     .tint(Color(hex: selectedPlate.color))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            
+
             LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
                 ForEach(section.sheets) { sheet in
                     if let song = sheet.song {
@@ -389,12 +389,12 @@ struct PlateProgressView: View {
             }
         }
     }
-    
+
     private func jacketItem(_ sheet: Sheet) -> some View {
         let key = Self.sheetKey(sheet)
         let isAchieved = achievedCache[key] ?? false
         let color = Color(hex: selectedPlate.color)
-        
+
         return GeometryReader { geometry in
             SongJacketView(
                 imageName: sheet.song?.imageName ?? "",
@@ -436,12 +436,12 @@ struct PlateProgressView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(jacketAccessibilityLabel(for: sheet, achieved: isAchieved))
     }
-    
+
     @ViewBuilder
     private func achievementMarker(sheet: Sheet) -> some View {
         let key = Self.sheetKey(sheet)
         let score = scoreCache[key]
-        
+
         switch selectedPlate {
         case .kiwami:
             if let fc = score?.fc, !fc.isEmpty {
@@ -464,7 +464,7 @@ struct PlateProgressView: View {
             }
         }
     }
-    
+
     private func badgeLabel(_ text: String, color: Color) -> some View {
         Text(text)
             .font(.system(size: 8, weight: .bold, design: .rounded))
@@ -474,12 +474,12 @@ struct PlateProgressView: View {
             .background(color.opacity(0.95), in: Capsule())
             .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
     }
-    
+
     private var loadingOverlay: some View {
         ZStack {
             Color.black.opacity(0.04)
                 .ignoresSafeArea()
-            
+
             ProgressView("plate.loading")
                 .padding(.horizontal, 18)
                 .padding(.vertical, 14)
@@ -487,15 +487,15 @@ struct PlateProgressView: View {
         }
         .allowsHitTesting(false)
     }
-    
+
     private var progressText: String {
         guard totalSheetCount > 0 else { return "0%" }
         return "\(Int(progressValue * 100))%"
     }
-    
+
     private var progressTitle: String {
         guard let group = selectedGroup else { return String(localized: "plate.title") }
-        
+
         let groupName = plateTitlePrefix(for: group)
         return String(localized: "plate.progress.title \(groupName) \(selectedPlate.shortName)")
     }
@@ -511,13 +511,13 @@ struct PlateProgressView: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? prefix : value
     }
-    
+
     private var summarySubtitle: String {
         let groupName = displayName(for: selectedGroup)
         let difficultyName = selectedDifficulty.uppercased()
         return "\(groupName) · \(difficultyName) · \(localizedPlateName(selectedPlate))"
     }
-    
+
     private func summaryMetric(title: LocalizedStringKey, value: Int, tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
@@ -529,7 +529,7 @@ struct PlateProgressView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
-    
+
     private func jacketAccessibilityLabel(for sheet: Sheet, achieved: Bool) -> String {
         let title = sheet.song?.title ?? String(localized: "common.unknown")
         let state = achieved

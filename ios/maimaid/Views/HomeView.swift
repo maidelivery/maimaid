@@ -16,37 +16,37 @@ struct HomeView: View {
     @Query private var allScores: [Score]
     @AppStorage(UserDefaultsKeys.didPerformInitialSync) private var didPerformInitialSync = false
     @AppStorage(AppStorageKeys.didShowOnboarding) private var didShowOnboarding = false
-    
+
     @State private var profileEditMode: UserProfileEditView.Mode?
     @State private var showingOnboarding = false
     @State private var computedB50Total: Int = 0
     @State private var standardB50Total: Int = 0
-    
+
     // Cache invalidation: track fingerprints to avoid redundant recalculation
     @State private var cachedScoreFingerprint = ""
     @State private var lastB50Fingerprint = ""
     @State private var hasComputedB50 = false
     @State private var b50UpdateTask: Task<Void, Never>?
-    
+
     private var config: SyncConfig? { configs.first }
     private var activeProfile: UserProfile? { activeProfiles.first }
-    
+
     private var currentB35Count: Int {
         activeProfile?.b35Count ?? config?.b35Count ?? 35
     }
-    
+
     private var currentB15Count: Int {
         activeProfile?.b15Count ?? config?.b15Count ?? 15
     }
-    
+
     private var totalB50Count: Int {
         currentB35Count + currentB15Count
     }
-    
+
     private var displayRating: Int {
         max(standardB50Total, activeProfile?.playerRating ?? 0)
     }
-    
+
     /// Generates a lightweight fingerprint to detect changes relevant to B50 calculation.
     private func b50Fingerprint(scoreFingerprint: String) -> String {
         let songCount = songs.count
@@ -56,12 +56,12 @@ struct HomeView: View {
         let server = activeProfile?.server ?? "jp"
         return "\(songCount)_\(b35)_\(b15)_\(profileId)_\(server)_\(scoreFingerprint)"
     }
-    
+
     let columns = [
         GridItem(.flexible(), spacing: 16),
         GridItem(.flexible(), spacing: 16)
     ]
-    
+
     var body: some View {
         NavigationStack {
             HomeDashboardLifecycleView(
@@ -146,7 +146,7 @@ struct HomeView: View {
             showingOnboarding = false
         }
     }
-    
+
     private func refreshScoreFingerprintCache() {
         cachedScoreFingerprint = makeScoreFingerprint(profileId: activeProfile?.id)
     }
@@ -182,7 +182,7 @@ struct HomeView: View {
     private func updateB50IfNeeded() async {
         let fingerprint = b50Fingerprint(scoreFingerprint: cachedScoreFingerprint)
         guard !hasComputedB50 || fingerprint != lastB50Fingerprint else { return }
-        
+
         // Small delay to avoid competing with navigation animations.
         try? await Task.sleep(for: .milliseconds(100))
         guard !Task.isCancelled else { return }
@@ -238,21 +238,21 @@ struct HomeView: View {
         lastB50Fingerprint = fingerprint
         hasComputedB50 = true
     }
-    
+
     private var activeServerLatestVersion: String? {
         guard let profile = activeProfile, let server = GameServer(rawValue: profile.server) else { return nil }
         return ServerVersionService.shared.latestVersion(for: server, songs: songs)
     }
-    
+
     // MARK: - Subviews
-    
+
     private var bestTableButton: some View {
         NavigationLink(destination: BestTableView()) {
             HStack {
                 Image(systemName: "trophy.fill")
                     .font(.system(size: 20))
                     .foregroundStyle(.orange)
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text("home.bestTable.button.title \(totalB50Count)")
                         .font(.system(size: 16, weight: .bold))
@@ -260,9 +260,9 @@ struct HomeView: View {
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.secondary.opacity(0.5))
@@ -277,7 +277,7 @@ struct HomeView: View {
         }
         .buttonStyle(.plain)
     }
-    
+
     private var functionGrid: some View {
         LazyVGrid(columns: columns, spacing: 16) {
             NavigationLink(destination: RandomSongView()) {
@@ -289,7 +289,7 @@ struct HomeView: View {
                 )
             }
             .buttonStyle(.plain)
-            
+
             NavigationLink(destination: RecommendationListView()) {
                 functionCard(
                     icon: "sparkles",
@@ -299,7 +299,7 @@ struct HomeView: View {
                 )
             }
             .buttonStyle(.plain)
-            
+
             NavigationLink(destination: ScoreQueryView()) {
                 functionCard(
                     icon: "list.bullet.rectangle.portrait.fill",
@@ -319,7 +319,7 @@ struct HomeView: View {
                 )
             }
             .buttonStyle(.plain)
-            
+
             NavigationLink(destination: PlateProgressView()) {
                 functionCard(
                     icon: "chart.bar.xaxis",
@@ -329,7 +329,7 @@ struct HomeView: View {
                 )
             }
             .buttonStyle(.plain)
-            
+
             NavigationLink(destination: DanListView()) {
                 functionCard(
                     icon: "checkmark.seal.fill",
@@ -349,7 +349,7 @@ struct HomeView: View {
                 )
             }
             .buttonStyle(.plain)
-            
+
             NavigationLink(destination: SongCollectionsView()) {
                 functionCard(
                     icon: "rectangle.stack.fill",
@@ -372,7 +372,7 @@ struct HomeView: View {
         }
     }
     // MARK: - Rating Badge
-    
+
     private var ratingBadge: some View {
         Text("\(displayRating)")
             .font(.system(size: 10, weight: .black, design: .rounded))
@@ -383,9 +383,9 @@ struct HomeView: View {
             .overlay(Capsule().stroke(Color.white, lineWidth: 1))
             .offset(x: 4, y: 4)
     }
-    
+
     // MARK: - Avatar View
-    
+
     private var avatarImage: some View {
         AvatarImageView(
             imageData: activeProfile?.avatarData,
@@ -405,7 +405,7 @@ struct HomeView: View {
                 // Avatar
                 ZStack {
                     avatarImage
-                    
+
                     // Rating badge
                     VStack {
                         Spacer()
@@ -416,13 +416,13 @@ struct HomeView: View {
                     }
                 }
                 .frame(width: 60, height: 60)
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Text(activeProfile?.name ?? String(localized: "home.profile.unbound"))
                             .font(.system(size: 18, weight: .bold))
                             .foregroundStyle(.primary)
-                        
+
                         // Server badge
                         if let profile = activeProfile, let server = GameServer(rawValue: profile.server) {
                             Text(server.displayName)
@@ -433,7 +433,7 @@ struct HomeView: View {
                                 .background(serverColor(server), in: RoundedRectangle(cornerRadius: 4))
                         }
                     }
-                    
+
                     if let plate = activeProfile?.plate, !plate.isEmpty {
                         Text(plate)
                             .font(.system(size: 12))
@@ -444,9 +444,9 @@ struct HomeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                
+
                 Spacer()
-                
+
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.secondary.opacity(0.3))
@@ -461,7 +461,7 @@ struct HomeView: View {
         }
         .buttonStyle(.plain)
     }
-    
+
     private func serverColor(_ server: GameServer) -> Color {
         switch server {
         case .jp:   return .red
@@ -469,7 +469,7 @@ struct HomeView: View {
         case .cn:   return .orange
         }
     }
-    
+
     private func functionCard(icon: String, title: LocalizedStringKey, subtitle: LocalizedStringKey, gradient: [Color]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Image(systemName: icon)
@@ -478,12 +478,12 @@ struct HomeView: View {
                     LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
                 )
                 .frame(width: 32, height: 32, alignment: .leading)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.primary)
-                
+
                 Text(subtitle)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)

@@ -264,58 +264,58 @@ struct ThemeUtils {
         default: type.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         }
     }
-    
+
     struct AppVersion: Decodable {
         let version: String
         let abbr: String
         let releaseDate: String?
     }
-    
+
     nonisolated static func versionSortOrder(_ version: String) -> Int {
         let sequence = UserDefaults.standard.stringArray(forKey: "MaimaiVersionSequence") ?? []
-        
+
         // 1. Exact match preferred
         if let index = sequence.firstIndex(of: version) {
             return index
         }
-        
+
         // 2. Fallback to longest matching candidate (Longest Match Wins)
         // This prevents greedy substring matches like Matching "maimai" against "maimai でらっくす"
         let matches = sequence.enumerated().filter { _, item in
             version.contains(item) || item.contains(version)
         }
-        
+
         if let bestMatch = matches.max(by: { $0.element.count < $1.element.count }) {
             return bestMatch.offset
         }
-        
-        return 999 
+
+        return 999
     }
-    
+
     static var latestVersion: String {
         let sequence = UserDefaults.app.maimaiVersionSequence
         return sequence.last ?? ""
     }
-    
+
     static func versionAbbreviation(_ version: String) -> String {
         guard let data = UserDefaults.app.maimaiVersionsData,
               let versions = try? JSONDecoder().decode([AppVersion].self, from: data) else {
             return version
         }
-        
+
         if let item = versions.first(where: { $0.version == version }) {
             return item.abbr
         }
-        
+
         // Longest Match Wins strategy for abbreviations
         let matches = versions.filter { version.contains($0.version) || $0.version.contains(version) }
         if let bestMatch = matches.max(by: { $0.version.count < $1.version.count }) {
             return bestMatch.abbr
         }
-        
+
         return version
     }
-    
+
     static func categorySortOrder(_ category: String) -> Int {
         let sequence = UserDefaults.app.maimaiCategorySequence
         if let index = sequence.firstIndex(of: category) {
@@ -323,9 +323,9 @@ struct ThemeUtils {
         }
         return 999
     }
-    
+
     // MARK: - Difficulty Helpers
-    
+
     /// Canonical ordering for difficulties (higher = harder). Used for sorting sheets.
     static func difficultyOrder(_ difficulty: String) -> Int {
         switch difficulty.lowercased() {
@@ -337,7 +337,7 @@ struct ThemeUtils {
         default:         return -1
         }
     }
-    
+
     /// Abbreviated difficulty name for compact badge display.
     static func diffShort(_ diff: String) -> String {
         switch diff.uppercased() {
@@ -349,7 +349,7 @@ struct ThemeUtils {
         default:         return diff
         }
     }
-    
+
     /// Maps difficulty string to numeric index (0–4).
     static func mapDifficultyToIndex(_ diff: String) -> Int {
         switch diff.lowercased() {
@@ -361,9 +361,9 @@ struct ThemeUtils {
         default:         return 3
         }
     }
-    
+
     // MARK: - Status Colors
-    
+
     /// Color for Full Combo status badges.
     nonisolated static func fcColor(_ fc: String) -> Color {
         let low = fc.lowercased()
@@ -371,7 +371,7 @@ struct ThemeUtils {
         if low.contains("fc") { return Color(red: 0.2, green: 0.75, blue: 0.2) }  // green
         return .secondary
     }
-    
+
     /// Color for Full Sync status badges.
     nonisolated static func fsColor(_ fs: String) -> Color {
         let low = fs.lowercased()
@@ -379,7 +379,7 @@ struct ThemeUtils {
         if low.contains("fs") || low.contains("sync") { return Color(red: 0.3, green: 0.5, blue: 1.0) } // blue
         return .secondary
     }
-    
+
     // MARK: - Status Normalization & Ordering
 
     /// Converts display and storage variants to the canonical FC status code.
@@ -395,7 +395,7 @@ struct ThemeUtils {
         default: return normalized
         }
     }
-    
+
     // Canonical ordering for FC badges
     static func fcOrder(_ fc: String?) -> Int {
         guard let fc = canonicalFC(fc) else { return 0 }
@@ -407,12 +407,12 @@ struct ThemeUtils {
         default:    return 0
         }
     }
-    
+
     static func bestFC(_ a: String?, _ b: String?) -> String? {
         if fcOrder(a) >= fcOrder(b) { return a }
         return b
     }
-    
+
     // Canonical ordering for FS badges
     static func fsOrder(_ fs: String?) -> Int {
         guard let fs = fs?.lowercased() else { return 0 }
@@ -425,12 +425,12 @@ struct ThemeUtils {
         default:     return 0
         }
     }
-    
+
     static func bestFS(_ a: String?, _ b: String?) -> String? {
         if fsOrder(a) >= fsOrder(b) { return a }
         return b
     }
-    
+
     /// Normalizes FC status codes to display strings (fc→FC, fcp→FC+, ap→AP, app→AP+).
     nonisolated static func normalizeFC(_ fc: String) -> String {
         switch canonicalFC(fc) {
@@ -441,7 +441,7 @@ struct ThemeUtils {
         default:    return fc.uppercased()
         }
     }
-    
+
     /// Normalizes FS status codes to display strings (fs→FS, fsp→FS+, fsd→FDX, fsdp→FDX+).
     nonisolated static func normalizeFS(_ fs: String) -> String {
         switch fs.lowercased() {
@@ -452,9 +452,9 @@ struct ThemeUtils {
         default:     return fs.uppercased()
         }
     }
-    
+
     // MARK: - Rating Colors
-    
+
     static func ratingColor(_ rating: Int) -> Color {
         if rating >= 15000 { return Color(hex: "#FF6100") } // Rainbow base
         if rating >= 14500 { return Color(hex: "#E5E4E2") } // Platinum
@@ -462,13 +462,13 @@ struct ThemeUtils {
         if rating >= 13000 { return Color(hex: "#C0C0C0") } // Silver
         if rating >= 12000 { return Color(hex: "#CD7F32") } // Bronze
         if rating >= 10000 { return Color(hex: "#D084FF") } // Purple
-        if rating >= 7000  { return Color(hex: "#FF5E5E") } // Red
-        if rating >= 4000  { return Color(hex: "#FFD400") } // Yellow
-        if rating >= 2000  { return Color(hex: "#46D246") } // Green
-        if rating >= 1000  { return Color(hex: "#56A6FF") } // Blue
+        if rating >= 7000 { return Color(hex: "#FF5E5E") } // Red
+        if rating >= 4000 { return Color(hex: "#FFD400") } // Yellow
+        if rating >= 2000 { return Color(hex: "#46D246") } // Green
+        if rating >= 1000 { return Color(hex: "#56A6FF") } // Blue
         return .gray // White
     }
-    
+
     static func ratingGradient(_ rating: Int) -> LinearGradient {
         if rating >= 15000 {
             // Rainbow
@@ -502,7 +502,7 @@ struct ThemeUtils {
                 endPoint: .bottom
             )
         }
-        
+
         let color = ratingColor(rating)
         return LinearGradient(colors: [color], startPoint: .top, endPoint: .bottom)
     }

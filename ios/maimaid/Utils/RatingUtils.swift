@@ -5,7 +5,7 @@ import SwiftData
 
 enum RatingUtils {
     // MARK: - RatingEntry
-    
+
     struct RatingEntry: Identifiable, Sendable {
         let id: UUID
         let songId: Int
@@ -21,7 +21,7 @@ enum RatingUtils {
         let maxDxScore: Int
         let fc: String?
         let fs: String?
-        
+
         init(
             id: UUID = UUID(),
             songId: Int,
@@ -54,15 +54,15 @@ enum RatingUtils {
             self.fs = fs
         }
     }
-    
+
     // MARK: - Rank Thresholds
-    
+
     struct RankThreshold: Identifiable {
         let id = UUID()
         let rank: String
         let threshold: Double
     }
-    
+
     static let rankThresholds: [RankThreshold] = [
         RankThreshold(rank: "D", threshold: 0.0),
         RankThreshold(rank: "C", threshold: 50.0),
@@ -79,12 +79,12 @@ enum RatingUtils {
         RankThreshold(rank: "SSS", threshold: 100.0),
         RankThreshold(rank: "SSS+", threshold: 100.5)
     ]
-    
+
     private struct RatingBreakpoint {
         let achievement: Double
         let coefficient: Double
     }
-    
+
     private static let ratingCoefficients: [RatingBreakpoint] = [
         RatingBreakpoint(achievement: 0.0, coefficient: 0.0),
         RatingBreakpoint(achievement: 10.0, coefficient: 1.6),
@@ -110,39 +110,39 @@ enum RatingUtils {
         RatingBreakpoint(achievement: 100.4999, coefficient: 22.2),
         RatingBreakpoint(achievement: 100.5, coefficient: 22.4)
     ]
-    
+
     static func getRatingCoefficient(for achievement: Double) -> Double {
         for i in 0..<ratingCoefficients.count {
             if i == ratingCoefficients.count - 1 || achievement < ratingCoefficients[i + 1].achievement {
                 return ratingCoefficients[i].coefficient
             }
         }
-        
+
         return 0.0
     }
-    
+
     // MARK: - Song Category
-    
+
     enum SongCategory: Sendable {
         case b15  // New-song bucket for the selected server version rules
         case b35  // Older-song bucket
         case excluded
     }
-    
+
     // MARK: - Circle Version Check
-    
+
     /// Returns true if the given version is "circle" or later in the version sequence.
     /// "circle" is identified by a case-insensitive substring match in the version sequence.
     static func isAfterCircle(version: String?) -> Bool {
         guard let version = version, !version.isEmpty else { return false }
         let sequence = UserDefaults.app.maimaiVersionSequence
         guard !sequence.isEmpty else { return false }
-        
+
         // Find the index of the "circle" version entry
         guard let circleIndex = sequence.firstIndex(where: { $0.lowercased().contains("circle") }) else {
             return false
         }
-        
+
         // Find the index of the given version
         let versionIndex: Int
         if let exact = sequence.firstIndex(of: version) {
@@ -152,12 +152,12 @@ enum RatingUtils {
         } else {
             return false
         }
-        
+
         return versionIndex >= circleIndex
     }
-    
+
     // MARK: - Rank Calculation
-    
+
     static func calculateRank(achievement: Double) -> String {
         if achievement >= 100.5 { return "SSS+" }
         if achievement >= 100.0 { return "SSS" }
@@ -174,15 +174,15 @@ enum RatingUtils {
         if achievement >= 50.0 { return "C" }
         return "D"
     }
-    
+
     // MARK: - Rating Calculation
-    
+
     /// Returns true if the fc value represents an All Perfect (AP or AP+).
     static func isAP(_ fc: String?) -> Bool {
         guard let fc = ThemeUtils.canonicalFC(fc) else { return false }
         return fc == "ap" || fc == "app"
     }
-    
+
     /// Calculates rating for a sheet.
     /// - Parameters:
     ///   - internalLevel: The internal level value of the sheet.
@@ -192,25 +192,25 @@ enum RatingUtils {
     ///                  When `true` and the score is AP (or AP+), +1 is added to the rating.
     static func calculateRating(internalLevel: Double, achievement: Double, fc: String? = nil, afterCircle: Bool = false) -> Int {
         guard internalLevel > 0, achievement > 0 else { return 0 }
-        
+
         let coefficient = getRatingCoefficient(for: achievement)
         let rating = internalLevel * (coefficient / 100.0) * min(achievement, 100.5)
         var result = Int(floor(rating + 0.000001))
-        
+
         if afterCircle && isAP(fc) {
             result += 1
         }
-        
+
         return result
     }
-    
+
     /// Convenience overload without fc (no AP bonus).
     static func calculateRating(internalLevel: Double, achievements: Double) -> Int {
         return calculateRating(internalLevel: internalLevel, achievement: achievements, fc: nil, afterCircle: false)
     }
-    
+
     // MARK: - Rank Colors
-    
+
     nonisolated static func colorForRank(_ rank: String) -> Color {
         switch rank {
         case "SSS+", "SSS":
@@ -229,9 +229,9 @@ enum RatingUtils {
             return .secondary
         }
     }
-    
+
     // MARK: - Song Category Determination
-    
+
     /// Determines a sheet's Best 50 bucket using the selected server's version rules.
     static func determineSongCategory(
         songVersion: String?,
@@ -241,13 +241,13 @@ enum RatingUtils {
     ) -> SongCategory {
         guard isRegionActive else { return .excluded }
         guard let server else { return .excluded }
-        
+
         guard let latest = latestServerVersion, let songVer = songVersion else {
             return .b35
         }
-        
+
         let versionSequence = UserDefaults.app.maimaiVersionSequence
-        
+
         guard let songIndex = versionIndex(of: songVer, in: versionSequence),
               let latestIndex = versionIndex(of: latest, in: versionSequence) else {
             return .b35
@@ -287,16 +287,16 @@ enum RatingUtils {
             .max { $0.element.count < $1.element.count }?
             .offset
     }
-    
+
     // MARK: - B50 Calculation
-    
+
     struct CalculationInput: Sendable {
         let songs: [SongCalculationData]
         let userProfileId: UUID?
         let server: GameServer?
         let scoreMap: [String: ScoreCalculationData]
     }
-    
+
     struct SongCalculationData: Sendable {
         let songId: Int
         let songIdentifier: String
@@ -308,7 +308,7 @@ enum RatingUtils {
         let isLocked: Bool
         let sheets: [SheetCalculationData]
     }
-    
+
     struct SheetCalculationData: Sendable {
         let songIdentifier: String
         let type: String
@@ -318,7 +318,7 @@ enum RatingUtils {
         let calculationLevel: Double?
         let isPlayable: Bool
     }
-    
+
     struct ScoreCalculationData: Sendable {
         let sheetId: String
         let rate: Double
@@ -327,7 +327,7 @@ enum RatingUtils {
         let fc: String?
         let fs: String?
     }
-    
+
     static func calculateB50(
         input: CalculationInput,
         b35Count: Int,
@@ -335,16 +335,16 @@ enum RatingUtils {
         latestVersion: String?
     ) async -> (total: Int, b35: [RatingEntry], b15: [RatingEntry]) {
         var allEntries: [(entry: RatingEntry, isNew: Bool)] = []
-        
+
         // Determine if the AP+1 bonus applies for the current server version
         let afterCircle = isAfterCircle(version: latestVersion)
-        
+
         for songData in input.songs {
             // Skip utage category
             if songData.category.lowercased().contains("utage") || songData.category.contains("宴") {
                 continue
             }
-            
+
             for sheetData in songData.sheets {
                 // Skip utage sheets
                 if sheetData.type.lowercased().contains("utage") { continue }
@@ -357,22 +357,22 @@ enum RatingUtils {
                 )
 
                 guard category != .excluded else { continue }
-                
+
                 let sheetId = "\(sheetData.songIdentifier)_\(sheetData.type)_\(sheetData.difficulty)"
                 guard let scoreData = input.scoreMap[sheetId] else { continue }
-                
+
                 let internalLevel = sheetData.calculationLevel ?? 0
                 guard internalLevel > 0 else { continue }
-                
+
                 let rating = calculateRating(
                     internalLevel: internalLevel,
                     achievement: scoreData.rate,
                     fc: scoreData.fc,
                     afterCircle: afterCircle
                 )
-                
+
                 guard rating > 0 else { continue }
-                
+
                 let entry = RatingEntry(
                     songId: songData.songId,
                     songIdentifier: songData.songIdentifier,
@@ -388,25 +388,25 @@ enum RatingUtils {
                     fc: scoreData.fc,
                     fs: scoreData.fs
                 )
-                
+
                 allEntries.append((entry: entry, isNew: category == .b15))
             }
         }
-        
+
         let b15Entries = allEntries
             .filter { $0.isNew }
             .sorted { $0.entry.rating > $1.entry.rating }
             .prefix(b15Count)
             .map { $0.entry }
-        
+
         let b35Entries = allEntries
             .filter { !$0.isNew }
             .sorted { $0.entry.rating > $1.entry.rating }
             .prefix(b35Count)
             .map { $0.entry }
-        
+
         let total = b15Entries.reduce(0) { $0 + $1.rating } + b35Entries.reduce(0) { $0 + $1.rating }
-        
+
         return (total: total, b35: Array(b35Entries), b15: Array(b15Entries))
     }
 }
@@ -568,7 +568,7 @@ extension RatingUtils {
     static func fetchScoreMap(context: ModelContext) async -> [String: Score] {
         ScoreService.shared.scoreMap(context: context)
     }
-    
+
     // 保留旧方法用于迁移兼容，但标记为废弃
     @available(*, deprecated, message: "Use fetchScoreMap(context:) instead for proper user isolation")
     static func fetchScoreMap(profileId: UUID?, context: ModelContext) -> [String: Score] {
@@ -581,7 +581,7 @@ extension RatingUtils {
             let allScores = (try? context.fetch(fallbackDesc)) ?? []
             scores = allScores.filter { $0.userProfileId == nil }
         }
-        
+
         var map: [String: Score] = [:]
         for score in scores {
             map[score.sheetId] = score

@@ -8,7 +8,7 @@ struct UserProfileListView: View {
     @State private var editingMode: UserProfileEditView.Mode?
     @State private var deletingProfileId: UUID?
     @State private var errorMessage: String?
-    
+
     // Cache server versions to avoid recomputing per-row
     @State private var serverVersionCache: [GameServer: String] = [:]
 
@@ -21,7 +21,7 @@ struct UserProfileListView: View {
         let hasIntlRegion: Bool
         let hasCnRegion: Bool
     }
-    
+
     var body: some View {
         List {
             if profiles.isEmpty {
@@ -110,7 +110,7 @@ struct UserProfileListView: View {
             await buildServerVersionCache()
         }
     }
-    
+
     private func buildServerVersionCache() async {
         let container = modelContext.container
         let sequence = UserDefaults.app.maimaiVersionSequence
@@ -194,15 +194,14 @@ struct UserProfileListView: View {
         }
         return serverVersion
     }
-    
+
     private func profileRow(_ profile: UserProfile) -> some View {
         HStack(spacing: 14) {
             // Avatar
             ZStack {
                 if let data = profile.avatarData, let uiImage = UIImage(data: data) {
                     Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
+                        .resizable().scaledToFill()
                         .frame(width: 48, height: 48)
                         .clipShape(Circle())
                 } else {
@@ -212,22 +211,22 @@ struct UserProfileListView: View {
                         .foregroundStyle(.blue.opacity(0.6))
                 }
             }
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(profile.name.isEmpty ? String(localized: "userProfile.unnamed") : profile.name)
                         .font(.headline)
-                    
+
                     if profile.isActive {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(.green)
                             .font(.caption)
                     }
                 }
-                
+
                 let server = GameServer(rawValue: profile.server) ?? .jp
                 let version = serverVersionCache[server] ?? ThemeUtils.latestVersion
-                
+
                 HStack(spacing: 6) {
                     Text(server.displayName)
                         .font(.caption)
@@ -236,15 +235,15 @@ struct UserProfileListView: View {
                         .background(serverColor(server).opacity(0.15))
                         .foregroundStyle(serverColor(server))
                         .clipShape(Capsule())
-                    
+
                     Text(ThemeUtils.versionAbbreviation(version))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
-            
+
             Spacer()
-            
+
             if profile.isActive {
                 Text("userProfile.active")
                     .font(.caption2)
@@ -257,7 +256,7 @@ struct UserProfileListView: View {
         }
         .padding(.vertical, 4)
     }
-    
+
     private func switchToProfile(_ profileId: UUID) {
         do {
             let didActivate = try UserProfileMutationService.activate(
@@ -276,7 +275,7 @@ struct UserProfileListView: View {
             errorMessage = error.localizedDescription
         }
     }
-    
+
     private func deleteProfile(_ profileId: UUID) {
         do {
             let didDelete = try UserProfileMutationService.delete(
@@ -295,7 +294,7 @@ struct UserProfileListView: View {
             errorMessage = error.localizedDescription
         }
     }
-    
+
     private func serverColor(_ server: GameServer) -> Color {
         switch server {
         case .jp:   return .red

@@ -4,12 +4,12 @@ import SwiftData
 struct SongDetailView: View {
     let song: Song
     @Environment(\.modelContext) private var modelContext
-    
-    @State private var selectedSheet: Sheet? = nil
+
+    @State private var selectedSheet: Sheet?
     @State private var selectedType: String = ""
-    @State private var toastMessage: String? = nil
+    @State private var toastMessage: String?
     @State private var statsService = ChartStatsService.shared
-    
+
     init(song: Song, preferredType: String? = nil) {
         self.song = song
         let types = Set(song.sheets.map { $0.type.lowercased() })
@@ -24,13 +24,13 @@ struct SongDetailView: View {
             _selectedType = State(initialValue: types.first ?? "")
         }
     }
-    
+
     private var filteredSheets: [Sheet] {
         song.sheets
             .filter { $0.type.lowercased() == selectedType }
             .sorted { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) }
     }
-    
+
     private var availableTypes: [String] {
         Array(Set(song.sheets.map { $0.type.lowercased() })).sorted().reversed()
     }
@@ -66,7 +66,7 @@ struct SongDetailContent: View {
     @State private var statsService = ChartStatsService.shared
     private let communityAliasService = CommunityAliasService.shared
     @State private var backendSessionManager = BackendSessionManager.shared
-    @State private var extractedDominantUIColor: UIColor? = nil
+    @State private var extractedDominantUIColor: UIColor?
     @State private var communityAliasDraft = ""
     @State private var isSubmittingCommunityAlias = false
     @State private var myCommunityCandidates: [CommunityAliasMyCandidate] = []
@@ -125,13 +125,13 @@ struct SongDetailContent: View {
         let hue = 0.33 * (1 - communityAliasDailyUsageProgress)
         return Color(hue: hue, saturation: 0.82, brightness: 0.92)
     }
-    
+
     private var filteredSheets: [Sheet] {
         song.sheets
             .filter { $0.type.lowercased() == selectedType }
             .sorted { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) }
     }
-    
+
     private var availableTypes: [String] {
         Array(Set(song.sheets.map { $0.type.lowercased() })).sorted().reversed()
     }
@@ -151,19 +151,19 @@ struct SongDetailContent: View {
             fallback: song.version
         )
     }
-    
+
     private var currentTitle: String {
         let sheetId = filteredSheets.first?.songId ?? 0
         let displayId = sheetId > 0 ? sheetId : song.songId
         return displayId > 0 ? "#\(String(displayId))" : ""
     }
-    
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 // MARK: - Hero Section
                 heroSection
-                
+
                 // MARK: - Content
                 VStack(spacing: 20) {
                     // Metadata pills
@@ -171,16 +171,16 @@ struct SongDetailContent: View {
 
                     // Community aliases
                     communityAliasSection
-                    
+
                     // Region & Lock status
                     availabilitySection
-                    
+
                     // External search links
                     externalLinksSection
-                    
+
                     // Chart type
                     chartTypeSection
-                    
+
                     // Sheet cards
                     sheetCards
                 }
@@ -232,8 +232,7 @@ struct SongDetailContent: View {
             }
         }
     }
-    
-    
+
     private func getJacketImage() -> UIImage? {
         // Try local cache/bundle via ImageDownloader
         if let image = ImageDownloader.shared.loadImage(imageName: song.imageName) {
@@ -242,30 +241,30 @@ struct SongDetailContent: View {
         // Fallback or asset
         return UIImage(named: song.imageName)
     }
-    
+
     private func shareImage(_ image: UIImage) {
         let activityVC = UIActivityViewController(activityItems: [image], applicationActivities: nil)
-        
+
         // Find the top most view controller to present
         if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootVC = scene.windows.first?.rootViewController {
-            
+
             var topVC = rootVC
             while let presented = topVC.presentedViewController {
                 topVC = presented
             }
-            
+
             // For iPad
             if let popover = activityVC.popoverPresentationController {
                 popover.sourceView = topVC.view
                 popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: topVC.view.bounds.midY, width: 0, height: 0)
                 popover.permittedArrowDirections = []
             }
-            
+
             topVC.present(activityVC, animated: true)
         }
     }
-    
+
     private func showToast(message: String) {
         // Haptic feedback
         let generator = UIImpactFeedbackGenerator(style: .medium)
@@ -370,13 +369,10 @@ struct SongDetailContent: View {
                 switch duplicateReason {
                 case .lxnsExisting:
                     showToast(message: String(localized: "community.alias.submit.duplicateLxns"))
-                    break
-                case .communityExisting:
+                    case .communityExisting:
                     showToast(message: String(localized: "community.alias.submit.duplicateCommunity"))
-                    break
-                case .adminRejectedLocked:
+                    case .adminRejectedLocked:
                     showToast(message: String(localized: "community.alias.submit.adminRejectedLocked"))
-                    break
                 }
                 break
             }
@@ -427,22 +423,22 @@ struct SongDetailContent: View {
             try? await Task.sleep(for: .milliseconds(110))
         }
     }
-    
+
     // MARK: - Ambient Background
-    
+
     private var ambientBackground: some View {
         Color(adjustedBackgroundUIColor(for: colorScheme))
             .ignoresSafeArea()
     }
-    
+
     private func adjustedBackgroundUIColor(for scheme: ColorScheme) -> UIColor {
         let sourceColor = extractedDominantUIColor ?? UIColor.systemBackground
-        
+
         var hue: CGFloat = 0
         var saturation: CGFloat = 0
         var brightness: CGFloat = 0
         var alpha: CGFloat = 0
-        
+
         if sourceColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) {
             if scheme == .dark {
                 // Keep song hue, but generate a controlled dark variant for readability.
@@ -456,7 +452,7 @@ struct SongDetailContent: View {
                 return UIColor(hue: hue, saturation: lightSaturation, brightness: lightBrightness, alpha: 1.0)
             }
         }
-        
+
         var white: CGFloat = 0
         if sourceColor.getWhite(&white, alpha: &alpha) {
             let adjusted = scheme == .dark
@@ -464,12 +460,12 @@ struct SongDetailContent: View {
                 : min(max(0.86 + (white - 0.5) * 0.08, 0.82), 0.94)
             return UIColor(white: adjusted, alpha: 1.0)
         }
-        
+
         return scheme == .dark ? UIColor.black : UIColor.systemBackground
     }
-    
+
     // MARK: - Hero Section
-    
+
     private var heroSection: some View {
         VStack(spacing: 16) {
             SongJacketView(imageName: song.imageName, size: 220, cornerRadius: 28, useThumbnail: false)
@@ -483,7 +479,7 @@ struct SongDetailContent: View {
                     } label: {
                         Label("song.detail.copy.title", systemImage: "doc.on.doc")
                     }
-                    
+
                     Button {
                         if let image = getJacketImage() {
                             UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
@@ -492,7 +488,7 @@ struct SongDetailContent: View {
                     } label: {
                         Label("song.detail.save.action", systemImage: "square.and.arrow.down")
                     }
-                    
+
                     Button {
                         if let image = getJacketImage() {
                             shareImage(image)
@@ -501,29 +497,29 @@ struct SongDetailContent: View {
                         Label("song.detail.share.action", systemImage: "square.and.arrow.up")
                     }
                 }
-            
+
             VStack(spacing: 6) {
                 MarqueeText(text: song.title, font: .title2, fontWeight: .bold, color: .primary, alignment: .center)
                     .frame(height: 32)
                     .onTapGesture { copyToClipboard(song.title, label: String(localized: "song.detail.label.title")) }
-                
+
                 MarqueeText(text: song.artist, font: .subheadline, color: .secondary, alignment: .center)
                     .frame(height: 20)
                     .onTapGesture { copyToClipboard(song.artist, label: String(localized: "song.detail.label.artist")) }
-                
+
                 if let keywords = song.searchKeywords, !keywords.isEmpty {
                     HStack(spacing: 6) {
                         Image(systemName: "tag.fill")
                             .font(.system(size: 8))
                             .foregroundStyle(.secondary.opacity(0.4))
-                        
+
                         Text(keywords.replacingOccurrences(of: ",", with: " · "))
                             .font(.system(size: 10))
                             .foregroundStyle(.secondary.opacity(0.6))
                     }
                     .padding(.top, 2)
                 }
-                
+
                 if !displayAliases.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 6) {
@@ -557,7 +553,7 @@ struct SongDetailContent: View {
         }
         .padding(.top, 8)
     }
-    
+
     // MARK: - Metadata Pills
 
     private var communityAliasSection: some View {
@@ -715,37 +711,36 @@ struct SongDetailContent: View {
             HStack(spacing: 8) {
                 pillsContent(isGrid: false)
             }
-            
-            
+
             // Priority 2: Two per row
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                 pillsContent(isGrid: true)
             }
         }
     }
-    
+
     @ViewBuilder
     private func pillsContent(isGrid: Bool) -> some View {
         if let bpm = song.bpm {
             metadataPill(icon: "metronome", value: "\(Int(bpm))", label: "song.detail.metadata.bpm", isGrid: isGrid)
                 .onTapGesture { copyToClipboard("\(Int(bpm))", label: String(localized: "song.detail.metadata.bpm")) }
         }
-        
+
         metadataPill(icon: "square.grid.2x2", value: song.category, label: nil, isGrid: isGrid)
             .onTapGesture { copyToClipboard(song.category, label: String(localized: "song.detail.metadata.category")) }
-        
+
         if let version = selectedChartMainVersion {
             metadataPill(icon: "clock", value: ThemeUtils.versionAbbreviation(version), label: nil, isGrid: isGrid)
                 .onTapGesture { copyToClipboard(version, label: String(localized: "song.detail.metadata.version")) }
         }
-        
+
         if let releaseDate = song.releaseDate {
             let displayDate = isGrid ? releaseDate : formatDate(releaseDate)
             metadataPill(icon: "calendar", value: displayDate, label: nil, isGrid: isGrid)
                 .onTapGesture { copyToClipboard(releaseDate, label: String(localized: "song.detail.metadata.releaseDate")) }
         }
     }
-    
+
     private func formatDate(_ date: String) -> String {
         let components = date.components(separatedBy: "-")
         if components.count == 3 {
@@ -754,13 +749,13 @@ struct SongDetailContent: View {
         }
         return date
     }
-    
+
     private func metadataPill(icon: String, value: String, label: LocalizedStringKey?, isGrid: Bool = false) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.secondary)
-            
+
             if let label = label {
                 HStack(spacing: 2) {
                     Text(value)
@@ -786,16 +781,16 @@ struct SongDetailContent: View {
                 .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
         )
     }
-    
+
     // MARK: - Availability Section
-    
+
     private var availabilitySection: some View {
         let allSheets = song.sheets
         // Aggregate: if ANY sheet is available in a region, the song is available there
         let jp = allSheets.contains { $0.regionJp }
         let intl = allSheets.contains { $0.regionIntl }
         let cn = allSheets.contains { $0.regionCn }
-        
+
         return HStack(spacing: 0) {
             // Region flags
             HStack(spacing: 12) {
@@ -803,9 +798,9 @@ struct SongDetailContent: View {
                 regionFlag("🌏", label: "song.detail.region.intl", available: intl)
                 regionFlag("🇨🇳", label: "song.detail.region.cn", available: cn)
             }
-            
+
             Spacer()
-            
+
             // Lock status
             if song.isLocked {
                 HStack(spacing: 4) {
@@ -839,44 +834,44 @@ struct SongDetailContent: View {
                 .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
         )
     }
-    
+
     private func regionFlag(_ flag: String, label: LocalizedStringKey, available: Bool) -> some View {
         VStack(spacing: 3) {
             Text(flag)
                 .font(.system(size: 22))
                 .opacity(available ? 1.0 : 0.25)
                 .saturation(available ? 1.0 : 0.0)
-            
+
             Text(label)
                 .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(available ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary.opacity(0.4)))
         }
     }
-    
+
     // MARK: - External Links
-    
+
     private var externalLinksSection: some View {
         let query = song.title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? song.title
-        
+
         return HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.secondary)
-            
+
             externalLinkButton(
                 icon: "play.rectangle.fill",
                 label: "YouTube",
                 color: .red,
                 url: "https://www.youtube.com/results?search_query=maimai+\(query)"
             )
-            
+
             externalLinkButton(
                 icon: "video.fill",
                 label: "Bilibili",
                 color: Color(red: 0.0, green: 0.74, blue: 0.95),
                 url: "https://search.bilibili.com/all?keyword=maimai+\(query)"
             )
-            
+
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -888,7 +883,7 @@ struct SongDetailContent: View {
                 .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
         )
     }
-    
+
     private func externalLinkButton(icon: String, label: LocalizedStringKey, color: Color, url: String) -> some View {
         Link(destination: URL(string: url)!) {
             HStack(spacing: 4) {
@@ -904,7 +899,7 @@ struct SongDetailContent: View {
             .overlay(Capsule().strokeBorder(color.opacity(0.2), lineWidth: 1))
         }
     }
-    
+
     // MARK: - Chart Type
 
     private var chartTypeLabel: String {
@@ -995,9 +990,9 @@ struct SongDetailContent: View {
                 .strokeBorder(currentChartTypeColor.opacity(0.18), lineWidth: 1)
         )
     }
-    
+
     // MARK: - Sheet Cards
-    
+
     private var sheetCards: some View {
         VStack(spacing: 12) {
             ForEach(filteredSheets) { sheet in
@@ -1009,8 +1004,6 @@ struct SongDetailContent: View {
         }
     }
 }
-
-
 
 // MARK: - Sheet Card View
 
@@ -1072,7 +1065,7 @@ struct SheetCardView: View {
             versionSequence: UserDefaults.app.maimaiVersionSequence
         )
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -1082,7 +1075,7 @@ struct SheetCardView: View {
                     .fill(diffColor)
                     .frame(width: 4)
                     .padding(.vertical, 4)
-                
+
                 HStack(spacing: 12) {
                     // Difficulty info
                     VStack(alignment: .leading, spacing: 3) {
@@ -1095,18 +1088,18 @@ struct SheetCardView: View {
                                     .font(.system(size: 13, weight: .bold, design: .rounded))
                                     .foregroundStyle(diffColor)
                             }
-                        
+
                         if let designer = sheet.noteDesigner, !designer.isEmpty {
                             Text(designer)
                                 .font(.system(size: 11))
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         }
-                        
+
                     }
-                    
+
                     Spacer()
-                    
+
                     // Score badge (if exists)
                     if !isExpanded, let score = currentScore {
                         VStack(alignment: .trailing, spacing: 1) {
@@ -1118,7 +1111,7 @@ struct SheetCardView: View {
                                 Text(RatingUtils.calculateRank(achievement: score.rate))
                                     .font(.system(size: 10, weight: .black, design: .rounded))
                                     .foregroundStyle(diffColor)
-                                
+
                                 if let fc = score.fc, !fc.isEmpty {
                                     Text(ThemeUtils.normalizeFC(fc))
                                         .font(.system(size: 8, weight: .bold, design: .rounded))
@@ -1127,7 +1120,7 @@ struct SheetCardView: View {
                                         .padding(.vertical, 1)
                                         .background(ThemeUtils.fcColor(fc), in: RoundedRectangle(cornerRadius: 3))
                                 }
-                                
+
                                 if let fs = score.fs, !fs.isEmpty {
                                     Text(ThemeUtils.normalizeFS(fs))
                                         .font(.system(size: 8, weight: .bold, design: .rounded))
@@ -1139,13 +1132,13 @@ struct SheetCardView: View {
                             }
                         }
                     }
-                    
+
                     // Level
                     Text(resolvedMetadata.displayLevel)
                         .font(.system(size: 28, weight: .black, design: .rounded))
                         .foregroundStyle(diffColor.opacity(0.85))
                         .frame(minWidth: 44)
-                    
+
                     // Expand chevron
                     Image(systemName: "chevron.down")
                         .font(.system(size: 10, weight: .bold))
@@ -1164,7 +1157,7 @@ struct SheetCardView: View {
                     }
                 }
             }
-            
+
             // Expanded content
             if isExpanded {
                 expandedContent
@@ -1211,7 +1204,7 @@ struct SheetCardView: View {
             Text("song.detail.history.delete.message")
         }
     }
-    
+
     @ViewBuilder
     private var chartStatsGrid: some View {
         if let stat = stat {
@@ -1276,7 +1269,7 @@ struct SheetCardView: View {
             .fill(diffColor.opacity(0.10))
             .frame(width: 1, height: 28)
     }
-    
+
     @ViewBuilder
     private var expandedContent: some View {
         VStack(spacing: 16) {
@@ -1296,20 +1289,20 @@ struct SheetCardView: View {
 
             // Current best score
             bestScoreRow
-            
+
             // Chart Stats
             chartStatsGrid
-            
+
             // Detailed Info Table (Notes)
             detailedInfoTable
-            
+
             // Achievement -> Rating table
             if supportsRatingTable,
                let level = resolvedMetadata.ratingLevel,
                level > 0 {
                 ratingTable(level: level)
             }
-            
+
             // Fault Tolerance Calculator
             if sheet.total != nil {
                 FaultToleranceCalculatorView(
@@ -1321,13 +1314,13 @@ struct SheetCardView: View {
                     diffColor: diffColor
                 )
             }
-            
+
             // Play History Table
             let records = ScoreService.shared.playHistory(for: sheet, context: modelContext)
             if !records.isEmpty {
                 playHistoryTable(records: records, diffColor: diffColor)
             }
-            
+
             HStack(spacing: 10) {
 							Button(action: onRecord) {
 									Label("song.detail.action.record", systemImage: "pencil.line")
@@ -1405,7 +1398,7 @@ struct SheetCardView: View {
                 .padding(.horizontal, 16)
         }
     }
-    
+
     private var detailedInfoTable: some View {
         VStack(spacing: 0) {
             if sheet.total != nil {
@@ -1431,7 +1424,7 @@ struct SheetCardView: View {
                     .padding(.bottom, isNotesExpanded ? 8 : 0)
                 }
                 .buttonStyle(.plain)
-                
+
                 if isNotesExpanded {
                     noteBreakdown
                         .transition(.opacity.combined(with: .move(edge: .top)))
@@ -1439,14 +1432,14 @@ struct SheetCardView: View {
             }
         }
     }
-    
+
     private func detailRow(label: String, value: String) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(label)
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .frame(width: 80, alignment: .leading)
-            
+
             Text(value)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.primary)
@@ -1457,16 +1450,15 @@ struct SheetCardView: View {
         .padding(.vertical, 8)
         .border(Color.primary.opacity(0.03), width: 0.5)
     }
-    
+
     // MARK: - Rating Table
-    
+
     private func ratingTable(level: Double) -> some View {
         SongDetailRatingTableSection(level: level, isExpanded: $isRatingExpanded)
     }
-    
-    
+
     // MARK: - Play History Table
-    
+
     private func playHistoryTable(records: [PlayRecord], diffColor: Color) -> some View {
         SongDetailPlayHistorySection(
             records: records,
@@ -1479,20 +1471,20 @@ struct SheetCardView: View {
             showingDeleteConfirm = true
         }
     }
-    
+
     private func deleteRecord(_ record: PlayRecord) {
         let profileId = record.userProfileId
         let rate = record.rate
 //        let date = record.playDate
-        
+
         // Remove from sheet's playRecords array
         if let index = sheet.playRecords?.firstIndex(where: { $0.id == record.id }) {
             sheet.playRecords?.remove(at: index)
         }
-        
+
         // Delete from model context
         modelContext.delete(record)
-        
+
         // Handle Score fallback if we deleted the best record
         let remainingRecords = sheet.playRecords?.filter { $0.userProfileId == profileId && $0.id != record.id } ?? []
         if let score = ScoreService.shared.score(for: sheet, context: modelContext) {
@@ -1509,7 +1501,7 @@ struct SheetCardView: View {
                 }
             }
         }
-        
+
         try? modelContext.save()
         ScoreService.shared.notifyScoresChanged(for: profileId)
         if let profileId {
@@ -1519,7 +1511,7 @@ struct SheetCardView: View {
             await SyncManager.shared.syncCloudSnapshotIfNeeded(context: modelContext)
         }
     }
-    
+
     @ViewBuilder
     private var noteBreakdown: some View {
         let totalWeight = calculateTotalWeight(sheet)
@@ -1528,39 +1520,39 @@ struct SheetCardView: View {
             ("HOLD", sheet.hold, 2.0, .pink),
             ("SLIDE", sheet.slide, 3.0, .blue),
             ("TOUCH", sheet.touch, 1.0, .blue),
-            ("BREAK", sheet.breakCount, 5.0, .orange),
+            ("BREAK", sheet.breakCount, 5.0, .orange)
         ]
-        
+
         VStack(spacing: 0) {
             ForEach(Array(items.filter { $0.1 != nil && $0.1! > 0 }.enumerated()), id: \.offset) { index, item in
                 let count = item.1!
                 let weight = Double(count) * item.2
                 let percent = totalWeight > 0 ? weight / totalWeight : 0
-                
+
                 HStack(spacing: 8) {
                     Text(item.0)
                         .font(.system(size: 9, weight: .black))
                         .foregroundStyle(.secondary)
                         .frame(width: 40, alignment: .leading)
-                    
+
                     // Progress bar
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             Capsule()
                                 .fill(Color.primary.opacity(0.06))
-                            
+
                             Capsule()
                                 .fill(item.3.opacity(0.5))
                                 .frame(width: max(4, geo.size.width * percent))
                         }
                     }
                     .frame(height: 6)
-                    
+
                     Text("\(count)")
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
                         .foregroundStyle(.primary)
                         .frame(width: 40, alignment: .trailing)
-                    
+
                     Text("\(Int(percent * 100))%")
                         .font(.system(size: 9, weight: .medium, design: .monospaced))
                         .foregroundStyle(.secondary)
@@ -1572,13 +1564,12 @@ struct SheetCardView: View {
             }
         }
     }
-    
+
     private func calculateTotalWeight(_ sheet: Sheet) -> Double {
         (Double(sheet.tap ?? 0) * 1.0) + (Double(sheet.hold ?? 0) * 2.0) +
         (Double(sheet.slide ?? 0) * 3.0) + (Double(sheet.touch ?? 0) * 1.0) +
         (Double(sheet.breakCount ?? 0) * 5.0)
     }
-    
 
 }
 
@@ -2004,17 +1995,17 @@ struct FaultToleranceCalculatorView: View {
 
         return (min(allowedGreat, tapCount), min(allowedGood, tapCount), min(allowedMiss, tapCount))
     }
-    
+
     private func toleranceInfoBox(title: String, value: Int, color: Color) -> some View {
         VStack(spacing: 4) {
             Text(title)
                 .font(.system(size: 8, weight: .black))
                 .foregroundStyle(color.opacity(0.8))
-            
+
             Text("\(value)")
                 .font(.system(size: 16, weight: .bold, design: .monospaced))
                 .foregroundStyle(.primary)
-            
+
             Text("song.detail.tolerance.limit")
                 .font(.system(size: 8))
                 .foregroundStyle(.secondary)

@@ -5,11 +5,11 @@ struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(CollectionImportCoordinator.self) private var collectionImportCoordinator
     @State private var didScheduleSongsPreload = false
-    
+
     @State private var searchText = ""
     @Query private var configs: [SyncConfig]
     @Query private var profiles: [UserProfile]
-    
+
     private var preferredScheme: ColorScheme? {
         switch configs.first?.themeRawValue ?? 0 {
         case 1: return .light
@@ -17,7 +17,7 @@ struct MainTabView: View {
         default: return nil
         }
     }
-    
+
     var body: some View {
         @Bindable var collectionImportCoordinator = collectionImportCoordinator
 
@@ -25,11 +25,11 @@ struct MainTabView: View {
             Tab("tab.home", systemImage: "house") {
                 HomeView()
             }
-            
+
             Tab("tab.scan", systemImage: "camera.viewfinder") {
                 ScannerView()
             }
-            
+
             Tab("tab.search", systemImage: "magnifyingglass") {
                 SongsView(searchText: searchText)
                     .searchable(text: $searchText, prompt: "search.placeholder")
@@ -61,16 +61,16 @@ struct MainTabView: View {
             ensureActiveProfileAndRepairScopedData()
             ScoreService.shared.repairDetachedRecordsIfNeeded(context: modelContext)
             await importVersionConstantsIfNeeded()
-            
+
             // Reconnect orphaned scores due to Model relationship changes
             fixOrphanedScores()
-            
+
             scheduleSongsPreloadIfNeeded()
-            
+
         }
-        
+
     }
-    
+
     // MARK: - Migration
 
     private func importVersionConstantsIfNeeded() async {
@@ -95,17 +95,17 @@ struct MainTabView: View {
             forceBundleApply: true
         )
     }
-    
+
     private func migrateToUserProfileIfNeeded() {
         guard let config = configs.first, !config.didMigrateToUserProfile else { return }
-        
+
         // Only migrate if there are no profiles yet
         guard profiles.isEmpty else {
             config.didMigrateToUserProfile = true
             try? modelContext.save()
             return
         }
-        
+
         // Create default profile from legacy SyncConfig data
         let profile = UserProfile(
             name: config.userName ?? String(localized: "userProfile.defaultName"),
@@ -121,7 +121,7 @@ struct MainTabView: View {
             b15RecLimit: config.b15RecLimit
         )
         modelContext.insert(profile)
-        
+
         // Associate existing scores with the new profile
         let scoreDescriptor = FetchDescriptor<Score>()
         if let scores = try? modelContext.fetch(scoreDescriptor) {
@@ -131,13 +131,13 @@ struct MainTabView: View {
                 }
             }
         }
-        
+
         config.didMigrateToUserProfile = true
         try? modelContext.save()
-        
+
         print("MainTabView: Migrated legacy config to default UserProfile (id: \(profile.id))")
     }
-    
+
     private func ensureActiveProfileAndRepairScopedData() {
         let profileDescriptor = FetchDescriptor<UserProfile>()
         let allProfiles = (try? modelContext.fetch(profileDescriptor)) ?? []
@@ -171,7 +171,7 @@ struct MainTabView: View {
             profile.isActive = profile.id == activeProfile.id
             didChange = true
         }
-        
+
         let scoreDescriptor = FetchDescriptor<Score>(predicate: #Predicate { $0.userProfileId == nil })
         if let orphanedScores = try? modelContext.fetch(scoreDescriptor), !orphanedScores.isEmpty {
             for score in orphanedScores {
@@ -179,7 +179,7 @@ struct MainTabView: View {
             }
             didChange = true
         }
-        
+
         let recordDescriptor = FetchDescriptor<PlayRecord>(predicate: #Predicate { $0.userProfileId == nil })
         if let orphanedRecords = try? modelContext.fetch(recordDescriptor), !orphanedRecords.isEmpty {
             for record in orphanedRecords {
@@ -187,29 +187,29 @@ struct MainTabView: View {
             }
             didChange = true
         }
-        
+
         if didChange {
             try? modelContext.save()
             ScoreService.shared.notifyActiveProfileChanged()
             ScoreService.shared.notifyScoresChanged(for: activeProfile.id)
         }
     }
-    
+
     private func fixOrphanedScores() {
         if UserDefaults.app.didFixOrphanedScoresMigration { return }
-        
+
         let scoreDescriptor = FetchDescriptor<Score>()
         guard let scores = try? modelContext.fetch(scoreDescriptor) else { return }
-        
+
         let sheetDescriptor = FetchDescriptor<Sheet>()
         guard let sheets = try? modelContext.fetch(sheetDescriptor) else { return }
-        
+
         var sheetMap: [String: Sheet] = [:]
         for sheet in sheets {
             let key = "\(sheet.songIdentifier)_\(sheet.type)_\(sheet.difficulty)"
             sheetMap[key] = sheet
         }
-        
+
         var fixedCount = 0
         for score in scores {
             if let sheet = sheetMap[score.sheetId] {
@@ -225,14 +225,14 @@ struct MainTabView: View {
                 }
             }
         }
-        
+
         if fixedCount > 0 {
             try? modelContext.save()
             print("MainTabView: Re-attached \(fixedCount) orphaned scores to their sheets.")
         }
         UserDefaults.app.didFixOrphanedScoresMigration = true
     }
-    
+
     private func scheduleSongsPreloadIfNeeded() {
         guard !didScheduleSongsPreload else { return }
         didScheduleSongsPreload = true
