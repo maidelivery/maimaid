@@ -54,6 +54,8 @@ struct VersionPlateGroup: Identifiable, Hashable {
     let versions: [String]
     let isOldFrame: Bool
     let hasSho: Bool
+    // Re:MASTER is the official chart difficulty name.
+    // swiftlint:disable:next inclusive_language
     let includeReMasterByDefault: Bool
 
     func hash(into hasher: inout Hasher) {
@@ -101,7 +103,7 @@ class PlateService {
             $0.version.localizedCaseInsensitiveContains("GreeN")
         } ?? versionsInfo.count
 
-        for (_, vInfo) in versionsInfo.enumerated() {
+        for vInfo in versionsInfo {
             if vInfo.abbr != currentAbbr {
                 if let abbr = currentAbbr {
                     groups.append(makeGroup(

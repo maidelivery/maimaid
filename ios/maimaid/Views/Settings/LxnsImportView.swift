@@ -50,7 +50,8 @@ struct LxnsImportView: View {
         let failedText = String(localized: "import.status.failed")
         let errorText = String(localized: "import.status.error")
         let expiredText = String(localized: "import.lxns.status.failed.expired")
-        let isFailure = importStatus.contains(failedText) || importStatus.contains(errorText) || importStatus.contains(expiredText)
+        let isFailure =
+            importStatus.contains(failedText) || importStatus.contains(errorText) || importStatus.contains(expiredText)
         return (isFailure ? .red : .cyan, isFailure ? "xmark.circle.fill" : "checkmark.circle.fill")
     }
 
@@ -137,7 +138,9 @@ struct LxnsImportView: View {
         if let profile = activeProfile, !lxnsRefreshToken.isEmpty {
             Section("import.lxns.bound.header") {
                 HStack(spacing: 12) {
-                    settingsIcon(icon: isValidatingSession ? "clock.badge.checkmark.fill" : "checkmark.shield.fill", color: sessionStatusTint)
+                    settingsIcon(
+                        icon: isValidatingSession ? "clock.badge.checkmark.fill" : "checkmark.shield.fill",
+                        color: sessionStatusTint)
                     Text("import.lxns.status")
                     Spacer()
                     Text(sessionStatusText)
@@ -210,7 +213,9 @@ struct LxnsImportView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-                    .disabled(authCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isImporting || isResolvingImportConflict)
+                    .disabled(
+                        authCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isImporting
+                            || isResolvingImportConflict)
                 }
                 .padding(.vertical, 4)
                 .listRowSeparator(.hidden)
@@ -302,7 +307,9 @@ struct LxnsImportView: View {
         totalRecords = 0
 
         do {
-            guard let tokenURL = URL(string: "https://maimai.lxns.net/api/v0/oauth/token") else { throw URLError(.badURL) }
+            guard let tokenURL = URL(string: "https://maimai.lxns.net/api/v0/oauth/token") else {
+                throw URLError(.badURL)
+            }
 
             var request = URLRequest(url: tokenURL)
             request.httpMethod = "POST"
@@ -329,7 +336,10 @@ struct LxnsImportView: View {
             let tokenResponse = try JSONDecoder().decode(LxnsTokenResponse.self, from: data)
 
             guard httpResponse.statusCode == 200, let tokenData = tokenResponse.data else {
-                importStatus = String(localized: "import.lxns.status.failed.token \(tokenResponse.message ?? String(localized: "import.status.error.unknown"))")
+                let errorMessage = tokenResponse.message ?? String(localized: "import.status.error.unknown")
+                importStatus = String(
+                    localized: "import.lxns.status.failed.token \(errorMessage)"
+                )
                 isImporting = false
                 return
             }
@@ -535,7 +545,9 @@ private extension LxnsImportView {
                 .foregroundStyle(.secondary)
         }
         .padding(20)
-        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .background(
+            Color(uiColor: .secondarySystemGroupedBackground),
+            in: RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 
     func actionRow(title: String, icon: String, tint: Color, action: @escaping () -> Void) -> some View {

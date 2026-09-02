@@ -61,7 +61,8 @@ struct StaticDataUpdateView: View {
 
                         Text(
                             fetcher.statusMessage.isEmpty
-                                ? String(localized: LocalizedStringResource(stringLiteral: fetcher.currentStage.rawValue))
+                                ? String(
+                                    localized: LocalizedStringResource(stringLiteral: fetcher.currentStage.rawValue))
                                 : fetcher.statusMessage
                         )
                             .font(.footnote)

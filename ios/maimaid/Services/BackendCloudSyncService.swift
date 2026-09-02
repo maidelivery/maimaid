@@ -311,7 +311,8 @@ enum BackendCloudSyncService {
             try context.save()
         }
 
-        try await uploadAvatarData(optimizedAvatar.data, to: uploadResponse.uploadUrl, contentType: optimizedAvatar.contentType)
+        try await uploadAvatarData(
+            optimizedAvatar.data, to: uploadResponse.uploadUrl, contentType: optimizedAvatar.contentType)
 
         guard
             let avatarEndpoint = BackendConfig.endpoint("v1/profiles/\(profileId)/avatar"),
@@ -339,7 +340,8 @@ enum BackendCloudSyncService {
         let profilesToDelete = response.profiles.filter { !localProfileIds.contains($0.id.lowercased()) }
 
         for profile in profilesToDelete where profile.isActive {
-            let escapedProfileId = profile.id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? profile.id
+            let escapedProfileId =
+                profile.id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? profile.id
             let _: BackendProfilePatchResponse = try await BackendAPIClient.request(
                 path: "v1/profiles/\(escapedProfileId)",
                 method: "PATCH",
@@ -349,7 +351,8 @@ enum BackendCloudSyncService {
         }
 
         for profile in profilesToDelete {
-            let escapedProfileId = profile.id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? profile.id
+            let escapedProfileId =
+                profile.id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? profile.id
             let _: BackendProfileDeleteResponse = try await BackendAPIClient.request(
                 path: "v1/profiles/\(escapedProfileId)",
                 method: "DELETE",
@@ -418,7 +421,8 @@ enum BackendCloudSyncService {
         }
     }
 
-    private static func uploadAvatarData(_ avatarData: Data, to uploadUrlString: String, contentType: String) async throws {
+    private static func uploadAvatarData(_ avatarData: Data, to uploadUrlString: String, contentType: String)
+        async throws {
         guard let uploadURL = URL(string: uploadUrlString) else {
             throw BackendAPIError.badResponse
         }

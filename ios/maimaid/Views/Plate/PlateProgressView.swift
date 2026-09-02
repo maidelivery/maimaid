@@ -61,7 +61,10 @@ struct PlateProgressView: View {
                         .controlSize(.large)
                         .frame(maxWidth: .infinity, minHeight: 240)
                 } else if cachedSections.isEmpty {
-                    ContentUnavailableView("plate.unavailable.title", systemImage: "music.note.list", description: Text("plate.unavailable.description"))
+                    ContentUnavailableView(
+                        "plate.unavailable.title", systemImage: "music.note.list",
+                        description: Text("plate.unavailable.description")
+                    )
                         .frame(maxWidth: .infinity, minHeight: 280)
                 } else {
                     LazyVStack(spacing: 24) {
@@ -259,7 +262,9 @@ struct PlateProgressView: View {
                     .tint(Color(hex: selectedPlate.color))
 
                 HStack(spacing: 12) {
-                    summaryMetric(title: "plate.summary.completed", value: achievedSheetCount, tint: Color(hex: selectedPlate.color))
+                    summaryMetric(
+                        title: "plate.summary.completed", value: achievedSheetCount,
+                        tint: Color(hex: selectedPlate.color))
                     summaryMetric(title: "plate.summary.remaining", value: remainingSheetCount, tint: .secondary)
                     summaryMetric(title: "plate.summary.total", value: totalSheetCount, tint: .secondary)
                 }
@@ -296,7 +301,9 @@ struct PlateProgressView: View {
                     systemImage: "sparkles.rectangle.stack.fill",
                     options: PlateType.allCases.map(localizedPlateName)
                 ) { name in
-                    guard let plate = PlateType.allCases.first(where: { localizedPlateName($0) == name }) else { return }
+                    guard let plate = PlateType.allCases.first(where: { localizedPlateName($0) == name }) else {
+                        return
+                    }
                     guard plate != .sho || selectedGroup?.hasSho == true else { return }
                     selectedPlate = plate
                 }
@@ -430,7 +437,8 @@ struct PlateProgressView: View {
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(isAchieved ? color.opacity(0.7) : Color.primary.opacity(0.08), lineWidth: isAchieved ? 2 : 1)
+                    .strokeBorder(
+                        isAchieved ? color.opacity(0.7) : Color.primary.opacity(0.08), lineWidth: isAchieved ? 2 : 1)
             }
         }
         .aspectRatio(1, contentMode: .fit)

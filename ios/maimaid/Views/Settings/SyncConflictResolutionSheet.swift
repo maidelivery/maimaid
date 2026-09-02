@@ -139,7 +139,8 @@ struct SyncConflictResolutionSheet: View {
                         Text(
                             isShowingAllImportConflicts
                                 ? String(localized: "settings.import.resolution.more.hide")
-                                : String(localized: "settings.import.resolution.more.show \(preview.conflicts.count - 1)")
+                                : String(
+                                    localized: "settings.import.resolution.more.show \(preview.conflicts.count - 1)")
                         )
                         .font(.footnote)
 
@@ -182,7 +183,8 @@ struct SyncConflictResolutionSheet: View {
                         )
                         capsuleTag(
                             text: ThemeUtils.diffShort(conflict.difficulty),
-                            background: ThemeUtils.colorForDifficulty(conflict.difficulty, conflict.chartType, colorScheme)
+                            background: ThemeUtils.colorForDifficulty(
+                                conflict.difficulty, conflict.chartType, colorScheme)
                         )
                     }
                 }

@@ -208,7 +208,8 @@ final class CommunityAliasService {
         let safeLimit = max(1, min(limit, 200))
         let safeOffset = max(0, offset)
         do {
-            let response: CommunityAliasRowsResponse<CommunityAliasVotingBoardItem> = try await BackendAPIClient.request(
+            let response: CommunityAliasRowsResponse<CommunityAliasVotingBoardItem> =
+                try await BackendAPIClient.request(
                 path: "v1/community/candidates:votingBoard?limit=\(safeLimit)&offset=\(safeOffset)",
                 method: "GET",
                 authentication: .optional
@@ -223,7 +224,8 @@ final class CommunityAliasService {
     func fetchMySongCandidates(songIdentifier: String, limit: Int = 50) async -> [CommunityAliasMyCandidate] {
         guard isConfigured, isAuthenticated else { return [] }
         let safeLimit = max(1, min(limit, 200))
-        let escapedSongIdentifier = songIdentifier.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? songIdentifier
+        let escapedSongIdentifier =
+            songIdentifier.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? songIdentifier
         do {
             let response: CommunityAliasRowsResponse<CommunityAliasMyCandidate> = try await BackendAPIClient.request(
                 path: "v1/community/candidates:my?songIdentifier=\(escapedSongIdentifier)&limit=\(safeLimit)",
@@ -268,7 +270,8 @@ final class CommunityAliasService {
         lastVoteErrorMessage = nil
 
         do {
-            let escapedCandidateId = candidateId.uuidString.lowercased().addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
+            let escapedCandidateId =
+                candidateId.uuidString.lowercased().addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
                 ?? candidateId.uuidString.lowercased()
             let payload = CommunityAliasVotePayload(vote: support ? 1 : -1)
             let response: CommunityAliasVoteResult = try await BackendAPIClient.request(
@@ -317,7 +320,9 @@ final class CommunityAliasService {
 
         let path: String
         if let since {
-            let encoded = since.ISO8601Format().addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? since.ISO8601Format()
+            let encoded =
+                since.ISO8601Format().addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
+                ?? since.ISO8601Format()
             path = "v1/community/aliases:sync?since=\(encoded)&limit=1000"
         } else {
             path = "v1/community/aliases:sync?limit=1000"

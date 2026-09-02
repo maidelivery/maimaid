@@ -49,10 +49,13 @@ nonisolated final class ModelURLProtocol: URLProtocol, @unchecked Sendable {
         lock.unlock()
     }
 
+    // URLProtocol requires overridable class methods even though this subclass is final.
+    // swiftlint:disable:next static_over_final_class
     override class func canInit(with request: URLRequest) -> Bool {
         request.url?.host?.hasSuffix(".models.test") == true
     }
 
+    // swiftlint:disable:next static_over_final_class
     override class func canonicalRequest(for request: URLRequest) -> URLRequest {
         request
     }
@@ -98,7 +101,8 @@ nonisolated struct ModelStoreFixture {
 
     init() throws {
         let identifier = UUID().uuidString.lowercased()
-        rootDirectory = URL.temporaryDirectory.appending(path: "maimaid-model-tests-\(identifier)", directoryHint: .isDirectory)
+        rootDirectory = URL.temporaryDirectory.appending(
+            path: "maimaid-model-tests-\(identifier)", directoryHint: .isDirectory)
         guard let testBaseURL = URL(string: "https://\(identifier).models.test") else {
             throw URLError(.badURL)
         }
@@ -106,7 +110,8 @@ nonisolated struct ModelStoreFixture {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [ModelURLProtocol.self]
         session = URLSession(configuration: configuration)
-        compiler = ControlledModelCompiler(outputRoot: rootDirectory.appending(path: "compiler", directoryHint: .isDirectory))
+        compiler = ControlledModelCompiler(
+            outputRoot: rootDirectory.appending(path: "compiler", directoryHint: .isDirectory))
         try FileManager.default.createDirectory(at: rootDirectory, withIntermediateDirectories: true)
     }
 
@@ -132,7 +137,9 @@ nonisolated struct ModelStoreFixture {
             let data = payloads[asset] ?? Data()
             return ModelManifestEntry(filename: asset.rawValue, sha256: Self.sha256(data), size: Int64(data.count))
         }
-        ModelURLProtocol.register(.http(status: 200, data: try JSONEncoder().encode(manifest + extraEntries)), for: baseURL.appending(path: "manifest.json"))
+        ModelURLProtocol.register(
+            .http(status: 200, data: try JSONEncoder().encode(manifest + extraEntries)),
+            for: baseURL.appending(path: "manifest.json"))
         for (asset, data) in payloads {
             ModelURLProtocol.register(.http(status: 200, data: data), for: baseURL.appending(path: asset.rawValue))
         }
@@ -140,7 +147,9 @@ nonisolated struct ModelStoreFixture {
     }
 
     func registerManifest(_ entries: [ModelManifestEntry], status: Int = 200) throws {
-        ModelURLProtocol.register(.http(status: status, data: try JSONEncoder().encode(entries)), for: baseURL.appending(path: "manifest.json"))
+        ModelURLProtocol.register(
+            .http(status: status, data: try JSONEncoder().encode(entries)),
+            for: baseURL.appending(path: "manifest.json"))
     }
 
     func registerManifestFailure(_ error: URLError) {

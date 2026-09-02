@@ -48,7 +48,10 @@ struct SongRowView: View {
                 // Info
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 4) {
-                        MarqueeText(text: song.title, font: .system(size: 15, weight: .semibold), fontWeight: .semibold, color: .primary)
+                        MarqueeText(
+                            text: song.title, font: .system(size: 15, weight: .semibold), fontWeight: .semibold,
+                            color: .primary
+                        )
                             .frame(height: 20)
                     }
 
@@ -73,11 +76,17 @@ struct SongRowView: View {
                             if let actualSheet { return [actualSheet] }
                             let dxSheets = song.sheets.filter { $0.type.lowercased() == "dx" }
                             if !dxSheets.isEmpty {
-                                return dxSheets.sorted(by: { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) })
+                                return dxSheets.sorted(by: {
+                                    ThemeUtils.difficultyOrder($0.difficulty)
+                                        > ThemeUtils.difficultyOrder($1.difficulty)
+                                })
                             }
                             return song.sheets
                                 .filter { $0.type.lowercased() == "std" }
-                                .sorted(by: { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) })
+                                .sorted(by: {
+                                    ThemeUtils.difficultyOrder($0.difficulty)
+                                        > ThemeUtils.difficultyOrder($1.difficulty)
+                                })
                         }()
 
                         ForEach(prioritizedSheets) { sheet in

@@ -191,7 +191,9 @@ enum RatingUtils {
     ///   - fc: The Full Combo status string (e.g. "ap", "app", "fc", etc.)
     ///   - afterCircle: Pass `true` when the current latest server version is "circle" or later.
     ///                  When `true` and the score is AP (or AP+), +1 is added to the rating.
-    static func calculateRating(internalLevel: Double, achievement: Double, fc: String? = nil, afterCircle: Bool = false) -> Int {
+    static func calculateRating(
+        internalLevel: Double, achievement: Double, fc: String? = nil, afterCircle: Bool = false
+    ) -> Int {
         guard internalLevel > 0, achievement > 0 else { return 0 }
 
         let coefficient = getRatingCoefficient(for: achievement)
@@ -492,7 +494,8 @@ extension Array where Element == Song {
         return extractedSongs
     }
 
-    nonisolated private static func makeSongCalculationData(from extractedSongs: [SongExtractionData]) -> [RatingUtils.SongCalculationData] {
+    nonisolated private static func makeSongCalculationData(from extractedSongs: [SongExtractionData]) -> [RatingUtils
+        .SongCalculationData] {
         extractedSongs.map { song in
             let sheets = song.sheets.map { sheet in
                 RatingUtils.SheetCalculationData(

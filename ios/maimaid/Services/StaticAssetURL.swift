@@ -1,7 +1,8 @@
 import Foundation
 
 enum StaticAssetURL {
-    nonisolated private static let legacyCoverBaseURL = URL(string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/")
+    nonisolated private static let legacyCoverBaseURL = URL(
+        string: "https://dp4p6x0xfi5o9.cloudfront.net/maimai/img/cover/")
     nonisolated private static let legacyPresetAvatarBaseURL = URL(string: "https://assets2.lxns.net/maimai/icon/")
     nonisolated private static let coverBaseURLKey = "static.assets.coverBaseURL"
     nonisolated private static let coverFallbackBaseURLKey = "static.assets.coverFallbackBaseURL"

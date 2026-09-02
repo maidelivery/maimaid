@@ -195,7 +195,11 @@ extension UserDefaults {
 }
 
 struct ThemeUtils {
-    static func colorForDifficulty(_ difficulty: String, _ type: String?, _ colorScheme: ColorScheme = .light) -> Color {
+    static func colorForDifficulty(
+        _ difficulty: String,
+        _ type: String?,
+        _ colorScheme: ColorScheme = .light
+    ) -> Color {
         let low = difficulty.lowercased()
         let dark = colorScheme == .dark
 

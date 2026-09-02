@@ -67,7 +67,10 @@ final class SongCollection {
     var clientUpdatedAt: Date?
     var deletedAt: Date?
 
-    init(id: UUID = UUID(), name: String, sortIndex: Int = 0, createdAt: Date = .now, updatedAt: Date = .now, clientUpdatedAt: Date? = nil, deletedAt: Date? = nil) {
+    init(
+        id: UUID = UUID(), name: String, sortIndex: Int = 0, createdAt: Date = .now, updatedAt: Date = .now,
+        clientUpdatedAt: Date? = nil, deletedAt: Date? = nil
+    ) {
         self.id = id
         self.name = name
         self.sortIndex = sortIndex

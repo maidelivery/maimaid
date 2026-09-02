@@ -144,11 +144,15 @@ struct SongsView: View {
     }
 
     var allCategories: [String] {
-        Array(Set(songs.map { $0.category })).sorted { ThemeUtils.categorySortOrder($0) < ThemeUtils.categorySortOrder($1) }
+        Array(Set(songs.map { $0.category })).sorted {
+            ThemeUtils.categorySortOrder($0) < ThemeUtils.categorySortOrder($1)
+        }
     }
 
     var allVersions: [String] {
-        Array(Set(songs.compactMap { $0.version })).sorted { ThemeUtils.versionSortOrder($0) < ThemeUtils.versionSortOrder($1) }
+        Array(Set(songs.compactMap { $0.version })).sorted {
+            ThemeUtils.versionSortOrder($0) < ThemeUtils.versionSortOrder($1)
+        }
     }
 
     private func extractSongSnapshot(_ song: Song) -> SongSnapshotExtraction {
@@ -627,7 +631,7 @@ struct SongsView: View {
                             }
                         }
                 }
-                .applyZoomTransition(id: song.songIdentifier, ns: songTransitionNamespace)
+                .applyZoomTransition(id: song.songIdentifier, namespace: songTransitionNamespace)
             }
         }
         .sheet(isPresented: $showFilterSheet) {
@@ -678,7 +682,7 @@ struct SongsView: View {
                     SongRowView(song: song, scoreCache: scoreCache)
                 }
                 .buttonStyle(.plain)
-                .applyMatchedTransitionSource(id: song.songIdentifier, ns: songTransitionNamespace)
+                .applyMatchedTransitionSource(id: song.songIdentifier, namespace: songTransitionNamespace)
             }
         }
         .padding(.vertical, 12)
@@ -693,7 +697,7 @@ struct SongsView: View {
         let cellSize = metrics.cellSize
         let spacing = metrics.spacing
         let horizontalPadding = spacing + 2
-        let cr = cornerRadius(for: intCols)
+        let cellCornerRadius = cornerRadius(for: intCols)
         let dots = showDots(for: intCols)
 
         return LazyVGrid(
@@ -701,7 +705,13 @@ struct SongsView: View {
             spacing: spacing
         ) {
             ForEach(displayedSongs) { song in
-                gridCellView(song: song, intCols: intCols, cellSize: cellSize, cornerRadius: cr, showDots: dots)
+                gridCellView(
+                    song: song,
+                    intCols: intCols,
+                    cellSize: cellSize,
+                    cornerRadius: cellCornerRadius,
+                    showDots: dots
+                )
                     .frame(width: cellSize, height: cellSize)
                     .id(song.songIdentifier)
             }
@@ -711,7 +721,8 @@ struct SongsView: View {
     }
 
     @ViewBuilder
-    private func gridCellView(song: Song, intCols: Int, cellSize: CGFloat, cornerRadius: CGFloat, showDots: Bool) -> some View {
+    private func gridCellView(song: Song, intCols: Int, cellSize: CGFloat, cornerRadius: CGFloat, showDots: Bool)
+        -> some View {
         Button {
             guard !navigationDisabled && !isZooming else { return }
             selectedSong = song
@@ -726,7 +737,7 @@ struct SongsView: View {
             )
         }
         .buttonStyle(.plain)
-        .applyMatchedTransitionSource(id: song.songIdentifier, ns: songTransitionNamespace)
+        .applyMatchedTransitionSource(id: song.songIdentifier, namespace: songTransitionNamespace)
     }
 }
 
@@ -747,18 +758,18 @@ extension View {
 
 extension View {
     @ViewBuilder
-    func applyMatchedTransitionSource(id: String, ns: Namespace.ID) -> some View {
+    func applyMatchedTransitionSource(id: String, namespace: Namespace.ID) -> some View {
         if #available(iOS 18.0, *) {
-            self.matchedTransitionSource(id: id, in: ns)
+            self.matchedTransitionSource(id: id, in: namespace)
         } else {
             self
         }
     }
 
     @ViewBuilder
-    func applyZoomTransition(id: String, ns: Namespace.ID) -> some View {
+    func applyZoomTransition(id: String, namespace: Namespace.ID) -> some View {
         if #available(iOS 18.0, *) {
-            self.navigationTransition(.zoom(sourceID: id, in: ns))
+            self.navigationTransition(.zoom(sourceID: id, in: namespace))
         } else {
             self
         }
@@ -820,11 +831,17 @@ struct SongGridCell: View {
                             if let actualSheet { return [actualSheet] }
                             let dxSheets = song.sheets.filter { $0.type.lowercased() == "dx" }
                             if !dxSheets.isEmpty {
-                                return dxSheets.sorted(by: { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) })
+                                return dxSheets.sorted(by: {
+                                    ThemeUtils.difficultyOrder($0.difficulty)
+                                        > ThemeUtils.difficultyOrder($1.difficulty)
+                                })
                             }
                             return song.sheets
                                 .filter { $0.type.lowercased() == "std" }
-                                .sorted(by: { ThemeUtils.difficultyOrder($0.difficulty) > ThemeUtils.difficultyOrder($1.difficulty) })
+                                .sorted(by: {
+                                    ThemeUtils.difficultyOrder($0.difficulty)
+                                        > ThemeUtils.difficultyOrder($1.difficulty)
+                                })
                         }()
 
                         ForEach(prioritizedSheets) { sheet in

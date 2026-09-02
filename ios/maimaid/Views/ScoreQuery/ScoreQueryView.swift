@@ -369,7 +369,7 @@ struct ScoreQueryView: View {
         let cellSize = metrics.cellSize
         let spacing = metrics.spacing
         let horizontalPadding = spacing + 2
-        let cr = cornerRadius(for: intCols)
+        let cellCornerRadius = cornerRadius(for: intCols)
 
         return LazyVGrid(
             columns: Array(repeating: GridItem(.fixed(cellSize), spacing: spacing), count: intCols),
@@ -377,7 +377,7 @@ struct ScoreQueryView: View {
         ) {
             ForEach(filteredEntries) { entry in
                 NavigationLink(destination: songDetailDestination(entry: entry)) {
-                    gridCell(entry: entry, cellSize: cellSize, cornerRadius: cr, intCols: intCols)
+                    gridCell(entry: entry, cellSize: cellSize, cornerRadius: cellCornerRadius, intCols: intCols)
                 }
                 .disabled(navigationDisabled || isZooming)
                 .buttonStyle(.plain)

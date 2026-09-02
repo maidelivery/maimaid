@@ -66,7 +66,8 @@ actor MLModelStore {
             }
             return .downloadRequired(totalBytes: missing)
         } catch is CancellationError {
-            return .failed(message: ModelStoreError.unavailable.localizedDescription, cachedModelsAvailable: activeReady)
+            return .failed(
+                message: ModelStoreError.unavailable.localizedDescription, cachedModelsAvailable: activeReady)
         } catch {
             pendingManifest = nil
             if activeReady {
@@ -383,13 +384,18 @@ nonisolated enum ZipArchiveExtractor {
             guard let root = components.first, root.hasSuffix(".mlpackage") else {
                 throw ModelStoreError.unsupportedArchive("ZIP package root is invalid")
             }
-            if let packageRoot, packageRoot != root { throw ModelStoreError.unsupportedArchive("ZIP contains multiple roots") }
+            if let packageRoot, packageRoot != root {
+                throw ModelStoreError.unsupportedArchive("ZIP contains multiple roots")
+            }
             packageRoot = root
-            let outputURL = destination.appending(path: components.joined(separator: "/"), directoryHint: name.hasSuffix("/") ? .isDirectory : .notDirectory)
+            let outputURL = destination.appending(
+                path: components.joined(separator: "/"),
+                directoryHint: name.hasSuffix("/") ? .isDirectory : .notDirectory)
             if name.hasSuffix("/") {
                 try FileManager.default.createDirectory(at: outputURL, withIntermediateDirectories: true)
             } else {
-                try FileManager.default.createDirectory(at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try FileManager.default.createDirectory(
+                    at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
                 try Data(data[payloadStart..<payloadEnd]).write(to: outputURL, options: .atomic)
             }
             offset = payloadEnd

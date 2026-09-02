@@ -39,7 +39,8 @@ struct SongDetailView: View {
     }
 
     var body: some View {
-        SongDetailContent(song: song, selectedType: $selectedType, selectedSheet: $selectedSheet, toastMessage: $toastMessage)
+        SongDetailContent(
+            song: song, selectedType: $selectedType, selectedSheet: $selectedSheet, toastMessage: $toastMessage)
     }
 }
 
@@ -334,7 +335,8 @@ struct SongDetailContent: View {
 
     private func refreshCommunityAliasUserState() async {
         let songIdentifier = song.songIdentifier
-        myCommunityCandidates = await communityAliasService.fetchMySongCandidates(songIdentifier: songIdentifier, limit: 30)
+        myCommunityCandidates = await communityAliasService.fetchMySongCandidates(
+            songIdentifier: songIdentifier, limit: 30)
         guard !Task.isCancelled else { return }
 
         if backendSessionManager.isAuthenticated {
@@ -374,9 +376,9 @@ struct SongDetailContent: View {
                 switch duplicateReason {
                 case .lxnsExisting:
                     showToast(message: String(localized: "community.alias.submit.duplicateLxns"))
-                    case .communityExisting:
+                case .communityExisting:
                     showToast(message: String(localized: "community.alias.submit.duplicateCommunity"))
-                    case .adminRejectedLocked:
+                case .adminRejectedLocked:
                     showToast(message: String(localized: "community.alias.submit.adminRejectedLocked"))
                 }
                 break
@@ -392,7 +394,9 @@ struct SongDetailContent: View {
             communityAliasDailyUsedCount = communityAliasDailyQuotaLimit
             triggerCommunityQuotaLimitFeedback()
         case .unauthenticated:
-            showToast(message: result.message.isEmpty ? String(localized: "community.alias.submit.loginRequired") : result.message)
+            showToast(
+                message: result.message.isEmpty
+                    ? String(localized: "community.alias.submit.loginRequired") : result.message)
         case .invalidRequest:
             showToast(message: String(localized: "community.alias.submit.invalidRequest"))
         case .error:
@@ -580,7 +584,13 @@ struct SongDetailContent: View {
                 if backendSessionManager.isAuthenticated {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 8) {
-                            Text(String(localized: "community.alias.section.dailyQuota \(communityAliasDailyUsedCount) \(communityAliasDailyQuotaLimit)"))
+                            let usedCount = communityAliasDailyUsedCount
+                            let quotaLimit = communityAliasDailyQuotaLimit
+                            Text(
+                                String(
+                                    localized: "community.alias.section.dailyQuota \(usedCount) \(quotaLimit)"
+                                )
+                            )
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(.secondary)
                             Spacer()
@@ -613,7 +623,9 @@ struct SongDetailContent: View {
                     }
 
                     HStack(spacing: 8) {
-                        TextField(String(localized: "community.alias.section.submit.placeholder"), text: $communityAliasDraft)
+                        TextField(
+                            String(localized: "community.alias.section.submit.placeholder"), text: $communityAliasDraft
+                        )
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .font(.system(size: 13))
@@ -742,7 +754,9 @@ struct SongDetailContent: View {
         if let releaseDate = song.releaseDate {
             let displayDate = isGrid ? releaseDate : formatDate(releaseDate)
             metadataPill(icon: "calendar", value: displayDate, label: nil, isGrid: isGrid)
-                .onTapGesture { copyToClipboard(releaseDate, label: String(localized: "song.detail.metadata.releaseDate")) }
+                .onTapGesture {
+                    copyToClipboard(releaseDate, label: String(localized: "song.detail.metadata.releaseDate"))
+                }
         }
     }
 
@@ -755,7 +769,8 @@ struct SongDetailContent: View {
         return date
     }
 
-    private func metadataPill(icon: String, value: String, label: LocalizedStringKey?, isGrid: Bool = false) -> some View {
+    private func metadataPill(icon: String, value: String, label: LocalizedStringKey?, isGrid: Bool = false)
+        -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .semibold))
@@ -1768,7 +1783,10 @@ private struct SongDetailPlayHistorySection: View {
                         let record = displayRecords[index]
                         HStack(spacing: 12) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(record.playDate.formatted(.dateTime.year(.twoDigits).month(.defaultDigits).day(.defaultDigits)))
+                                Text(
+                                    record.playDate.formatted(
+                                        .dateTime.year(.twoDigits).month(.defaultDigits).day(.defaultDigits))
+                                )
                                     .font(.system(size: 10, weight: .bold))
                                     .foregroundStyle(.primary)
                                 Text(record.playDate, style: .time)

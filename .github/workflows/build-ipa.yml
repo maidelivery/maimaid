@@ -40,12 +40,15 @@ jobs:
         env:
           ARCHIVE_PATH: ${{ runner.temp }}/maimaid.xcarchive
           MAIMAID_API_URL: ${{ secrets.MAIMAID_API_URL }}
+          MAIMAID_AUTH_URL: https://maimaid.rhythmeta.org
         run: |
           set -euo pipefail
           mkdir -p build
           LOG_PATH="$PWD/build/archive.log"
           RESULT_BUNDLE_PATH="$PWD/build/maimaid.xcresult"
           : "${MAIMAID_API_URL:?Missing GitHub Secret MAIMAID_API_URL}"
+          : "${MAIMAID_AUTH_URL:?Missing MAIMAID_AUTH_URL}"
+          echo "Configuring backend API and auth endpoints for the IPA archive."
           if ! xcodebuild \
             -project ios/maimaid.xcodeproj \
             -scheme maimaid \
@@ -54,6 +57,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CURRENT_PROJECT_VERSION="$MAIMAID_BUILD_NUMBER" \
             BACKEND_URL="$MAIMAID_API_URL" \
+            BACKEND_AUTH_URL="$MAIMAID_AUTH_URL" \
             archive \
             -archivePath "$ARCHIVE_PATH" \
             -resultBundlePath "$RESULT_BUNDLE_PATH" 2>&1 | tee "$LOG_PATH"; then

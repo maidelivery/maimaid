@@ -33,7 +33,10 @@ struct ScoreEntryView: View {
     @ScaledMetric(relativeTo: .title3) private var achievementPercentFontSize = 24
     @ScaledMetric(relativeTo: .body) private var dxScoreFieldMinWidth = 88
 
-    init(sheet: Sheet, initialRate: Double? = nil, initialRank: String? = nil, initialDxScore: Int? = nil, initialFC: String? = nil, initialFS: String? = nil) {
+    init(
+        sheet: Sheet, initialRate: Double? = nil, initialRank: String? = nil, initialDxScore: Int? = nil,
+        initialFC: String? = nil, initialFS: String? = nil
+    ) {
         self.sheet = sheet
         self.initialRate = initialRate
         self.initialRank = initialRank
@@ -358,10 +361,14 @@ struct ScoreEntryView: View {
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: 44)
                 .padding(.horizontal, 12)
-                .background(displayedRank == "—" ? Color.secondary.opacity(0.08) : displayedRankColor.opacity(0.12), in: Capsule())
+                .background(
+                    displayedRank == "—" ? Color.secondary.opacity(0.08) : displayedRankColor.opacity(0.12),
+                    in: Capsule()
+                )
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(Text("score.entry.rank"))
-                .accessibilityValue(Text(displayedRank == "—" ? String(localized: "score.entry.rank.pending") : displayedRank))
+                .accessibilityValue(
+                    Text(displayedRank == "—" ? String(localized: "score.entry.rank.pending") : displayedRank))
 
                 HStack(spacing: 8) {
                     Image(systemName: "star.fill")
@@ -390,7 +397,8 @@ struct ScoreEntryView: View {
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: 44)
                 .padding(.horizontal, 12)
-                .background(dxScoreText.isEmpty ? Color.secondary.opacity(0.08) : Color.yellow.opacity(0.12), in: Capsule())
+                .background(
+                    dxScoreText.isEmpty ? Color.secondary.opacity(0.08) : Color.yellow.opacity(0.12), in: Capsule())
             }
 
             if let validationMessage {
@@ -425,7 +433,10 @@ struct ScoreEntryView: View {
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: 44)
                     .padding(.horizontal, 12)
-                    .background((selectedFC?.isEmpty ?? true) ? Color.secondary.opacity(0.08) : Color.green.opacity(0.12), in: Capsule())
+                    .background(
+                        (selectedFC?.isEmpty ?? true) ? Color.secondary.opacity(0.08) : Color.green.opacity(0.12),
+                        in: Capsule()
+                    )
                     .foregroundStyle((selectedFC?.isEmpty ?? true) ? AnyShapeStyle(.secondary) : AnyShapeStyle(.green))
                 }
                 .accessibilityLabel(Text("score.entry.combo"))
@@ -451,7 +462,10 @@ struct ScoreEntryView: View {
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: 44)
                     .padding(.horizontal, 12)
-                    .background((selectedFS?.isEmpty ?? true) ? Color.secondary.opacity(0.08) : Color.blue.opacity(0.12), in: Capsule())
+                    .background(
+                        (selectedFS?.isEmpty ?? true) ? Color.secondary.opacity(0.08) : Color.blue.opacity(0.12),
+                        in: Capsule()
+                    )
                     .foregroundStyle((selectedFS?.isEmpty ?? true) ? AnyShapeStyle(.secondary) : AnyShapeStyle(.blue))
                 }
                 .accessibilityLabel(Text("score.entry.sync"))

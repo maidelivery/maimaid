@@ -16,7 +16,8 @@ enum SongCollectionCodec {
         let activeItems = items
             .filter { $0.collectionId == collection.id && $0.deletedAt == nil }
             .sorted { left, right in
-                left.position == right.position ? left.id.uuidString < right.id.uuidString : left.position < right.position
+                left.position == right.position
+                    ? left.id.uuidString < right.id.uuidString : left.position < right.position
             }
         guard collection.deletedAt == nil, collection.name.count <= 200, activeItems.count <= maxEntries else {
             throw SongCollectionCodecError.invalid
@@ -77,7 +78,11 @@ enum SongCollectionCodec {
 
     private static func rawDeflate(_ input: Data) throws -> Data {
         var stream = z_stream()
-        guard deflateInit2_(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size)) == Z_OK else {
+        guard
+            deflateInit2_(
+                &stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY, ZLIB_VERSION,
+                Int32(MemoryLayout<z_stream>.size)) == Z_OK
+        else {
             throw SongCollectionCodecError.invalid
         }
         defer { deflateEnd(&stream) }

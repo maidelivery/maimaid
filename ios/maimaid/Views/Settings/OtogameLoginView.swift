@@ -11,7 +11,8 @@ struct OtogameLoginView: View {
                     viewModel.hasSession
                         ? "import.otogame.session.ready"
                         : "import.otogame.session.required",
-                    systemImage: viewModel.hasSession ? "checkmark.circle.fill" : "person.crop.circle.badge.exclamationmark"
+                    systemImage: viewModel.hasSession
+                        ? "checkmark.circle.fill" : "person.crop.circle.badge.exclamationmark"
                 )
                 .foregroundStyle(viewModel.hasSession ? .green : .secondary)
                 Spacer()

@@ -125,10 +125,8 @@ struct MainTabView: View {
         // Associate existing scores with the new profile
         let scoreDescriptor = FetchDescriptor<Score>()
         if let scores = try? modelContext.fetch(scoreDescriptor) {
-            for score in scores {
-                if score.userProfileId == nil {
-                    score.userProfileId = profile.id
-                }
+            for score in scores where score.userProfileId == nil {
+                score.userProfileId = profile.id
             }
         }
 

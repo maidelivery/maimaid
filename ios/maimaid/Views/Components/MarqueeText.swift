@@ -21,7 +21,7 @@ struct MarqueeText: View {
 
     var body: some View {
         GeometryReader { container in
-            let cw = container.size.width
+            let availableWidth = container.size.width
 
             HStack(spacing: spacing) {
                 textLabel
@@ -30,7 +30,7 @@ struct MarqueeText: View {
                             Color.clear
                                 .onAppear {
                                     contentWidth = content.size.width
-                                    containerWidth = cw
+                                    containerWidth = availableWidth
                                 }
                                 .onChange(of: text) { _, _ in
                                     contentWidth = content.size.width
@@ -44,15 +44,15 @@ struct MarqueeText: View {
                 }
             }
             .offset(x: offset)
-            .frame(width: cw, alignment: needsScroll ? .leading : alignment)
+            .frame(width: availableWidth, alignment: needsScroll ? .leading : alignment)
             .onAppear {
-                containerWidth = cw
+                containerWidth = availableWidth
                 startMarquee()
             }
             .onChange(of: contentWidth) { _, _ in
                 startMarquee()
             }
-            .onChange(of: cw) { _, newWidth in
+            .onChange(of: availableWidth) { _, newWidth in
                 containerWidth = newWidth
                 startMarquee()
             }

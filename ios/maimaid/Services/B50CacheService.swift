@@ -19,7 +19,8 @@ final class B50CacheService {
 
     private var lastScoreFingerprintByProfile: [String: String] = [:]
     private var lastScoreMapByProfile: [String: [String: Score]] = [:]
-    private var currentCalculationTask: Task<(total: Int, b35: [RatingUtils.RatingEntry], b15: [RatingUtils.RatingEntry]), Never>?
+    private var currentCalculationTask:
+        Task<(total: Int, b35: [RatingUtils.RatingEntry], b15: [RatingUtils.RatingEntry]), Never>?
 
     private init() {}
 

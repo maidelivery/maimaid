@@ -16,11 +16,15 @@ struct RandomSongView: View {
 
     // Computed properties for filter options
     private var allCategories: [String] {
-        Array(Set(allSongs.map { $0.category })).sorted { ThemeUtils.categorySortOrder($0) < ThemeUtils.categorySortOrder($1) }
+        Array(Set(allSongs.map { $0.category })).sorted {
+            ThemeUtils.categorySortOrder($0) < ThemeUtils.categorySortOrder($1)
+        }
     }
 
     private var allVersions: [String] {
-        Array(Set(allSongs.compactMap { $0.version })).sorted { ThemeUtils.versionSortOrder($0) < ThemeUtils.versionSortOrder($1) }
+        Array(Set(allSongs.compactMap { $0.version })).sorted {
+            ThemeUtils.versionSortOrder($0) < ThemeUtils.versionSortOrder($1)
+        }
     }
 
     private var currentSlotHeight: CGFloat {
@@ -63,21 +67,24 @@ struct RandomSongView: View {
                 .padding(.horizontal, 16)
 
                 // Spin Button
-                Button(action: {
-                    if isSpinning {
-                        skipSpin()
-                    } else {
-                        spin()
+                Button(
+                    action: {
+                        if isSpinning {
+                            skipSpin()
+                        } else {
+                            spin()
+                        }
+                    },
+                    label: {
+                        HStack {
+                            Image(systemName: isSpinning ? "forward.end.fill" : "dice.fill")
+                            Text(isSpinning ? "random.action.skip" : "random.action.spin")
+                                .font(.headline.bold())
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
                     }
-                }) {
-                    HStack {
-                        Image(systemName: isSpinning ? "forward.end.fill" : "dice.fill")
-                        Text(isSpinning ? "random.action.skip" : "random.action.spin")
-                            .font(.headline.bold())
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                }
+                )
                 .buttonStyle(.borderedProminent)
                 .disabled(allSongs.isEmpty)
                 .padding(.horizontal, 40)

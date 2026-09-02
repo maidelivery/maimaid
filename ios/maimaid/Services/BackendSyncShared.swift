@@ -44,7 +44,14 @@ enum BackendSyncShared {
             }
             for identifier in songIdentifiers(for: sheet) {
                 for separator in separators {
-                    map[sheetKey(identifier: identifier, separator: separator, chartType: chartType, difficulty: difficulty)] = sheet
+                    map[
+                        sheetKey(
+                            identifier: identifier,
+                            separator: separator,
+                            chartType: chartType,
+                            difficulty: difficulty
+                        )] =
+                        sheet
                 }
             }
         }

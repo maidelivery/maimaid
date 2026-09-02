@@ -12,7 +12,8 @@ struct MLModelStoreTests {
     func downloadsAndActivatesKnownModels() async throws {
         let fixture = try ModelStoreFixture()
         defer { fixture.remove() }
-        let unknown = ModelManifestEntry(filename: "future-model.bin", sha256: String(repeating: "f", count: 64), size: 12)
+        let unknown = ModelManifestEntry(
+            filename: "future-model.bin", sha256: String(repeating: "f", count: 64), size: 12)
         let manifest = try fixture.install(marker: "v1", extraEntries: [unknown])
         let store = fixture.makeStore()
 
@@ -70,7 +71,8 @@ struct MLModelStoreTests {
         defer { fixture.remove() }
         var manifest = try fixture.install(marker: "digest")
         let original = manifest[0]
-        manifest[0] = ModelManifestEntry(filename: original.filename, sha256: String(repeating: "0", count: 64), size: original.size)
+        manifest[0] = ModelManifestEntry(
+            filename: original.filename, sha256: String(repeating: "0", count: 64), size: original.size)
         try fixture.registerManifest(manifest)
         let store = fixture.makeStore()
         _ = await store.inspect()

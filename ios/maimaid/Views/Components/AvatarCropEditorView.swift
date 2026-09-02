@@ -124,15 +124,19 @@ struct AvatarCropEditorView: View {
     private func magnificationGesture(guideDiameter: CGFloat, baseSize: CGSize) -> some Gesture {
         MagnificationGesture()
             .onChanged { value in
-                let proposedScale = normalizedScale(committedScale * value, guideDiameter: guideDiameter, baseSize: baseSize)
+                let proposedScale = normalizedScale(
+                    committedScale * value, guideDiameter: guideDiameter, baseSize: baseSize)
                 scale = proposedScale
-                offset = clampedOffset(offset, guideDiameter: guideDiameter, baseSize: baseSize, scale: proposedScale, rotation: rotation)
+                offset = clampedOffset(
+                    offset, guideDiameter: guideDiameter, baseSize: baseSize, scale: proposedScale, rotation: rotation)
             }
             .onEnded { value in
-                let proposedScale = normalizedScale(committedScale * value, guideDiameter: guideDiameter, baseSize: baseSize)
+                let proposedScale = normalizedScale(
+                    committedScale * value, guideDiameter: guideDiameter, baseSize: baseSize)
                 scale = proposedScale
                 committedScale = proposedScale
-                offset = clampedOffset(offset, guideDiameter: guideDiameter, baseSize: baseSize, scale: proposedScale, rotation: rotation)
+                offset = clampedOffset(
+                    offset, guideDiameter: guideDiameter, baseSize: baseSize, scale: proposedScale, rotation: rotation)
                 committedOffset = offset
             }
     }
@@ -142,13 +146,15 @@ struct AvatarCropEditorView: View {
             .onChanged { value in
                 let proposedRotation = committedRotation + value
                 rotation = proposedRotation
-                offset = clampedOffset(offset, guideDiameter: guideDiameter, baseSize: baseSize, scale: scale, rotation: proposedRotation)
+                offset = clampedOffset(
+                    offset, guideDiameter: guideDiameter, baseSize: baseSize, scale: scale, rotation: proposedRotation)
             }
             .onEnded { value in
                 let proposedRotation = committedRotation + value
                 rotation = proposedRotation
                 committedRotation = proposedRotation
-                offset = clampedOffset(offset, guideDiameter: guideDiameter, baseSize: baseSize, scale: scale, rotation: proposedRotation)
+                offset = clampedOffset(
+                    offset, guideDiameter: guideDiameter, baseSize: baseSize, scale: scale, rotation: proposedRotation)
                 committedOffset = offset
             }
     }

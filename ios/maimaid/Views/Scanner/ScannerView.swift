@@ -110,14 +110,12 @@ extension ScannerView {
                     }
                 }
 
-                for replacement in replacements {
-                    if current.contains(replacement) {
-                        let variant = current.replacingOccurrences(of: String(replacement), with: String(original))
-                        if !seen.contains(variant) {
-                            seen.insert(variant)
-                            variants.append(variant)
-                            queue.append(variant)
-                        }
+                for replacement in replacements where current.contains(replacement) {
+                    let variant = current.replacingOccurrences(of: String(replacement), with: String(original))
+                    if !seen.contains(variant) {
+                        seen.insert(variant)
+                        variants.append(variant)
+                        queue.append(variant)
                     }
                 }
             }
@@ -126,24 +124,24 @@ extension ScannerView {
         return variants
     }
 
-    private func isSimilarWithOCRErrors(_ s1: String, _ s2: String, threshold: Int? = nil) -> Bool {
-        if s1.localizedCaseInsensitiveCompare(s2) == .orderedSame {
+    private func isSimilarWithOCRErrors(_ firstText: String, _ secondText: String, threshold: Int? = nil) -> Bool {
+        if firstText.localizedCaseInsensitiveCompare(secondText) == .orderedSame {
             return true
         }
 
-        let s1Variants = generateOCRVariants(s1)
-        let s2Lower = s2.lowercased()
+        let firstTextVariants = generateOCRVariants(firstText)
+        let secondTextLowercased = secondText.lowercased()
 
-        for variant in s1Variants {
+        for variant in firstTextVariants {
             let variantLower = variant.lowercased()
-            if s2Lower.localizedCaseInsensitiveContains(variantLower) ||
-               variantLower.localizedCaseInsensitiveContains(s2Lower) {
+            if secondTextLowercased.localizedCaseInsensitiveContains(variantLower) ||
+               variantLower.localizedCaseInsensitiveContains(secondTextLowercased) {
                 return true
             }
         }
 
-        let dist = levenshteinDistance(s1, s2)
-        let maxLen = max(s1.count, s2.count)
+        let dist = levenshteinDistance(firstText, secondText)
+        let maxLen = max(firstText.count, secondText.count)
         let adaptiveThreshold = threshold ?? max(2, maxLen / 3)
 
         return dist <= adaptiveThreshold
@@ -204,7 +202,10 @@ extension ScannerView {
 
     private func normalizedSongMatchTitle(_ title: String) -> String {
         stripUtagePrefix(title)
-            .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+            .folding(
+                options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
+                locale: Locale(identifier: "en_US_POSIX")
+            )
             .replacingOccurrences(of: "\u{3000}", with: " ")
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -237,9 +238,11 @@ extension ScannerView {
                     if let exact = exact { return exact }
                 }
                 if let dx = dxScore, dx > 0 {
-                    let best = kanjiMatches.min { s1, s2 in
-                        guard let t1 = s1.total, let t2 = s2.total else { return s1.total != nil }
-                        return abs(t1 * 3 - dx) < abs(t2 * 3 - dx)
+                    let best = kanjiMatches.min { firstSheet, secondSheet in
+                        guard let firstTotal = firstSheet.total, let secondTotal = secondSheet.total else {
+                            return firstSheet.total != nil
+                        }
+                        return abs(firstTotal * 3 - dx) < abs(secondTotal * 3 - dx)
                     }
                     if let best = best { return best }
                 }
@@ -260,9 +263,11 @@ extension ScannerView {
             }
             if matching.count == 1 { return matching.first }
 
-            let best = matching.min { s1, s2 in
-                guard let t1 = s1.total, let t2 = s2.total else { return s1.total != nil }
-                return abs(t1 * 3 - dx) < abs(t2 * 3 - dx)
+            let best = matching.min { firstSheet, secondSheet in
+                guard let firstTotal = firstSheet.total, let secondTotal = secondSheet.total else {
+                    return firstSheet.total != nil
+                }
+                return abs(firstTotal * 3 - dx) < abs(secondTotal * 3 - dx)
             }
             if let best = best { return best }
         }
@@ -434,11 +439,15 @@ struct ScannerView: View {
                     cancel: modelController.cancelDownload
                 )
             }
-            .sheet(isPresented: $isShowingScoreEntry, onDismiss: {
-                resetScanner()
-            }) {
-                scoreEntrySheetContent
-            }
+            .sheet(
+                isPresented: $isShowingScoreEntry,
+                onDismiss: {
+                    resetScanner()
+                },
+                content: {
+                    scoreEntrySheetContent
+                }
+            )
             .onChange(of: selectedPhotoItem) { _, newItem in
                 if let item = newItem {
                     Task { await processSelectedPhoto(item) }
@@ -563,18 +572,18 @@ struct ScannerView: View {
             for candidate in allCandidates {
                 let matches = songs.filter { song in
                     let standardSheets = song.sheets.filter { $0.type.lowercased() != "utage" }
-                    let isDeleted = standardSheets.isEmpty || standardSheets.allSatisfy { !$0.regionJp && !$0.regionIntl && !$0.regionCn }
+                    let isDeleted =
+                        standardSheets.isEmpty
+                        || standardSheets.allSatisfy { !$0.regionJp && !$0.regionIntl && !$0.regionCn }
                     if isDeleted { return false }
                     return song.title.localizedCaseInsensitiveContains(candidate) ||
                         candidate.localizedCaseInsensitiveContains(song.title) ||
                         (song.searchKeywords?.localizedCaseInsensitiveContains(candidate) ?? false) ||
                         song.aliases.contains(where: { $0.localizedCaseInsensitiveContains(candidate) })
                 }
-                for song in matches {
-                    if !seenIds.contains(song.songIdentifier) {
-                        matchedSongs.append(song)
-                        seenIds.insert(song.songIdentifier)
-                    }
+                for song in matches where !seenIds.contains(song.songIdentifier) {
+                    matchedSongs.append(song)
+                    seenIds.insert(song.songIdentifier)
                 }
             }
 
@@ -722,7 +731,9 @@ struct ScannerView: View {
                         ScannerNoteCountValidator.isCompatible(maxDxScore: maxDxScore, sheetTotal: $0.total)
                 }
                 if utageSheets.isEmpty { return false }
-                if hasExplicitUtagePrefix && !songHasExplicitUtagePrefix(song, kanji: explicitTitleKanji) { return false }
+                if hasExplicitUtagePrefix && !songHasExplicitUtagePrefix(song, kanji: explicitTitleKanji) {
+                    return false
+                }
                 if let validatedKanji,
                    !utageSheets.contains(where: { $0.difficulty.contains(validatedKanji) }) {
                     return false
@@ -835,20 +846,36 @@ struct ScannerView: View {
                 for searchCandidate in variants {
                     let normalizedSearchTitle = normalizedSongMatchTitle(searchCandidate)
                     if normalizedSongTitle == normalizedSearchTitle { matchScore = 110; break }
-                    if song.title.localizedCaseInsensitiveCompare(searchCandidate) == .orderedSame { matchScore = 100; break }
-                    if song.aliases.contains(where: { $0.localizedCaseInsensitiveCompare(searchCandidate) == .orderedSame }) { matchScore = max(matchScore, 95); break }
-                    if normalizedSongTitle.hasPrefix(normalizedSearchTitle) && normalizedSongTitle != normalizedSearchTitle {
+                    if song.title.localizedCaseInsensitiveCompare(searchCandidate) == .orderedSame {
+                        matchScore = 100; break
+                    }
+                    if song.aliases.contains(where: {
+                        $0.localizedCaseInsensitiveCompare(searchCandidate) == .orderedSame
+                    }) {
+                        matchScore = max(matchScore, 95); break
+                    }
+                    if normalizedSongTitle.hasPrefix(normalizedSearchTitle)
+                        && normalizedSongTitle != normalizedSearchTitle {
                         matchScore = max(matchScore, isUtage ? 45 : 80)
                         continue
                     }
-                    if normalizedSearchTitle.hasPrefix(normalizedSongTitle) && normalizedSongTitle != normalizedSearchTitle {
+                    if normalizedSearchTitle.hasPrefix(normalizedSongTitle)
+                        && normalizedSongTitle != normalizedSearchTitle {
                         matchScore = max(matchScore, isUtage ? 40 : 75)
                         continue
                     }
-                    if song.title.localizedStandardContains(searchCandidate) { matchScore = max(matchScore, isUtage ? 35 : 80); continue }
-                    if searchCandidate.localizedStandardContains(song.title) { matchScore = max(matchScore, isUtage ? 30 : 75); continue }
-                    if song.aliases.contains(where: { $0.localizedStandardContains(searchCandidate) }) { matchScore = max(matchScore, 70); continue }
-                    if let keywords = song.searchKeywords, keywords.localizedStandardContains(searchCandidate) { matchScore = max(matchScore, 60); continue }
+                    if song.title.localizedStandardContains(searchCandidate) {
+                        matchScore = max(matchScore, isUtage ? 35 : 80); continue
+                    }
+                    if searchCandidate.localizedStandardContains(song.title) {
+                        matchScore = max(matchScore, isUtage ? 30 : 75); continue
+                    }
+                    if song.aliases.contains(where: { $0.localizedStandardContains(searchCandidate) }) {
+                        matchScore = max(matchScore, 70); continue
+                    }
+                    if let keywords = song.searchKeywords, keywords.localizedStandardContains(searchCandidate) {
+                        matchScore = max(matchScore, 60); continue
+                    }
 
                     let dist = levenshteinDistance(cleaned, song.title)
                     let maxLen = max(cleaned.count, song.title.count)
@@ -875,7 +902,9 @@ struct ScannerView: View {
             }
         }
 
-        if matchedSongs.isEmpty && allCandidates.allSatisfy({ $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) && hasAnyValidation {
+        if matchedSongs.isEmpty
+            && allCandidates.allSatisfy({ $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+            && hasAnyValidation {
             for song in filteredSongs where !seenIds.contains(song.songIdentifier) {
                 let score: Int
                 if let validatedMaxDxScore {
@@ -940,8 +969,16 @@ struct ScannerView: View {
             if isUtage {
                 if sheet.type.lowercased() != "utage" { return false }
                 if let kanji, !kanji.isEmpty, !sheet.difficulty.contains(kanji) { return false }
-                if hasExplicitUtagePrefix, let song = sheet.song, !songHasExplicitUtagePrefix(song, kanji: explicitTitleKanji) { return false }
-                if let tn = derivedTotalNotes, tn > 0 { if let total = sheet.total, total != tn { return false } }
+                if hasExplicitUtagePrefix, let song = sheet.song,
+                    !songHasExplicitUtagePrefix(song, kanji: explicitTitleKanji) {
+                    return false
+                }
+                if let totalNotes = derivedTotalNotes,
+                   totalNotes > 0,
+                   let sheetTotal = sheet.total,
+                   sheetTotal != totalNotes {
+                    return false
+                }
                 if let dx = dxScore, dx > 0 { if let total = sheet.total, total * 3 < dx { return false } }
                 return true
             }
@@ -950,12 +987,21 @@ struct ScannerView: View {
                 if sheet.type.lowercased() != type.lowercased() { return false }
             }
             if let diff = difficulty { if sheet.difficulty.lowercased() != diff.lowercased() { return false } }
-            if let lv = level, lv >= 1, lv <= 15 {
+            if let recognizedLevel = level, recognizedLevel >= 1, recognizedLevel <= 15 {
                 let metadata = ServerChartPolicy.metadata(for: sheet, on: activeServer)
-                let sl = metadata.ratingLevel ?? 0
-                if sl > 0 { if Int(sl) != Int(lv) { return false } } else { if Int(metadata.level) != Int(lv) { return false } }
+                let sheetLevel = metadata.ratingLevel ?? 0
+                if sheetLevel > 0 {
+                    if Int(sheetLevel) != Int(recognizedLevel) { return false }
+                } else if Int(metadata.level) != Int(recognizedLevel) {
+                    return false
+                }
             }
-            if let tn = derivedTotalNotes, tn > 0 { if let st = sheet.total, st != tn { return false } }
+            if let totalNotes = derivedTotalNotes,
+               totalNotes > 0,
+               let sheetTotal = sheet.total,
+               sheetTotal != totalNotes {
+                return false
+            }
             if let dx = dxScore, dx > 0 { if let total = sheet.total, total * 3 < dx { return false } }
             if let maxDx = maxDxScore, maxDx > 0 { if let total = sheet.total, total * 3 != maxDx { return false } }
             return true
@@ -983,7 +1029,10 @@ struct ScannerView: View {
                 for song in songs {
                     if !song.sheets.contains(where: { sheetOK($0) }) { continue }
                     let normalizedSongTitle = normalizedSongMatchTitle(song.title)
-                    if (!isUtage && (song.title.localizedCaseInsensitiveContains(cleaned) || cleaned.localizedCaseInsensitiveContains(song.title))) ||
+                    if (!isUtage
+                        && (song.title.localizedCaseInsensitiveContains(cleaned)
+                            || cleaned.localizedCaseInsensitiveContains(song.title)))
+                        ||
                         (isUtage && normalizedSongTitle.hasPrefix(normalizedCleaned)) {
                         frameMatches.append(song.songIdentifier); foundFast = true
                         if frameMatches.count > 3 { break }
@@ -993,13 +1042,18 @@ struct ScannerView: View {
             if !foundFast && cleaned.count > 4 {
                 for song in songs {
                     if !song.sheets.contains(where: { sheetOK($0) }) { continue }
-                    if fuzzyMatch(cleaned, song.title) { frameMatches.append(song.songIdentifier); if frameMatches.count > 3 { break } }
+                    if fuzzyMatch(cleaned, song.title) {
+                        frameMatches.append(song.songIdentifier); if frameMatches.count > 3 { break }
+                    }
                 }
             }
             if !frameMatches.isEmpty { break }
         }
         if frameMatches.isEmpty && hasMaxDxScore {
-            for song in songs { if song.sheets.contains(where: { sheetOK($0) }) { frameMatches.append(song.songIdentifier); if frameMatches.count > 3 { break } } }
+            for song in songs where song.sheets.contains(where: { sheetOK($0) }) {
+                frameMatches.append(song.songIdentifier)
+                if frameMatches.count > 3 { break }
+            }
         }
         if frameMatches.isEmpty && !hasAnyValidation {
             for candidate in allCandidates {
@@ -1024,9 +1078,9 @@ struct ScannerView: View {
 
     // MARK: - Utilities
 
-    private func levenshteinDistance(_ s1: String, _ s2: String) -> Int {
-        let firstCharacters = Array(s1.lowercased())
-        let secondCharacters = Array(s2.lowercased())
+    private func levenshteinDistance(_ firstText: String, _ secondText: String) -> Int {
+        let firstCharacters = Array(firstText.lowercased())
+        let secondCharacters = Array(secondText.lowercased())
         if firstCharacters.isEmpty { return secondCharacters.count }
         if secondCharacters.isEmpty { return firstCharacters.count }
 
@@ -1072,10 +1126,11 @@ struct ScannerView: View {
         }
     }
 
-    private func fuzzyMatch(_ s1: String, _ s2: String) -> Bool {
-        let t1 = s1.lowercased().filter { !$0.isWhitespace }, t2 = s2.lowercased().filter { !$0.isWhitespace }
-        if abs(t1.count - t2.count) > 2 { return false }
-        return levenshteinDistance(t1, t2) <= max(1, t1.count / 4)
+    private func fuzzyMatch(_ firstText: String, _ secondText: String) -> Bool {
+        let normalizedFirstText = firstText.lowercased().filter { !$0.isWhitespace }
+        let normalizedSecondText = secondText.lowercased().filter { !$0.isWhitespace }
+        if abs(normalizedFirstText.count - normalizedSecondText.count) > 2 { return false }
+        return levenshteinDistance(normalizedFirstText, normalizedSecondText) <= max(1, normalizedFirstText.count / 4)
     }
 
     // MARK: - Header
@@ -1306,7 +1361,8 @@ struct ScannerView: View {
                 let newClass = songIds.contains(song.songIdentifier) ? imageClass : recognizedClass
                 if recognizedSong?.songIdentifier != song.songIdentifier || recognizedClass != newClass {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        self.recognizedSong = song; if newClass != .unknown { self.recognizedClass = newClass }; self.isLocked = true
+                        self.recognizedSong = song; if newClass != .unknown { self.recognizedClass = newClass }
+                        self.isLocked = true
                     }
                 }
                 self.lastSeenDate = Date()
@@ -1354,7 +1410,9 @@ struct ScannerView: View {
             if let maxCombo = recognition.maxCombo { recognizedMaxCombo = maxCombo }
             if let kanji = recognition.kanji { recognizedKanji = kanji }
         }
-        if isLocked && !isShowingScoreEntry { if Date().timeIntervalSince(lastSeenDate) > 4.0 { withAnimation { resetScanner() } } }
+        if isLocked && !isShowingScoreEntry {
+            if Date().timeIntervalSince(lastSeenDate) > 4.0 { withAnimation { resetScanner() } }
+        }
     }
 
     private func resetScanner() {
@@ -1365,7 +1423,9 @@ struct ScannerView: View {
         maxDxScoreBuffer.removeAll(); debugBoxes.removeAll(); isLocked = false
     }
 
-    private func canPresentScoreResult(for song: Song, difficulty: String?, type: String?, kanji: String?, maxDxScore: Int?, dxScore: Int?) -> Bool {
+    private func canPresentScoreResult(
+        for song: Song, difficulty: String?, type: String?, kanji: String?, maxDxScore: Int?, dxScore: Int?
+    ) -> Bool {
         let normalizedDifficulty = difficulty?.trimmingCharacters(in: .whitespacesAndNewlines)
         let hasDifficulty = normalizedDifficulty?.isEmpty == false
         let hasMaxDxScore = (maxDxScore ?? 0) > 0
@@ -1383,7 +1443,9 @@ struct ScannerView: View {
         ) != nil
     }
 
-    private func resolvedScoreSheet(for song: Song, difficulty: String?, type: String?, kanji: String?, maxDxScore: Int?, dxScore: Int?) -> Sheet? {
+    private func resolvedScoreSheet(
+        for song: Song, difficulty: String?, type: String?, kanji: String?, maxDxScore: Int?, dxScore: Int?
+    ) -> Sheet? {
         let normalizedDifficulty = difficulty?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let normalizedType = type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
@@ -1399,7 +1461,10 @@ struct ScannerView: View {
             let sheetType = sheet.type.lowercased()
             if sheetType == "utage" { return false }
             if let normalizedType, !normalizedType.isEmpty, sheetType != normalizedType { return false }
-            if let normalizedDifficulty, !normalizedDifficulty.isEmpty, sheet.difficulty.lowercased() != normalizedDifficulty { return false }
+            if let normalizedDifficulty, !normalizedDifficulty.isEmpty,
+                sheet.difficulty.lowercased() != normalizedDifficulty {
+                return false
+            }
             return true
         }
 

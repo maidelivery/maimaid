@@ -26,7 +26,11 @@ struct DivingFishImportView: View {
                     VStack(alignment: .leading) {
                         Text(isConnected ? "import.df.oauth.connected" : "import.df.oauth.title")
                             .bold()
-                        Text(isConnected ? (connectedUsername ?? String(localized: "import.df.oauth.connectedAccount")) : String(localized: "import.df.oauth.description"))
+                        Text(
+                            isConnected
+                                ? (connectedUsername ?? String(localized: "import.df.oauth.connectedAccount"))
+                                : String(localized: "import.df.oauth.description")
+                        )
                             .foregroundStyle(.secondary)
                         if isConnected && !canSyncScores {
                             Text("import.df.oauth.writePending")
@@ -84,7 +88,8 @@ struct DivingFishImportView: View {
                     }
                     if !importStatus.isEmpty {
                         Text(importStatus)
-                            .foregroundStyle(importStatus.contains(String(localized: "import.status.error")) ? .red : .secondary)
+                            .foregroundStyle(
+                                importStatus.contains(String(localized: "import.status.error")) ? .red : .secondary)
                     }
                     if totalRecords > 0 {
                         Text("import.df.oauth.fetched \(totalRecords)")
@@ -196,7 +201,8 @@ struct DivingFishImportView: View {
                     )
                 }
             }
-            throw BackendAPIError(statusCode: nil, code: "expired", message: String(localized: "import.df.oauth.expired"))
+            throw BackendAPIError(
+                statusCode: nil, code: "expired", message: String(localized: "import.df.oauth.expired"))
         } catch is CancellationError {
             return
         } catch {

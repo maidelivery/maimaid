@@ -33,11 +33,15 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 // User Management Section
-                Section(header: Text("settings.userManagement.header"), footer: Text("settings.userManagement.footer")) {
+                Section(
+                    header: Text("settings.userManagement.header"),
+                    footer: Text("settings.userManagement.footer")
+                ) {
                     NavigationLink {
                         UserProfileListView()
                     } label: {
-                        settingsRowLabel(icon: "person.2.fill", iconColor: .purple, title: "settings.userManagement.title")
+                        settingsRowLabel(
+                            icon: "person.2.fill", iconColor: .purple, title: "settings.userManagement.title")
                     }
                 }
 
@@ -120,13 +124,16 @@ struct SettingsView: View {
                     }
 
                     Toggle(isOn: $showScannerBoundingBox) {
-                        settingsRowLabel(icon: "viewfinder", iconColor: .green, title: "settings.appearance.showBoundingBox")
+                        settingsRowLabel(
+                            icon: "viewfinder", iconColor: .green, title: "settings.appearance.showBoundingBox")
                     }
                 }
 
                 // About Section
                 Section("settings.about.header") {
-                    settingsRow(icon: "info.circle.fill", iconColor: .gray, title: "settings.about.version", value: appVersionText)
+                    settingsRow(
+                        icon: "info.circle.fill", iconColor: .gray, title: "settings.about.version",
+                        value: appVersionText)
                 }
             }
             .navigationTitle("settings.title")

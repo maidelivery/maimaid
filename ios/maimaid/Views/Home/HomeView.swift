@@ -109,25 +109,26 @@ struct HomeView: View {
                 },
                 onDisappear: {
                     b50UpdateTask?.cancel()
-                }
-            ) {
-                HomeDashboardView(
-                    profileEditMode: $profileEditMode,
-                    showingOnboarding: $showingOnboarding,
-                    didShowOnboarding: $didShowOnboarding
-                ) {
-                    VStack(spacing: 16) {
-                        // Profile Section
-                        profileHeader
+                },
+                content: {
+                    HomeDashboardView(
+                        profileEditMode: $profileEditMode,
+                        showingOnboarding: $showingOnboarding,
+                        didShowOnboarding: $didShowOnboarding
+                    ) {
+                        VStack(spacing: 16) {
+                            // Profile Section
+                            profileHeader
 
-                        // Main "Best Table" Button
-                        bestTableButton
+                            // Main "Best Table" Button
+                            bestTableButton
 
-                        // Function Grid
-                        functionGrid
+                            // Function Grid
+                            functionGrid
+                        }
                     }
                 }
-            }
+            )
         }
     }
 
@@ -472,7 +473,8 @@ struct HomeView: View {
         }
     }
 
-    private func functionCard(icon: String, title: LocalizedStringKey, subtitle: LocalizedStringKey, gradient: [Color]) -> some View {
+    private func functionCard(icon: String, title: LocalizedStringKey, subtitle: LocalizedStringKey, gradient: [Color])
+        -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 28))

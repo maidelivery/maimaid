@@ -14,7 +14,10 @@ struct MaimaiIconPicker: View {
         if searchText.isEmpty {
             return icons
         }
-        return icons.filter { $0.name.localizedCaseInsensitiveContains(searchText) || $0.genre.localizedCaseInsensitiveContains(searchText) }
+        return icons.filter {
+            $0.name.localizedCaseInsensitiveContains(searchText)
+                || $0.genre.localizedCaseInsensitiveContains(searchText)
+        }
     }
 
     let columns = [
@@ -34,14 +37,17 @@ struct MaimaiIconPicker: View {
                                     .resizable().scaledToFill()
                                     .frame(width: 70, height: 70)
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary.opacity(0.1), lineWidth: 1))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12).stroke(
+                                            Color.primary.opacity(0.1), lineWidth: 1))
                             } else {
                                 RemoteImage(url: URL(string: icon.iconUrl)) {
                                     ProgressView()
                                 }
                                 .frame(width: 70, height: 70)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary.opacity(0.1), lineWidth: 1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12).stroke(Color.primary.opacity(0.1), lineWidth: 1))
                             }
 
                             Text(icon.name)

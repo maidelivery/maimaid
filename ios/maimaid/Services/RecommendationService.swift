@@ -26,14 +26,16 @@ class RecommendationService {
 
     private let chartStatsService = ChartStatsService.shared
     private let maximumCandidatesPerCategory = 100
-    private let maximumCandidatesPerCategoryForEmptyProfile = 50
+    private let emptyProfileCandidateLimit = 50
 
     private init() {}
 
-    /// Generates recommendations considering B15/B35 thresholds and potential gain
-    // Candidate generation keeps both B15 and B35 thresholds in one cancellable calculation pass.
+// Candidate generation keeps both B15 and B35 thresholds in one cancellable calculation pass.
+    // Generates recommendations considering B15/B35 thresholds and potential gain.
     // swiftlint:disable:next function_body_length
-    func getRecommendations(songs: [Song], configs: [SyncConfig], activeProfile: UserProfile? = nil, modelContext: ModelContext) async -> RecommendationResponse {
+    func getRecommendations(
+        songs: [Song], configs: [SyncConfig], activeProfile: UserProfile? = nil, modelContext: ModelContext
+    ) async -> RecommendationResponse {
         print("RecommendationService: Generating recommendations for \(songs.count) songs...")
 
         await chartStatsService.fetchStats()
@@ -54,12 +56,14 @@ class RecommendationService {
         let scoreMap = ScoreService.shared.scoreMap(context: modelContext)
         let profileId = profile?.id
         let candidateLimit = scoreMap.isEmpty
-            ? maximumCandidatesPerCategoryForEmptyProfile
+            ? emptyProfileCandidateLimit
             : maximumCandidatesPerCategory
 
-        let input = await songs.toCalculationInput(userProfileId: profileId, server: serverContext, preloadedScores: scoreMap)
+        let input = await songs.toCalculationInput(
+            userProfileId: profileId, server: serverContext, preloadedScores: scoreMap)
 
-        let b50 = await RatingUtils.calculateB50(input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: latestVersion)
+        let b50 = await RatingUtils.calculateB50(
+            input: input, b35Count: b35Limit, b15Count: b15Limit, latestVersion: latestVersion)
         let b15Threshold = replacementThreshold(for: b50.b15, capacity: b15Limit)
         let b35Threshold = replacementThreshold(for: b50.b35, capacity: b35Limit)
 
@@ -112,7 +116,10 @@ class RecommendationService {
                 let threshold = isNew ? b15Threshold : b35Threshold
                 let selectedEntries = isNew ? b50.b15 : b50.b35
 
-                let currentRating = currentScore.map { RatingUtils.calculateRating(internalLevel: internalLevelValue, achievement: $0.rate, fc: $0.fc) } ?? 0
+                let currentRating =
+                    currentScore.map {
+                        RatingUtils.calculateRating(internalLevel: internalLevelValue, achievement: $0.rate, fc: $0.fc)
+                    } ?? 0
                 let isInB50 = selectedEntries.contains { entry in
                     entry.songIdentifier == song.songIdentifier
                         && entry.diff.caseInsensitiveCompare(sheet.difficulty) == .orderedSame
@@ -128,7 +135,8 @@ class RecommendationService {
                     // Skip milestones the user has already reached (approximately)
                     if milestone.achievement <= currentRate + 0.0001 { continue }
 
-                    let potentialRating = RatingUtils.calculateRating(internalLevel: internalLevelValue, achievements: milestone.achievement)
+                    let potentialRating = RatingUtils.calculateRating(
+                        internalLevel: internalLevelValue, achievements: milestone.achievement)
                     let gain: Int
                     if isInB50 {
                         gain = max(0, potentialRating - currentRating)

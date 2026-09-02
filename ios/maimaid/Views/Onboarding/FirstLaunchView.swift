@@ -115,7 +115,8 @@ struct FirstLaunchView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(
+            Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private func featureRow(icon: String, titleKey: LocalizedStringKey, detailKey: LocalizedStringKey) -> some View {

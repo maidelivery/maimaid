@@ -577,7 +577,8 @@ private extension AccountDataResolutionCoordinator {
     }
 
     private func scoreDraft(from localScore: Score, scoreSheetMap: [String: Sheet]) -> ScoreDraft? {
-        let resolvedSheet = localScore.sheet ?? BackendSyncShared.resolveSheet(for: localScore.sheetId, sheetMap: scoreSheetMap)
+        let resolvedSheet =
+            localScore.sheet ?? BackendSyncShared.resolveSheet(for: localScore.sheetId, sheetMap: scoreSheetMap)
         let normalizedSheetId = resolvedSheet.map(BackendSyncShared.canonicalScoreSheetId(for:)) ?? localScore.sheetId
         let key = normalizedScoreKey(normalizedSheetId)
         return ScoreDraft(
@@ -625,7 +626,8 @@ private extension AccountDataResolutionCoordinator {
     }
 
     private func recordDraft(from localRecord: PlayRecord, recordSheetMap: [String: Sheet]) -> RecordDraft? {
-        let resolvedSheet = localRecord.sheet ?? BackendSyncShared.resolveSheet(for: localRecord.sheetId, sheetMap: recordSheetMap)
+        let resolvedSheet =
+            localRecord.sheet ?? BackendSyncShared.resolveSheet(for: localRecord.sheetId, sheetMap: recordSheetMap)
         let sheetId = resolvedSheet.map(BackendSyncShared.canonicalRecordSheetId(for:)) ?? localRecord.sheetId
         let uniqueKey = recordUniqueKey(
             normalizedSheetKey: normalizedRecordKey(sheetId),
@@ -650,7 +652,8 @@ private extension AccountDataResolutionCoordinator {
         )
     }
 
-    private func recordDraft(from remoteRecord: CloudSnapshotPlayRecord, recordSheetMap: [String: Sheet]) -> RecordDraft? {
+    private func recordDraft(from remoteRecord: CloudSnapshotPlayRecord, recordSheetMap: [String: Sheet])
+        -> RecordDraft? {
         guard
             let remoteSheet = remoteRecord.sheet,
             let sheet = BackendSyncShared.resolveSheet(

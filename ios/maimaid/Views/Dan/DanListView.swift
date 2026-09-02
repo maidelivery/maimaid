@@ -88,7 +88,9 @@ struct DanListView: View {
         let sequence = UserDefaults.app.maimaiVersionSequence
         if let matched = sequence
             .sorted(by: { $0.count > $1.count })
-            .first(where: { title.localizedCaseInsensitiveContains($0) || category.id.localizedCaseInsensitiveContains($0) }) {
+            .first(where: {
+                title.localizedCaseInsensitiveContains($0) || category.id.localizedCaseInsensitiveContains($0)
+            }) {
             return matched
         }
 

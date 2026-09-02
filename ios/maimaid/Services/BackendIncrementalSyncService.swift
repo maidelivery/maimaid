@@ -74,8 +74,17 @@ private struct BackendSyncEvent: Decodable {
     let profileId: String?
     let entityType: String
     let entityId: String
-    let op: String
+    let operation: String
     let createdAt: Date
+
+    private enum CodingKeys: String, CodingKey {
+        case revision
+        case profileId
+        case entityType
+        case entityId
+        case operation = "op"
+        case createdAt
+    }
 }
 
 private struct BackendSyncSnapshot: Decodable {
@@ -292,7 +301,8 @@ private struct BackendSyncPushPayload: Encodable {
         scoreUpserts: [BackendSyncScoreSet],
         playRecordUpserts: [BackendSyncRecordSet],
         replaceScoreProfileIds: [String] = [],
-        replacePlayRecordProfileIds: [String] = [], collectionUpserts: [BackendSyncCollectionUpsertPayload] = [], collectionItemUpserts: [BackendSyncCollectionItemUpsertPayload] = []
+        replacePlayRecordProfileIds: [String] = [], collectionUpserts: [BackendSyncCollectionUpsertPayload] = [],
+        collectionItemUpserts: [BackendSyncCollectionItemUpsertPayload] = []
     ) {
         self.idempotencyKey = idempotencyKey
         self.forceProfileOverwrite = forceProfileOverwrite
@@ -727,10 +737,16 @@ enum BackendIncrementalSyncService {
 			)
 		}
 		let dataProfileIds = Set(
-			profiles.filter { forceDataUpload || config.pendingDataProfileIds.contains($0.id) || !config.syncedDataProfileIds.contains($0.id) }.map(\.id)
+            profiles.filter {
+                forceDataUpload || config.pendingDataProfileIds.contains($0.id)
+                    || !config.syncedDataProfileIds.contains($0.id)
+            }.map(\.id)
 		)
 		let metadataProfileIds = Set(
-			profiles.filter { forceProfileOverwrite || config.pendingUpdatedProfileIds.contains($0.id) || config.remoteProfileVersion(for: $0.id) == nil }.map(\.id)
+            profiles.filter {
+                forceProfileOverwrite || config.pendingUpdatedProfileIds.contains($0.id)
+                    || config.remoteProfileVersion(for: $0.id) == nil
+            }.map(\.id)
 		)
 
 		let profileUpserts = profiles.filter { metadataProfileIds.contains($0.id) }.map { profile in
@@ -740,7 +756,8 @@ enum BackendIncrementalSyncService {
                 clientUpdatedAt: config.remoteProfileVersion(for: profile.id)
             )
         }
-		let scoreUpserts = try profiles.filter { dataProfileIds.contains($0.id) }.compactMap { profile -> BackendSyncScoreSet? in
+        let dataProfiles = profiles.filter { dataProfileIds.contains($0.id) }
+        let scoreUpserts = try dataProfiles.compactMap { profile -> BackendSyncScoreSet? in
             let profileId = profile.id
             let scores = try context.fetch(
                 FetchDescriptor<Score>(predicate: #Predicate<Score> { $0.userProfileId == profileId })
@@ -752,7 +769,7 @@ enum BackendIncrementalSyncService {
                 scores: scores
             )
         }
-		let playRecordUpserts = try profiles.filter { dataProfileIds.contains($0.id) }.compactMap { profile -> BackendSyncRecordSet? in
+        let playRecordUpserts = try dataProfiles.compactMap { profile -> BackendSyncRecordSet? in
             let profileId = profile.id
             let records = try context.fetch(
                 FetchDescriptor<PlayRecord>(predicate: #Predicate<PlayRecord> { $0.userProfileId == profileId })
@@ -765,7 +782,10 @@ enum BackendIncrementalSyncService {
             )
         }
 
-		guard !profileUpserts.isEmpty || !scoreUpserts.isEmpty || !playRecordUpserts.isEmpty || !collectionUpserts.isEmpty || !collectionItemUpserts.isEmpty || !dataProfileIds.isEmpty else {
+        guard
+            !profileUpserts.isEmpty || !scoreUpserts.isEmpty || !playRecordUpserts.isEmpty || !collectionUpserts.isEmpty
+                || !collectionItemUpserts.isEmpty || !dataProfileIds.isEmpty
+        else {
 			return
 		}
 
@@ -947,7 +967,10 @@ enum BackendIncrementalSyncService {
         ScoreService.shared.notifyScoresChanged(for: profileId)
     }
 
-    static func previewImportConflicts(context: ModelContext, profileId: UUID) async throws -> ImportSyncConflictPreview {
+    static func previewImportConflicts(
+        context: ModelContext,
+        profileId: UUID
+    ) async throws -> ImportSyncConflictPreview {
         try await BackendSyncOperationGate.shared.withLock {
             try await previewImportConflictsUnlocked(context: context, profileId: profileId)
         }
@@ -1065,7 +1088,8 @@ enum BackendIncrementalSyncService {
     }
 
     static func deleteRemoteProfileUnlocked(profileId: UUID) async throws {
-        let escapedProfileId = profileId.uuidString.lowercased().addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
+        let escapedProfileId =
+            profileId.uuidString.lowercased().addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
             ?? profileId.uuidString.lowercased()
         do {
             try await requestRemoteProfileDeletion(escapedProfileId: escapedProfileId)
@@ -1251,7 +1275,7 @@ enum BackendIncrementalSyncService {
     private static func applyProfileDeleteEvents(_ events: [BackendSyncEvent], context: ModelContext) throws {
         let deletedProfileIds: Set<UUID> = Set(
             events.compactMap { event -> UUID? in
-                guard event.entityType == "profile", event.op == "delete" else {
+                guard event.entityType == "profile", event.operation == "delete" else {
                     return nil
                 }
                 if let profileId = event.profileId, let uuid = UUID(uuidString: profileId) {
@@ -1367,7 +1391,8 @@ enum BackendIncrementalSyncService {
         let scoreSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["_", "-"])
         let recordSheetMap = BackendSyncShared.buildSheetMap(for: sheets, separators: ["-", "_"])
 
-        let resolvedRecords = snapshot.records.compactMap { remoteRecord -> (UUID, Sheet, BackendSyncRemotePlayRecord)? in
+        let resolvedRecords: [(UUID, Sheet, BackendSyncRemotePlayRecord)] =
+            snapshot.records.compactMap { remoteRecord in
             guard let profileId = UUID(uuidString: remoteRecord.profileId) else { return nil }
             guard profileIds.contains(profileId) else { return nil }
             guard
@@ -1524,7 +1549,8 @@ enum BackendIncrementalSyncService {
         from score: Score,
         scoreSheetMap: [String: Sheet]
     ) -> BackendSyncScoreEntry? {
-        guard let sheet = score.sheet ?? BackendSyncShared.resolveSheet(for: score.sheetId, sheetMap: scoreSheetMap) else {
+        guard let sheet = score.sheet ?? BackendSyncShared.resolveSheet(for: score.sheetId, sheetMap: scoreSheetMap)
+        else {
             return nil
         }
         let songId = sheet.songId > 0 ? sheet.songId : nil
@@ -1548,7 +1574,8 @@ enum BackendIncrementalSyncService {
         from record: PlayRecord,
         recordSheetMap: [String: Sheet]
     ) -> BackendSyncPlayRecordEntry? {
-        guard let sheet = record.sheet ?? BackendSyncShared.resolveSheet(for: record.sheetId, sheetMap: recordSheetMap) else {
+        guard let sheet = record.sheet ?? BackendSyncShared.resolveSheet(for: record.sheetId, sheetMap: recordSheetMap)
+        else {
             return nil
         }
         let songId = sheet.songId > 0 ? sheet.songId : nil

@@ -4,7 +4,7 @@ import SwiftUI
 import UIKit
 
 @MainActor
-private final class BackendWebAuthPresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
+private final class WebAuthPresentationProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
         let windowScenes = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
@@ -46,7 +46,7 @@ struct BackendAuthView: View {
         let message: String
     }
 
-    private let webAuthPresentationContextProvider = BackendWebAuthPresentationContextProvider()
+    private let webAuthPresentationContextProvider = WebAuthPresentationProvider()
 
     private enum WebAuthMode: String {
         case login

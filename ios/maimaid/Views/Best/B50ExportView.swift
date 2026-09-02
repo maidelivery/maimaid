@@ -131,7 +131,9 @@ struct B50ExportView: View {
 
     // MARK: - Section
 
-    private func sectionView(title: LocalizedStringKey, subtitle: String, entries: [RatingUtils.RatingEntry], accentColor: Color) -> some View {
+    private func sectionView(
+        title: LocalizedStringKey, subtitle: String, entries: [RatingUtils.RatingEntry], accentColor: Color
+    ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
             HStack(alignment: .firstTextBaseline) {

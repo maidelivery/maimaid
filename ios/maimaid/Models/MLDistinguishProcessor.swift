@@ -47,7 +47,7 @@ nonisolated final class MLDistinguishProcessor {
 
 /// Enum representing the recognized image type
 enum MaimaiImageType: String, Sendable {
-    case score = "score"
-    case choose = "choose"
-    case unknown = "unknown"
+    case score
+    case choose
+    case unknown
 }

@@ -3,7 +3,7 @@ import Foundation
 @preconcurrency import Vision
 @preconcurrency import UIKit
 
-/// Processor that encapsulates the logic for parsing Maimai scores using CoreML model.
+// Processor that encapsulates the logic for parsing Maimai scores using CoreML model.
 // The detector and OCR pipeline share intermediate Vision regions throughout this type.
 // swiftlint:disable:next type_body_length
 nonisolated final class MLScoreProcessor {
@@ -221,7 +221,8 @@ nonisolated final class MLScoreProcessor {
 
         // MARK: - Extract kanji from title as fallback
         if scoreResult.kanji == nil || scoreResult.kanji!.isEmpty {
-            let extractedKanji = extractKanjiFromTitleCandidates(scoreResult.titleCandidates, fallback: scoreResult.title)
+            let extractedKanji = extractKanjiFromTitleCandidates(
+                scoreResult.titleCandidates, fallback: scoreResult.title)
             if let extracted = extractedKanji {
                 scoreResult.kanji = extracted
                 print("  [kanji] ✓ extracted from title: '\(extracted)'")
@@ -263,7 +264,7 @@ nonisolated final class MLScoreProcessor {
     /// Matches patterns like 【宴】, 【狂】, [覚], [協] etc. at the start of the title.
     private static func extractKanjiFromTitleCandidates(_ candidates: [String], fallback: String?) -> String? {
         var allTexts = candidates
-        if let fb = fallback { allTexts.insert(fb, at: 0) }
+        if let fallback { allTexts.insert(fallback, at: 0) }
 
         for text in allTexts {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -309,10 +310,14 @@ nonisolated final class MLScoreProcessor {
         }
 
         let titleTexts = [result.title] + result.titleCandidates
-        for candidate in titleTexts.compactMap({ $0?.trimmingCharacters(in: .whitespacesAndNewlines) }) {
-            if candidate.range(of: #"^(?:【[^】]+】|\[[^\]]+\]|［[^］]+］)"#, options: .regularExpression) != nil {
-                return "utage"
-            }
+        let titleCandidates = titleTexts.compactMap {
+            $0?.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        for candidate in titleCandidates where candidate.range(
+            of: #"^(?:【[^】]+】|\[[^\]]+\]|［[^］]+］)"#,
+            options: .regularExpression
+        ) != nil {
+            return "utage"
         }
 
         return nil

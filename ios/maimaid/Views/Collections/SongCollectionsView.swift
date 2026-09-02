@@ -31,13 +31,15 @@ struct SongCollectionsView: View {
     var body: some View {
         let visibleCollections = orderedCollections
         let songMap = Dictionary(uniqueKeysWithValues: songs.map { ($0.songIdentifier, $0) })
-        let sheetMap = Dictionary(uniqueKeysWithValues: sheets.map { (sheetKey($0.songIdentifier, $0.type, $0.difficulty), $0) })
+        let sheetMap = Dictionary(
+            uniqueKeysWithValues: sheets.map { (sheetKey($0.songIdentifier, $0.type, $0.difficulty), $0) })
         let activeItems = items.filter { $0.deletedAt == nil }
         let itemsByCollection = Dictionary(grouping: activeItems, by: \.collectionId)
         List {
             ForEach(visibleCollections) { collection in
                 let collectionItems = itemsByCollection[collection.id] ?? []
-                let previews = previewCards(for: collection, items: collectionItems, songMap: songMap, sheetMap: sheetMap)
+                let previews = previewCards(
+                    for: collection, items: collectionItems, songMap: songMap, sheetMap: sheetMap)
                 NavigationLink {
                     SongCollectionDetailView(collection: collection, songs: songs)
                 } label: {
@@ -160,7 +162,10 @@ struct SongCollectionsView: View {
         guard !name.isEmpty else { return }
         let now = Date.now
         let uniqueName = uniqueCollectionName(from: String(name.prefix(40)))
-        modelContext.insert(SongCollection(name: uniqueName, sortIndex: orderedCollections.count, createdAt: now, updatedAt: now, clientUpdatedAt: now))
+        modelContext.insert(
+            SongCollection(
+                name: uniqueName, sortIndex: orderedCollections.count, createdAt: now, updatedAt: now,
+                clientUpdatedAt: now))
         try? modelContext.save()
         newName = ""
     }
@@ -254,7 +259,9 @@ struct SongCollectionDetailView: View {
         self.collection = collection
         self.songs = songs
         let collectionId = collection.id
-        _items = Query(filter: #Predicate<SongCollectionItem> { $0.collectionId == collectionId && $0.deletedAt == nil }, sort: [SortDescriptor(\.position)])
+        _items = Query(
+            filter: #Predicate<SongCollectionItem> { $0.collectionId == collectionId && $0.deletedAt == nil },
+            sort: [SortDescriptor(\.position)])
     }
 
     var body: some View {
@@ -268,7 +275,10 @@ struct SongCollectionDetailView: View {
                     let metrics = collectionGridMetrics(columnCount: columns, width: geometry.size.width)
                     ScrollView {
                         LazyVGrid(
-                            columns: Array(repeating: GridItem(.fixed(metrics.cellSize), spacing: metrics.spacing), count: columns),
+                            columns: Array(
+                                repeating: GridItem(.fixed(metrics.cellSize), spacing: metrics.spacing),
+                                count: columns
+                            ),
                             spacing: metrics.spacing
                         ) {
                             ForEach(displayedCards) { card in
@@ -374,7 +384,9 @@ struct SongCollectionDetailView: View {
         }
     }
 
-    private func collectionGridMetrics(columnCount: Int, width: CGFloat) -> (cellSize: CGFloat, spacing: CGFloat, horizontalPadding: CGFloat) {
+    private func collectionGridMetrics(columnCount: Int, width: CGFloat) -> (
+        cellSize: CGFloat, spacing: CGFloat, horizontalPadding: CGFloat
+    ) {
         let spacing: CGFloat
         switch columnCount {
         case ...3: spacing = 5
@@ -407,7 +419,10 @@ struct SongCollectionDetailView: View {
 
     private func makeSortedCards() -> [SongCollectionCard] {
         let songIDs = Set(items.map(\.songId))
-        let songMap = Dictionary(uniqueKeysWithValues: songs.lazy.filter { songIDs.contains($0.songIdentifier) }.map { ($0.songIdentifier, $0) })
+        let songMap = Dictionary(
+            uniqueKeysWithValues: songs.lazy.filter { songIDs.contains($0.songIdentifier) }.map {
+                ($0.songIdentifier, $0)
+            })
         return items.compactMap { item in
             let song = songMap[item.songId]
             return SongCollectionCard(
@@ -500,7 +515,9 @@ private func collectionCardComesBefore(
     let followsDirection: Bool
     switch sortOption {
     case .defaultOrder:
-        result = leftSong.sortOrder == rightSong.sortOrder ? .orderedSame : (leftSong.sortOrder < rightSong.sortOrder ? .orderedAscending : .orderedDescending)
+        result =
+            leftSong.sortOrder == rightSong.sortOrder
+            ? .orderedSame : (leftSong.sortOrder < rightSong.sortOrder ? .orderedAscending : .orderedDescending)
         followsDirection = true
     case .versionAndDate:
         let leftVersion = ThemeUtils.versionSortOrder(leftSong.version ?? "")
@@ -508,9 +525,12 @@ private func collectionCardComesBefore(
         if leftVersion != rightVersion {
             result = leftVersion < rightVersion ? .orderedAscending : .orderedDescending
         } else if (leftSong.releaseDate ?? "") != (rightSong.releaseDate ?? "") {
-            result = (leftSong.releaseDate ?? "") < (rightSong.releaseDate ?? "") ? .orderedAscending : .orderedDescending
+            result =
+                (leftSong.releaseDate ?? "") < (rightSong.releaseDate ?? "") ? .orderedAscending : .orderedDescending
         } else {
-            result = leftSong.sortOrder == rightSong.sortOrder ? .orderedSame : (leftSong.sortOrder < rightSong.sortOrder ? .orderedAscending : .orderedDescending)
+            result =
+                leftSong.sortOrder == rightSong.sortOrder
+                ? .orderedSame : (leftSong.sortOrder < rightSong.sortOrder ? .orderedAscending : .orderedDescending)
         }
         followsDirection = true
     case .difficulty:
@@ -529,7 +549,8 @@ private func collectionCardComesBefore(
         }
     }
     if result != .orderedSame {
-        return followsDirection ? (sortAscending ? result == .orderedAscending : result == .orderedDescending) : result == .orderedAscending
+        return followsDirection
+            ? (sortAscending ? result == .orderedAscending : result == .orderedDescending) : result == .orderedAscending
     }
     return left.item.position < right.item.position
 }
@@ -618,12 +639,15 @@ private struct SongCollectionGridCard: View {
                 }
                 .buttonStyle(.plain)
             } else {
-                Button(action: {}) {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(.secondary.opacity(0.12))
-                        .frame(height: 104)
-                        .overlay { Image(systemName: "music.note").foregroundStyle(.secondary) }
-                }
+                Button(
+                    action: {},
+                    label: {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(.secondary.opacity(0.12))
+                            .frame(height: 104)
+                            .overlay { Image(systemName: "music.note").foregroundStyle(.secondary) }
+                    }
+                )
                 .buttonStyle(.plain)
             }
         }
@@ -636,7 +660,8 @@ private struct SongCollectionGridCard: View {
 struct AddToSongCollectionsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<SongCollection> { $0.deletedAt == nil }, sort: [SortDescriptor(\.sortIndex)]) private var collections: [SongCollection]
+    @Query(filter: #Predicate<SongCollection> { $0.deletedAt == nil }, sort: [SortDescriptor(\.sortIndex)]) private
+        var collections: [SongCollection]
     @Query private var items: [SongCollectionItem]
     let songId: String
     let chartType: String
@@ -670,7 +695,10 @@ struct AddToSongCollectionsView: View {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(collection.name)
                                         .foregroundStyle(.primary)
-                                    Text(String(localized: "collections_item_count \(displayedItemCount(for: collection))"))
+                                    Text(
+                                        String(
+                                            localized: "collections_item_count \(displayedItemCount(for: collection))")
+                                    )
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -685,7 +713,9 @@ struct AddToSongCollectionsView: View {
             .navigationTitle("collections_picker_title")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("filter.done", action: save) }
-                ToolbarItem(placement: .cancellationAction) { Button("profile.edit.cancel", action: dismiss.callAsFunction) }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("profile.edit.cancel", action: dismiss.callAsFunction)
+                }
             }
         }
         .onAppear {

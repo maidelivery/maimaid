@@ -31,7 +31,9 @@ struct ModelManifestTests {
         }
     }
 
-    @Test("Non-ASCII and malformed SHA-256 values are rejected", arguments: ["", String(repeating: "g", count: 64), String(repeating: "０", count: 64)])
+    @Test(
+        "Non-ASCII and malformed SHA-256 values are rejected",
+        arguments: ["", String(repeating: "g", count: 64), String(repeating: "０", count: 64)])
     func rejectsInvalidDigest(digest: String) {
         let entry = ModelManifestEntry(filename: ModelAsset.score.rawValue, sha256: digest, size: 1)
 

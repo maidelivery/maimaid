@@ -27,31 +27,40 @@ struct ScannerResultCardView: View, Equatable {
 
     var body: some View {
         if recognizedClass == .choose {
-            NavigationLink(destination: {
-                SongDetailView(song: song).onDisappear { onResetTap() }
-            }) {
-                VStack(spacing: 0) {
-                    HStack(spacing: 12) {
-                        SongJacketView(imageName: song.imageName, size: 40, cornerRadius: 8)
-                            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(song.title).font(.system(size: 14, weight: .bold)).foregroundStyle(.primary).lineLimit(1)
-                            Text(song.artist).font(.system(size: 11, weight: .regular)).foregroundStyle(.secondary).lineLimit(1)
+            NavigationLink(
+                destination: {
+                    SongDetailView(song: song).onDisappear { onResetTap() }
+                },
+                label: {
+                    VStack(spacing: 0) {
+                        HStack(spacing: 12) {
+                            SongJacketView(imageName: song.imageName, size: 40, cornerRadius: 8)
+                                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(song.title).font(.system(size: 14, weight: .bold)).foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                Text(song.artist).font(.system(size: 11, weight: .regular)).foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold)).foregroundStyle(
+                                .secondary.opacity(0.4))
                         }
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold)).foregroundStyle(.secondary.opacity(0.4))
+                        .padding(.vertical, 14)
+                        .padding(.horizontal, 16)
                     }
-                    .padding(.vertical, 14)
-                    .padding(.horizontal, 16)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.primary.opacity(0.1), lineWidth: 1))
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 40)
                 }
-                .fixedSize(horizontal: false, vertical: true)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-                .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.primary.opacity(0.1), lineWidth: 1))
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
-            }
+            )
             .buttonStyle(.plain)
-            .transition(.asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)), removal: .opacity.combined(with: .scale(scale: 0.95))))
+            .transition(
+                .asymmetric(
+                    insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)),
+                    removal: .opacity.combined(with: .scale(scale: 0.95))))
         } else {
             Button { onScoreEntryTap() } label: {
                 let sheet = resolvedSheet ?? song.sheets.first(where: {
@@ -69,30 +78,43 @@ struct ScannerResultCardView: View, Equatable {
                                 .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
                             VStack(alignment: .leading, spacing: 3) {
                                 HStack(spacing: 4) {
-                                    Text(chartType.uppercased() == "STD" ? String(localized: "scanner.chart.std") : chartType.uppercased())
+                                    Text(
+                                        chartType.uppercased() == "STD"
+                                            ? String(localized: "scanner.chart.std") : chartType.uppercased()
+                                    )
                                         .font(.system(size: 8, weight: .black))
                                         .padding(.horizontal, 4).padding(.vertical, 1)
                                         .background(ThemeUtils.badgeColorForChartType(chartType, colorScheme))
                                         .foregroundStyle(.white).cornerRadius(3)
-                                    Text(song.title).font(.system(size: 12, weight: .bold)).foregroundStyle(.primary).lineLimit(1)
+                                    Text(song.title).font(.system(size: 12, weight: .bold)).foregroundStyle(.primary)
+                                        .lineLimit(1)
                                 }
                                 if diff.lowercased() == "remaster" {
-                                    Text("RE: MASTER").font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(diffColor)
+                                    Text("RE: MASTER").font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .foregroundStyle(diffColor)
                                 } else {
-                                    Text(diff.uppercased()).font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(diffColor)
+                                    Text(diff.uppercased()).font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .foregroundStyle(diffColor)
                                 }
                             }
                             Spacer()
                             if let rate = recognizedRate {
                                 VStack(alignment: .trailing, spacing: 1) {
-                                    Text("\(rate, format: .number.precision(.fractionLength(4)))%").font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundStyle(.primary)
-                                    Text(RatingUtils.calculateRank(achievement: rate)).font(.system(size: 10, weight: .black, design: .rounded)).foregroundStyle(diffColor)
+                                    Text("\(rate, format: .number.precision(.fractionLength(4)))%").font(
+                                        .system(size: 12, weight: .bold, design: .monospaced)
+                                    ).foregroundStyle(.primary)
+                                    Text(RatingUtils.calculateRank(achievement: rate)).font(
+                                        .system(size: 10, weight: .black, design: .rounded)
+                                    ).foregroundStyle(diffColor)
                                 }
                             }
-                            if let levelStr = sheet.map({ ServerChartPolicy.metadata(for: $0, on: server).displayLevel }) {
-                                Text(levelStr).font(.system(size: 28, weight: .black, design: .rounded)).foregroundStyle(diffColor.opacity(0.85)).frame(minWidth: 44)
+                            if let levelStr = sheet.map({ ServerChartPolicy.metadata(for: $0, on: server).displayLevel }
+                            ) {
+                                Text(levelStr).font(.system(size: 28, weight: .black, design: .rounded))
+                                    .foregroundStyle(diffColor.opacity(0.85)).frame(minWidth: 44)
                             }
-                            Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold)).foregroundStyle(.secondary.opacity(0.4))
+                            Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold)).foregroundStyle(
+                                .secondary.opacity(0.4))
                         }
                         .padding(.leading, 12).padding(.trailing, 16)
                     }
@@ -105,7 +127,10 @@ struct ScannerResultCardView: View, Equatable {
                 .padding(.bottom, 40)
             }
             .buttonStyle(.plain)
-            .transition(.asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)), removal: .opacity.combined(with: .scale(scale: 0.95))))
+            .transition(
+                .asymmetric(
+                    insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.9)),
+                    removal: .opacity.combined(with: .scale(scale: 0.95))))
         }
     }
 }

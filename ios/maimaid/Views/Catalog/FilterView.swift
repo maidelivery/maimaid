@@ -29,7 +29,10 @@ struct FilterView: View {
                         }
 
                         HStack {
-                            Label("filter.hideDeleted", systemImage: settings.hideDeletedSongs ? "eye.slash.fill" : "eye.slash")
+                            Label(
+                                "filter.hideDeleted",
+                                systemImage: settings.hideDeletedSongs ? "eye.slash.fill" : "eye.slash"
+                            )
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(.primary)
                             Spacer()
@@ -38,7 +41,10 @@ struct FilterView: View {
                         }
 
                         HStack {
-                            Label("filter.playableOnly", systemImage: settings.showOnlyPlayableSongs ? "play.circle.fill" : "play.circle")
+                            Label(
+                                "filter.playableOnly",
+                                systemImage: settings.showOnlyPlayableSongs ? "play.circle.fill" : "play.circle"
+                            )
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(.primary)
                             Spacer()
@@ -56,7 +62,8 @@ struct FilterView: View {
                                         FilterChip(
                                             title: diff,
                                             isSelected: settings.selectedDifficulties.contains(internalName(for: diff)),
-                                            color: ThemeUtils.colorForDifficulty(internalName(for: diff), nil, colorScheme)
+                                            color: ThemeUtils.colorForDifficulty(
+                                                internalName(for: diff), nil, colorScheme)
                                         ) {
                                             toggleSet(&settings.selectedDifficulties, internalName(for: diff))
                                         }
@@ -70,12 +77,23 @@ struct FilterView: View {
                                         .font(.system(size: 11, weight: .bold))
                                         .foregroundStyle(.secondary)
                                     Spacer()
-                                    Text("\(settings.minLevel, specifier: "%.1f") - \(settings.maxLevel, specifier: "%.1f")")
+                                    let minimumLevel = settings.minLevel.formatted(
+                                        .number.precision(.fractionLength(1))
+                                    )
+                                    let maximumLevel = settings.maxLevel.formatted(
+                                        .number.precision(.fractionLength(1))
+                                    )
+                                    Text("\(minimumLevel) - \(maximumLevel)")
                                         .font(.system(.subheadline, design: .monospaced, weight: .bold))
-                                        .foregroundStyle(settings.selectedDifficulties.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.blue))
+                                    .foregroundStyle(
+                                        settings.selectedDifficulties.isEmpty
+                                            ? AnyShapeStyle(.secondary) : AnyShapeStyle(.blue))
                                 }
 
-                                RangeSlider(minValue: $settings.minLevel, maxValue: $settings.maxLevel, range: 1.0...15.0, step: 0.1, isActive: !settings.selectedDifficulties.isEmpty)
+                                RangeSlider(
+                                    minValue: $settings.minLevel, maxValue: $settings.maxLevel, range: 1.0...15.0,
+                                    step: 0.1, isActive: !settings.selectedDifficulties.isEmpty
+                                )
                                     .padding(.horizontal, 8)
                             }
                         }
@@ -162,7 +180,8 @@ struct FilterView: View {
     }
 
     @ViewBuilder
-    private func filterSection<Content: View>(title: LocalizedStringKey, @ViewBuilder content: () -> Content) -> some View {
+    private func filterSection<Content: View>(title: LocalizedStringKey, @ViewBuilder content: () -> Content)
+        -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.system(size: 12, weight: .semibold))
@@ -246,7 +265,8 @@ struct RangeSlider: View {
                                 let relativeX = Double(value.location.x / totalWidth)
                                 let newValue = range.lowerBound + relativeX * rangeSpan
                                 let steppedValue = (newValue / step).rounded() * step
-                                let clampedValue = Swift.min(Swift.max(range.lowerBound, steppedValue), range.upperBound)
+                                let clampedValue = Swift.min(
+                                    Swift.max(range.lowerBound, steppedValue), range.upperBound)
 
                                 if draggingHandle == .none {
                                     // Logic to pick a handle when they overlap or determine closest
@@ -377,7 +397,8 @@ struct FlowLayout: Layout {
         }
 
         if currentRowStart < subviews.count {
-            rows.append(Row(range: currentRowStart..<subviews.count, width: currentX - spacing, height: currentRowHeight))
+            rows.append(
+                Row(range: currentRowStart..<subviews.count, width: currentX - spacing, height: currentRowHeight))
         }
 
         return rows

@@ -17,7 +17,10 @@ final class PlayRecord {
 
     var sheet: Sheet?
 
-    init(id: UUID = UUID(), sheetId: String, rate: Double, rank: String, dxScore: Int = 0, fc: String? = nil, fs: String? = nil, playDate: Date = Date(), userProfileId: UUID? = nil) {
+    init(
+        id: UUID = UUID(), sheetId: String, rate: Double, rank: String, dxScore: Int = 0, fc: String? = nil,
+        fs: String? = nil, playDate: Date = Date(), userProfileId: UUID? = nil
+    ) {
         self.id = id
         self.sheetId = sheetId
         self.rate = rate

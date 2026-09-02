@@ -24,7 +24,8 @@ nonisolated final class PhotoService: Sendable {
 
         var albumPlaceholder: PHObjectPlaceholder?
         try await PHPhotoLibrary.shared().performChanges {
-            let createAlbumRequest = PHAssetCollectionChangeRequest.creationRequestForAssetCollection(withTitle: albumName)
+            let createAlbumRequest = PHAssetCollectionChangeRequest.creationRequestForAssetCollection(
+                withTitle: albumName)
             albumPlaceholder = createAlbumRequest.placeholderForCreatedAssetCollection
         }
 
@@ -36,7 +37,8 @@ nonisolated final class PhotoService: Sendable {
             )
         }
 
-        let fetchResult = PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [placeholder.localIdentifier], options: nil)
+        let fetchResult = PHAssetCollection.fetchAssetCollections(
+            withLocalIdentifiers: [placeholder.localIdentifier], options: nil)
         guard let album = fetchResult.firstObject else {
             throw NSError(
                 domain: "PhotoService",

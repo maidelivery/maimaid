@@ -1,0 +1,11 @@
+excluded:
+  - ios/maimaid/Generated
+
+identifier_name:
+  excluded:
+    - id
+    - fc
+    - fs
+    - dx
+    - jp
+    - cn

@@ -116,8 +116,12 @@ private struct OtogameImportStatusSection: View {
             }
 
             if let result {
+                let fetched = result.fetchedCount
+                let imported = result.importedCount
+                let duplicate = result.duplicateCount
+                let unmatched = result.unmatchedCount
                 Text(
-                    "import.otogame.result.counts \(result.fetchedCount) \(result.importedCount) \(result.duplicateCount) \(result.unmatchedCount)"
+                    "import.otogame.result.counts \(fetched) \(imported) \(duplicate) \(unmatched)"
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)

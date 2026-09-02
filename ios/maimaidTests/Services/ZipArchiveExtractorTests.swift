@@ -5,7 +5,8 @@ import Testing
 struct ZipArchiveExtractorTests {
     @Test("Stored CoreML package ZIP extracts its complete top-level directory")
     func extractsStoredPackage() throws {
-        let root = URL.temporaryDirectory.appending(path: "zip-extractor-\(UUID().uuidString)", directoryHint: .isDirectory)
+        let root = URL.temporaryDirectory.appending(
+            path: "zip-extractor-\(UUID().uuidString)", directoryHint: .isDirectory)
         defer { try? FileManager.default.removeItem(at: root) }
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let archive = root.appending(path: "model.zip")
@@ -26,10 +27,13 @@ struct ZipArchiveExtractorTests {
 
     @Test(
         "ZIP paths cannot escape the extraction directory",
-        arguments: ["../outside", "/absolute.mlpackage/file", "score.mlpackage/../../outside", "score.mlpackage\\..\\outside"]
+        arguments: [
+            "../outside", "/absolute.mlpackage/file", "score.mlpackage/../../outside", "score.mlpackage\\..\\outside"
+        ]
     )
     func rejectsUnsafePath(path: String) throws {
-        let root = URL.temporaryDirectory.appending(path: "zip-path-test-\(UUID().uuidString)", directoryHint: .isDirectory)
+        let root = URL.temporaryDirectory.appending(
+            path: "zip-path-test-\(UUID().uuidString)", directoryHint: .isDirectory)
         defer { try? FileManager.default.removeItem(at: root) }
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let archive = root.appending(path: "model.zip")

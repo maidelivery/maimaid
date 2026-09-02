@@ -2,9 +2,9 @@ import Foundation
 import SwiftData
 
 enum GameServer: String, CaseIterable, Identifiable, Codable, Sendable {
-    case jp = "jp"
-    case intl = "intl"
-    case cn = "cn"
+    case jp
+    case intl
+    case cn
 
     var id: String { rawValue }
 
@@ -103,7 +103,9 @@ class ServerVersionService {
         var serverVersion = orderedVersions.first ?? ThemeUtils.latestVersion
 
         for version in orderedVersions {
-            let versionSongs = songs.filter { $0.version == version && !($0.category.lowercased().contains("utage") || $0.category.contains("宴")) }
+            let versionSongs = songs.filter {
+                $0.version == version && !($0.category.lowercased().contains("utage") || $0.category.contains("宴"))
+            }
 
             // Exclude completely deleted/removed songs from the version count
             let activeVersionSongs = versionSongs.filter { song in

@@ -19,7 +19,8 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
     override func viewDidLoad() {
         super.viewDidLoad()
         setupCaptureSession()
-        NotificationCenter.default.addObserver(self, selector: #selector(handleTakePhoto), name: Notification.Name("TakeScannerPhoto"), object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleTakePhoto), name: Notification.Name("TakeScannerPhoto"), object: nil)
     }
 
     deinit {
@@ -47,7 +48,8 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
         if captureSession.canAddOutput(photoOut) {
             captureSession.addOutput(photoOut)
             if #available(iOS 16.0, *) {
-                photoOut.maxPhotoDimensions = videoDevice.activeFormat.supportedMaxPhotoDimensions.last ?? CMVideoDimensions(width: 0, height: 0)
+                photoOut.maxPhotoDimensions =
+                    videoDevice.activeFormat.supportedMaxPhotoDimensions.last ?? CMVideoDimensions(width: 0, height: 0)
             } else {
                 photoOut.isHighResolutionCaptureEnabled = true
             }
@@ -81,7 +83,9 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
         }
     }
 
-    nonisolated func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+    nonisolated func captureOutput(
+        _ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection
+    ) {
         let count = frameCounter.withLock { value -> Int in
             value += 1
             return value
@@ -171,7 +175,9 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
 
         let wideCameraZoomFactor: CGFloat
         if videoDevice.isVirtualDevice,
-           let wideCameraIndex = videoDevice.constituentDevices.firstIndex(where: { $0.deviceType == .builtInWideAngleCamera }),
+            let wideCameraIndex = videoDevice.constituentDevices.firstIndex(where: {
+                $0.deviceType == .builtInWideAngleCamera
+            }),
            wideCameraIndex > 0,
            videoDevice.virtualDeviceSwitchOverVideoZoomFactors.indices.contains(wideCameraIndex - 1) {
             wideCameraZoomFactor = CGFloat(
@@ -198,8 +204,14 @@ final class CameraViewController: UIViewController, AVCaptureVideoDataOutputSamp
 }
 
 extension CameraViewController: AVCaptureMetadataOutputObjectsDelegate {
-    nonisolated func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
-        guard let code = metadataObjects.compactMap({ $0 as? AVMetadataMachineReadableCodeObject }).first(where: { $0.type == .qr }),
+    nonisolated func metadataOutput(
+        _ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject],
+        from connection: AVCaptureConnection
+    ) {
+        guard
+            let code = metadataObjects.compactMap({ $0 as? AVMetadataMachineReadableCodeObject }).first(where: {
+                $0.type == .qr
+            }),
               let value = code.stringValue,
               let url = URL(string: value),
               CollectionSharingService.isCollectionLink(url) else { return }
@@ -208,7 +220,9 @@ extension CameraViewController: AVCaptureMetadataOutputObjectsDelegate {
 }
 
 extension CameraViewController: AVCapturePhotoCaptureDelegate {
-    nonisolated func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+    nonisolated func photoOutput(
+        _ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?
+    ) {
         let result: Result<Data, Error>
         if let error {
             result = .failure(error)

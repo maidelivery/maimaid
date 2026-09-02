@@ -271,7 +271,9 @@ class MaimaiDataFetcher {
         await CommunityAliasService.shared.syncApprovedAliasesIntoSongs(modelContext: modelContext, force: true)
     }
 
-    private func fetchBackendStaticBundleIfNeeded(forceApply: Bool = false) async throws -> (bundle: StaticBundleResponse?, isUpToDate: Bool) {
+    private func fetchBackendStaticBundleIfNeeded(forceApply: Bool = false) async throws -> (
+        bundle: StaticBundleResponse?, isUpToDate: Bool
+    ) {
         guard let manifestURL = BackendConfig.staticAssetsEndpoint("manifest.json") else {
             return (nil, false)
         }
@@ -387,7 +389,8 @@ class MaimaiDataFetcher {
 
             // --- 阶段 2: Aliases & IDs ---
             if options.updateAliases {
-                updateStage(.fetchingAliases, base: 0.30, message: String(localized: "data.sync.status.fetchingAliases"))
+                updateStage(
+                    .fetchingAliases, base: 0.30, message: String(localized: "data.sync.status.fetchingAliases"))
                 var aliasItems: [AliasItem] = []
                 var songIdToTitle: [Int: String] = [:]
 
@@ -509,7 +512,8 @@ class MaimaiDataFetcher {
 
                         for title in resolvedTitles {
                             let normalizedTitle = Self.normalizeSongLookupTitle(title)
-                            let normalizedAliases = normalizedTitle.isEmpty ? nil : aliasMapByNormalizedTitle[normalizedTitle]
+                            let normalizedAliases =
+                                normalizedTitle.isEmpty ? nil : aliasMapByNormalizedTitle[normalizedTitle]
                             let merged = Self.mergingAliases(
                                 item.aliases,
                                 into: aliasMap[title] ?? normalizedAliases ?? []
@@ -539,7 +543,8 @@ class MaimaiDataFetcher {
 
             // --- Stage 3.5: Dan Data ---
             if options.updateDanData {
-                updateStage(.fetchingDanData, base: 0.50, message: String(localized: "data.sync.status.fetchingDanData"))
+                updateStage(
+                    .fetchingDanData, base: 0.50, message: String(localized: "data.sync.status.fetchingDanData"))
                 if let bundledDan = bundleResources?.danInfo {
                     let cleanedCategories = sanitizeDanCategories(bundledDan)
                     let danJsonData = try JSONEncoder().encode(cleanedCategories)
@@ -552,7 +557,8 @@ class MaimaiDataFetcher {
             }
 
             if options.updateChartStats {
-                updateStage(.fetchingChartStats, base: 0.53, message: String(localized: "data.sync.status.fetchingChartStats"))
+                updateStage(
+                    .fetchingChartStats, base: 0.53, message: String(localized: "data.sync.status.fetchingChartStats"))
                 if let bundledChartFit = bundleResources?.resolvedChartFit {
                     ChartStatsService.shared.replaceStats(with: bundledChartFit)
                     log(String(localized: "data.sync.log.chartStatsUpdated"))
@@ -563,7 +569,9 @@ class MaimaiDataFetcher {
             }
 
             if options.updateUtageChartStats {
-                updateStage(.fetchingUtageChartStats, base: 0.54, message: String(localized: "data.sync.status.fetchingUtageChartStats"))
+                updateStage(
+                    .fetchingUtageChartStats, base: 0.54,
+                    message: String(localized: "data.sync.status.fetchingUtageChartStats"))
                 if let bundledStats = bundleResources?.utageNoteJSON {
                     utageStatsById = Dictionary(uniqueKeysWithValues: bundledStats.map { ($0.id, $0) })
                     utageStatsByKey = Self.buildUtageStatsByKey(bundledStats)
@@ -580,7 +588,10 @@ class MaimaiDataFetcher {
             }
 
             // --- 阶段 4: 合并数据入库 ---
-            if options.updateRemoteData || options.updateAliases || options.updateIcons || options.updateUtageChartStats {
+            if options.updateRemoteData
+                || options.updateAliases
+                || options.updateIcons
+                || options.updateUtageChartStats {
                 updateStage(.processingSongs, base: 0.55, message: String(localized: "data.sync.status.processing"))
 
                 let existingSongsFromDB = try modelContext.fetch(FetchDescriptor<Song>())
@@ -594,10 +605,9 @@ class MaimaiDataFetcher {
                     songsToProcess = existingSongsFromDB.map(Self.remoteSong)
                 } else {
                     let currentRemoteIds = Set(remoteSongs.map { $0.songId })
-                    for existing in existingSongsFromDB {
-                        if !currentRemoteIds.contains(existing.songIdentifier) {
-                            modelContext.delete(existing)
-                        }
+                    for existing in existingSongsFromDB
+                    where !currentRemoteIds.contains(existing.songIdentifier) {
+                        modelContext.delete(existing)
                     }
                 }
 
@@ -659,13 +669,16 @@ class MaimaiDataFetcher {
                     let sheetProviderIds = remoteSong.sheets.compactMap {
                         ProviderSongIDResolver.resolve(internalID: $0.internalId, chartType: $0.type)
                     }
-                    let possibleProviderIds = (sheetProviderIds + titleProviderIds).reduce(into: [Int]()) { result, id in
+                    let providerIds = sheetProviderIds + titleProviderIds
+                    let possibleProviderIds = providerIds.reduce(into: [Int]()) { result, id in
                         guard !result.contains(id) else { return }
                         result.append(id)
                     }
 
                     if options.updateAliases {
-                        if let officialId = titleToSongId[song.title] ?? titleToSongIdByNormalized[normalizedSongTitle] {
+                        let officialId = titleToSongId[song.title]
+                            ?? titleToSongIdByNormalized[normalizedSongTitle]
+                        if let officialId {
                             song.songId = officialId
                         }
                         if let resolvedID = ProviderSongIDResolver.preferredID(
@@ -678,7 +691,8 @@ class MaimaiDataFetcher {
                         if hasFreshAliasSnapshot {
                             // Full replace on each successful alias sync so stale local aliases
                             // (e.g. removed community aliases) do not survive future refreshes.
-                            let normalizedAliases = normalizedSongTitle.isEmpty ? nil : aliasMapByNormalizedTitle[normalizedSongTitle]
+                            let normalizedAliases =
+                                normalizedSongTitle.isEmpty ? nil : aliasMapByNormalizedTitle[normalizedSongTitle]
                             var officialAliases = aliasMap[song.title] ?? normalizedAliases ?? []
                             for providerSongId in possibleProviderIds {
                                 for relatedID in ProviderSongIDResolver.relatedIDs(to: providerSongId) {
@@ -703,8 +717,8 @@ class MaimaiDataFetcher {
                     }
 
                     var sheetMap: [String: Sheet] = [:]
-                    for sh in song.sheets {
-                        sheetMap["\(sh.type)_\(sh.difficulty)"] = sh
+                    for existingSheet in song.sheets {
+                        sheetMap["\(existingSheet.type)_\(existingSheet.difficulty)"] = existingSheet
                     }
 
                     for remoteSheet in remoteSong.sheets {
@@ -741,7 +755,9 @@ class MaimaiDataFetcher {
                             if type == "utage" {
                                 if let id = titleProviderIds.first(where: { $0 >= 100000 }) { sheet.songId = id }
                             } else if type == "dx" {
-                                if let id = titleProviderIds.first(where: { $0 >= 10000 && $0 < 100000 }) { sheet.songId = id }
+                                if let id = titleProviderIds.first(where: { $0 >= 10000 && $0 < 100000 }) {
+                                    sheet.songId = id
+                                }
                             } else if type == "std" {
                                 if let id = titleProviderIds.first(where: { $0 < 10000 }) { sheet.songId = id }
                             }
@@ -773,13 +789,13 @@ class MaimaiDataFetcher {
                             sheet.cnInternalLevel = cnOverride?.internalLevel
                             sheet.cnInternalLevelValue = cnOverride?.internalLevelValue
 
-                            if let nc = remoteSheet.noteCounts {
-                                sheet.tap = nc.tap
-                                sheet.hold = nc.hold
-                                sheet.slide = nc.slide
-                                sheet.touch = nc.touch
-                                sheet.breakCount = nc.breakNote
-                                sheet.total = nc.total
+                            if let noteCounts = remoteSheet.noteCounts {
+                                sheet.tap = noteCounts.tap
+                                sheet.hold = noteCounts.hold
+                                sheet.slide = noteCounts.slide
+                                sheet.touch = noteCounts.touch
+                                sheet.breakCount = noteCounts.breakNote
+                                sheet.total = noteCounts.total
                             }
 
                             if let regions = remoteSheet.regions {
@@ -807,11 +823,11 @@ class MaimaiDataFetcher {
 
                     if options.updateRemoteData {
                         let currentSheetKeys = Set(remoteSong.sheets.map { "\($0.type)_\($0.difficulty)" })
-                        for sh in song.sheets {
-                            let key = "\(sh.type)_\(sh.difficulty)"
-                            let hasPlayRecords = !(sh.playRecords?.isEmpty ?? true)
-                            if !currentSheetKeys.contains(key) && sh.scores.isEmpty && !hasPlayRecords {
-                                modelContext.delete(sh)
+                        for existingSheet in song.sheets {
+                            let key = "\(existingSheet.type)_\(existingSheet.difficulty)"
+                            let hasPlayRecords = !(existingSheet.playRecords?.isEmpty ?? true)
+                            if !currentSheetKeys.contains(key) && existingSheet.scores.isEmpty && !hasPlayRecords {
+                                modelContext.delete(existingSheet)
                             }
                         }
                     }
@@ -831,7 +847,9 @@ class MaimaiDataFetcher {
                     }
                 }
 
-                log(String(localized: "data.sync.log.processingCompleted \(providerMatchCount) \(songsToProcess.count)"))
+                log(
+                    String(localized: "data.sync.log.processingCompleted \(providerMatchCount) \(songsToProcess.count)")
+                )
                 log(String(localized: "data.sync.log.syncedSummary \(providerMatchCount) \(sheetMatchCount)"))
                 if options.updateUtageChartStats {
                     log(String(localized: "data.sync.log.mergedUtageChartStats \(utageStatsMergeCount)"))
@@ -876,14 +894,13 @@ class MaimaiDataFetcher {
 
             // --- 阶段 5: 下载图片资源 ---
             if options.updateCovers {
-                updateStage(.downloadingImages, base: 0.75, message: String(localized: "data.sync.status.scanningCovers"))
+                updateStage(
+                    .downloadingImages, base: 0.75, message: String(localized: "data.sync.status.scanningCovers"))
                 let descriptor = FetchDescriptor<Song>()
                 let allSongs = try modelContext.fetch(descriptor)
                 var coverDownloadTasks: [([URL], String)] = []
-                for song in allSongs {
-                    if !ImageDownloader.shared.imageExists(imageName: song.imageName) {
-                        coverDownloadTasks.append((StaticAssetURL.coverURLs(for: song.imageName), song.imageName))
-                    }
+                for song in allSongs where !ImageDownloader.shared.imageExists(imageName: song.imageName) {
+                    coverDownloadTasks.append((StaticAssetURL.coverURLs(for: song.imageName), song.imageName))
                 }
 
                 if !coverDownloadTasks.isEmpty {
@@ -895,7 +912,8 @@ class MaimaiDataFetcher {
                             Double(chunk) / Double(max(coverDownloadTasks.count, 1)),
                             totalForStage: 0.15,
                             baseForStage: 0.75,
-                            status: String(localized: "data.sync.status.downloadingCovers \(chunk) \(coverDownloadTasks.count)")
+                            status: String(
+                                localized: "data.sync.status.downloadingCovers \(chunk) \(coverDownloadTasks.count)")
                         )
                         await withTaskGroup(of: Void.self) { group in
                             for task in subTasks {
@@ -910,14 +928,13 @@ class MaimaiDataFetcher {
 
             // --- 阶段 6: 下载预设头像 ---
             if options.updateIcons {
-                updateStage(.downloadingIcons, base: 0.85, message: String(localized: "data.sync.status.downloadingIcons"))
+                updateStage(
+                    .downloadingIcons, base: 0.85, message: String(localized: "data.sync.status.downloadingIcons"))
                 let descriptor = FetchDescriptor<MaimaiIcon>()
                 let allIcons = try modelContext.fetch(descriptor)
                 var iconDownloadTasks: [([URL], Int)] = []
-                for icon in allIcons {
-                    if !ImageDownloader.shared.iconExists(iconId: icon.id) {
-                        iconDownloadTasks.append((StaticAssetURL.presetAvatarURLs(for: icon.id), icon.id))
-                    }
+                for icon in allIcons where !ImageDownloader.shared.iconExists(iconId: icon.id) {
+                    iconDownloadTasks.append((StaticAssetURL.presetAvatarURLs(for: icon.id), icon.id))
                 }
 
                 if !iconDownloadTasks.isEmpty {
@@ -949,7 +966,9 @@ class MaimaiDataFetcher {
                                         Double(completed) / max(total, 1),
                                         totalForStage: 0.10,
                                         baseForStage: 0.85,
-                                        status: String(localized: "data.sync.status.downloadingIconsProgress \(completed) \(totalCount)")
+                                        status: String(
+                                            localized:
+                                                "data.sync.status.downloadingIconsProgress \(completed) \(totalCount)")
                                     )
                                 }
                             }
@@ -990,7 +1009,8 @@ class MaimaiDataFetcher {
             isSyncing = false
         } catch {
             print("Fetch failed: \(error)")
-            updateStage(.failed, base: 0.0, message: String(localized: "data.sync.status.failed \(error.localizedDescription)"))
+            updateStage(
+                .failed, base: 0.0, message: String(localized: "data.sync.status.failed \(error.localizedDescription)"))
             isSyncing = false
             throw error
         }
@@ -1199,7 +1219,10 @@ class MaimaiDataFetcher {
         raw
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "藏", with: "蔵")
-            .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+            .folding(
+                options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
+                locale: Locale(identifier: "en_US_POSIX")
+            )
             .lowercased()
     }
 
@@ -1209,9 +1232,15 @@ class MaimaiDataFetcher {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: #"^\s*(?:\[[^\]]+\]|【[^】]+】)\s*"#, with: "", options: .regularExpression)
             .replacingOccurrences(of: #"^\s*[\(（]宴[\)）]\s*"#, with: "", options: .regularExpression)
-            .replacingOccurrences(of: #"\s*[\(（](?:EASY|BASIC|ADVANCED|EXPERT|MASTER|Re:MASTER)[\)）]\s*$"#, with: "", options: [.regularExpression, .caseInsensitive])
+            .replacingOccurrences(
+                of: #"\s*[\(（](?:EASY|BASIC|ADVANCED|EXPERT|MASTER|Re:MASTER)[\)）]\s*$"#, with: "",
+                options: [.regularExpression, .caseInsensitive]
+            )
             .replacingOccurrences(of: "藏", with: "蔵")
-            .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+            .folding(
+                options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
+                locale: Locale(identifier: "en_US_POSIX")
+            )
             .lowercased()
 
         return stripped.replacingOccurrences(of: #"[[:space:]\[\]【】\(\)（）]+"#, with: "", options: .regularExpression)
@@ -1220,7 +1249,10 @@ class MaimaiDataFetcher {
     private static func normalizeSongLookupTitle(_ raw: String) -> String {
         let normalized = raw
             .trimmingCharacters(in: .whitespacesAndNewlines)
-            .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+            .folding(
+                options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
+                locale: Locale(identifier: "en_US_POSIX")
+            )
             .lowercased()
             .replacingOccurrences(of: #"\s+"#, with: "", options: .regularExpression)
         return normalized.isEmpty && !raw.isEmpty ? " " : normalized

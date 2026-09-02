@@ -245,7 +245,8 @@ struct BestTableView: View {
                         Label("bestTable.action.export", systemImage: "square.and.arrow.up")
                     }
                 }
-                .disabled(cache.isLoading || isExporting || (cache.b50Result.b35.isEmpty && cache.b50Result.b15.isEmpty))
+                .disabled(
+                    cache.isLoading || isExporting || (cache.b50Result.b35.isEmpty && cache.b50Result.b15.isEmpty))
             }
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -506,7 +507,9 @@ struct BestTableView: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                MarqueeText(text: entry.songTitle, font: .system(size: 15, weight: .bold), fontWeight: .bold, color: .primary)
+                MarqueeText(
+                    text: entry.songTitle, font: .system(size: 15, weight: .bold), fontWeight: .bold, color: .primary
+                )
                     .frame(height: 20)
 
                 HStack(spacing: 6) {
@@ -532,7 +535,8 @@ struct BestTableView: View {
                 }
 
                 HStack(spacing: 4) {
-                    BadgeView(text: entry.type.uppercased(), background: entry.type.uppercased() == "DX" ? .orange : .blue)
+                    BadgeView(
+                        text: entry.type.uppercased(), background: entry.type.uppercased() == "DX" ? .orange : .blue)
 
                     if let fc = entry.fc, !fc.isEmpty {
                         BadgeView(text: ThemeUtils.normalizeFC(fc), background: ThemeUtils.fcColor(fc))

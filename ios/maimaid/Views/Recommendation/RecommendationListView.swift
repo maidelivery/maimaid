@@ -170,7 +170,8 @@ struct RecommendationListView: View {
         let configFingerprint = currentConfigFingerprint()
 
         // Skip if nothing changed (unless forced)
-        if !force && hasLoadedOnce && scoreFingerprint == lastScoreFingerprint && configFingerprint == lastConfigFingerprint {
+        if !force && hasLoadedOnce && scoreFingerprint == lastScoreFingerprint
+            && configFingerprint == lastConfigFingerprint {
             return
         }
 
@@ -216,7 +217,9 @@ struct RecommendationRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 // Line 1: Song Title
-                MarqueeText(text: result.song.title, font: .system(size: 15, weight: .bold), fontWeight: .bold, color: .primary)
+                MarqueeText(
+                    text: result.song.title, font: .system(size: 15, weight: .bold), fontWeight: .bold, color: .primary
+                )
                     .frame(height: 18)
 
                 // Line 2: Current Status
@@ -239,7 +242,9 @@ struct RecommendationRow: View {
 
                 // Line 3: Badges
                 HStack(spacing: 4) {
-                    BadgeView(text: result.sheet.type.uppercased(), background: result.sheet.type.lowercased() == "dx" ? .orange : .blue)
+                    BadgeView(
+                        text: result.sheet.type.uppercased(),
+                        background: result.sheet.type.lowercased() == "dx" ? .orange : .blue)
                 }
             }
             .frame(minHeight: 56, alignment: .leading)

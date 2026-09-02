@@ -16,7 +16,10 @@ final class Score {
 
     var sheet: Sheet?
 
-    init(sheetId: String, rate: Double, rank: String, dxScore: Int = 0, fc: String? = nil, fs: String? = nil, achievementDate: Date = Date(), userProfileId: UUID? = nil) {
+    init(
+        sheetId: String, rate: Double, rank: String, dxScore: Int = 0, fc: String? = nil, fs: String? = nil,
+        achievementDate: Date = Date(), userProfileId: UUID? = nil
+    ) {
         self.sheetId = sheetId
         self.rate = rate
         self.rank = rank
