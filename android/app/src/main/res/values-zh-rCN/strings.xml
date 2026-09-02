@@ -637,10 +637,11 @@
 	<string name="cloud_logout_keep_local">保留本地数据</string>
 	<string name="cloud_logout_clear_local">清空本地数据</string>
 	<string name="cloud_local_data_cleared">本地数据已清空</string>
-    <string name="home_letter_game">开字母</string>
+    <string name="home_letter_game">出你字母</string>
     <string name="home_letter_game_subtitle">实时房间猜歌游戏</string>
-    <string name="detail_letter_game">开字母</string>
-    <string name="letter_game_login_required">登录后游玩</string>
+
+	<string name="detail_letter_game">出你字母</string>
+	<string name="letter_game_login_required">登录后游玩</string>
     <string name="letter_game_login_required_summary">多人房间需要 maimaid 账号。</string>
     <string name="letter_game_join_title">创建房间</string>
     <string name="letter_game_room_code">房间码</string>
