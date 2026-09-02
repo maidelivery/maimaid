@@ -33,7 +33,9 @@ export class LetterGameTurnScheduler {
 		try {
 			const matchIds = await this.service.expireDueMatches();
 			await Promise.all(matchIds.map((matchId) => this.hub.broadcastMatch(matchId)));
-			const roomIds = await this.service.dissolveEmptyRooms(100, (roomId) => this.hub.broadcastRoom(roomId));
+			const roomIds = await this.service.dissolveEmptyRooms(100, (roomId, userId) =>
+				this.hub.broadcastRoom(roomId, { removedMember: { userId, reason: "left" } }),
+			);
 			for (const roomId of roomIds) this.hub.closeRoom(roomId);
 		} catch (error) {
 			console.error("[letter-game] scheduler tick failed", error);

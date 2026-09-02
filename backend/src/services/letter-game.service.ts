@@ -366,11 +366,11 @@ export class LetterGameService {
 		if (activeMatch?.players.some((player: any) => player.userId === member.userId && player.status === "active")) {
 			await this.leaveMatch(member.userId, activeMatch.id);
 		}
-		await this.prisma.letterGameRoomMember.update({
+		const updatedMember = await this.prisma.letterGameRoomMember.update({
 			where: { id: memberId },
 			data: { status: "kicked", kickedAt: new Date(), leftAt: new Date() },
 		});
-		return this.getRoom(actorId, roomId);
+		return { room: await this.getRoom(actorId, roomId), member: updatedMember };
 	}
 
 	async leaveRoom(userId: string, roomId: string) {
@@ -1004,7 +1004,7 @@ export class LetterGameService {
 		return expiredMatchIds;
 	}
 
-	async dissolveEmptyRooms(limit = 100, onRoomChanged?: (roomId: string) => Promise<void>) {
+	async dissolveEmptyRooms(limit = 100, onRoomChanged?: (roomId: string, userId: string) => Promise<void>) {
 		const now = new Date();
 		const staleBefore = new Date(now.getTime() - MEMBER_STALE_AFTER_MS);
 		const dissolvedRoomIds = new Set<string>();
@@ -1023,7 +1023,7 @@ export class LetterGameService {
 		for (const member of staleMembers) {
 			const result = await this.leaveRoomMember(member.userId, member.roomId, { staleBefore }).catch(() => null);
 			if (result?.dissolved) dissolvedRoomIds.add(member.roomId);
-			else if (result?.left) await onRoomChanged?.(member.roomId);
+			else if (result?.left) await onRoomChanged?.(member.roomId, member.userId);
 		}
 
 		const candidates = await this.prisma.letterGameRoom.findMany({

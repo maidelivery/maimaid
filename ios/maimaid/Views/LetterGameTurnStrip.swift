@@ -30,7 +30,7 @@ struct LetterGameTurnStrip: View {
                                 localAvatarData: localAvatarData,
                                 localAvatarURL: localAvatarURL
                             )
-                            Text("letterGame.points \(player.score)")
+                            LetterGamePointsText(points: player.score)
                                 .font(.caption.bold())
                                 .foregroundStyle(player.userId == turnUserId ? Color.accentColor : Color.secondary)
                         }

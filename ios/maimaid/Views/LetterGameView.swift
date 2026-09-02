@@ -2,6 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct LetterGameView: View {
+    @Environment(\.dismiss) private var dismiss
     @Query(filter: #Predicate<UserProfile> { $0.isActive == true })
     private var activeProfiles: [UserProfile]
     @Query(
@@ -34,6 +35,15 @@ struct LetterGameView: View {
             .sorted()
     }
 
+    private var isWaitingRoom: Bool {
+        guard service.room != nil else { return false }
+        return !["active", "finished", "abandoned"].contains(service.match?.status)
+    }
+
+    private var isShowingResults: Bool {
+        ["finished", "abandoned"].contains(service.match?.status)
+    }
+
     var body: some View {
         Group {
             if !session.isAuthenticated {
@@ -51,6 +61,8 @@ struct LetterGameView: View {
         }
         .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(service.room != nil)
+        .toolbarVisibility(service.room == nil ? .automatic : .hidden, for: .tabBar)
         .toolbar { roomToolbar }
         .task(id: session.currentUser?.id) { await service.run() }
         .onDisappear(perform: service.disconnect)
@@ -64,44 +76,57 @@ struct LetterGameView: View {
     @ToolbarContentBuilder
     private var roomToolbar: some ToolbarContent {
         if let room = service.room {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                ShareLink(item: room.code) {
-                    Label("letterGame.shareCode", systemImage: "square.and.arrow.up")
-                }
-
-                Button("letterGame.settings", systemImage: "slider.horizontal.3") {
-                    isShowingSettings = true
-                }
-                .sheet(isPresented: $isShowingSettings) {
-                    LetterGameRoomSettingsView(
-                        service: service,
-                        room: room,
-                        versions: UserDefaults.app.maimaiVersionSequence,
-                        categories: availableCategories,
-                        collections: collections,
-                        collectionItems: collectionItems
-                    )
-                }
-
-                Button(
-                    "letterGame.leave",
-                    systemImage: "rectangle.portrait.and.arrow.right",
-                    role: .destructive
-                ) {
-                    isConfirmingLeave = true
-                }
+            ToolbarItem(placement: .topBarLeading) {
+                Button("letterGame.back", systemImage: "chevron.backward", action: handleBack)
                 .confirmationDialog(
                     "letterGame.leaveConfirm.title",
                     isPresented: $isConfirmingLeave,
                     titleVisibility: .visible
                 ) {
-                    Button("letterGame.leave", role: .destructive) {
-                        Task { await service.leaveRoom() }
-                    }
+                    Button("letterGame.leave", role: .destructive, action: leaveAndDismiss)
                     Button("letterGame.cancel", role: .cancel) {}
                 } message: {
                     Text("letterGame.leaveConfirm.message")
                 }
+            }
+
+            if isWaitingRoom {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    ShareLink(item: room.code) {
+                        Label("letterGame.shareCode", systemImage: "square.and.arrow.up")
+                    }
+
+                    Button("letterGame.settings", systemImage: "slider.horizontal.3") {
+                        isShowingSettings = true
+                    }
+                    .sheet(isPresented: $isShowingSettings) {
+                        LetterGameRoomSettingsView(
+                            service: service,
+                            room: room,
+                            versions: UserDefaults.app.maimaiVersionSequence,
+                            categories: availableCategories,
+                            collections: collections,
+                            collectionItems: collectionItems
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private func handleBack() {
+        if isShowingResults {
+            Task { await service.reopenRoom() }
+        } else {
+            isConfirmingLeave = true
+        }
+    }
+
+    private func leaveAndDismiss() {
+        Task {
+            await service.leaveRoom()
+            if service.room == nil {
+                dismiss()
             }
         }
     }

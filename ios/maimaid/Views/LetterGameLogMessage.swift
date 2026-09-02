@@ -1,31 +1,30 @@
 import Foundation
 
 enum LetterGameLogMessage {
-    static func localizedString(for log: LetterGameLogEntry) -> String {
-        let actor = if let actorName = log.actorName, !actorName.isEmpty {
-            actorName
-        } else {
-            log.actorUserId ?? String(localized: "letterGame.player")
-        }
-
-        switch log.actionType {
-        case "open_character":
-            let character = log.character ?? ""
-            let revealedCount = log.newlyRevealedCount ?? 0
-            let points = log.points ?? 0
-            return String(
-                localized: "letterGame.logOpen \(actor) \(character) \(revealedCount) \(points)"
-            )
-        case "guess_song" where log.correct == true:
-            return String(
-                localized: "letterGame.logCorrect \(actor) \(log.points ?? 0)"
-            )
-        case "guess_song":
-            return String(localized: "letterGame.logWrong \(actor)")
-        case "buy_hint":
-            return String(localized: "letterGame.logHint \(actor) \(log.hintCost ?? 0)")
-        default:
-            return log.message
+    static func localizedString(for narration: LetterGameLogNarration) -> String {
+        switch narration.template {
+        case .openNoProgress1, .openNoProgress2,
+             .openNoProgressStreak1, .openNoProgressStreak2,
+             .openRepeated1, .openRepeated2,
+             .openFew1, .openFew2:
+            localizedBasicOpen(narration)
+        case .openMany1, .openMany2, .openSuccessStreak1, .openSuccessStreak2:
+            localizedOpenMomentum(narration)
+        case .guessBlind1, .guessBlind2,
+             .guessCorrect1, .guessCorrect2,
+             .guessCorrectStreak1, .guessCorrectStreak2,
+             .guessIncorrect1, .guessIncorrect2,
+             .guessIncorrectStreak1, .guessIncorrectStreak2:
+            localizedGuess(narration)
+        case .progressRecovered1, .progressRecovered2:
+            localizedRecovery(narration)
+        case .hintPublic1, .hintPublic2,
+             .hintPrivate1, .hintPrivate2,
+             .hintLowScore1, .hintLowScore2,
+             .hintNormal1, .hintNormal2:
+            localizedHint(narration)
+        case .fallback:
+            narration.fallbackMessage ?? ""
         }
     }
 }

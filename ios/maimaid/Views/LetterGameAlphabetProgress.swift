@@ -7,7 +7,7 @@ struct LetterGameAlphabetProgress: View {
 
   var body: some View {
     VStack(alignment: .leading) {
-      Label("letterGame.alphabetProgress", systemImage: "character")
+      Label("letterGame.alphabetProgress", systemImage: "textformat.alt")
         .font(.headline)
       LazyVGrid(columns: columns, spacing: 4) {
         ForEach(Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ"), id: \.self) { letter in

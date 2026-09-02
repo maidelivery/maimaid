@@ -17,7 +17,10 @@ const selectionConfigSchema = z
 		minVersion: z.string().trim().min(1).max(100).nullable().optional(),
 		maxVersion: z.string().trim().min(1).max(100).nullable().optional(),
 		categories: z.array(z.string().trim().min(1).max(100)).max(100).optional(),
-		chartTypes: z.array(z.enum(["standard", "dx"])).max(2).optional(),
+		chartTypes: z
+			.array(z.enum(["standard", "dx"]))
+			.max(2)
+			.optional(),
 		collectionIds: z.array(z.uuid()).max(100).optional(),
 	})
 	.strict();
@@ -91,9 +94,9 @@ letterGameV1Route.patch(
 		const service = c.var.resolve(LetterGameService);
 		const roomId = c.req.valid("param").roomId;
 		const room = await service.updateSettings(
-				requireUser(c),
-				roomId,
-				c.req.valid("json") as unknown as Parameters<LetterGameService["updateSettings"]>[2],
+			requireUser(c),
+			roomId,
+			c.req.valid("json") as unknown as Parameters<LetterGameService["updateSettings"]>[2],
 		);
 		await c.var.resolve(LetterGameConnectionHub).broadcastRoom(roomId);
 		return ok(c, { room });
@@ -102,11 +105,12 @@ letterGameV1Route.patch(
 
 letterGameV1Route.post("/rooms/:roomId/leave", standardValidator("param", roomParamSchema, validationHook), async (c) => {
 	const service = c.var.resolve(LetterGameService);
+	const userId = requireUser(c);
 	const roomId = c.req.valid("param").roomId;
-	const result = await service.leaveRoom(requireUser(c), roomId);
+	const result = await service.leaveRoom(userId, roomId);
 	const hub = c.var.resolve(LetterGameConnectionHub);
 	if (result.dissolved) hub.closeRoom(roomId);
-	else await hub.broadcastRoom(roomId);
+	else await hub.broadcastRoom(roomId, { removedMember: { userId, reason: "left" } });
 	return ok(c, result);
 });
 
@@ -139,7 +143,9 @@ letterGameV1Route.post(
 		const service = c.var.resolve(LetterGameService);
 		const params = c.req.valid("param");
 		const result = await service.rejectMember(requireUser(c), params.roomId, params.memberId);
-		await c.var.resolve(LetterGameConnectionHub).broadcastRoom(params.roomId);
+		await c.var.resolve(LetterGameConnectionHub).broadcastRoom(params.roomId, {
+			removedMember: { userId: result.member.userId, reason: "rejected" },
+		});
 		return ok(c, result);
 	},
 );
@@ -150,9 +156,11 @@ letterGameV1Route.post(
 	async (c) => {
 		const service = c.var.resolve(LetterGameService);
 		const params = c.req.valid("param");
-		const room = await service.kickMember(requireUser(c), params.roomId, params.memberId);
-		await c.var.resolve(LetterGameConnectionHub).broadcastRoom(params.roomId);
-		return ok(c, { room });
+		const result = await service.kickMember(requireUser(c), params.roomId, params.memberId);
+		await c.var.resolve(LetterGameConnectionHub).broadcastRoom(params.roomId, {
+			removedMember: { userId: result.member.userId, reason: "kicked" },
+		});
+		return ok(c, { room: result.room });
 	},
 );
 

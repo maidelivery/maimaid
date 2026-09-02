@@ -1021,7 +1021,7 @@ struct SheetCardView: View {
     @State private var recordToDelete: PlayRecord?
     @State private var showingDeleteConfirm = false
     @State private var showingCollectionPicker = false
-    @GestureState private var isCollectionLongPressing = false
+    @State private var isCollectionLongPressing = false
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
     @Query(filter: #Predicate<UserProfile> { $0.isActive }) private var activeProfiles: [UserProfile]
@@ -1172,25 +1172,19 @@ struct SheetCardView: View {
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(diffColor.opacity(0.15), lineWidth: 1)
         )
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.white.opacity(isCollectionLongPressing ? 0.12 : 0))
+                .allowsHitTesting(false)
+        }
         .contentShape(.rect(cornerRadius: 16))
-        .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.45, maximumDistance: 24)
-                .updating($isCollectionLongPressing) { value, state, _ in
-                    state = value
-                }
-                .onEnded { _ in
-                    showingCollectionPicker = true
-                }
-        )
-        .scaleEffect(isCollectionLongPressing ? 0.985 : 1)
-        .offset(y: isCollectionLongPressing ? -4 : 0)
-        .shadow(
-            color: .black.opacity(isCollectionLongPressing ? 0.18 : 0),
-            radius: isCollectionLongPressing ? 12 : 0,
-            y: isCollectionLongPressing ? 6 : 0
+        .onLongPressGesture(
+            minimumDuration: 0.2,
+            maximumDistance: 2,
+            perform: { showingCollectionPicker = true },
+            onPressingChanged: { isCollectionLongPressing = $0 }
         )
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isExpanded)
-        .animation(.spring(response: 0.22, dampingFraction: 0.82), value: isCollectionLongPressing)
         .alert("song.detail.history.delete.title", isPresented: $showingDeleteConfirm) {
             Button("song.detail.history.delete.confirm", role: .destructive) {
                 if let record = recordToDelete {

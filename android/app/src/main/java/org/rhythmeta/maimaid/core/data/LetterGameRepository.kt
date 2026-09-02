@@ -115,8 +115,10 @@ class LetterGameRepository(
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 when (reason) {
                     "room_dissolved" -> mutableEvents.tryEmit(LetterGameEvent.RoomDissolved(roomCode))
+                    "kicked", "left", "rejected" ->
+                        mutableEvents.tryEmit(LetterGameEvent.MemberRemoved(roomCode, reason))
                     "room_access_denied", "member_removed" ->
-                        mutableEvents.tryEmit(LetterGameEvent.MemberRemoved(roomCode, "kicked"))
+                        mutableEvents.tryEmit(LetterGameEvent.MemberRemoved(roomCode, null))
                 }
             }
         })

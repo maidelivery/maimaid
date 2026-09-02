@@ -729,7 +729,9 @@
     <string name="letter_game_approve">承認</string>
     <string name="letter_game_reject">拒否</string>
     <string name="letter_game_remove">削除</string>
-    <string name="letter_game_removed_from_room">ルームから退出させられました</string>
+    <string name="letter_game_kicked_from_room">ルームからキックされました</string>
+    <string name="letter_game_exited_room">ルームを退出しました</string>
+    <string name="letter_game_join_rejected">ルームへの参加リクエストが拒否されました</string>
     <string name="letter_game_room_dissolved">ルームが解散しました</string>
     <string name="letter_game_your_turn">あなたの手番 · %1$d 秒</string>
     <string name="letter_game_waiting_turn">%1$s の手番待ち · %2$d 秒</string>

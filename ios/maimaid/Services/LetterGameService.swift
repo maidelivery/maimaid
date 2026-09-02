@@ -18,6 +18,7 @@ final class LetterGameService {
     private var socket: URLSessionWebSocketTask?
     private var receiveTask: Task<Void, Never>?
     private var hiddenFinishedMatchId: String?
+    private var isLeavingRoom = false
     private let savedRoomCodeKey = "letterGame.savedRoomCode"
 
     var currentUserId: String? { BackendSessionManager.shared.currentUser?.id }
@@ -132,8 +133,14 @@ final class LetterGameService {
     }
 
     func leaveRoom() async {
-        guard let room else { return }
-        await performLoadingAction {
+        guard let room, !isLeavingRoom else { return }
+        isLeavingRoom = true
+        isLoading = true
+        defer {
+            isLeavingRoom = false
+            isLoading = false
+        }
+        do {
             _ = try await BackendAPIClient.requestData(
                 path: "v1/letter-game/rooms/\(room.id)/leave",
                 method: "POST",
@@ -141,6 +148,8 @@ final class LetterGameService {
             )
             clearRoom()
             await refreshPublicRooms(silently: true)
+        } catch {
+            present(error)
         }
     }
 
@@ -184,12 +193,13 @@ final class LetterGameService {
 
     private func refreshCurrentRoom() async {
         guard let room else { return }
+        let removalMessage = membershipRemovalMessage(for: room)
         do {
             struct Response: Decodable { let room: LetterGameRoom }
             let response: Response = try await BackendAPIClient.request(path: "v1/letter-game/rooms/\(room.id)")
             guard hasCurrentMembership(in: response.room) else {
                 clearRoom()
-                presentMessage(String(localized: "letterGame.removed"))
+                if !isLeavingRoom { presentMessage(removalMessage) }
                 return
             }
             self.room = response.room
@@ -197,7 +207,7 @@ final class LetterGameService {
             await refreshLatestMatch()
         } catch let error as BackendAPIError where [403, 404, 410].contains(error.statusCode) {
             clearRoom()
-            presentMessage(String(localized: "letterGame.removed"))
+            if !isLeavingRoom { presentMessage(removalMessage) }
         } catch {
             // WebSocket state remains authoritative during transient polling failures.
         }
@@ -206,6 +216,11 @@ final class LetterGameService {
     private func refreshLatestMatch() async {
         guard let latest = room?.latestMatch else { return }
         if latest.id == hiddenFinishedMatchId, latest.status != "active" { return }
+        guard LetterGameMatchPresentationPolicy.shouldAccept(
+            status: latest.status,
+            matchId: latest.id,
+            trackedMatchId: match?.matchId
+        ) else { return }
         if match?.matchId == latest.id, match?.revision == latest.revision { return }
         await refreshMatch(id: latest.id)
     }
@@ -214,8 +229,7 @@ final class LetterGameService {
         do {
             struct Response: Decodable { let match: LetterGameMatchSnapshot }
             let response: Response = try await BackendAPIClient.request(path: "v1/letter-game/matches/\(id)")
-            if response.match.status == "active" { hiddenFinishedMatchId = nil }
-            match = response.match
+            acceptMatch(response.match)
         } catch {
             present(error)
         }
@@ -313,28 +327,30 @@ final class LetterGameService {
             let match: LetterGameMatchSnapshot?
             let code: String?
             let message: String?
+            let reason: String?
         }
         guard let envelope = try? BackendAPIClient.decoder.decode(Envelope.self, from: data) else { return }
         switch envelope.type {
         case "room_snapshot":
             if let updated = envelope.room, updated.id == room?.id {
                 guard hasCurrentMembership(in: updated) else {
+                    let removalMessage = membershipRemovalMessage(for: room)
                     clearRoom()
-                    presentMessage(String(localized: "letterGame.removed"))
+                    if !isLeavingRoom { presentMessage(removalMessage) }
                     return
                 }
                 room = updated
             }
         case "match_snapshot":
-            if let updated = envelope.match,
-               updated.matchId != hiddenFinishedMatchId || updated.status == "active" {
-                if updated.status == "active" { hiddenFinishedMatchId = nil }
-                match = updated
-            }
+            if let updated = envelope.match { acceptMatch(updated) }
         case "member_removed", "room_dissolved":
+            let shouldPresentRemoval = !isLeavingRoom
             clearRoom()
-            let key = envelope.type == "room_dissolved" ? "letterGame.dissolved" : "letterGame.removed"
-            presentMessage(String(localized: String.LocalizationValue(key)))
+            if envelope.type == "room_dissolved", shouldPresentRemoval {
+                presentMessage(String(localized: "letterGame.dissolved"))
+            } else if envelope.type == "member_removed", shouldPresentRemoval {
+                presentMessage(memberRemovalMessage(reason: envelope.reason))
+            }
         case "action_rejected":
             let key: String? = if envelope.code == "hint_already_known" {
                 "letterGame.hintKnown"
@@ -353,6 +369,17 @@ final class LetterGameService {
         default:
             break
         }
+    }
+
+    private func acceptMatch(_ updated: LetterGameMatchSnapshot) {
+        guard updated.matchId != hiddenFinishedMatchId || updated.status == "active",
+              LetterGameMatchPresentationPolicy.shouldAccept(
+                  status: updated.status,
+                  matchId: updated.matchId,
+                  trackedMatchId: match?.matchId
+              ) else { return }
+        if updated.status == "active" { hiddenFinishedMatchId = nil }
+        match = updated
     }
 
     private func sendResume(match: LetterGameMatchSnapshot) async {
@@ -396,6 +423,21 @@ final class LetterGameService {
 
     private func present(_ error: Error) {
         presentMessage(error.localizedDescription)
+    }
+
+    private func membershipRemovalMessage(for room: LetterGameRoom?) -> String {
+        let status = room?.members.first(where: { $0.userId == currentUserId })?.status
+        let key = status == "pending" ? "letterGame.joinRejected" : "letterGame.kicked"
+        return String(localized: String.LocalizationValue(key))
+    }
+
+    private func memberRemovalMessage(reason: String?) -> String {
+        let key = switch reason {
+        case "left": "letterGame.exited"
+        case "rejected": "letterGame.joinRejected"
+        default: "letterGame.kicked"
+        }
+        return String(localized: String.LocalizationValue(key))
     }
 
     private func presentMessage(_ message: String) {

@@ -28,21 +28,20 @@ struct LetterGameMemberRow: View {
             Spacer()
             if service.isHost && member.userId != room.hostUserId && member.status == "pending" {
                 HStack(spacing: 6) {
-                    Button("letterGame.approve", systemImage: "checkmark", action: approve)
+                    Button("letterGame.approve", action: approve)
                         .buttonStyle(.borderedProminent)
                         .controlSize(.small)
                         .tint(.green)
-                    Button("letterGame.reject", systemImage: "xmark", role: .destructive, action: reject)
+                    Button("letterGame.reject", role: .destructive, action: reject)
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                         .tint(.red)
                 }
             } else if service.isHost && member.userId != room.hostUserId {
-                Menu("letterGame.memberActions", systemImage: "ellipsis.circle") {
-                    Button("letterGame.remove", systemImage: "person.fill.xmark", role: .destructive) {
-                        Task { await service.kick(member) }
-                    }
-                }
+                Button("letterGame.remove", role: .destructive, action: remove)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .tint(.red)
             }
         }
     }
@@ -65,5 +64,9 @@ struct LetterGameMemberRow: View {
 
     private func reject() {
         Task { await service.reject(member) }
+    }
+
+    private func remove() {
+        Task { await service.kick(member) }
     }
 }

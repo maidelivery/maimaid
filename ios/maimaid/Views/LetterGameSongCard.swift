@@ -5,8 +5,7 @@ struct LetterGameSongCard: View {
   var hintAction: (() -> Void)?
 
   @Environment(\.colorScheme) private var colorScheme
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @GestureState private var isLongPressing = false
+  @State private var isLongPressing = false
 
   private var accentColor: Color {
     ThemeUtils.colorForDifficulty(song.hasRemaster ? "remaster" : "master", nil, colorScheme)
@@ -30,7 +29,7 @@ struct LetterGameSongCard: View {
   }
 
   var body: some View {
-    HStack(spacing: 0) {
+    let card = HStack(spacing: 0) {
       RoundedRectangle(cornerRadius: 2)
         .fill(accentColor)
         .frame(width: 4)
@@ -88,29 +87,23 @@ struct LetterGameSongCard: View {
         .strokeBorder(accentColor.opacity(0.12), lineWidth: 1)
     }
     .contentShape(.rect)
-    .simultaneousGesture(
-      LongPressGesture(minimumDuration: 0.45, maximumDistance: 24)
-        .updating($isLongPressing) { value, state, _ in
-          guard song.status == "active" else { return }
-          state = value
+
+    if let hintAction, song.status == "active" {
+      card
+        .overlay {
+          RoundedRectangle(cornerRadius: 14)
+            .fill(.white.opacity(isLongPressing ? 0.12 : 0))
+            .allowsHitTesting(false)
         }
-        .onEnded { _ in
-          guard song.status == "active" else { return }
-          hintAction?()
-        }
-    )
-    .scaleEffect(isLongPressing && !reduceMotion ? 0.985 : 1)
-    .offset(y: isLongPressing && !reduceMotion ? -4 : 0)
-    .opacity(isLongPressing ? 0.88 : 1)
-    .shadow(
-      color: .black.opacity(isLongPressing && !reduceMotion ? 0.18 : 0),
-      radius: isLongPressing && !reduceMotion ? 12 : 0,
-      y: isLongPressing && !reduceMotion ? 6 : 0
-    )
-    .animation(.spring(response: 0.22, dampingFraction: 0.82), value: isLongPressing)
-    .accessibilityAction(named: Text("letterGame.buyHint")) {
-      guard song.status == "active" else { return }
-      hintAction?()
+        .onLongPressGesture(
+          minimumDuration: 0.2,
+          maximumDistance: 2,
+          perform: hintAction,
+          onPressingChanged: { isLongPressing = $0 }
+        )
+        .accessibilityAction(named: Text("letterGame.buyHint"), hintAction)
+    } else {
+      card
     }
   }
 }

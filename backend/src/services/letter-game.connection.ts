@@ -15,6 +15,15 @@ type Connection = {
 	roomCode: string;
 };
 
+export type LetterGameMemberRemovalReason = "kicked" | "left" | "rejected";
+
+type RoomBroadcastOptions = {
+	removedMember?: {
+		userId: string;
+		reason: LetterGameMemberRemovalReason;
+	};
+};
+
 const send = (ws: WebSocket, payload: unknown) => {
 	if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(payload));
 };
@@ -83,7 +92,7 @@ export class LetterGameConnectionHub {
 		});
 	}
 
-	async broadcastRoom(roomId: string) {
+	async broadcastRoom(roomId: string, options: RoomBroadcastOptions = {}) {
 		const connections = [...this.connections.values()]
 			.flatMap((items) => [...items])
 			.filter((connection) => connection.roomId === roomId);
@@ -95,11 +104,14 @@ export class LetterGameConnectionHub {
 				} catch (error) {
 					const code = (error as { code?: string }).code;
 					if (code === "room_access_denied") {
-						send(connection.ws, { type: "member_removed", roomId, reason: "kicked" });
+						const removal = options.removedMember?.userId === connection.userId ? options.removedMember : null;
+						send(connection.ws, { type: "member_removed", roomId, reason: removal?.reason ?? "kicked" });
 					} else if (code === "room_closed") {
 						send(connection.ws, { type: "room_dissolved", roomId });
 					}
-					connection.ws.close(1000, code ?? "room_access_denied");
+					const closeReason =
+						options.removedMember?.userId === connection.userId ? options.removedMember.reason : (code ?? "room_access_denied");
+					connection.ws.close(1000, closeReason);
 					return;
 				}
 				if (room) {
@@ -160,13 +172,16 @@ export class LetterGameConnectionHub {
 			if ([...roomConnections].some((item) => item.userId === userId)) return;
 			const timer = setTimeout(() => {
 				this.disconnectTimers.delete(disconnectKey);
-				void this.service.leaveFinishedRoomOnDisconnect(userId, room.id).then(async (result) => {
-					if (!result?.left) return;
-					if (result.dissolved) this.closeRoom(room.id);
-					else await this.broadcastRoom(room.id);
-				}).catch((error) => {
-					console.error("[letter-game] disconnect cleanup failed", error);
-				});
+				void this.service
+					.leaveFinishedRoomOnDisconnect(userId, room.id)
+					.then(async (result) => {
+						if (!result?.left) return;
+						if (result.dissolved) this.closeRoom(room.id);
+						else await this.broadcastRoom(room.id, { removedMember: { userId, reason: "left" } });
+					})
+					.catch((error) => {
+						console.error("[letter-game] disconnect cleanup failed", error);
+					});
 			}, 5_000);
 			timer.unref?.();
 			this.disconnectTimers.set(disconnectKey, timer);
@@ -208,7 +223,9 @@ export class LetterGameConnectionHub {
 			return;
 		}
 		if (message?.type === "resume") {
-			const resume = z.object({ type: z.literal("resume"), matchId: z.uuid(), lastRevision: z.number().int().nonnegative().optional() }).safeParse(message);
+			const resume = z
+				.object({ type: z.literal("resume"), matchId: z.uuid(), lastRevision: z.number().int().nonnegative().optional() })
+				.safeParse(message);
 			if (!resume.success) {
 				send(connection.ws, { type: "action_rejected", code: "invalid_action", message: "Invalid resume request." });
 				return;
@@ -268,13 +285,7 @@ export class LetterGameConnectionHub {
 				send(connection.ws, { type: "action_rejected", code: "room_mismatch" });
 				return;
 			}
-			const result = await this.service.applyAction(
-				connection.userId,
-				data.matchId,
-				actionId,
-				data.expectedRevision,
-				payload,
-			);
+			const result = await this.service.applyAction(connection.userId, data.matchId, actionId, data.expectedRevision, payload);
 			send(connection.ws, { type: "action_accepted", action: result });
 			await this.broadcastMatch(data.matchId);
 		} catch (error) {

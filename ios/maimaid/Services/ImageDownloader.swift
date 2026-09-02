@@ -6,6 +6,12 @@ class ImageDownloader {
     static let shared = ImageDownloader()
     private let fileManager = FileManager.default
     private static let imageAcceptHeader = "image/png"
+    private let remoteImageCache: NSCache<NSURL, UIImage> = {
+        let cache = NSCache<NSURL, UIImage>()
+        cache.countLimit = 128
+        return cache
+    }()
+    private var inFlightImageRequests: [URL: Task<UIImage, Error>] = [:]
 
     private lazy var coversDirectory: URL = {
         let dir = URL.documentsDirectory.appending(path: "Covers", directoryHint: .isDirectory)
@@ -89,8 +95,28 @@ class ImageDownloader {
     }
 
     func fetchImage(from url: URL) async throws -> UIImage {
-        let (_, image) = try await fetchImageData(from: url)
-        return image
+        if let cachedImage = remoteImageCache.object(forKey: url as NSURL) {
+            return cachedImage
+        }
+        if let request = inFlightImageRequests[url] {
+            return try await request.value
+        }
+
+        let request = Task {
+            let (_, image) = try await self.fetchImageData(from: url)
+            return image
+        }
+        inFlightImageRequests[url] = request
+
+        do {
+            let image = try await request.value
+            remoteImageCache.setObject(image, forKey: url as NSURL)
+            inFlightImageRequests[url] = nil
+            return image
+        } catch {
+            inFlightImageRequests[url] = nil
+            throw error
+        }
     }
 
     private func fetchImageData(from url: URL) async throws -> (Data, UIImage) {

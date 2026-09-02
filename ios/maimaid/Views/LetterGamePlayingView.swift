@@ -20,6 +20,10 @@ struct LetterGamePlayingView: View {
         match.players.first { $0.userId == service.currentUserId }
     }
 
+    private var visiblePlayers: [LetterGameMatchPlayer] {
+        LetterGameMatchPresentationPolicy.visiblePlayers(match.players, roomMembers: room.members)
+    }
+
     private var canAct: Bool {
         service.isCurrentTurn && service.isConnected
     }
@@ -46,7 +50,7 @@ struct LetterGamePlayingView: View {
                 }
 
                 LetterGameTurnStrip(
-                    players: match.players,
+                    players: visiblePlayers,
                     turnUserId: match.turnUserId,
                     currentUserId: service.currentUserId,
                     localAvatarData: localAvatarData,
@@ -70,6 +74,7 @@ struct LetterGamePlayingView: View {
             }
             .padding()
         }
+        .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             LetterGameInputBar(
                 input: $input,
@@ -128,10 +133,11 @@ struct LetterGamePlayingView: View {
             return
         }
 
-        let newLogs = logs.filter { !shownLogIDs.contains($0.id) }
+        let narrations = LetterGameLogNarrator.narrate(logs)
+        let newNarrations = narrations.filter { !shownLogIDs.contains($0.logId) }
         shownLogIDs.formUnion(currentIDs)
-        guard let latestLog = newLogs.last else { return }
-        showToast(LetterGameLogMessage.localizedString(for: latestLog))
+        guard let latestNarration = newNarrations.last else { return }
+        showToast(LetterGameLogMessage.localizedString(for: latestNarration))
     }
 
     private func showToast(_ message: String) {

@@ -46,10 +46,10 @@ struct LetterGameHintView: View {
                 }
                 Section {
                     LabeledContent("letterGame.cost") {
-                        Text("letterGame.points \(cost)")
+                        LetterGamePointsText(points: cost)
                     }
                     LabeledContent("letterGame.balance") {
-                        Text("letterGame.points \(player?.score ?? 0)")
+                        LetterGamePointsText(points: player?.score ?? 0)
                     }
                     if isKnown {
                         Label("letterGame.hintKnown", systemImage: "info.circle")

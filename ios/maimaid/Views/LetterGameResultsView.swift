@@ -6,6 +6,8 @@ struct LetterGameResultsView: View {
     let localAvatarData: Data?
     let localAvatarURL: String?
 
+    @State private var isConfirmingLeave = false
+
     private var rankedPlayers: [LetterGameMatchPlayer] {
         match.players.sorted { $0.score > $1.score }
     }
@@ -41,7 +43,7 @@ struct LetterGameResultsView: View {
                         Text(player.name)
                             .lineLimit(1)
                         Spacer()
-                        Text("letterGame.points \(player.score)")
+                        LetterGamePointsText(points: player.score)
                             .bold()
                     }
                     .padding()
@@ -49,7 +51,7 @@ struct LetterGameResultsView: View {
                         player.userId == service.currentUserId
                             ? Color.accentColor.opacity(0.12)
                             : Color.secondary.opacity(0.08),
-                        in: .rect(cornerRadius: 8)
+                        in: .rect(cornerRadius: 16)
                     )
                 }
 
@@ -67,14 +69,48 @@ struct LetterGameResultsView: View {
                     ForEach(unguessedSongs) { LetterGameSongCard(song: $0) }
                 }
 
-                Button("letterGame.reopen", systemImage: "arrow.clockwise") {
-                    Task { await service.reopenRoom() }
+                HStack {
+                    Button(action: reopenRoom) {
+                        Label("letterGame.reopen", systemImage: "arrow.clockwise")
+                            .bold()
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .background(Color.accentColor, in: .rect(cornerRadius: 16))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(role: .destructive) {
+                        isConfirmingLeave = true
+                    } label: {
+                        Label("letterGame.leave", systemImage: "rectangle.portrait.and.arrow.right")
+                            .bold()
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .background(Color.red.opacity(0.12), in: .rect(cornerRadius: 16))
+                    }
+                    .buttonStyle(.plain)
+                    .confirmationDialog(
+                        "letterGame.leaveConfirm.title",
+                        isPresented: $isConfirmingLeave,
+                        titleVisibility: .visible
+                    ) {
+                        Button("letterGame.leave", role: .destructive, action: leaveRoom)
+                        Button("letterGame.cancel", role: .cancel) {}
+                    } message: {
+                        Text("letterGame.leaveConfirm.message")
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .frame(maxWidth: .infinity)
                 .padding(.top)
             }
             .padding()
         }
+    }
+
+    private func reopenRoom() {
+        Task { await service.reopenRoom() }
+    }
+
+    private func leaveRoom() {
+        Task { await service.leaveRoom() }
     }
 }

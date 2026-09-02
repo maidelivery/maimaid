@@ -747,7 +747,7 @@
 	<string name="letter_game_summary_categories">categories %1$s</string>
 	<string name="letter_game_summary_chart_types">chart types %1$s</string>
 	<string name="letter_game_summary_list_separator">, </string>
-	<string name="letter_game_leave_room">Leave room</string>
+	<string name="letter_game_leave_room">Exit room</string>
 	<string name="letter_game_copy_room_code">Copy room code</string>
 	<string name="letter_game_players">Players</string>
 	<string name="letter_game_host">Host</string>
@@ -757,7 +757,9 @@
 	<string name="letter_game_approve">Approve</string>
 	<string name="letter_game_reject">Reject</string>
 	<string name="letter_game_remove">Remove</string>
-	<string name="letter_game_removed_from_room">You were removed from the room.</string>
+	<string name="letter_game_kicked_from_room">You were kicked out of the room.</string>
+	<string name="letter_game_exited_room">You exited the room.</string>
+	<string name="letter_game_join_rejected">Your request to join the room was rejected.</string>
 	<string name="letter_game_room_dissolved">This room has been dissolved.</string>
 	<string name="letter_game_your_turn">Your turn · %1$ds</string>
 	<string name="letter_game_waiting_turn">Waiting for %1$s · %2$ds</string>
@@ -842,8 +844,8 @@
 	<string name="letter_game_dismiss">Dismiss</string>
 	<string name="letter_game_points">%1$d pts</string>
 	<string name="letter_game_rank">%1$d</string>
-	<string name="letter_game_leave_room_confirm_title">Leave this room?</string>
-	<string name="letter_game_leave_room_confirm_summary">You will leave the current match and lose
+	<string name="letter_game_leave_room_confirm_title">Exit this room?</string>
+	<string name="letter_game_leave_room_confirm_summary">You will exit the current match and lose
 		your seat in the room.</string>
 	<string name="letter_game_cancel">Cancel</string>
 	<string name="letter_game_join_game">Join room</string>

@@ -16,37 +16,47 @@ struct LetterGameInputBar: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading) {
-            Label {
-                Text(turnLabel)
-            } icon: {
-                Image(systemName: isConnected ? "timer" : "wifi.slash")
-            }
-            .font(.subheadline.bold())
-            .foregroundStyle(isCurrentTurn ? Color.accentColor : Color.secondary)
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Label {
+                    Text(turnLabel)
+                } icon: {
+                    Image(systemName: isConnected ? "timer" : "wifi.slash")
+                }
+                .font(.caption.bold())
+                .foregroundStyle(isCurrentTurn ? Color.accentColor : Color.secondary)
 
-            HStack {
                 TextField(
                     isCharacter ? "letterGame.characterPlaceholder" : "letterGame.inputPlaceholder",
                     text: $input
                 )
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.plain)
+                .submitLabel(.send)
+                .lineLimit(1)
                 .disabled(!isCurrentTurn || !isConnected)
                 .onSubmit {
                     if canSubmit { onSubmit() }
                 }
-
-                Button(
-                    isCharacter ? "letterGame.open" : "letterGame.guess",
-                    systemImage: "paperplane.fill",
-                    action: onSubmit
-                )
-                .buttonStyle(.borderedProminent)
-                .disabled(!canSubmit)
             }
+
+            Button(
+                isCharacter ? "letterGame.open" : "letterGame.guess",
+                systemImage: "arrow.up",
+                action: onSubmit
+            )
+            .labelStyle(.iconOnly)
+            .buttonStyle(.glassProminent)
+            .buttonBorderShape(.circle)
+            .controlSize(.large)
+            .frame(minWidth: 44, minHeight: 44)
+            .disabled(!canSubmit)
         }
-        .padding()
-        .background(.bar)
+        .padding(.leading, 16)
+        .padding(.trailing, 8)
+        .padding(.vertical, 8)
+        .glassEffect(.regular, in: .rect(cornerRadius: 28))
+        .padding(.horizontal)
+        .padding(.vertical, 8)
     }
 
     private var turnLabel: LocalizedStringKey {

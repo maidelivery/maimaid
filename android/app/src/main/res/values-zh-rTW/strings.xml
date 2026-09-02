@@ -716,7 +716,7 @@
     <string name="letter_game_summary_categories">分類為%1$s</string>
     <string name="letter_game_summary_chart_types">譜面類型為%1$s</string>
     <string name="letter_game_summary_list_separator">、</string>
-    <string name="letter_game_leave_room">離開房間</string>
+    <string name="letter_game_leave_room">退出房間</string>
     <string name="letter_game_copy_room_code">複製房間碼</string>
     <string name="letter_game_players">玩家</string>
     <string name="letter_game_host">房主</string>
@@ -726,7 +726,9 @@
     <string name="letter_game_approve">確認</string>
     <string name="letter_game_reject">拒絕</string>
     <string name="letter_game_remove">移除</string>
-    <string name="letter_game_removed_from_room">你已被移出房間</string>
+    <string name="letter_game_kicked_from_room">你已被踢出房間</string>
+    <string name="letter_game_exited_room">你已退出房間</string>
+    <string name="letter_game_join_rejected">你的加入房間請求已被拒絕</string>
     <string name="letter_game_room_dissolved">房間已解散</string>
     <string name="letter_game_your_turn">你的回合 · %1$d 秒</string>
     <string name="letter_game_waiting_turn">等待 %1$s · %2$d 秒</string>
@@ -810,8 +812,8 @@
     <string name="letter_game_dismiss">關閉</string>
     <string name="letter_game_points">%1$d 分</string>
     <string name="letter_game_rank">%1$d</string>
-    <string name="letter_game_leave_room_confirm_title">確認離開房間？</string>
-    <string name="letter_game_leave_room_confirm_summary">你將退出目前對局並離開房間座位。</string>
+    <string name="letter_game_leave_room_confirm_title">確認退出房間？</string>
+    <string name="letter_game_leave_room_confirm_summary">你將退出目前對局並放棄房間座位。</string>
     <string name="letter_game_cancel">取消</string>
 	  <string name="letter_game_join_game">加入房間</string>
 </resources>

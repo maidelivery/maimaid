@@ -13,14 +13,16 @@ struct LetterGameInputTipView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-
+        }
+        .padding(.trailing, 32)
+        .padding(14)
+        .background(.regularMaterial, in: .rect(cornerRadius: 16))
+        .overlay(alignment: .topTrailing) {
             Button("letterGame.dismissTip", systemImage: "xmark", action: onDismiss)
                 .labelStyle(.iconOnly)
                 .foregroundStyle(.secondary)
-                .frame(minWidth: 44, minHeight: 44)
+                .frame(width: 44, height: 44)
                 .contentShape(.circle)
         }
-        .padding(14)
-        .background(.regularMaterial, in: .rect(cornerRadius: 16))
     }
 }

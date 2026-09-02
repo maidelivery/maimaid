@@ -98,6 +98,7 @@ import org.rhythmeta.maimaid.core.data.LetterGameCreateRequest
 import org.rhythmeta.maimaid.core.data.LetterGameEvent
 import org.rhythmeta.maimaid.core.data.LetterGameFact
 import org.rhythmeta.maimaid.core.data.LetterGameLogEntry
+import org.rhythmeta.maimaid.core.data.LetterGameMatchPresentationPolicy
 import org.rhythmeta.maimaid.core.data.LetterGameMatchPlayer
 import org.rhythmeta.maimaid.core.data.LetterGameMatchSnapshot
 import org.rhythmeta.maimaid.core.data.LetterGameMatchSong
@@ -182,7 +183,9 @@ fun LetterGameScreen(
     val roomCodeCopiedMessage = stringResource(R.string.letter_game_room_code_copied)
     val hintAlreadyKnownMessage = stringResource(R.string.letter_game_hint_already_known)
     val ambiguousGuessMessage = stringResource(R.string.letter_game_ambiguous_guess)
-    val removedFromRoomMessage = stringResource(R.string.letter_game_removed_from_room)
+    val kickedFromRoomMessage = stringResource(R.string.letter_game_kicked_from_room)
+    val exitedRoomMessage = stringResource(R.string.letter_game_exited_room)
+    val joinRejectedMessage = stringResource(R.string.letter_game_join_rejected)
     val roomDissolvedMessage = stringResource(R.string.letter_game_room_dissolved)
     val gameVersions by container.catalogRepository.versions.collectAsStateWithLifecycle(emptyList())
     val songCategories by container.catalogRepository.categories.collectAsStateWithLifecycle(emptyList())
@@ -198,6 +201,29 @@ fun LetterGameScreen(
             ?: activeProfile?.avatarUrl?.takeIf(String::isNotBlank)
     }
 
+    fun memberRemovalMessage(reason: String?, previousStatus: String? = null): String = when {
+        reason == "left" -> exitedRoomMessage
+        reason == "rejected" || previousStatus == "pending" -> joinRejectedMessage
+        else -> kickedFromRoomMessage
+    }
+
+    fun reopenFinishedMatch(room: LetterGameRoom, finishedMatch: LetterGameMatchSnapshot) {
+        hiddenFinishedMatchId = finishedMatch.matchId
+        scope.launch {
+            runCatching { repository.reopenRoom(room.id) }
+                .onSuccess {
+                    savedRoomCode = it.code
+                    selectedRoom = it
+                    hiddenFinishedMatchId = finishedMatch.matchId
+                    match = null
+                }
+                .onFailure {
+                    hiddenFinishedMatchId = null
+                    errorMessage = it.message
+                }
+        }
+    }
+
     LaunchedEffect(Unit) { container.backendSessionManager.checkSession() }
     LaunchedEffect(joinRequestToken) {
         if (joinRequestToken != handledJoinRequestToken) {
@@ -208,7 +234,13 @@ fun LetterGameScreen(
     LaunchedEffect(exitRequestToken) {
         if (exitRequestToken != handledExitRequestToken) {
             handledExitRequestToken = exitRequestToken
-            if (selectedRoom != null) showExitConfirmation = true
+            val currentRoom = selectedRoom
+            val currentMatch = match
+            if (currentRoom != null && currentMatch != null && currentMatch.status in setOf("finished", "abandoned")) {
+                reopenFinishedMatch(currentRoom, currentMatch)
+            } else if (currentRoom != null) {
+                showExitConfirmation = true
+            }
         }
     }
     LaunchedEffect(copyRequestToken) {
@@ -273,11 +305,12 @@ fun LetterGameScreen(
                 if (savedRoomCode != code || leavingRoom) return@onSuccess
                 val membership = room.members.firstOrNull { it.userId == session.user?.id }
                 if (!leavingRoom && membership != null && membership.status !in setOf("accepted", "pending")) {
+                    val message = memberRemovalMessage(reason = null, previousStatus = membership.status)
                     savedRoomCode = null
                     selectedRoom = null
                     match = null
                     errorMessage = null
-                    scope.launch { snackbarHostState.showSnackbar(removedFromRoomMessage, duration = SnackbarDuration.Short) }
+                    scope.launch { snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short) }
                 } else {
                     selectedRoom = room
                 }
@@ -296,6 +329,8 @@ fun LetterGameScreen(
                     if (selectedRoom?.id == event.room.id) {
                         val membership = event.room.members.firstOrNull { it.userId == session.user?.id }
                         if (!leavingRoom && membership != null && membership.status !in setOf("accepted", "pending")) {
+                            val previousStatus = selectedRoom?.members?.firstOrNull { it.userId == session.user?.id }?.status
+                            val message = memberRemovalMessage(reason = null, previousStatus = previousStatus)
                             socket?.close(1000, "member_removed")
                             socket = null
                             selectedRoom = null
@@ -305,7 +340,7 @@ fun LetterGameScreen(
                             showRoomSettings = false
                             showExitConfirmation = false
                             hiddenFinishedMatchId = null
-                            scope.launch { snackbarHostState.showSnackbar(removedFromRoomMessage, duration = SnackbarDuration.Short) }
+                            scope.launch { snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short) }
                         } else {
                             selectedRoom = event.room
                         }
@@ -313,6 +348,7 @@ fun LetterGameScreen(
                 }
                 is LetterGameEvent.MemberRemoved -> {
                     if (!leavingRoom && (selectedRoom?.id == event.roomId || selectedRoom?.code == event.roomId)) {
+                        val message = memberRemovalMessage(event.reason)
                         socket?.close(1000, "member_removed")
                         socket = null
                         selectedRoom = null
@@ -322,7 +358,7 @@ fun LetterGameScreen(
                         showRoomSettings = false
                         showExitConfirmation = false
                         hiddenFinishedMatchId = null
-                        scope.launch { snackbarHostState.showSnackbar(removedFromRoomMessage, duration = SnackbarDuration.Short) }
+                        scope.launch { snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short) }
                     }
                 }
                 is LetterGameEvent.RoomDissolved -> {
@@ -341,7 +377,15 @@ fun LetterGameScreen(
                 }
                 is LetterGameEvent.Match -> {
                     val isHiddenFinishedMatch = event.match.matchId == hiddenFinishedMatchId && event.match.status != "active"
-                    if (!isHiddenFinishedMatch && selectedRoom != null && (match?.matchId == null || match?.matchId == event.match.matchId)) {
+                    if (
+                        !isHiddenFinishedMatch &&
+                        selectedRoom != null &&
+                        LetterGameMatchPresentationPolicy.shouldAccept(
+                            status = event.match.status,
+                            matchId = event.match.matchId,
+                            trackedMatchId = match?.matchId,
+                        )
+                    ) {
                         match = event.match
                     }
                 }
@@ -373,9 +417,19 @@ fun LetterGameScreen(
         val room = selectedRoom ?: return@LaunchedEffect
         val latest = room.latestMatch ?: return@LaunchedEffect
         if (latest.id == hiddenFinishedMatchId && latest.status != "active") return@LaunchedEffect
+        if (!LetterGameMatchPresentationPolicy.shouldAccept(latest.status, latest.id, match?.matchId)) return@LaunchedEffect
         runCatching { repository.getMatch(latest.id) }
             .onSuccess { refreshed ->
-                if (hiddenFinishedMatchId != latest.id || refreshed.status == "active") match = refreshed
+                if (
+                    (hiddenFinishedMatchId != latest.id || refreshed.status == "active") &&
+                    LetterGameMatchPresentationPolicy.shouldAccept(
+                        refreshed.status,
+                        refreshed.matchId,
+                        match?.matchId,
+                    )
+                ) {
+                    match = refreshed
+                }
             }
             .onFailure { errorMessage = it.message }
     }
@@ -392,6 +446,8 @@ fun LetterGameScreen(
                     if (selectedRoom?.id != roomId) return@onSuccess
                     val membership = refreshed.members.firstOrNull { it.userId == session.user?.id }
                     if (!leavingRoom && membership != null && membership.status !in setOf("accepted", "pending")) {
+                        val previousStatus = selectedRoom?.members?.firstOrNull { it.userId == session.user?.id }?.status
+                        val message = memberRemovalMessage(reason = null, previousStatus = previousStatus)
                         socket?.close(1000, "member_removed")
                         socket = null
                         selectedRoom = null
@@ -401,13 +457,15 @@ fun LetterGameScreen(
                         showRoomSettings = false
                         showExitConfirmation = false
                         hiddenFinishedMatchId = null
-                        scope.launch { snackbarHostState.showSnackbar(removedFromRoomMessage, duration = SnackbarDuration.Short) }
+                        scope.launch { snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short) }
                     } else {
                         selectedRoom = refreshed
                     }
                 }
                 .onFailure { error ->
                     if ((error as? org.rhythmeta.maimaid.core.network.BackendApiException)?.code == "room_access_denied") {
+                        val previousStatus = selectedRoom?.members?.firstOrNull { it.userId == session.user?.id }?.status
+                        val message = memberRemovalMessage(reason = null, previousStatus = previousStatus)
                         socket?.close(1000, "member_removed")
                         socket = null
                         selectedRoom = null
@@ -417,7 +475,7 @@ fun LetterGameScreen(
                         showRoomSettings = false
                         showExitConfirmation = false
                         hiddenFinishedMatchId = null
-                        scope.launch { snackbarHostState.showSnackbar(removedFromRoomMessage, duration = SnackbarDuration.Short) }
+                        scope.launch { snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short) }
                     } else {
                         errorMessage = error.message
                     }
@@ -531,6 +589,7 @@ fun LetterGameScreen(
                     when (animatedMatch?.status) {
                         "active" -> PlayingPage(
                                 match = animatedMatch,
+                                    roomMembers = animatedRoom.members,
                                     currentUserId = currentUserId,
                                     localAvatarModel = localAvatarModel,
                                     englishOnly = animatedRoom.settings.selectionConfig["englishOnly"]?.jsonPrimitive?.booleanOrNull == true,
@@ -561,20 +620,7 @@ fun LetterGameScreen(
                                     versions = gameVersions,
                                     contentTopPadding = contentTopPadding,
                                     onReopen = {
-                                        hiddenFinishedMatchId = animatedMatch.matchId
-                                        scope.launch {
-                                        runCatching { repository.reopenRoom(animatedRoom.id) }
-                                                .onSuccess {
-                                                        savedRoomCode = it.code
-                                                        selectedRoom = it
-                                                        hiddenFinishedMatchId = animatedMatch.matchId
-                                                        match = null
-                                                    }
-                                                    .onFailure {
-                                                        hiddenFinishedMatchId = null
-                                                    errorMessage = it.message
-                                                }
-                                    }
+                                        reopenFinishedMatch(animatedRoom, animatedMatch)
                                 },
                                 onExit = { showExitConfirmation = true },
                             )
@@ -1170,6 +1216,7 @@ private fun RoomMembers(
 @Composable
 private fun PlayingPage(
     match: LetterGameMatchSnapshot,
+    roomMembers: List<LetterGameRoomMember>,
     currentUserId: String?,
     localAvatarModel: Any?,
     englishOnly: Boolean,
@@ -1193,6 +1240,9 @@ private fun PlayingPage(
     val isTurn = match.turnUserId == currentUserId
     val canAct = isTurn && socket != null
     val currentPlayer = match.players.firstOrNull { it.userId == currentUserId }
+    val visiblePlayers = remember(match.players, roomMembers) {
+        LetterGameMatchPresentationPolicy.visiblePlayers(match.players, roomMembers)
+    }
     val canBuyHint = canAct && currentPlayer?.scoringEligible == true
     val currentScore = currentPlayer?.score ?: 0
     val narratedLogs = remember(match.logs) { LetterGameLogNarrator.narrate(match.logs) }
@@ -1264,7 +1314,7 @@ private fun PlayingPage(
             item { InputMechanismTip(onDismiss = { showInputTip = false }) }
         }
         if (errorMessage != null) item { ErrorBanner(errorMessage) }
-        item { TurnStrip(match.players, match.turnUserId, currentUserId, localAvatarModel) }
+        item { TurnStrip(visiblePlayers, match.turnUserId, currentUserId, localAvatarModel) }
         if (englishOnly) item { EnglishLetterProgress(match.logs) }
         items(match.songs, key = LetterGameMatchSong::slotId) { song ->
             LetterSongCard(
@@ -1665,7 +1715,7 @@ private fun LetterSongCard(
     song: LetterGameMatchSong,
     coverImageStore: org.rhythmeta.maimaid.core.data.CoverImageStore?,
     versions: List<GameVersionEntity>,
-    onLongClick: () -> Unit = {},
+    onLongClick: (() -> Unit)? = null,
 ) {
     val darkTheme = SongVisualUtils.isDarkTheme(MiuixTheme.colorScheme.background)
     val masterColor = SongVisualUtils.difficultyColor("master", darkTheme = darkTheme, brightenDark = true)
@@ -1676,6 +1726,11 @@ private fun LetterSongCard(
         ?.takeIf(String::isNotBlank)
         ?.let { SongVisualUtils.versionAbbreviation(it, versions) }
     val chartTypes = letterGameChartTypes(song.chartTypes)
+    val interactionModifier = if (onLongClick == null) {
+        Modifier
+    } else {
+        Modifier.combinedClickable(onClick = {}, onLongClick = onLongClick)
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1691,7 +1746,7 @@ private fun LetterSongCard(
                 cornerRadius = 14.dp,
                 extension = SquircleExtension,
             )
-            .combinedClickable(onClick = {}, onLongClick = onLongClick)
+            .then(interactionModifier)
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
