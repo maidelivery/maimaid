@@ -189,7 +189,8 @@ const versionedInternalLevel = (payload: unknown, targetVersion: string | null):
 	if (!values || !targetVersion) {
 		return null;
 	}
-	const value = Number(values[targetVersion]);
+	const matchingVersion = Object.keys(values).find((version) => version.toLocaleLowerCase() === targetVersion.toLocaleLowerCase());
+	const value = Number(matchingVersion ? values[matchingVersion] : undefined);
 	return Number.isFinite(value) && value > 0 ? value : null;
 };
 
@@ -217,7 +218,9 @@ const applyDxDataRegionConstants = (sheet: Record<string, unknown>, regionVersio
 		if (regions?.[region] !== true) {
 			continue;
 		}
-		const internalLevel = versionedInternalLevel(multiverInternalLevelValue, regionVersions[region]);
+		const internalLevel =
+			versionedInternalLevel(multiverInternalLevelValue, regionVersions[region]) ??
+			(region === "cn" ? versionedInternalLevel(multiverInternalLevelValue, typeof sheet.version === "string" ? sheet.version : null) : null);
 		if (internalLevel === null) {
 			continue;
 		}

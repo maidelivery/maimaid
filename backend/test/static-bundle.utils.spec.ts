@@ -499,6 +499,19 @@ describe("normalizeDxDataCatalog", () => {
 							regions: { jp: true, intl: true, cn: true },
 							multiverInternalLevelValue: { Splash: 12.1 },
 						},
+						{
+							type: "dx",
+							difficulty: "master",
+							version: "CiRCLE PLUS",
+							releaseDate: "2025-09-18",
+							level: "13+",
+							internalLevelValue: 13.6,
+							regions: { jp: true, intl: false, cn: true },
+							multiverInternalLevelValue: {
+								CiRCLE: 13.7,
+								"CiRCLE PLUS": 13.6,
+							},
+						},
 					],
 				},
 			],
@@ -527,6 +540,13 @@ describe("normalizeDxDataCatalog", () => {
 		});
 		expect(song.sheets[1]?.internalLevelValue).toBe(12.5);
 		expect(song.sheets[1]?.regionOverrides).toBeUndefined();
+		expect(song.sheets[2]?.version).toBe("CiRCLE");
+		expect(song.sheets[2]?.regionOverrides?.cn).toEqual({
+		level: "13+",
+		levelValue: 13.6,
+		internalLevel: "13.7",
+		internalLevelValue: 13.7,
+	});
 	});
 });
 
