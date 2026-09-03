@@ -234,6 +234,8 @@ fun LiquidGlassTabBar(
                                 refractionAmount = 24.dp.toPx(),
                             )
                         },
+                        highlight = null,
+                        shadow = null,
                         onDrawSurface = { drawRect(containerColor) },
                     )
                     .fillMaxWidth()
